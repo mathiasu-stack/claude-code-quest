@@ -584,14 +584,158 @@ body {
   font-size: 14px;
 }
 
+/* ==================== MOBILE HEADER ==================== */
+
+.mobile-header {
+  display: none;
+}
+
+/* ==================== SIDEBAR BACKDROP ==================== */
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 199;
+}
+.sidebar-backdrop.visible { display: block; }
+
+/* ==================== HOVER (pointer devices only) ==================== */
+
+@media (hover: hover) {
+  .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-400); }
+  .back-btn:hover { color: var(--navy); }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+  .chapter-card.unlocked:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .lesson-item:hover:not(.disabled) { box-shadow: var(--shadow); border-color: var(--gray-200); }
+  .nav-item:hover { background: var(--navy-light); color: var(--white); }
+  .nav-item.nav-locked:hover { background: transparent; }
+}
+
 /* ==================== RESPONSIVE ==================== */
 
 @media (max-width: 768px) {
-  body { flex-direction: column; }
-  #sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; overflow-x: auto; }
-  .sidebar-nav { display: flex; flex-direction: row; overflow-x: auto; }
-  .nav-chapter-title { display: none; }
-  #main-content { padding: 20px 16px; }
-  .dashboard-header { flex-direction: column; }
-  .chapter-grid { grid-template-columns: 1fr; }
+  /* Layout */
+  body { flex-direction: column; overflow: hidden; }
+
+  /* Mobile top bar */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--navy);
+    color: var(--white);
+    padding: 0 16px;
+    height: 54px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .mobile-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--white);
+  }
+  .hamburger-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+  }
+
+  /* Sidebar as slide-in drawer */
+  #sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  #sidebar.open { transform: translateX(0); }
+  .sidebar-nav { flex-direction: column; overflow-x: unset; }
+  .nav-chapter-title { display: block; }
+  .nav-item { padding: 14px 16px; min-height: 48px; font-size: 14px; }
+
+  /* Main content */
+  #main-content { padding: 20px 14px; flex: 1; overflow-y: auto; min-height: 0; }
+
+  /* Touch targets */
+  .btn-primary { padding: 16px 24px; min-height: 48px; font-size: 15px; width: 100%; }
+  .btn-secondary { padding: 14px 18px; min-height: 44px; font-size: 14px; }
+  .back-btn { padding: 10px 0; min-height: 44px; display: inline-flex; align-items: center; }
+  .reset-btn { padding: 12px 16px; min-height: 44px; font-size: 13px; }
+
+  /* Dashboard */
+  .dashboard-header { flex-direction: column; gap: 16px; }
+  .xp-summary { width: 100%; text-align: left; min-width: unset; }
+  .welcome-name { font-size: 26px; }
+  .chapter-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Chapter/lesson/test views */
+  .chapter-view, .lesson-view, .test-view { max-width: 100%; }
+
+  /* Lesson nav — stacked full-width so it's impossible to miss */
+  .lesson-nav { flex-direction: column; gap: 10px; margin-top: 20px; }
+  .lesson-nav .btn-secondary { width: 100%; text-align: center; justify-content: center; }
+
+  /* Lesson title */
+  .lesson-title { font-size: 22px; }
+
+  /* Code blocks */
+  .lesson-content pre {
+    font-size: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tables */
+  .lesson-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Textarea — font-size 16px prevents iOS auto-zoom; reduce rows via height */
+  .test-textarea { font-size: 16px; min-height: 160px; }
+
+  /* XP toast */
+  .xp-toast {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    text-align: center;
+  }
+  .xp-toast.visible { transform: translateY(0); }
+
+  /* Modal */
+  .modal { padding: 24px; }
+
+  /* Small text bump */
+  .player-level, .brand-sub { font-size: 12px; }
+
+  /* Word wrapping */
+  .card-title, .lesson-title, .test-title { word-break: break-word; overflow-wrap: break-word; }
+}
+
+@media (max-width: 480px) {
+  #main-content { padding: 14px 10px; }
+  .chapter-grid { gap: 10px; }
+  .welcome-name { font-size: 22px; }
 }

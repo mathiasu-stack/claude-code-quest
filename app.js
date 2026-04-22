@@ -14,6 +14,7 @@ const App = {
 
   boot() {
     this.renderSidebar();
+    this.setupMobileNav();
     this.navigate('dashboard');
   },
 
@@ -126,11 +127,11 @@ const App = {
     }
 
     sidebar.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(el => {
-      el.addEventListener('click', () => App.navigate('dashboard'));
+      el.addEventListener('click', () => { App.navigate('dashboard'); App.closeSidebar(); });
     });
 
     sidebar.querySelectorAll('.nav-item.chapter-nav:not(.nav-locked)').forEach(el => {
-      el.addEventListener('click', () => App.navigate('chapter', { chapterId: el.dataset.chapter }));
+      el.addEventListener('click', () => { App.navigate('chapter', { chapterId: el.dataset.chapter }); App.closeSidebar(); });
     });
 
     document.getElementById('reset-progress-btn').addEventListener('click', () => {
@@ -143,6 +144,21 @@ const App = {
 
   refreshSidebar() {
     this.renderSidebar();
+  },
+
+  openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-backdrop').classList.add('visible');
+  },
+
+  closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('visible');
+  },
+
+  setupMobileNav() {
+    document.getElementById('hamburger-btn')?.addEventListener('click', () => this.openSidebar());
+    document.getElementById('sidebar-backdrop')?.addEventListener('click', () => this.closeSidebar());
   },
 
   updateSidebarActive(view, params) {
