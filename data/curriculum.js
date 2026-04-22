@@ -8,7 +8,9 @@ window.CURRICULUM = [
     xpReward: 200,
     lessons: [
       {
-        id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: [],
+        id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/AJpK3YTTKZ4" title="Introducing Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Welcome to Acme Corp</h2>
 <p>Congratulations on your first day! You've been assigned an AI coding assistant: <strong>Claude Code</strong>. Think of it as a senior engineer who lives in your terminal — one who never sleeps, never gets annoyed at your questions, and has read every doc you've been putting off.</p>
 <p>Claude Code is Anthropic's official CLI tool that brings the Claude AI model directly into your development workflow. Unlike a chat interface, Claude Code operates <em>inside your project directory</em>. It can read your files, understand your codebase, make edits, run commands, and help you ship faster.</p>
@@ -24,10 +26,22 @@ window.CURRICULUM = [
 <p>Claude Code works best as a <em>collaborative partner</em>. You provide direction, context, and judgment; it provides speed, recall, and tireless execution. The quality of what you get out depends heavily on the quality of what you put in.</p>`,
       },
       {
-        id: 'ch01-l02', title: 'Installation & Setup', xpReward: 50, videos: [],
+        id: 'ch01-l02', title: 'Installation & Setup', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/SUysp3sJHbA" title="Claude Code Tutorial #1 - Introduction &amp; Setup" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Getting Claude Code Running</h2>
-<p>Claude Code is distributed as an npm package. You'll need Node.js 18+ installed. If you're on a fresh machine, install it from <code>nodejs.org</code> or use <code>nvm</code>.</p>
-<h3>Install globally</h3>
+<p>The recommended way to install Claude Code is via the native installer — no Node.js required. The installer bundles its own binary.</p>
+<h3>Native install (recommended)</h3>
+<pre><code># macOS / Linux / WSL
+curl -fsSL https://claude.ai/install.sh | bash
+
+# macOS via Homebrew
+brew install --cask claude-code
+
+# Windows via WinGet
+winget install Anthropic.ClaudeCode</code></pre>
+<h3>Alternative: npm (advanced)</h3>
+<p>If you prefer the npm path, Node.js 18+ is required:</p>
 <pre><code>npm install -g @anthropic-ai/claude-code</code></pre>
 <h3>Authentication</h3>
 <ul>
@@ -36,13 +50,14 @@ window.CURRICULUM = [
 </ul>
 <h3>Verify the installation</h3>
 <pre><code>claude --version</code></pre>
-<p>You should see the installed version. If you get "command not found", check that your npm global bin directory is in your <code>PATH</code>.</p>
 <h3>Updating</h3>
-<pre><code>npm update -g @anthropic-ai/claude-code</code></pre>
-<p>Run this regularly — new versions often bring improved tool use and new features.</p>`,
+<pre><code>claude update</code></pre>
+<p>Native installs also auto-update in the background. Run <code>claude update</code> to force an immediate update.</p>`,
       },
       {
-        id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: [],
+        id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/ntDIxaeo3Wg" title="Claude Code - Full Tutorial for Beginners" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Starting Your First Session</h2>
 <p>Navigate to any project directory in your terminal, then run:</p>
 <pre><code>claude</code></pre>
@@ -58,18 +73,41 @@ window.CURRICULUM = [
 <p>Type <code>/exit</code> or press <kbd>Ctrl+C</kbd> twice. If you need to resume complex work, use <code>/compact</code> before exiting to create a summary you can hand back in your next session.</p>`,
       },
       {
-        id: 'ch01-l04', title: 'Understanding the Interface', xpReward: 50, videos: [],
+        id: 'ch01-l04', title: 'Understanding the Interface', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Navigating the Terminal Interface</h2>
 <h3>Tool use indicators</h3>
 <p>When Claude Code acts on your project, it shows what it's doing: <strong>Read</strong> (viewing a file), <strong>Edit</strong> (modifying — shows a diff), <strong>Bash</strong> (running a shell command), <strong>Write</strong> (creating a new file). Some actions are auto-approved; others require you to press <kbd>Y</kbd>.</p>
 <h3>Slash commands</h3>
-<p>Commands beginning with <code>/</code> are instructions to Claude Code itself, not to the AI. <code>/clear</code> resets context, <code>/help</code> shows available commands. You'll learn these in Chapter 10.</p>
+<p>Commands beginning with <code>/</code> are instructions to Claude Code itself, not to the AI. <code>/clear</code> resets context, <code>/help</code> shows available commands. You'll learn these in Chapter 11.</p>
 <h3>Keyboard shortcuts</h3>
 <ul>
   <li><kbd>↑</kbd> / <kbd>↓</kbd> — navigate prompt history</li>
   <li><kbd>Ctrl+C</kbd> — cancel current operation</li>
   <li><kbd>Shift+Tab</kbd> — toggle between Auto and Plan modes</li>
 </ul>`,
+      },
+      {
+        id: 'ch01-l05', title: 'This training has a shelf life', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>AI Tooling Docs Age Fast</h2>
+<p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
+<h3>Why this matters</h3>
+<p>Unlike a course on SQL or Git, Claude Code is a living product. A tutorial written 6 months ago might reference a flag that no longer exists or miss a feature that would save you hours. The gap between "what the training says" and "what the tool actually does" can make you less effective, or worse, confidently wrong.</p>
+<h3>How to stay current</h3>
+<p>Three quick checks that take under a minute:</p>
+<ul>
+  <li><strong><code>claude --version</code></strong> — see exactly what version you're running</li>
+  <li><strong><code>claude doctor</code></strong> — checks your setup is healthy and flags known issues</li>
+  <li><strong><code>claude --help</code></strong> — the authoritative list of current commands and flags, generated from the actual binary</li>
+</ul>
+<p>For deeper reference, the official docs at <strong>docs.anthropic.com/claude-code</strong> are updated with each release.</p>
+<h3>What the verification stamp means</h3>
+<p>Every lesson in this course shows a stamp like: <em>Verified against Claude Code v2.1.114 · 22 Apr 2026</em>. This tells you when the content was last checked against a specific version. If the stamp is old and you're on a much newer version, treat that lesson as a starting point — then verify the specifics yourself before relying on them.</p>
+<h3>The habit to build</h3>
+<p>When something doesn't work the way a tutorial says it should, your first instinct should be: <em>"Has this changed?"</em> — not <em>"Am I doing something wrong?"</em> Check <code>claude --help</code>, check the changelog, then adjust. This skill transfers to every AI tool you'll ever use.</p>`,
       },
     ],
     practicalTest: {
@@ -99,6 +137,8 @@ window.CURRICULUM = [
     lessons: [
       {
         id: 'ch02-l01', title: 'What is a Business Brain?', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Centralised Context Beats Smart Orchestration</h2>
 <p>One of the most common mistakes teams make with AI coding assistants is trying to make the AI smarter through complex prompt engineering or multi-agent orchestration. The simpler — and more effective — approach is to give the AI a rich, centralised store of business context it can draw from on every task.</p>
 <p>A <strong>Business Brain</strong> is a dedicated folder in your project (or organisation) that holds everything an AI assistant needs to understand your business: your brand voice, your clients, your product strategy, your team's conventions, and your domain vocabulary. Instead of explaining your context in every session, you build it once and reference it everywhere.</p>
@@ -115,6 +155,8 @@ window.CURRICULUM = [
       },
       {
         id: 'ch02-l02', title: 'Structuring the Business Brain Folder', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Folder Layout and File Conventions</h2>
 <p>The Business Brain folder is typically stored at the root of your project or in a shared repository accessible to all your projects. A consistent structure makes it easy for Claude Code to find and use the right context.</p>
 <h3>Recommended structure</h3>
@@ -142,6 +184,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       },
       {
         id: 'ch02-l03', title: 'Business Brain in Practice', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Using Context, Not Repeating It</h2>
 <p>The power of a Business Brain is that you write context once and reference it forever. Every skill, every session, every team member draws from the same source of truth.</p>
 <h3>Before Business Brain (what most teams do)</h3>
@@ -184,12 +228,15 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     xpReward: 300,
     lessons: [
       {
-        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 60, videos: [],
+        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Persistent Memory for Your Project</h2>
 <p>Every time you start a new Claude Code session, the AI starts fresh. <strong>CLAUDE.md</strong> solves this — it's a markdown file you place in your project root that Claude Code reads automatically at the start of every session.</p>
 <h3>Where it lives</h3>
 <ul>
-  <li><code>./CLAUDE.md</code> — project-specific instructions (commit to the repo)</li>
+  <li><code>./CLAUDE.md</code> or <code>./.claude/CLAUDE.md</code> — project-specific instructions (commit to repo)</li>
+  <li><code>./CLAUDE.local.md</code> — personal overrides for this project (gitignored, not shared)</li>
   <li><code>~/.claude/CLAUDE.md</code> — global instructions applied to every project</li>
   <li><code>./src/CLAUDE.md</code> — subdirectory instructions (for monorepos)</li>
 </ul>
@@ -204,9 +251,11 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
 <p>The CLAUDE.md is loaded into context on every session — so everything in it costs tokens. This makes <em>what you put in it</em> a critical design decision, not just a convenience.</p>`,
       },
       {
-        id: 'ch03-l02', title: 'The 250k Token Limit and Context Rot', xpReward: 60, videos: [],
+        id: 'ch03-l02', title: 'The Context Window and Context Rot', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Your Context Window is Finite</h2>
-<p>Claude Code has a maximum context window of approximately 250,000 tokens. Every word in your conversation — your messages, Claude's responses, files it reads, your CLAUDE.md — counts against this limit. Understanding this limit is not optional; it directly impacts the quality of output you get.</p>
+<p>Claude Code's context window is 200,000 tokens on standard plans, with a 1 million token extended window available on Max, Team, and Enterprise plans. Every word in your conversation — your messages, Claude's responses, files it reads, your CLAUDE.md — counts against this limit. Understanding this limit is not optional; it directly impacts the quality of output you get.</p>
 <h3>What "context rot" looks like</h3>
 <p>As a session grows and approaches the limit, something subtle happens: earlier context gets compressed or dropped. The AI starts "forgetting" instructions from earlier in the session. You get responses that ignore constraints you set at the start. Output quality degrades — not dramatically, but consistently.</p>
 <h3>The CLAUDE.md trap</h3>
@@ -216,6 +265,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       },
       {
         id: 'ch03-l03', title: 'Writing a Lean CLAUDE.md', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Less is More</h2>
 <p>A well-written CLAUDE.md is concise, declarative, and always relevant. Every line should earn its place — if it's not going to affect Claude Code's behaviour in a meaningful way, cut it.</p>
 <h3>What belongs in CLAUDE.md</h3>
@@ -240,6 +291,8 @@ Load the relevant file when the task requires it.</code></pre>
       },
       {
         id: 'ch03-l04', title: 'CLAUDE.md as a Team Document', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>A Shared Contract with the AI</h2>
 <p>When CLAUDE.md is committed to your repo, it becomes a shared document — every team member's Claude Code sessions use the same project context. This is powerful: the AI behaves consistently for everyone on the team.</p>
 <h3>What to standardise</h3>
@@ -263,7 +316,7 @@ src/api/ → routes  src/services/ → business logic  src/db/ → queries
 
 ## Context
 Business context: .business-brain/
-Skills: .claude/commands/ (run /help to list them)</code></pre>
+Skills: .claude/skills/ (run /skills to list them)</code></pre>
 <p>This entire CLAUDE.md is under 150 tokens. It's always relevant, always loaded, never wasted.</p>`,
       },
     ],
@@ -288,13 +341,100 @@ Skills: .claude/commands/ (run /help to list them)</code></pre>
   // ── Chapter 4 ─────────────────────────────────────────────────────────────
   {
     id: 'ch04',
+    title: 'The Memory Framework',
+    subtitle: 'Week 4 — Where Context Lives',
+    icon: '🗄️',
+    xpReward: 275,
+    lessons: [
+      {
+        id: 'ch04-l01', title: 'The Four Memory Layers', xpReward: 65, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Claude Code Has Four Memory Layers</h2>
+<p>By this point you've met three memory tools individually: the <strong>Business Brain</strong> (Chapter 2), <strong>CLAUDE.md</strong> (Chapter 3), and a preview of <strong>skills</strong> (coming in Chapters 8–9). Before you go further, it helps to see how they fit together as a system — because they are a system, not a collection of independent tricks.</p>
+<h3>The four layers, from always-loaded to on-demand</h3>
+<table>
+  <thead><tr><th>Layer</th><th>Location</th><th>Loaded when?</th><th>What it holds</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1. Global CLAUDE.md</strong></td><td><code>~/.claude/CLAUDE.md</code></td><td>Every session, every project</td><td>Your personal defaults: preferred language, output style, global constraints that apply regardless of project</td></tr>
+    <tr><td><strong>2. Project CLAUDE.md</strong></td><td><code>./CLAUDE.md</code> in repo root</td><td>Every session in this project</td><td>Stack, test commands, constraints, folder structure, pointers to other layers</td></tr>
+    <tr><td><strong>3. Business Brain</strong></td><td><code>.business-brain/</code></td><td>On demand — when the task needs it</td><td>Brand voice, client profiles, product strategy, domain glossary</td></tr>
+    <tr><td><strong>4. Skills + learnings.md</strong></td><td><code>.claude/skills/</code></td><td>Name/description always; full content only when invoked</td><td>Workflow templates and the team's accumulated prompt-engineering knowledge</td></tr>
+  </tbody>
+</table>
+<h3>How the layers stack</h3>
+<p>Layers 1 and 2 are always in context — every token they contain is consumed on every session. Layer 3 is pointed to from Layer 2 and loaded only when a task requires it. Layer 4 exposes only its index at session start; the full skill loads when you invoke it.</p>
+<p>This progressive loading is the architecture's key insight: you get the right information at the right time, without paying the token cost of everything all the time.</p>
+<h3>Going deeper</h3>
+<ul>
+  <li>Business Brain (Layer 3) — Chapter 2 covers building and maintaining it</li>
+  <li>CLAUDE.md layers 1 &amp; 2 — Chapter 3 covers writing them lean</li>
+  <li>Token cost of each layer — Chapter 7 covers context management in depth</li>
+  <li>Skills (Layer 4) — Chapters 8–9 cover building and writing them; Chapter 10 covers refining them over time with learnings.md</li>
+</ul>`,
+      },
+      {
+        id: 'ch04-l02', title: 'What Belongs Where', xpReward: 65, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>The Decision Rule</h2>
+<p>Every piece of context you want to give Claude Code belongs in exactly one layer. The decision rule is straightforward:</p>
+<table>
+  <thead><tr><th>If it is…</th><th>Put it in…</th></tr></thead>
+  <tbody>
+    <tr><td>Always relevant, every session in every project</td><td>Global CLAUDE.md (<code>~/.claude/CLAUDE.md</code>)</td></tr>
+    <tr><td>Always relevant for this project, every session</td><td>Project CLAUDE.md (<code>./CLAUDE.md</code>)</td></tr>
+    <tr><td>Business context — brand, clients, product, strategy</td><td>Business Brain (pointer from CLAUDE.md)</td></tr>
+    <tr><td>A repeatable workflow or task-specific prompt</td><td>Skill (<code>.claude/skills/</code>)</td></tr>
+    <tr><td>What you've learned about how a skill behaves</td><td>learnings.md (alongside the skill)</td></tr>
+  </tbody>
+</table>
+<h3>Concrete examples</h3>
+<ul>
+  <li><code>npm test</code> — <strong>Project CLAUDE.md</strong>. Always needed in this project, not in others.</li>
+  <li>"Never use var" — <strong>Project CLAUDE.md</strong>. Always active constraint for this codebase.</li>
+  <li>"I prefer concise responses in British English" — <strong>Global CLAUDE.md</strong>. Developer preference, applies across all projects.</li>
+  <li>Brand voice guide — <strong>Business Brain</strong>. Long document, only needed for brand-related tasks.</li>
+  <li>PR description workflow — <strong>Skill</strong>. Repeatable multi-step process, invoked on demand.</li>
+  <li>Lessons from a past skill bug — <strong>learnings.md</strong>. History specific to that skill.</li>
+</ul>
+<h3>The two anti-patterns to avoid</h3>
+<p><strong>Stuffing CLAUDE.md with Business Brain content.</strong> Your brand voice guide does not belong in CLAUDE.md. It's long, it's only needed for brand-related tasks, and loading it on every session wastes context budget. Use the pointer pattern: one line in CLAUDE.md pointing to the Business Brain file.</p>
+<p><strong>Putting workflow instructions in CLAUDE.md.</strong> A 10-step PR description process does not belong in CLAUDE.md. Wrap it in a skill. The CLAUDE.md gets a one-line mention; the full instructions only cost tokens when you actually run the skill.</p>
+<h3>The test</h3>
+<p>When you're about to add something to CLAUDE.md, ask: "If I never run a task that uses this, does it still belong here?" If no — it belongs in a skill or Business Brain file, not CLAUDE.md.</p>`,
+      },
+    ],
+    practicalTest: {
+      id: 'ch04-test',
+      scenarioType: 'slack', scenarioFrom: 'Priya Nair', scenarioRole: 'Tech Lead', scenarioAvatar: '👩‍💻',
+      scenario: `Welcome to the Acme platform team! Before you start contributing, I want you to design the memory layer setup for the new payments microservice. Here are the things we need Claude Code to know about:\n\n1. Test command: npm test\n2. Our brand voice guide (3,000-word document)\n3. Our PR description workflow (run it every time a PR is ready)\n4. The rule: never commit directly to main\n5. Lessons we've learned about when our PR skill produces weak output\n6. Your personal preference: always respond in British English\n7. Client profiles for our top 5 enterprise accounts\n\nFor each item, tell me which memory layer it belongs in and why. This tells me whether you understand how to keep our AI setup lean and efficient.`,
+      task: 'Assign each of the 7 items to the correct Claude Code memory layer and explain your reasoning for each.',
+      hint: 'The four layers: Global CLAUDE.md (~/.claude/CLAUDE.md), Project CLAUDE.md (./CLAUDE.md), Business Brain (.business-brain/), Skills + learnings.md (.claude/skills/). Use the always-active vs on-demand rule.',
+      minLength: 150, passThreshold: 70, xpReward: 375,
+      criteria: [
+        { type: 'keyword', value: ['CLAUDE.md', 'claude.md'], description: 'References CLAUDE.md as a layer', weight: 2 },
+        { type: 'keyword', value: ['business brain', 'Business Brain', '.business-brain', 'business-brain'], description: 'References Business Brain layer', weight: 2 },
+        { type: 'keyword', value: ['skill', 'skills', '.claude/commands', 'commands'], description: 'References the skills layer', weight: 2 },
+        { type: 'keyword', value: ['global', 'personal', 'every project', '~/.claude'], description: 'Distinguishes global vs project CLAUDE.md', weight: 1 },
+        { type: 'keyword', value: ['always', 'on demand', 'on-demand', 'sometimes', 'when needed', 'token'], description: 'Explains always-active vs on-demand reasoning', weight: 1 },
+        { type: 'length', value: 150, description: 'Response is at least 150 characters', weight: 1 },
+      ],
+    },
+  },
+
+  // ── Chapter 5 ─────────────────────────────────────────────────────────────
+  {
+    id: 'ch05',
     title: 'Effective Prompting',
-    subtitle: 'Week 4 — Speaking the Right Language',
+    subtitle: 'Week 5 — Speaking the Right Language',
     icon: '✍️',
     xpReward: 250,
     lessons: [
       {
-        id: 'ch04-l01', title: 'Why Specificity Matters', xpReward: 50, videos: [],
+        id: 'ch05-l01', title: 'Why Specificity Matters', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Garbage In, Garbage Out</h2>
 <p>The single biggest factor in Claude Code's output quality is how specific your prompt is. Vague instructions produce vague results. Claude Code will make reasonable guesses when information is missing, and those guesses will often be wrong for your context.</p>
 <h3>The specificity spectrum</h3>
@@ -314,7 +454,9 @@ Skills: .claude/commands/ (run /help to list them)</code></pre>
 </ul>`,
       },
       {
-        id: 'ch04-l02', title: 'Providing Context', xpReward: 50, videos: [],
+        id: 'ch05-l02', title: 'Providing Context', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Context is Competitive Advantage</h2>
 <p>When you open a Claude Code session, it can read your files — but it doesn't automatically understand <em>why</em> things are structured the way they are. Context bridges that gap.</p>
 <h3>Types of context to provide</h3>
@@ -326,7 +468,9 @@ Skills: .claude/commands/ (run /help to list them)</code></pre>
 <p>If you find yourself repeating the same context in every session, it belongs in your CLAUDE.md or Business Brain — not in every prompt.</p>`,
       },
       {
-        id: 'ch04-l03', title: 'Iterative Prompting', xpReward: 50, videos: [],
+        id: 'ch05-l03', title: 'Iterative Prompting', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Prompting is a Conversation, Not a Command</h2>
 <p>The best results often come from multiple turns. Think of it like pair programming — you don't give your pair programmer a 500-word spec and wait an hour. You collaborate in real time.</p>
 <h3>The iterative loop</h3>
@@ -337,10 +481,12 @@ Skills: .claude/commands/ (run /help to list them)</code></pre>
   <li><strong>Test</strong> — Ask Claude Code to write or run tests to verify the result</li>
 </ol>
 <h3>When to start fresh</h3>
-<p>If a session has gone badly wrong — Claude Code is confused, making circular edits, or the context has bloated — use <code>/clear</code> to reset and start a new, focused conversation with a better-crafted first prompt. Don't double down on a bad session.</p>`,
+<p>If a session has gone badly wrong — Claude Code is confused, making circular edits, or the context has bloated — use <code>/clear</code> to reset and start a new, focused conversation with a better-crafted first prompt. Don't double down on a bad session. For large operations spanning many files, switch to Plan Mode first (Chapter 12).</p>`,
       },
       {
-        id: 'ch04-l04', title: 'Anatomy of a Good Prompt', xpReward: 50, videos: [],
+        id: 'ch05-l04', title: 'Anatomy of a Good Prompt', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Prompt Formula</h2>
 <pre><code>[ACTION] [WHAT] in [WHERE]
 so that [WHY / OUTCOME]
@@ -360,7 +506,7 @@ Do not change the function signature or any callers.</code></pre>
       },
     ],
     practicalTest: {
-      id: 'ch04-test',
+      id: 'ch05-test',
       scenarioType: 'jira', scenarioFrom: 'Marcus Webb', scenarioRole: 'Senior Engineer', scenarioAvatar: '👨‍💻',
       scenario: `ACME-42 · In Review\n\nThe \`calculateDiscount()\` function in \`src/pricing.js\` is crashing when called with null or undefined product objects. We need it to return 0 in those cases instead of throwing. Assigned to you. Please write the prompt you'll give Claude Code to fix this.`,
       task: 'Write the prompt you would give Claude Code to fix the null-handling bug in calculateDiscount().',
@@ -376,16 +522,18 @@ Do not change the function signature or any callers.</code></pre>
     },
   },
 
-  // ── Chapter 5 ─────────────────────────────────────────────────────────────
+  // ── Chapter 6 ─────────────────────────────────────────────────────────────
   {
-    id: 'ch05',
+    id: 'ch06',
     title: 'Working with Files',
-    subtitle: 'Week 5 — Hands on the Codebase',
+    subtitle: 'Week 6 — Hands on the Codebase',
     icon: '📁',
     xpReward: 250,
     lessons: [
       {
-        id: 'ch05-l01', title: 'Reading Files with Claude Code', xpReward: 50, videos: [],
+        id: 'ch06-l01', title: 'Reading Files with Claude Code', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Claude Code as a Code Reader</h2>
 <p>Before Claude Code changes anything, it reads. You can ask it to read and explain any file in your project, and it will do so in context — tracing function calls, explaining relationships, answering questions about behaviour.</p>
 <pre><code>Read \`src/auth/middleware.js\` and explain what it does, focusing on the token validation logic.</code></pre>
@@ -400,7 +548,9 @@ Do not change the function signature or any callers.</code></pre>
 </ul>`,
       },
       {
-        id: 'ch05-l02', title: 'Making Targeted Edits', xpReward: 50, videos: [],
+        id: 'ch06-l02', title: 'Making Targeted Edits', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Surgical vs Broad Edits</h2>
 <p>When you know exactly what needs to change, be specific:</p>
 <pre><code>In \`components/Button.tsx\`, change the default \`variant\` prop from "primary" to "secondary".</code></pre>
@@ -415,7 +565,9 @@ Do not change the function signature or any callers.</code></pre>
 </ul>`,
       },
       {
-        id: 'ch05-l03', title: 'Multi-file Operations', xpReward: 50, videos: [],
+        id: 'ch06-l03', title: 'Multi-file Operations', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Working Across Files</h2>
 <p>Claude Code can reason across multiple files simultaneously. It's not just a search-and-replace tool — it understands relationships between files.</p>
 <pre><code>Rename the \`processPayment()\` function to \`chargeCard()\` across all files in \`src/\`. Update all call sites and any JSDoc references.</code></pre>
@@ -425,10 +577,12 @@ Do not change the function signature or any callers.</code></pre>
   <li>Ask Claude Code to confirm the scope before it begins: "How many files will this affect?"</li>
   <li>After the operation, ask it to verify: "Check that no call sites were missed"</li>
 </ul>
-<p>For large operations, switch to Plan Mode first (Chapter 11) so you can review the full scope before any edits are made.</p>`,
+<p>For large operations, switch to Plan Mode first (Chapter 12) so you can review the full scope before any edits are made.</p>`,
       },
       {
-        id: 'ch05-l04', title: 'Reviewing Changes Before Accepting', xpReward: 50, videos: [],
+        id: 'ch06-l04', title: 'Reviewing Changes Before Accepting', xpReward: 50, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>You're Still in Charge</h2>
 <p>Reviewing every change Claude Code proposes — especially in critical paths — is not optional. It's part of the workflow.</p>
 <h3>The review habit</h3>
@@ -444,7 +598,7 @@ Do not change the function signature or any callers.</code></pre>
       },
     ],
     practicalTest: {
-      id: 'ch05-test',
+      id: 'ch06-test',
       scenarioType: 'email', scenarioFrom: 'David Osei', scenarioRole: 'Tech Lead', scenarioAvatar: '👨‍🔧',
       scenario: `From: david.osei@acmecorp.com\nSubject: Quick task — JSDoc for utils\n\nHi,\n\nWe have a new dev starting Monday and the \`utils/helpers.js\` file is completely undocumented. Can you add JSDoc comments to every function in that file before EOD Friday? Use Claude Code for this — should be a quick job. Thanks.`,
       task: 'Write the Claude Code prompt you would use to add JSDoc comments to all functions in utils/helpers.js.',
@@ -460,18 +614,20 @@ Do not change the function signature or any callers.</code></pre>
     },
   },
 
-  // ── Chapter 6 ─────────────────────────────────────────────────────────────
+  // ── Chapter 7 ─────────────────────────────────────────────────────────────
   {
-    id: 'ch06',
+    id: 'ch07',
     title: 'Token Efficiency & Sessions',
-    subtitle: 'Week 6 — Working Lean',
+    subtitle: 'Week 7 — Working Lean',
     icon: '🪙',
     xpReward: 300,
     lessons: [
       {
-        id: 'ch06-l01', title: 'Understanding the 250k Token Budget', xpReward: 60, videos: [],
+        id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Every Word Costs</h2>
-<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. Claude Code's context window is approximately 250,000 tokens. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
+<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Max, Team, and Enterprise plans support up to 1 million tokens. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
   <li>Your full conversation history from session start</li>
@@ -486,7 +642,9 @@ Do not change the function signature or any callers.</code></pre>
 <p>Leaner context = better results. Not because Claude Code gets smarter, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
       {
-        id: 'ch06-l02', title: 'When to Use /clear', xpReward: 60, videos: [],
+        id: 'ch07-l02', title: 'When to Use /clear', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Fresh Start</h2>
 <p><code>/clear</code> resets your conversation context completely. Everything before the <code>/clear</code> is gone — Claude Code starts the next turn as if you just opened a new session.</p>
 <h3>When to use /clear</h3>
@@ -504,7 +662,9 @@ Do not change the function signature or any callers.</code></pre>
 <p>If there's important context you want to carry forward, summarise it yourself and paste it as your first message after <code>/clear</code>. Or use <code>/compact</code> to let Claude Code create the summary automatically.</p>`,
       },
       {
-        id: 'ch06-l03', title: '/compact and Summaries', xpReward: 60, videos: [],
+        id: 'ch07-l03', title: '/compact and Summaries', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Compression Without Loss</h2>
 <p><code>/compact</code> asks Claude Code to summarise the current conversation into a compact representation — preserving key decisions, context, and state — then replace the full history with that summary. You continue from a leaner starting point without losing the thread.</p>
 <pre><code>/compact Focus on the decisions we made about the auth flow; discard the debugging tangents.</code></pre>
@@ -521,7 +681,9 @@ Do not change the function signature or any callers.</code></pre>
 <p>Even /compact summaries can lose fidelity. For critical decisions made earlier in the session, consider writing them down externally (a note, a comment in the code) rather than relying purely on the compacted context to remember them.</p>`,
       },
       {
-        id: 'ch06-l04', title: 'Structuring Long Sessions', xpReward: 60, videos: [],
+        id: 'ch07-l04', title: 'Structuring Long Sessions', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Staying Lean Over Time</h2>
 <p>On large projects, a single task might span multiple days. Without intentional structure, context bloat compounds into a real productivity drag.</p>
 <h3>One session, one task</h3>
@@ -539,7 +701,7 @@ Do not change the function signature or any callers.</code></pre>
       },
     ],
     practicalTest: {
-      id: 'ch06-test',
+      id: 'ch07-test',
       scenarioType: 'slack', scenarioFrom: 'Yuki Tanaka', scenarioRole: 'Senior Engineer', scenarioAvatar: '👩‍🔬',
       scenario: `Hey — our team's Claude Code costs are out of hand. Sessions are running for hours, context keeps ballooning, and I'm seeing 2-3x slower responses by end of day. We're doing a big refactor spanning multiple days. What's your strategy for keeping sessions lean without losing important context?`,
       task: 'Describe your strategy for maintaining token efficiency during a multi-day refactor with Claude Code.',
@@ -548,39 +710,38 @@ Do not change the function signature or any callers.</code></pre>
       criteria: [
         { type: 'keyword', value: ['/clear', 'clear command', 'clear the context'], description: 'Mentions /clear', weight: 2 },
         { type: 'keyword', value: ['/compact', 'compact command'], description: 'Mentions /compact', weight: 2 },
-        { type: 'keyword', value: ['context', 'token', 'tokens', '250k', 'window'], description: 'Discusses context/token management', weight: 1 },
+        { type: 'keyword', value: ['context', 'token', 'tokens', '200k', '200,000', 'window'], description: 'Discusses context/token management', weight: 1 },
         { type: 'keyword', value: ['session', 'new session', 'one task', 'single task'], description: 'Recommends single-task sessions', weight: 1 },
         { type: 'length', value: 100, description: 'Response is at least 100 characters', weight: 1 },
       ],
     },
   },
 
-  // ── Chapter 7 ─────────────────────────────────────────────────────────────
+  // ── Chapter 8 ─────────────────────────────────────────────────────────────
   {
-    id: 'ch07',
+    id: 'ch08',
     title: 'Skills: Foundations',
-    subtitle: 'Week 7 — Reusable Workflows',
+    subtitle: 'Week 8 — Reusable Workflows',
     icon: '⚡',
     xpReward: 350,
     lessons: [
       {
-        id: 'ch07-l01', title: 'What Are Skills?', xpReward: 70, videos: [],
+        id: 'ch08-l01', title: 'What Are Skills?', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Reusable Prompt Templates</h2>
-<p>Skills (custom slash commands) are reusable, parameterised prompt templates stored in <code>.claude/commands/</code>. They let you package complex workflows into a single command invocable from any session.</p>
+<p>Skills (custom slash commands) are reusable, parameterised prompt templates stored in <code>.claude/skills/</code>. They let you package complex workflows into a single command invocable from any session.</p>
 <h3>Without skills</h3>
 <p>Every time you want a PR description, a security review, or a changelog entry, you write the same multi-paragraph prompt from memory. Results vary based on how well you remember the prompt. Context is wasted typing it out.</p>
 <h3>With skills</h3>
 <p>You run <code>/pr-description</code> or <code>/security-review</code> and get consistent, high-quality output every time — without burning context on the prompt instructions themselves.</p>
-<h3>Built-in skills</h3>
-<ul>
-  <li><code>/init</code> — Initialise a CLAUDE.md for your project</li>
-  <li><code>/review</code> — Review a pull request</li>
-  <li><code>/security-review</code> — Security check on changed code</li>
-  <li><code>/simplify</code> — Code quality pass</li>
-</ul>`,
+<h3>Built-in commands vs bundled skills</h3>
+<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/review</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>`,
       },
       {
-        id: 'ch07-l02', title: 'Progressive Disclosure: Why Skills Beat Static Config', xpReward: 70, videos: [],
+        id: 'ch08-l02', title: 'Progressive Disclosure: Why Skills Beat Static Config', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Only Pay for What You Use</h2>
 <p>This is the most important and least-understood aspect of how skills work: <strong>only the skill's name and description live in context at all times</strong>. The full skill instructions are only loaded when the skill is actually invoked.</p>
 <h3>The progressive disclosure principle</h3>
@@ -595,11 +756,13 @@ Do not change the function signature or any callers.</code></pre>
 <p>If an instruction is "always active", it belongs in CLAUDE.md. If it's "sometimes needed", it belongs in a skill. This distinction alone can halve your average session context cost.</p>`,
       },
       {
-        id: 'ch07-l03', title: 'Writing Your First Skill', xpReward: 70, videos: [],
+        id: 'ch08-l03', title: 'Writing Your First Skill', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>A Skill is Just a Markdown File</h2>
-<p>Creating a skill: create a markdown file in <code>.claude/commands/</code>, name it after the command you want, write the prompt template inside.</p>
+<p>Creating a skill: make a directory inside <code>.claude/skills/</code> named after the command, and put a <code>SKILL.md</code> file inside it with the prompt template.</p>
 <h3>Example: changelog skill</h3>
-<p>File: <code>.claude/commands/changelog.md</code></p>
+<p>File: <code>.claude/skills/changelog/SKILL.md</code></p>
 <pre><code>Generate a changelog entry for version $ARGUMENTS.
 
 Review the git log since the last tag and summarise:
@@ -615,34 +778,46 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
   <li>Use <code>$ARGUMENTS</code> for dynamic input</li>
   <li>Be explicit about output format</li>
   <li>Include quality criteria ("flag breaking changes", "be concise")</li>
-  <li>Skills in <code>.claude/commands/</code> are shared with the team via git</li>
-  <li>Personal skills go in <code>~/.claude/commands/</code></li>
+  <li>Skills in <code>.claude/skills/</code> are shared with the team via git</li>
+  <li>Personal skills go in <code>~/.claude/skills/</code></li>
+  <li>The legacy <code>.claude/commands/</code> path still works but is no longer canonical</li>
 </ul>`,
       },
       {
-        id: 'ch07-l04', title: 'Hook-based Skills', xpReward: 70, videos: [],
+        id: 'ch08-l04', title: 'Hook-based Skills', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Skills That Trigger Automatically</h2>
-<p>Some skills don't need manual invocation — they run automatically at specific lifecycle events. These are configured in <code>settings.json</code> using hooks.</p>
-<h3>Hook events</h3>
+<p>Some skills don't need manual invocation — they run automatically at specific lifecycle events. These are configured in <code>~/.claude/settings.json</code> (user-level) or <code>.claude/settings.json</code> (project-level) using hooks.</p>
+<h3>Hook events (selected)</h3>
 <ul>
-  <li><strong>PreToolUse</strong> — runs before Claude Code uses any tool</li>
+  <li><strong>PreToolUse</strong> — runs before Claude Code uses any tool (can block)</li>
   <li><strong>PostToolUse</strong> — runs after a tool completes</li>
   <li><strong>Stop</strong> — runs when Claude Code finishes responding</li>
-  <li><strong>Notification</strong> — triggered by specific conditions</li>
+  <li><strong>SessionStart / SessionEnd</strong> — session lifecycle</li>
+  <li><strong>UserPromptSubmit</strong> — before each user message is processed</li>
+  <li><strong>PreCompact / PostCompact</strong> — around /compact operations</li>
+  <li><strong>SubagentStart / SubagentStop</strong> — for multi-agent workflows</li>
 </ul>
+<p>There are 27 hook events in total — see the official docs for the complete list.</p>
 <h3>Example: auto-lint on stop</h3>
 <pre><code>{
   "hooks": {
-    "Stop": [{ "command": "npm run lint" }]
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "npm run lint" }]
+      }
+    ]
   }
 }</code></pre>
-<p>Every time Claude Code finishes a response, the linter runs automatically. You never have to remember to lint after a Claude Code edit.</p>
+<p>Every time Claude Code finishes a response, the linter runs automatically. The <code>matcher</code> field filters by tool name (empty string = match all).</p>
 <h3>When hooks shine</h3>
 <p>Hooks are best for guardrails — things that should always happen regardless of which skill or task is running. Linting, type checking, running the test suite on a changed file. They're your automated quality gate.</p>`,
       },
     ],
     practicalTest: {
-      id: 'ch07-test',
+      id: 'ch08-test',
       scenarioType: 'slack', scenarioFrom: 'James Kato', scenarioRole: 'DevOps Lead', scenarioAvatar: '🧑‍💻',
       scenario: `Hey — a few things. First, we keep forgetting to run the linter before commits, causing CI failures. Second, our CLAUDE.md has grown to 3,000 words because we stuffed all our workflow instructions in it. Can you (1) write a settings.json hook to run the linter automatically, and (2) explain why the workflow instructions should be moved to skills instead?`,
       task: 'Write the settings.json hook for auto-linting AND explain why skills beat a large CLAUDE.md for workflow instructions.',
@@ -658,16 +833,18 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
     },
   },
 
-  // ── Chapter 8 ─────────────────────────────────────────────────────────────
+  // ── Chapter 9 ─────────────────────────────────────────────────────────────
   {
-    id: 'ch08',
+    id: 'ch09',
     title: 'Skills: Methodology',
-    subtitle: 'Week 8 — Build Skills That Actually Work',
+    subtitle: 'Week 9 — Build Skills That Actually Work',
     icon: '🔬',
     xpReward: 350,
     lessons: [
       {
-        id: 'ch08-l01', title: 'Walk Before You Codify', xpReward: 70, videos: [],
+        id: 'ch09-l01', title: 'Walk Before You Codify', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Biggest Skill-Building Mistake</h2>
 <p>Most people build skills the wrong way: they <em>imagine</em> what a good workflow looks like, write a skill file for it, then discover the skill produces inconsistent output and spend weeks debugging prompt templates instead of doing actual work.</p>
 <p>The correct approach: <strong>walk through the workflow manually first</strong>. Run it in a live Claude Code session, step by step. Correct it in real time. Only after you've run it successfully multiple times — and you understand exactly what inputs, outputs, and corrections it needs — do you write the skill file.</p>
@@ -681,7 +858,9 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
 <p>A skill built from observed behaviour is empirically grounded. A skill built from imagination is a hypothesis. Given how much output quality depends on subtle prompt phrasing, the empirical approach produces significantly more reliable skills — and you discover edge cases before they become production failures.</p>`,
       },
       {
-        id: 'ch08-l02', title: 'Documenting a Workflow Run', xpReward: 70, videos: [],
+        id: 'ch09-l02', title: 'Documenting a Workflow Run', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Taking Notes During Manual Runs</h2>
 <p>The goal of the manual phase is not just to complete the task — it's to learn enough about the workflow to encode it reliably. That requires deliberate note-taking during the run.</p>
 <h3>What to capture</h3>
@@ -701,7 +880,9 @@ Required input: target branch name, JIRA ticket number
 Output must: include summary, test plan, and breaking changes section</code></pre>`,
       },
       {
-        id: 'ch08-l03', title: 'Writing the Skill from Observation', xpReward: 70, videos: [],
+        id: 'ch09-l03', title: 'Writing the Skill from Observation', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>From Notes to skill.md</h2>
 <p>With 3+ successful manual runs documented, writing the skill file is straightforward. You're not guessing — you're encoding what you've already observed to work.</p>
 <h3>Skill structure template</h3>
@@ -729,7 +910,7 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
       },
     ],
     practicalTest: {
-      id: 'ch08-test',
+      id: 'ch09-test',
       scenarioType: 'jira', scenarioFrom: 'Engineering Enablement Team', scenarioRole: 'Developer Experience', scenarioAvatar: '🛠️',
       scenario: `ACME-DX-14 · Assigned to You\n\nWe want to build a skill for generating weekly status reports from git commits. Before writing the skill file, you've run the workflow manually three times. Here's what you observed:\n\n- Opening that worked: "Summarise this week's commits into a status report for non-technical stakeholders"\n- Always needed to add: "avoid jargon, focus on business impact"\n- Always needed to add: "group by feature area, not by commit"\n- Required input: the date range\n- Output should be: 3-5 bullet points per feature area, plain English\n\nWrite the skill.md file based on these observations.`,
       task: 'Write the skill.md file for the weekly status report workflow based on the observed manual run notes.',
@@ -744,3 +925,4 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
       ],
     },
   },
+];

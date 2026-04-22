@@ -1,5 +1,7 @@
 const App = {
   progress: null,
+  _currentView: 'dashboard',
+  _currentParams: {},
 
   init() {
     this.progress = Progress.load();
@@ -47,6 +49,8 @@ const App = {
   },
 
   navigate(view, params = {}) {
+    this._currentView = view;
+    this._currentParams = params;
     switch (view) {
       case 'dashboard':
         Dashboard.renderDashboard();
@@ -98,7 +102,7 @@ const App = {
           const unlocked = Progress.isChapterUnlocked(progress, ch.id);
           const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
           return `
-            <div class="nav-item chapter-nav ${unlocked ? '' : 'nav-locked'} ${passed ? 'nav-complete' : ''}"
+            <div class="nav-item chapter-nav ${unlocked ? '' : 'nav-locked'} ${passed ? 'nav-complete' : ''} ${isActive('chapter', ch.id)}"
                  data-nav="chapter" data-chapter="${ch.id}">
               <span class="nav-icon">${unlocked ? ch.icon : '🔒'}</span>
               <span class="nav-chapter-title">${ch.title}</span>
@@ -113,7 +117,13 @@ const App = {
       </div>
     `;
 
-    function isActive(view) { return ''; }
+    function isActive(navType, chapterId = null) {
+      const v = App._currentView;
+      const p = App._currentParams;
+      if (navType === 'dashboard') return v === 'dashboard' ? 'active' : '';
+      if (navType === 'chapter') return p.chapterId === chapterId ? 'active' : '';
+      return '';
+    }
 
     sidebar.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(el => {
       el.addEventListener('click', () => App.navigate('dashboard'));

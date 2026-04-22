@@ -307,6 +307,19 @@ body {
 }
 .lesson-title { font-size: 26px; font-weight: 700; color: var(--navy); }
 
+.video-embed {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  margin-bottom: 28px;
+}
+.video-embed iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border-radius: var(--radius);
+  border: none;
+}
 .video-placeholder {
   background: var(--navy);
   color: var(--gray-400);
@@ -550,6 +563,26 @@ body {
   pointer-events: none;
 }
 .xp-toast.visible { opacity: 1; transform: translateY(0); }
+
+/* ==================== VERIFY STAMP ==================== */
+
+.verify-stamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 8px;
+  padding: 10px 14px;
+  background: rgba(212, 175, 55, 0.08);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.verify-icon {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 14px;
+}
 
 /* ==================== RESPONSIVE ==================== */
 

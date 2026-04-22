@@ -29,6 +29,12 @@ function renderLesson(chapterId, lessonId) {
         ${lesson.content}
       </div>
 
+      ${lesson.lastVerified ? `
+      <div class="verify-stamp">
+        <span class="verify-icon">✓</span>
+        Verified against Claude Code ${lesson.verifiedAgainstVersion} · ${formatVerifyDate(lesson.lastVerified)}
+      </div>` : ''}
+
       <div class="lesson-footer">
         ${alreadyDone
           ? '<div class="already-done">✓ You\'ve completed this lesson</div>'
@@ -106,6 +112,12 @@ function showXpToast(amount) {
     toast.classList.remove('visible');
     setTimeout(() => toast.remove(), 400);
   }, 2500);
+}
+
+function formatVerifyDate(dateStr) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return `${day} ${months[month - 1]} ${year}`;
 }
 
 window.Lesson = { renderLesson, showXpToast };
