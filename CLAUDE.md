@@ -78,3 +78,19 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 - `curriculum2.js` was missing from `index.html` script tags (fixed)
 - `isActive(view)` in `app.js` was a stub; sidebar active state was non-functional (fixed)
 - All lesson `videos` arrays are empty — placeholder text renders instead
+
+## Deployment
+
+To deploy changes to the NAS (accessible at http://192.168.70.9:8888 on 
+home Wi-Fi), run `./deploy.sh` from the project root. Optionally pass a 
+commit message: `./deploy.sh "your message"`.
+
+The script commits local changes (if any), pushes to GitHub, then 
+SSHes to the NAS and runs `git pull`. SSH is via the `nas` alias 
+(configured in ~/.ssh/config on WSL) using key auth — no password prompts.
+
+After deploy completes, the user must hard-refresh their browser 
+to see changes (mobile browsers cache aggressively).
+
+When the user says "deploy", "ship it", "push to NAS", or similar, 
+run `./deploy.sh`.
