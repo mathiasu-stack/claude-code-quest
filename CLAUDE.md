@@ -94,3 +94,16 @@ to see changes (mobile browsers cache aggressively).
 
 When the user says "deploy", "ship it", "push to NAS", or similar, 
 run `./deploy.sh`.
+
+## Remote access
+
+The game is reachable from any Tailscale-connected device at:
+
+- `http://ds925-urlacher:8888` (MagicDNS, recommended)
+- `http://100.101.225.85:8888` (direct IP, works without MagicDNS)
+
+Works over mobile data, Wi-Fi, anywhere — as long as Tailscale is 
+active on the accessing device.
+
+Local-only access (when on home Wi-Fi, no Tailscale needed): 
+`http://192.168.70.9:8888`.
