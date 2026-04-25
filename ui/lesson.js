@@ -37,7 +37,8 @@ function renderLesson(chapterId, lessonId) {
 
       <div class="lesson-footer">
         ${alreadyDone
-          ? '<div class="already-done">✓ You\'ve completed this lesson</div>'
+          ? `<div class="already-done">✓ You've completed this lesson</div>
+             ${buildContinueCta(ch, lessonId)}`
           : `<button class="btn-primary complete-btn" id="mark-complete">Mark as Complete — Earn ${lesson.xpReward} PP →</button>`
         }
         ${buildLessonNav(ch, lessonId)}
@@ -56,6 +57,7 @@ function renderLesson(chapterId, lessonId) {
   }
 
   buildNavListeners(ch, lessonId);
+  bindContinueCta();
 }
 
 function completeLesson(ch, lesson) {
@@ -74,10 +76,37 @@ function completeLesson(ch, lesson) {
 
   const btn = document.getElementById('mark-complete');
   if (btn) {
-    btn.replaceWith(Object.assign(document.createElement('div'), {
-      className: 'already-done',
-      textContent: '✓ Lesson complete!',
-    }));
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div class="already-done">✓ Lesson complete!</div>
+      ${buildContinueCta(ch, lesson.id)}
+    `;
+    btn.replaceWith(...Array.from(wrapper.childNodes));
+    bindContinueCta();
+  }
+}
+
+function buildContinueCta(ch, currentLessonId) {
+  const idx = ch.lessons.findIndex(l => l.id === currentLessonId);
+  const next = ch.lessons[idx + 1];
+  if (next) {
+    return `<button class="btn-primary continue-cta" id="continue-next" data-chapter="${ch.id}" data-lesson="${next.id}">Continue: ${next.title} →</button>`;
+  }
+  return `<button class="btn-primary continue-cta" id="continue-test" data-chapter="${ch.id}">Take the Practical Test →</button>`;
+}
+
+function bindContinueCta() {
+  const nextBtn = document.getElementById('continue-next');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      window.App.navigate('lesson', { chapterId: nextBtn.dataset.chapter, lessonId: nextBtn.dataset.lesson });
+    });
+  }
+  const testBtn = document.getElementById('continue-test');
+  if (testBtn) {
+    testBtn.addEventListener('click', () => {
+      window.App.navigate('test', { chapterId: testBtn.dataset.chapter });
+    });
   }
 }
 

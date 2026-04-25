@@ -374,6 +374,7 @@ body {
 .already-done { color: var(--green); font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
 .complete-btn { margin-bottom: 20px; }
+.continue-cta { margin-bottom: 20px; }
 
 .lesson-nav { display: flex; justify-content: space-between; margin-top: 16px; gap: 12px; }
 
