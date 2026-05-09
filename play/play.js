@@ -13,6 +13,7 @@ import {
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
+import { applyIdle } from './characters/idleAnimations.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -496,6 +497,8 @@ function makeCharacter(look) {
   }
 
   g.userData.parts = { leftLeg, rightLeg, leftArm, rightArm, head, torso };
+  // Stash look on the group so idle animations can read look.gesture etc.
+  g.userData.look = look;
   // Procedural cartoon face on the head's front. Reads in any lighting.
   g.userData.face = attachFace(g, head, look);
   return g;
@@ -2047,8 +2050,14 @@ function update(dt) {
   // Drive face animations (blink + idle look-at-player) on every character.
   const nowMs = performance.now();
   if (player?.userData?.face) updateFace(player.userData.face, nowMs);
+  // Player breathing/head-bob — applyIdle is safe because player has no
+  // signature gesture (`look.gesture` undefined ⇒ gesture switch falls
+  // through to the no-op default).
+  if (player) applyIdle(player, dt, nowMs);
   for (const m of npcMeshes) {
     if (m.userData?.face) updateFace(m.userData.face, nowMs);
+    // Idle breathing + signature gesture per NPC.
+    applyIdle(m, dt, nowMs);
     // Look-at-player: when player within 4m of NPC, gently rotate the head
     // toward the player. Otherwise reset slowly.
     const head = m.userData?.parts?.head;
