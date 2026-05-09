@@ -1612,6 +1612,12 @@ function setupRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // Pin to legacy lighting so our preset intensity values (calibrated for
+  // pre-r163 lighting) render predictably. Tone-mapping gives bloom +
+  // strong key lights room to breathe without clipping.
+  renderer.useLegacyLights = true;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
   container.appendChild(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
