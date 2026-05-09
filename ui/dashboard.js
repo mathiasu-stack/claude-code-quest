@@ -29,6 +29,8 @@ function renderDashboard() {
         </div>
       </div>
 
+      ${renderTrophyCabinet(progress)}
+
       <h2 class="section-title">Training Curriculum</h2>
       <div class="chapter-grid">
         ${CURRICULUM.map(ch => renderChapterCard(ch, progress)).join('')}
@@ -148,6 +150,38 @@ function renderChapterView(chapterId) {
       window.App.navigate('test', { chapterId: ch.id });
     });
   }
+}
+
+function renderTrophyCabinet(progress) {
+  if (!window.Achievements) return '';
+  const all = Achievements.ALL;
+  const unlockedSet = new Set(progress.unlockedAchievements || []);
+  const unlockedCount = all.filter(a => unlockedSet.has(a.id)).length;
+  const streak = Progress.getCurrentStreak(progress);
+
+  return `
+    <section class="trophy-cabinet">
+      <div class="trophy-header">
+        <h2 class="trophy-title">Trophy Cabinet</h2>
+        <div class="trophy-meta">
+          <span class="trophy-count">${unlockedCount} / ${all.length} unlocked</span>
+          ${streak > 0 ? `<span class="trophy-streak">🔥 ${streak}-day streak</span>` : ''}
+        </div>
+      </div>
+      <div class="trophy-grid">
+        ${all.map(a => {
+          const got = unlockedSet.has(a.id);
+          return `
+            <div class="trophy ${got ? 'trophy-got' : 'trophy-locked'}" title="${escapeHtml(a.description)}">
+              <div class="trophy-icon">${got ? a.icon : '🔒'}</div>
+              <div class="trophy-label">${a.label}</div>
+              <div class="trophy-desc">${a.description}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+  `;
 }
 
 function escapeHtml(str) {

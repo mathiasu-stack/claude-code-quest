@@ -12,7 +12,18 @@ const App = {
     }
   },
 
+  touchActivity() {
+    const before = this.progress.currentStreak || 0;
+    this.progress = Progress.recordActivity(this.progress);
+    Progress.save(this.progress);
+    if (window.Achievements) {
+      this.progress = Achievements.checkAfterActivity(this.progress, before, this.progress.currentStreak);
+      Progress.save(this.progress);
+    }
+  },
+
   boot() {
+    this.touchActivity();
     this.renderSidebar();
     this.setupMobileNav();
     this.navigate('dashboard');
@@ -93,6 +104,7 @@ const App = {
           <div class="level-fill" style="width:${level.progressToNext}%"></div>
         </div>
         ${level.next ? `<div class="level-next">Next: ${level.next.label}</div>` : '<div class="level-next">Max Level!</div>'}
+        ${Progress.getCurrentStreak(progress) > 0 ? `<div class="player-streak" title="Current daily streak"><span class="streak-flame">🔥</span> ${Progress.getCurrentStreak(progress)}-day streak</div>` : ''}
       </div>
 
       <nav class="sidebar-nav" id="sidebar-nav">

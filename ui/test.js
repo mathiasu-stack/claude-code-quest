@@ -92,6 +92,7 @@ function handleTestSubmit(ch, test) {
 
   let progress = window.App.progress;
   const wasAlreadyPassed = Progress.isTestPassed(progress, test.id);
+  const attemptsBefore = progress.testResults[test.id]?.attempts || 0;
   progress = Progress.recordTestResult(progress, test.id, result, test.xpReward);
 
   if (result.passed && !wasAlreadyPassed) {
@@ -101,6 +102,15 @@ function handleTestSubmit(ch, test) {
       progress = Progress.unlockChapter(progress, nextCh.id);
     }
     progress = Progress.recordTestResult(progress, ch.id + '_chapter_bonus', { passed: true, score: 100 }, ch.xpReward);
+  }
+
+  const streakBefore = progress.currentStreak || 0;
+  progress = Progress.recordActivity(progress);
+  const streakAfter = progress.currentStreak || 0;
+
+  if (window.Achievements) {
+    progress = Achievements.checkAfterTest(progress, ch, test, result, attemptsBefore, wasAlreadyPassed);
+    progress = Achievements.checkAfterActivity(progress, streakBefore, streakAfter);
   }
 
   Progress.save(progress);
@@ -152,11 +162,21 @@ function renderFeedback(result, test, wasAlreadyPassed) {
       ${result.criteriaResults.map(c => `
         <div class="criterion-row ${c.passed ? 'pass' : 'fail'}">
           <span class="criterion-icon">${c.passed ? '✓' : '✗'}</span>
-          <span class="criterion-desc">${c.description}</span>
+          <div class="criterion-body">
+            <div class="criterion-desc">${c.description}</div>
+            ${!c.passed && c.improvement ? `<div class="criterion-improvement">→ ${c.improvement}</div>` : ''}
+          </div>
           <span class="criterion-weight">${c.weight} pt${c.weight !== 1 ? 's' : ''}</span>
         </div>
       `).join('')}
     </div>
+
+    ${!result.passed && test.exemplar ? `
+      <details class="exemplar-reveal">
+        <summary>💡 Show what a strong answer includes</summary>
+        <div class="exemplar-body">${test.exemplar}</div>
+      </details>
+    ` : ''}
 
     ${result.passed && !wasAlreadyPassed ? '<div class="unlock-notice">🎉 Next chapter unlocked!</div>' : ''}
   `;

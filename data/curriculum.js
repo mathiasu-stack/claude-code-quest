@@ -24,6 +24,17 @@ window.CURRICULUM = [
 </ul>
 <h3>What it is not</h3>
 <p>Claude Code works best as a <em>collaborative partner</em>. You provide direction, context, and judgment; it provides speed, recall, and tireless execution. The quality of what you get out depends heavily on the quality of what you put in.</p>`,
+        check: {
+          question: 'Which statement best describes how Claude Code is different from a typical chat interface?',
+          options: [
+            'It uses a more advanced AI model than the chat product',
+            'It runs inside your project directory and can read, write, and run files',
+            'It works without an internet connection',
+            'It only answers coding questions and refuses other topics',
+          ],
+          correctIndex: 1,
+          explanation: 'The key difference is that Claude Code is a CLI that operates inside your project — it can actually read, edit, and run code, not just discuss it.',
+        },
       },
       {
         id: 'ch01-l02', title: 'Installation & Setup', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/SUysp3sJHbA" title="Claude Code Tutorial #1 - Introduction &amp; Setup" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -53,6 +64,17 @@ winget install Anthropic.ClaudeCode</code></pre>
 <h3>Updating</h3>
 <pre><code>claude update</code></pre>
 <p>Native installs also auto-update in the background. Run <code>claude update</code> to force an immediate update.</p>`,
+        check: {
+          question: 'Your teammate is on a fresh macOS laptop and wants the simplest install — no Node.js, no extra tooling. What do you recommend?',
+          options: [
+            'Install Node.js first, then `npm install -g @anthropic-ai/claude-code`',
+            'Run the native installer: `curl -fsSL https://claude.ai/install.sh | bash` (or `brew install --cask claude-code`)',
+            'Download a zip from the website and add it to PATH manually',
+            'Use the npm version because it auto-updates more reliably',
+          ],
+          correctIndex: 1,
+          explanation: 'The native installer is the recommended path — it bundles its own binary, no Node.js required, and auto-updates in the background.',
+        },
       },
       {
         id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/ntDIxaeo3Wg" title="Claude Code - Full Tutorial for Beginners" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -71,6 +93,17 @@ winget install Anthropic.ClaudeCode</code></pre>
 </ol>
 <h3>Ending a session</h3>
 <p>Type <code>/exit</code> or press <kbd>Ctrl+C</kbd> twice. If you need to resume complex work, use <code>/compact</code> before exiting to create a summary you can hand back in your next session.</p>`,
+        check: {
+          question: 'You\'ve been working on a complex refactor for 30 minutes and need to step away. You want to pick up exactly where you left off in the next session. What\'s the right move before exiting?',
+          options: [
+            'Just close the terminal — Claude Code remembers everything automatically',
+            'Run `/compact` to generate a summary you can hand back next session',
+            'Copy the entire conversation into a Google Doc',
+            'Press Ctrl+C three times to save state',
+          ],
+          correctIndex: 1,
+          explanation: '`/compact` summarises the session into something compact enough to fit back into context next time — that\'s how you preserve work across sessions.',
+        },
       },
       {
         id: 'ch01-l04', title: 'Understanding the Interface', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -87,6 +120,17 @@ winget install Anthropic.ClaudeCode</code></pre>
   <li><kbd>Ctrl+C</kbd> — cancel current operation</li>
   <li><kbd>Shift+Tab</kbd> — toggle between Auto and Plan modes</li>
 </ul>`,
+        check: {
+          question: 'You see Claude Code about to run a `Bash` command but it\'s pausing for input. What\'s it asking you to do?',
+          options: [
+            'Choose between several command options it\'s suggesting',
+            'Approve the command before it runs (press Y to allow)',
+            'Type the command yourself — it can\'t run shell commands',
+            'Confirm you have a network connection',
+          ],
+          correctIndex: 1,
+          explanation: 'Some tool actions auto-approve, but others — particularly Bash — require you to press Y to allow. This is the human-in-the-loop guardrail.',
+        },
       },
       {
         id: 'ch01-l05', title: 'This training has a shelf life', xpReward: 50, videos: [],
@@ -108,6 +152,17 @@ winget install Anthropic.ClaudeCode</code></pre>
 <p>Every lesson in this course shows a stamp like: <em>Verified against Claude Code v2.1.114 · 22 Apr 2026</em>. This tells you when the content was last checked against a specific version. If the stamp is old and you're on a much newer version, treat that lesson as a starting point — then verify the specifics yourself before relying on them.</p>
 <h3>The habit to build</h3>
 <p>When something doesn't work the way a tutorial says it should, your first instinct should be: <em>"Has this changed?"</em> — not <em>"Am I doing something wrong?"</em> Check <code>claude --help</code>, check the changelog, then adjust. This skill transfers to every AI tool you'll ever use.</p>`,
+        check: {
+          question: 'You\'re following a Claude Code tutorial and a flag the tutorial mentions doesn\'t seem to work. What\'s the right first move?',
+          options: [
+            'Assume you\'re typing it wrong and try variations',
+            'Check `claude --help` and the changelog — the tool may have changed',
+            'Ignore the flag and proceed without it',
+            'File a bug report immediately',
+          ],
+          correctIndex: 1,
+          explanation: 'AI tooling docs go stale fast. When something doesn\'t match, default to "has this changed?" and check `claude --help` against the actual installed version.',
+        },
       },
     ],
     practicalTest: {
@@ -118,12 +173,20 @@ winget install Anthropic.ClaudeCode</code></pre>
       hint: 'Think about what makes Claude Code different from a normal chatbot, and make sure to include the actual terminal command.',
       minLength: 80, passThreshold: 70, xpReward: 300,
       criteria: [
-        { type: 'keyword', value: ['terminal', 'cli', 'command line'], description: 'Mentions it runs in the terminal / is a CLI tool', weight: 1 },
-        { type: 'keyword', value: ['claude'], description: 'Includes the `claude` start command', weight: 2 },
-        { type: 'keyword', value: ['file', 'files', 'codebase', 'project', 'code'], description: 'Explains it works with your code/files', weight: 1 },
-        { type: 'keyword', value: ['ai', 'assistant', 'anthropic', 'model'], description: 'Identifies it as an AI assistant', weight: 1 },
-        { type: 'length', value: 80, description: 'Response is at least 80 characters', weight: 1 },
+        { type: 'keyword', value: ['terminal', 'cli', 'command line'], description: 'Mentions it runs in the terminal / is a CLI tool', improvement: 'Say it lives in the terminal — that\'s what makes it different from a chat UI.', weight: 1 },
+        { type: 'keyword', value: ['claude'], description: 'Includes the `claude` start command', improvement: 'Include the literal command Sarah needs to type — `claude`.', weight: 2 },
+        { type: 'keyword', value: ['file', 'files', 'codebase', 'project', 'code'], description: 'Explains it works with your code/files', improvement: 'Mention that it reads and edits your project files / codebase, not just chats.', weight: 1 },
+        { type: 'keyword', value: ['ai', 'assistant', 'anthropic', 'model'], description: 'Identifies it as an AI assistant', improvement: 'Name what it is — an AI assistant from Anthropic.', weight: 1 },
+        { type: 'length', value: 80, description: 'Response is at least 80 characters', improvement: 'Add a sentence of context — Sarah needs enough to repeat this in standup.', weight: 1 },
       ],
+      exemplar: `<p>A strong reply usually covers four things in a couple of sentences:</p>
+<ol>
+  <li><strong>What it is:</strong> Anthropic's official AI coding assistant.</li>
+  <li><strong>Where it runs:</strong> in your terminal, inside the project folder — not a separate chat window.</li>
+  <li><strong>What it does:</strong> reads and edits files, runs commands, follows instructions in <code>CLAUDE.md</code>.</li>
+  <li><strong>How to start it:</strong> <code>cd</code> into a project, then run <code>claude</code>.</li>
+</ol>
+<p>Example: <em>"Claude Code is Anthropic's AI coding assistant that runs in your terminal. You <code>cd</code> into a project and run <code>claude</code> — it can then read, edit, and reason about the files in that folder. Different from ChatGPT because it actually touches your codebase."</em></p>`,
     },
   },
 
@@ -210,12 +273,26 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       hint: 'Include at minimum: a brand/voice file, a client overview, and a team conventions file. Show the folder structure clearly.',
       minLength: 150, passThreshold: 70, xpReward: 350,
       criteria: [
-        { type: 'keyword', value: ['brand', 'voice', 'tone'], description: 'Includes a brand/voice file', weight: 2 },
-        { type: 'keyword', value: ['client', 'customers', 'audience'], description: 'Includes client/audience context', weight: 2 },
-        { type: 'keyword', value: ['convention', 'team', 'decision', 'glossary'], description: 'Includes team conventions or decisions', weight: 2 },
-        { type: 'regex', value: '\\.(md|txt|json)', description: 'References actual file types', weight: 1 },
-        { type: 'length', value: 150, description: 'Response is at least 150 characters', weight: 1 },
+        { type: 'keyword', value: ['brand', 'voice', 'tone'], description: 'Includes a brand/voice file', improvement: 'Add something like `brand/voice.md` so Claude knows your tone without re-explaining.', weight: 2 },
+        { type: 'keyword', value: ['client', 'customers', 'audience'], description: 'Includes client/audience context', improvement: 'Add a `clients/` section — Jordan flagged repeating audience context as the pain point.', weight: 2 },
+        { type: 'keyword', value: ['convention', 'team', 'decision', 'glossary'], description: 'Includes team conventions or decisions', improvement: 'Capture how the team works (`team/conventions.md`) or key decisions (`product/decisions.md`).', weight: 2 },
+        { type: 'regex', value: '\\.(md|txt|json)', description: 'References actual file types', improvement: 'Use concrete file names like `voice.md` — folder names alone don\'t show structure.', weight: 1 },
+        { type: 'length', value: 150, description: 'Response is at least 150 characters', improvement: 'A real folder spec needs a sentence per file explaining what goes in it.', weight: 1 },
       ],
+      exemplar: `<p>A strong answer shows the tree, then says what goes in each file:</p>
+<pre><code>.business-brain/
+├── brand/
+│   ├── voice.md          # Tone, style, words we use / avoid
+│   └── values.md         # What we stand for
+├── clients/
+│   └── overview.md       # Mid-market eng leaders, their pain points
+├── product/
+│   └── decisions.md      # Key product calls + rationale
+└── team/
+    ├── conventions.md    # PR standards, review etiquette
+    └── glossary.md       # Domain terms with our specific meaning</code></pre>
+<p>Then point Claude at it from <code>CLAUDE.md</code>:</p>
+<p><em>"All brand and client context lives in <code>.business-brain/</code>. Consult <code>brand/voice.md</code> before writing user-facing copy and <code>product/decisions.md</code> before proposing roadmap changes."</em></p>`,
     },
   },
 

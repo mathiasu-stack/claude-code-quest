@@ -81,19 +81,21 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 
 ## Deployment
 
-To deploy changes to the NAS (accessible at http://192.168.70.9:8888 on 
-home Wi-Fi), run `./deploy.sh` from the project root. Optionally pass a 
-commit message: `./deploy.sh "your message"`.
+This project is hosted on a Synology NAS at /volume1/projects/claude-code-quest, 
+served via Web Station + Nginx at http://192.168.70.9:8888 (local), 
+http://ds925-urlacher:8888 (Tailscale).
 
-The script commits local changes (if any), pushes to GitHub, then 
-SSHes to the NAS and runs `git pull`. SSH is via the `nas` alias 
-(configured in ~/.ssh/config on WSL) using key auth — no password prompts.
+When running on the NAS (Remote Control sessions), deploy by committing 
+and pushing directly:
 
-After deploy completes, the user must hard-refresh their browser 
-to see changes (mobile browsers cache aggressively).
+    git add .
+    git commit -m "your message"
+    git push
 
-When the user says "deploy", "ship it", "push to NAS", or similar, 
-run `./deploy.sh`.
+When running on WSL, use ./deploy.sh which handles the WSL → GitHub → NAS sync.
+
+Whichever side commits, always run `git pull` on the other side before 
+starting new work to avoid merge conflicts.
 
 ## Remote access
 

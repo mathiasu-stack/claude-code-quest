@@ -46,6 +46,7 @@ function evaluate(submission, criteria, minLength, passThreshold) {
       tooShort: true,
       criteriaResults: criteria.map(c => ({
         description: c.description,
+        improvement: c.improvement,
         passed: false,
         weight: c.weight,
       })),
@@ -59,7 +60,7 @@ function evaluate(submission, criteria, minLength, passThreshold) {
     const passed = checkCriterion(c.type, c.value, trimmed);
     totalWeight += c.weight;
     if (passed) earnedWeight += c.weight;
-    return { description: c.description, passed, weight: c.weight };
+    return { description: c.description, improvement: c.improvement, passed, weight: c.weight };
   });
 
   const score = totalWeight === 0 ? 100 : Math.round((earnedWeight / totalWeight) * 100);
