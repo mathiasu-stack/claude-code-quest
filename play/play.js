@@ -2010,19 +2010,22 @@ function update(dt) {
     }
   }
 
-  // Detect zone change → swap lighting + post-fx preset together so the
-  // mood reads as one coordinated transition.
+  // Detect zone change → swap lighting, post-fx, and music together.
   if (lighting && player) {
     const idx = zoneIndexAt(player.position.z);
     if (idx >= 0 && idx !== lastZoneIdx) {
       lastZoneIdx = idx;
       lighting.applyPreset(idx);
       if (postfx) postfx.applyPreset(lighting.getPostFx());
+      // Crossfade zone music. fail-silent inside AudioManager.
+      try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
     }
   }
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
+  // Update audio listener position so PannerNode sources track the camera.
+  if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
 
   // Animate hearts around CEO portrait if all chapters complete
   if (ceoHearts) {
@@ -2087,6 +2090,8 @@ export function start(host) {
     const idx = zoneIndexAt(player.position.z);
     lighting.applyPreset(idx >= 0 ? idx : 0);
     lastZoneIdx = idx >= 0 ? idx : 0;
+    // Initial zone music — silent fallback if the file isn't there.
+    try { audio.startMusic(`zone-${lastZoneIdx}`, musicForZone(lastZoneIdx), 2500); } catch {}
   }
   // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
   // initial bloom/vignette values to the current zone preset.
@@ -2155,7 +2160,9 @@ export function stop() {
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
+  try { audio.stopMusic(800); } catch {}
   lastZoneIdx = -1;
+  footstepAccum = 0;
   renderer = null; scene = null; camera = null;
   player = null; npcMeshes = []; interactionTarget = null;
   zoneDoors = [];
