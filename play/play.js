@@ -14,6 +14,7 @@ import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { applyIdle } from './characters/idleAnimations.js';
+import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -1587,9 +1588,11 @@ function addPlayerAccessories(group, tier) {
 function buildPlayer() {
   const o = getOutfit();
   const tier = getCompletedChapterCount();
+  const cust = loadCustomization();
   player = makeCharacter({
-    skin: 0xfdd9b5, hair: 0x3e2723, hairStyle: 'short',
+    skin: cust.skin, hair: cust.hairColor, hairStyle: 'short',
     shirt: o.shirt, pants: o.pants, glasses: false, prop: null,
+    face: cust.face, expression: 'happy',
   });
   addPlayerAccessories(player, tier);
 
@@ -2158,6 +2161,19 @@ export function start(host) {
   // Mount the audio settings gear inside the play container so it lives
   // alongside the back button and tier badge.
   mountAudioSettings(container);
+  // Customization button: when the user changes their face/hair/skin, we
+  // tear down and rebuild the player mesh so the change is visible
+  // immediately. Saves to localStorage via customization.js.
+  mountCustomization(container, () => {
+    if (player) {
+      const oldX = player.position.x, oldZ = player.position.z;
+      const oldRot = player.rotation.y;
+      scene.remove(player);
+      buildPlayer();
+      player.position.set(oldX, 0, oldZ);
+      player.rotation.y = oldRot;
+    }
+  });
   // If after 1.5s the audio is still locked (mobile autoplay restriction),
   // surface a brief hint. Auto-removes once a tap unlocks the context.
   setTimeout(() => {
@@ -2244,6 +2260,7 @@ export function stop() {
   if (lighting) { lighting.dispose(); lighting = null; }
   try { audio.stopMusic(800); } catch {}
   try { unmountAudioSettings(); } catch {}
+  try { unmountCustomization(); } catch {}
   lastZoneIdx = -1;
   footstepAccum = 0;
   renderer = null; scene = null; camera = null;

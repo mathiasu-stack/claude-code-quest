@@ -1279,6 +1279,69 @@ body.in-play #mobile-header { display: none !important; }
 }
 .play-audio-panel .aud-close:hover { background: var(--gold); color: var(--navy); }
 
+/* Customization — button + popover. Anchored top-LEFT (below the back
+   button) so it doesn't compete with the audio gear / tier badge. */
+.play-custom-btn {
+  position: absolute;
+  top: 60px;
+  left: 16px;
+  z-index: 11;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(26, 39, 68, 0.88);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-custom-btn:hover { background: rgba(26, 39, 68, 1); }
+
+.play-custom-panel {
+  position: absolute;
+  top: 108px;
+  left: 16px;
+  z-index: 11;
+  width: 280px;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+}
+.play-custom-panel.hidden { display: none; }
+.play-custom-panel .cust-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--navy);
+  text-transform: uppercase;
+  margin: 8px 0 4px;
+  font-weight: 700;
+}
+.play-custom-panel .cust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.play-custom-panel .cust-chip {
+  flex: 1 1 60px;
+  padding: 8px 6px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: #f7f7f7;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.play-custom-panel .cust-chip.active {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
 .play-toast {
   position: absolute;
   top: 80px;
