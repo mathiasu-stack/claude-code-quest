@@ -61,6 +61,10 @@ const App = {
   },
 
   navigate(view, params = {}) {
+    if (this._currentView === 'play' && view !== 'play' && window.Play) {
+      window.Play.stop();
+    }
+    document.body.classList.toggle('in-play', view === 'play');
     this._currentView = view;
     this._currentParams = params;
     switch (view) {
@@ -76,10 +80,50 @@ const App = {
       case 'test':
         TestView.renderTest(params.chapterId);
         break;
+      case 'play':
+        this.renderPlayView();
+        break;
       default:
         Dashboard.renderDashboard();
     }
     this.updateSidebarActive(view, params);
+  },
+
+  renderPlayView() {
+    const main = document.getElementById('main-content');
+    main.innerHTML = `
+      <div class="play-view">
+        <div class="play-canvas-host" id="play-canvas-host"></div>
+        <button class="play-back-btn" id="play-back-btn">← Dashboard</button>
+        <div class="play-tier-badge" id="play-tier-badge">Tier: ${this.getCurrentTierLabel()}</div>
+        <div class="play-help">WASD or arrows to walk · E to interact</div>
+        <div class="play-prompt" id="play-prompt"></div>
+        <div class="play-joystick" id="play-joystick">
+          <div class="play-joystick-thumb" id="play-joystick-thumb"></div>
+        </div>
+        <button class="play-interact-btn" id="play-interact-btn">Talk</button>
+      </div>
+    `;
+    const tryStart = (attempts = 0) => {
+      if (window.Play && window.Play.start) {
+        window.Play.start(document.getElementById('play-canvas-host'));
+      } else if (attempts < 50) {
+        setTimeout(() => tryStart(attempts + 1), 100);
+      } else {
+        document.getElementById('play-canvas-host').innerHTML =
+          '<div style="padding:40px;text-align:center;color:#1a2744;">Couldn\'t load 3D engine. Check your connection and try again.</div>';
+      }
+    };
+    tryStart();
+  },
+
+  getCurrentTierLabel() {
+    if (!window.CURRICULUM || !this.progress) return 'Intern';
+    const tiers = ['Intern', 'Junior Hire', 'Associate', 'Engineer', 'Senior', 'Lead', 'Principal', 'Director'];
+    const completed = window.CURRICULUM.filter(ch =>
+      Progress.isTestPassed(this.progress, ch.practicalTest.id)
+    ).length;
+    return tiers[Math.min(completed, tiers.length - 1)];
   },
 
   renderSidebar() {

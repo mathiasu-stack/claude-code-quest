@@ -37,6 +37,16 @@
   <script src="ui/lesson.js"></script>
   <script src="ui/test.js"></script>
 
+  <!-- 3D Play Mode (Three.js, ES module via importmap) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="play/play.js"></script>
+
   <!-- App Bootstrap -->
   <script src="app.js"></script>
 

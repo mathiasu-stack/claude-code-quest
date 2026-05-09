@@ -29,6 +29,11 @@ function renderDashboard() {
         </div>
       </div>
 
+      <div class="play-cta-row">
+        <button class="btn-primary play-cta-btn" id="play-cta-btn">🎮 Play in 3D (Beta)</button>
+        <span class="play-cta-sub">Walk around the office, meet your colleagues, learn lessons in person.</span>
+      </div>
+
       ${renderTrophyCabinet(progress)}
 
       <h2 class="section-title">Training Curriculum</h2>
@@ -44,6 +49,9 @@ function renderDashboard() {
       window.App.navigate('chapter', { chapterId: chId });
     });
   });
+
+  const playBtn = document.getElementById('play-cta-btn');
+  if (playBtn) playBtn.addEventListener('click', () => window.App.navigate('play'));
 }
 
 function renderChapterCard(ch, progress) {
