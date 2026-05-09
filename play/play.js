@@ -1689,14 +1689,24 @@ function setupInput() {
   j.addEventListener('touchend', onEnd);
   j.addEventListener('touchcancel', onEnd);
 
-  document.getElementById('play-prompt').addEventListener('click', tryInteract);
+  document.getElementById('play-prompt').addEventListener('click', () => { playUi('click'); tryInteract(); });
   document.getElementById('play-back-btn').addEventListener('click', () => {
+    playUi('cancel');
     window.App.navigate('dashboard');
   });
-  document.getElementById('play-interact-btn').addEventListener('click', tryInteract);
+  document.getElementById('play-interact-btn').addEventListener('click', () => { playUi('click'); tryInteract(); });
   document.getElementById('play-jump-btn')?.addEventListener('click', () => {
     if (!inputLocked) jumpRequested = true;
   });
+  // Tap inside dialogue panel: if typewriter is running, fast-forward to end.
+  if (dialogueEl) {
+    dialogueEl.addEventListener('click', (e) => {
+      if (currentTypewriter && !e.target.closest('button')) {
+        currentTypewriter.cancel();
+        currentTypewriter = null;
+      }
+    });
+  }
 
   resizeListener = () => resize();
   window.addEventListener('resize', resizeListener);
@@ -1748,7 +1758,7 @@ function openDialogue(npc) {
         </div>
       </div>
       ${statusLine}
-      <div class="dlg-body">${escapeHtml(npc.intro)}</div>
+      <div class="dlg-body" data-typewriter></div>
       ${nextHint}
       <div class="dlg-actions">
         <button class="btn-primary dlg-go">${
@@ -1761,10 +1771,15 @@ function openDialogue(npc) {
     </div>
   `;
   d.classList.add('visible');
+  // Open chime
+  playUi('confirm');
+  // Typewriter the intro line — plays a blip per character (rate-limited).
+  startTypewriter(d.querySelector('[data-typewriter]'), npc.intro, blipPitchForNpc(npc.id));
 
-  d.querySelector('.dlg-cancel').onclick = closeDialogue;
-  d.querySelector('.dlg-close').onclick = closeDialogue;
+  d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
+  d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
   d.querySelector('.dlg-go').onclick = () => {
+    playUi('confirm');
     if (player) {
       sessionStorage.setItem('ccq_play_pos', JSON.stringify({
         x: player.position.x, z: player.position.z,
@@ -1785,9 +1800,40 @@ function getLessonTitle(npc) {
 }
 
 function closeDialogue() {
+  if (currentTypewriter) { currentTypewriter.cancel(); currentTypewriter = null; }
   dialogueEl.classList.remove('visible');
   dialogueEl.innerHTML = '';
   inputLocked = false;
+}
+
+let currentTypewriter = null;
+function startTypewriter(el, text, pitch = 1.0) {
+  if (!el) return;
+  el.textContent = '';
+  let i = 0;
+  let blipCounter = 0;
+  let cancelled = false;
+  const charDelay = 22; // ms per character
+
+  function tick() {
+    if (cancelled) return;
+    if (i >= text.length) { currentTypewriter = null; return; }
+    const ch = text.charAt(i++);
+    el.textContent += ch;
+    // Blip every ~2 visible characters; skip whitespace + punctuation
+    if (/[A-Za-z0-9]/.test(ch)) {
+      blipCounter++;
+      if (blipCounter % 2 === 0) playDialogueBlip(pitch);
+    }
+    setTimeout(tick, charDelay);
+  }
+  currentTypewriter = {
+    cancel() {
+      cancelled = true;
+      el.textContent = text; // reveal everything if cancelled
+    },
+  };
+  tick();
 }
 
 function escapeHtml(s) {
