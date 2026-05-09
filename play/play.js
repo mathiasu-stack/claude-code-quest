@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { LightingManager } from './lighting/manager.js';
+import { isMobile } from './lighting/mobile.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -249,6 +251,8 @@ function generateChapterNPCs(chapterIdx) {
 
 // ─── Module state ────────────────────────────────────────────────────────────
 let renderer, scene, camera, clock;
+let lighting = null;
+let lastZoneIdx = -1;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1186,19 +1190,14 @@ function buildCeoPortrait(targetScene) {
 // ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
+  // Background + fog get set by LightingManager.applyPreset(); these are
+  // safe defaults in case the manager hasn't run yet.
   scene.background = new THREE.Color(0xeaf3ff);
   scene.fog = new THREE.Fog(0xeaf3ff, 30, 70);
 
-  // Lights
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x99aab5, 0.65));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.85);
-  dir.position.set(8, 14, 6);
-  dir.castShadow = true;
-  dir.shadow.mapSize.set(2048, 2048);
-  dir.shadow.camera.left = -25; dir.shadow.camera.right = 25;
-  dir.shadow.camera.top = 25; dir.shadow.camera.bottom = -25;
-  dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 50;
-  scene.add(dir);
+  // All scene lighting is now driven by LightingManager + per-zone presets.
+  // See play/lighting/zone-presets.js to author/tune zones (incl. 3-16).
+  lighting = new LightingManager(scene, { mobile: isMobile() });
 
   // ─── Zone 1 ground (office) ───
   const officeFloor = new THREE.Mesh(
@@ -1908,6 +1907,15 @@ function update(dt) {
     }
   }
 
+  // Detect zone change → swap lighting/post-fx preset
+  if (lighting && player) {
+    const idx = zoneIndexAt(player.position.z);
+    if (idx >= 0 && idx !== lastZoneIdx) {
+      lastZoneIdx = idx;
+      lighting.applyPreset(idx);
+    }
+  }
+
   // Animate hearts around CEO portrait if all chapters complete
   if (ceoHearts) {
     const t = performance.now() * 0.001;
@@ -1964,6 +1972,13 @@ export function start(host) {
   buildPlayer();
   buildNPCs();
   setupInput();
+  // Apply the initial zone preset so the first frame renders with proper
+  // lighting; subsequent transitions are picked up by update().
+  if (lighting) {
+    const idx = zoneIndexAt(player.position.z);
+    lighting.applyPreset(idx >= 0 ? idx : 0);
+    lastZoneIdx = idx >= 0 ? idx : 0;
+  }
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
@@ -2007,6 +2022,8 @@ export function stop() {
       }
     });
   }
+  if (lighting) { lighting.dispose(); lighting = null; }
+  lastZoneIdx = -1;
   renderer = null; scene = null; camera = null;
   player = null; npcMeshes = []; interactionTarget = null;
   zoneDoors = [];
