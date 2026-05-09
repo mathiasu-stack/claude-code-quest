@@ -1041,6 +1041,8 @@ body.in-play #main-content {
   max-width: none !important;
   overflow: hidden !important;
 }
+body.in-play #sidebar { display: none !important; }
+body.in-play #mobile-header { display: none !important; }
 
 .play-view {
   position: relative;
@@ -1174,9 +1176,52 @@ body.in-play #main-content {
 }
 .play-interact-btn.visible { display: block; }
 
+.play-jump-btn {
+  position: absolute;
+  bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  right: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(33, 150, 243, 0.85);
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 24px;
+  font-weight: 700;
+  z-index: 10;
+  display: none;
+  cursor: pointer;
+  touch-action: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  .play-jump-btn { display: block; }
+}
+
 @media (hover: none) and (pointer: coarse) {
   .play-joystick { display: block; }
   .play-help { display: none; }
+}
+
+.play-toast {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  z-index: 25;
+  background: linear-gradient(135deg, var(--gold), #f4c95d);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+.play-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* Intro modal */

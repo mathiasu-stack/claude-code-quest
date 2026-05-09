@@ -191,6 +191,9 @@ function renderFeedback(result, test, wasAlreadyPassed) {
 
   if (result.passed) {
     Lesson.showXpToast(wasAlreadyPassed ? 0 : test.xpReward);
+    if (!wasAlreadyPassed) {
+      try { sessionStorage.setItem('ccq_dance_for', test.id); } catch {}
+    }
   }
 
   const backToPlay = document.getElementById('back-to-play-from-test');

@@ -35,7 +35,7 @@ const App = {
     overlay.innerHTML = `
       <div class="modal">
         <div class="modal-logo">🏢</div>
-        <h2>Welcome to Acme Corp</h2>
+        <h2>Welcome to Kedash Corp</h2>
         <p>You've been enrolled in the <strong>Claude Code Quest</strong> training programme. Before we begin, what should we call you?</p>
         <input type="text" id="name-input" class="modal-input" placeholder="Your first name" maxlength="40" autofocus>
         <button class="btn-primary modal-btn" id="start-btn">Start Training →</button>
@@ -103,12 +103,13 @@ const App = {
           <div class="play-joystick-thumb" id="play-joystick-thumb"></div>
         </div>
         <button class="play-interact-btn" id="play-interact-btn">Talk</button>
+        <button class="play-jump-btn" id="play-jump-btn" aria-label="Jump">↑</button>
 
         <div class="play-intro-overlay" id="play-intro-overlay">
           <div class="intro-card">
-            <div class="intro-eyebrow">DAY 1 — ACME CORP HQ</div>
+            <div class="intro-eyebrow">DAY 1 — KEDASH CORP HQ</div>
             <h2>Welcome, <span class="intro-name">${playerName}</span>.</h2>
-            <p>You've just been hired. The reception floor is buzzing — this is where every Acme engineer learns the ropes of working with Claude Code.</p>
+            <p>You've just been hired. The reception floor is buzzing — this is where every Kedash engineer learns the ropes of working with Claude Code.</p>
             <p>Walk around with <strong>WASD</strong> (or the on-screen joystick on mobile). Approach a colleague and press <strong>E</strong> (or tap <strong>Talk</strong>) to learn what they teach. Each colleague will point you to the next.</p>
             <p><strong>Start with Linda</strong> at the reception desk straight ahead of you.</p>
             <button class="btn-primary intro-btn">Got it — let's go →</button>
@@ -149,7 +150,7 @@ const App = {
       <div class="sidebar-brand">
         <div class="brand-logo">🏢</div>
         <div>
-          <div class="brand-name">Acme Corp</div>
+          <div class="brand-name">Kedash Corp</div>
           <div class="brand-sub">Claude Code Quest</div>
         </div>
       </div>

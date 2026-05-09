@@ -21,7 +21,7 @@ const NPCS = [
     name: 'Linda Park', role: 'HR Director', portrait: '👩‍💼',
     chapterId: 'ch01', lessonId: 'ch01-l01', kind: 'lesson',
     look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'bun', shirt: 0xc44a6e, pants: 0x263238, glasses: false, prop: 'clipboard' },
-    intro: "Welcome to Acme Corp! I'm Linda from HR. Before you can start work, let's cover the basics — what Claude Code actually IS. Take a seat, this won't take long.",
+    intro: "Welcome to Kedash Corp! I'm Linda from HR. Before you can start work, let's cover the basics — what Claude Code actually IS. Take a seat, this won't take long.",
     nextHint: "Done with me? Walk over to Marcus at the IT bench so he can get you set up.",
   },
   {
@@ -100,16 +100,165 @@ const NPCS = [
   },
 ];
 
+// ─── Zone layout ─────────────────────────────────────────────────────────────
+// Each zone is 22m wide and 22m deep. Zones extend along +Z.
+const ZONE_COUNT = 16;
+const ZONE_BOUNDS = Array.from({ length: ZONE_COUNT }, (_, i) => ({
+  startZ: i * 22 - 11,
+  endZ: (i + 1) * 22 - 11,
+  centerZ: i * 22,
+  chapterId: `ch${String(i + 1).padStart(2, '0')}`,
+}));
+
+function zoneIndexAt(z) {
+  for (let i = 0; i < ZONE_BOUNDS.length; i++) {
+    if (z >= ZONE_BOUNDS[i].startZ - 0.01 && z <= ZONE_BOUNDS[i].endZ + 0.01) return i;
+  }
+  return -1;
+}
+function isZoneIdxOpen(idx) {
+  if (idx <= 0) return true;
+  return isTestDone(`ch${String(idx).padStart(2, '0')}-test`);
+}
+
+// Themes for zones 3-16 (zones 1-2 are hand-built). Colors escalate.
+const ZONE_THEMES = [
+  null, null,
+  { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', title: 'CLAUDE.md Atrium', metal: 0.05 },
+  { floor: 0x90caf9, wall: 0xe3f2fd, accent: '#1565c0', title: 'Memory Vault', metal: 0.1 },
+  { floor: 0xa5d6a7, wall: 0xe8f5e9, accent: '#2e7d32', title: 'Communications Hub', metal: 0.1 },
+  { floor: 0xffcc80, wall: 0xfff3e0, accent: '#ef6c00', title: 'File Workshop', metal: 0.15 },
+  { floor: 0xce93d8, wall: 0xf3e5f5, accent: '#6a1b9a', title: 'Token Lounge', metal: 0.2 },
+  { floor: 0xff8a65, wall: 0xffccbc, accent: '#bf360c', title: 'Skill Forge', metal: 0.25 },
+  { floor: 0x80cbc4, wall: 0xe0f2f1, accent: '#00695c', title: 'Methodology Lab', metal: 0.3 },
+  { floor: 0xffd54f, wall: 0xfff9c4, accent: '#f57c00', title: 'Refinement Loop', metal: 0.35 },
+  { floor: 0x9fa8da, wall: 0xeceff1, accent: '#283593', title: 'Slash Command Center', metal: 0.4 },
+  { floor: 0xb39ddb, wall: 0xede7f6, accent: '#311b92', title: 'Plan War Room', metal: 0.45 },
+  { floor: 0x4dd0e1, wall: 0xe0f7fa, accent: '#006064', title: 'Integration Bay', metal: 0.5 },
+  { floor: 0xff7043, wall: 0xfbe9e7, accent: '#d84315', title: 'Mission Control', metal: 0.55 },
+  { floor: 0xb2dfdb, wall: 0xfff8e1, accent: '#00897b', title: 'Architect Studio', metal: 0.6 },
+  { floor: 0xffd700, wall: 0xfffde7, accent: '#ff6f00', title: 'NAS Server Room — Capstone', metal: 0.75 },
+];
+
+// ─── NPC generator (chapters 3-16) ───────────────────────────────────────────
+const NAME_FIRST = ['Aiko','Ben','Carmen','Dario','Elena','Felix','Greta','Hassan','Imani','Joel','Kira','Lars','Maya','Nikhil','Omar','Priya','Quinn','Rita','Sven','Tara','Uma','Vince','Wren','Xander','Yara','Zane','Anna','Bilal','Camille','Diego','Esme','Farid','Gabi','Hugo','Iris','Jin','Karim'];
+const NAME_LAST = ['Chen','Diaz','Hassan','Kim','Liu','Mehta','Nakamura','Olsen','Park','Rao','Singh','Tanaka','Volkov','Wong','Zhang','Patel','Garcia','Lopez','Khan','Hassan','Andersson','Dubois','Rossi','Schmidt'];
+const PORTRAITS = ['👩‍💼','👨‍💼','🧑‍💼','👩‍💻','👨‍💻','🧑‍💻','👩‍🔬','👨‍🔬','👩‍🏫','👨‍🏫','🧑‍🚀','👨‍🚀','👩‍🚀','🧑‍🎨','👨‍🔧','👩‍🔧','👨‍⚕️','👩‍⚕️','👨‍🍳','👩‍🍳'];
+const ROLES_LESSON = ['Senior Engineer','Tech Lead','Architect','Specialist','Principal','Researcher','Trainer','Practitioner','Coach','Engineer','Strategist','Operator','Maintainer','Designer','Reviewer'];
+const SKIN_COLORS = [0xfdd9b5, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524];
+const HAIR_COLORS = [0x000000, 0x1a1a1a, 0x3e2723, 0x5d4037, 0x8b6914, 0xb87333, 0xc0c0c0, 0xb87333, 0x4a2c0f];
+const HAIR_STYLES = ['short','long','bun','short','long','short'];
+const SHIRT_PALETTES = [
+  0xc44a6e, 0x546e7a, 0x90caf9, 0xa5d6a7, 0xffe082, 0x81d4fa, 0xff8a65, 0xce93d8,
+  0x4caf50, 0x00897b, 0x42a5f5, 0xab47bc, 0xec407a, 0xff7043, 0x66bb6a, 0x29b6f6,
+];
+const PROPS = ['clipboard','tablet','mug','book','badge','clipboard','tablet','book',null,'mug'];
+const INTRO_TEMPLATES = [
+  "Hey, {name} here. Quick lesson on “{title}” — pull up a chair.",
+  "I'll walk you through {title}. Won't take long.",
+  "{title} catches a lot of people out. Let me show you.",
+  "Welcome over. I teach {title}. Ready?",
+  "{name}, by the way. Your stop today is {title}. Let's dive in.",
+  "Good — I cover {title}. The short version is: it actually matters more than people think.",
+];
+const TEST_INTROS = [
+  "I run the practical for {chTitle}. Confident? Let's go.",
+  "Final hurdle for {chTitle}. I send a scenario, you reply, I score it.",
+  "{chTitle} assessor here. Pass and the door behind me opens.",
+];
+const NEXT_HINTS = [
+  "Then find the next colleague — usually a desk over.",
+  "Keep moving through this floor — there's more.",
+  "Onward. Someone else here will pick up where I left off.",
+];
+
+function pick(arr, seed) { return arr[(seed * 9301 + 49297) % arr.length]; }
+function npcLook(seed) {
+  return {
+    skin: pick(SKIN_COLORS, seed),
+    hair: pick(HAIR_COLORS, seed + 1),
+    hairStyle: pick(HAIR_STYLES, seed + 2),
+    shirt: pick(SHIRT_PALETTES, seed + 3),
+    pants: 0x263238,
+    glasses: seed % 3 === 0,
+    beard: seed % 5 === 0,
+    prop: pick(PROPS, seed + 4),
+  };
+}
+
+function generateChapterNPCs(chapterIdx) {
+  const ch = window.CURRICULUM?.[chapterIdx];
+  if (!ch) return [];
+  const cZ = chapterIdx * 22;
+  const slots = [
+    { x: -6, z: cZ - 4, face: Math.PI / 2 },
+    { x:  6, z: cZ - 4, face: -Math.PI / 2 },
+    { x: -6, z: cZ + 0, face: Math.PI / 2 },
+    { x:  6, z: cZ + 0, face: -Math.PI / 2 },
+    { x: -6, z: cZ + 4, face: Math.PI / 2 },
+    { x:  6, z: cZ + 4, face: -Math.PI / 2 },
+  ];
+  const npcs = [];
+  ch.lessons.forEach((l, i) => {
+    const slot = slots[i % slots.length];
+    const seed = chapterIdx * 11 + i * 7;
+    const first = pick(NAME_FIRST, seed);
+    const last = pick(NAME_LAST, seed + 1);
+    const tmpl = pick(INTRO_TEMPLATES, seed + 2);
+    npcs.push({
+      id: `auto-${l.id}`,
+      zone: chapterIdx + 1,
+      pos: [slot.x, slot.z],
+      face: slot.face,
+      name: `${first} ${last}`,
+      role: pick(ROLES_LESSON, seed + 3),
+      portrait: pick(PORTRAITS, seed + 4),
+      chapterId: ch.id,
+      lessonId: l.id,
+      kind: 'lesson',
+      look: npcLook(seed),
+      intro: tmpl.replace('{name}', first).replace('{title}', l.title),
+      nextHint: i < ch.lessons.length - 1
+        ? pick(NEXT_HINTS, seed + 5)
+        : `Now find the assessor by the back door — they run the practical for ${ch.title}.`,
+    });
+  });
+  // Test NPC at south end (near door to next zone)
+  const seed = chapterIdx * 11 + 99;
+  const first = pick(NAME_FIRST, seed);
+  const last = pick(NAME_LAST, seed + 1);
+  npcs.push({
+    id: `auto-${ch.id}-test`,
+    zone: chapterIdx + 1,
+    pos: [0, cZ + 8.5],
+    face: Math.PI,
+    name: `${first} ${last}`,
+    role: 'Assessor',
+    portrait: pick(PORTRAITS, seed + 2),
+    chapterId: ch.id,
+    testId: ch.practicalTest.id,
+    kind: 'test',
+    look: npcLook(seed),
+    intro: pick(TEST_INTROS, seed).replace('{chTitle}', ch.title),
+    nextHint: chapterIdx < ZONE_COUNT - 1
+      ? `Pass it and the door to the next zone opens.`
+      : `That's it — the capstone. Pass me and you'll have completed every chapter.`,
+  });
+  return npcs;
+}
+
 // ─── Module state ────────────────────────────────────────────────────────────
 let renderer, scene, camera, clock;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
+let jumpRequested = false;
+let danceUntil = 0;
 let interactionTarget = null;
 let raf = null;
 let resizeListener, keyDownListener, keyUpListener;
 let container, promptEl, dialogueEl;
 let inputLocked = false;
-let zone2Door, zone2DoorLabel;
+let zoneDoors = []; // each: { mesh, label, gateChapter }
 
 function getProgress() { return window.App?.progress; }
 function isLessonDone(id) { return id && window.Progress.isLessonComplete(getProgress(), id); }
@@ -126,6 +275,56 @@ function getOutfit() {
 }
 function isZone2Open() {
   return isTestDone('ch01-test');
+}
+
+function clampMove(oldX, oldZ, newX, newZ) {
+  // X always within zone width
+  newX = Math.max(-10.5, Math.min(10.5, newX));
+
+  // First, find what zone we're trying to be in
+  // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
+  for (let i = 1; i < ZONE_COUNT; i++) {
+    const bZ = ZONE_BOUNDS[i].startZ;
+    if (Math.abs(newZ - bZ) <= 0.6) {
+      // Near a boundary
+      if (Math.abs(newX) <= 1.7) {
+        // In doorway corridor
+        if (isZoneIdxOpen(i)) {
+          // Allow passage; clamp x to corridor width
+          newX = Math.max(-1.7, Math.min(1.7, newX));
+          return { x: newX, z: newZ };
+        } else {
+          // Locked: bounce back to whichever side player came from
+          const oldIdx = zoneIndexAt(oldZ);
+          if (oldIdx < i) newZ = bZ - 0.61;
+          else newZ = bZ + 0.61;
+          return { x: newX, z: newZ };
+        }
+      } else {
+        // Near boundary but not in corridor: push into the zone we came from
+        const oldIdx = zoneIndexAt(oldZ);
+        if (oldIdx < i) newZ = Math.min(newZ, bZ - 0.61);
+        else newZ = Math.max(newZ, bZ + 0.61);
+        return { x: newX, z: newZ };
+      }
+    }
+  }
+
+  // Otherwise, in a normal zone interior
+  const targetIdx = zoneIndexAt(newZ);
+  if (targetIdx < 0) {
+    // Out of all zones — clamp to entire range
+    newZ = Math.max(ZONE_BOUNDS[0].startZ + 0.4,
+      Math.min(ZONE_BOUNDS[ZONE_COUNT - 1].endZ - 0.4, newZ));
+    return { x: newX, z: newZ };
+  }
+  if (!isZoneIdxOpen(targetIdx)) {
+    // Trying to be inside a locked zone — push to last open zone end
+    let lastOpen = targetIdx - 1;
+    while (lastOpen >= 0 && !isZoneIdxOpen(lastOpen)) lastOpen--;
+    if (lastOpen >= 0) newZ = ZONE_BOUNDS[lastOpen].endZ - 0.61;
+  }
+  return { x: newX, z: newZ };
 }
 
 // ─── Character builder ───────────────────────────────────────────────────────
@@ -498,6 +697,96 @@ function buildLamp(x, z) {
   return g;
 }
 
+// ─── CEO portrait ────────────────────────────────────────────────────────────
+let ceoHearts = null;
+
+function buildCeoPortrait(targetScene) {
+  const allDone = window.CURRICULUM?.every(ch =>
+    window.Progress.isTestPassed(getProgress(), ch.practicalTest.id)
+  );
+
+  const group = new THREE.Group();
+
+  // Outer wood frame
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 2.6, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0x4e342e, metalness: 0.2, roughness: 0.5 })
+  );
+  frame.position.z = -0.04;
+  group.add(frame);
+
+  // Gold inner trim
+  const trim = new THREE.Mesh(
+    new THREE.BoxGeometry(2.0, 2.4, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0xc9a44c, metalness: 0.7, roughness: 0.25 })
+  );
+  trim.position.z = 0;
+  group.add(trim);
+
+  // Photo plane
+  const photoMat = new THREE.MeshBasicMaterial({ color: 0xfdd9b5 });
+  const photo = new THREE.Mesh(new THREE.PlaneGeometry(1.85, 2.25), photoMat);
+  photo.position.z = 0.06;
+  group.add(photo);
+
+  // Load real photograph
+  const loader = new THREE.TextureLoader();
+  loader.load(
+    'play/assets/ceo.jpg',
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      photo.material = new THREE.MeshBasicMaterial({ map: tex });
+    },
+    undefined,
+    () => {
+      // Fallback placeholder
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 320;
+      const ctx = c.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, c.height);
+      grad.addColorStop(0, '#fdd9b5'); grad.addColorStop(1, '#a06752');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = '#1a2744';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CEO Photo', c.width / 2, c.height / 2 - 10);
+      ctx.font = '14px sans-serif';
+      ctx.fillText('drop ceo.jpg into', c.width / 2, c.height / 2 + 20);
+      ctx.fillText('play/assets/', c.width / 2, c.height / 2 + 40);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      photo.material = new THREE.MeshBasicMaterial({ map: tex });
+    }
+  );
+
+  // Name plaque
+  const plaque = makeLabelSprite(
+    allDone ? '♥  Maya Kedash · CEO  ♥' : 'Maya Kedash — CEO',
+    '#fff',
+    allDone ? 'rgba(180,30,80,0.95)' : 'rgba(26,39,68,0.95)'
+  );
+  plaque.scale.set(2.6, 0.55, 1);
+  plaque.position.set(0, -1.55, 0.12);
+  group.add(plaque);
+
+  // Floating hearts when all chapters complete (CEO has fallen for the player)
+  if (allDone) {
+    ceoHearts = new THREE.Group();
+    for (let i = 0; i < 8; i++) {
+      const h = makeLabelSprite('♥', '#ff3366', 'rgba(255,255,255,0)');
+      h.scale.set(0.5, 0.5, 1);
+      h.userData.phase = i / 8;
+      ceoHearts.add(h);
+    }
+    group.add(ceoHearts);
+  }
+
+  // Position centered on back wall, above reception desk
+  group.position.set(0, 2.0, -10.86);
+  targetScene.add(group);
+  return group;
+}
+
 // ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
@@ -553,13 +842,16 @@ function buildWorld() {
   wall(8.5, wallH, 0.3, 6.75, wallH/2, 11);
   wall(4, 1.2, 0.3, 0, wallH - 0.6, 11);
 
-  // Logo on back wall
-  const logo = makeWallSign('ACME CORP — RECEPTION', 8, 1.6);
-  logo.position.set(0, 2.8, -10.84);
+  // CEO portrait on back wall (replaces wall logo) — real image, not shapes
+  buildCeoPortrait(scene);
+
+  // Wall sign (smaller, off to the side)
+  const logo = makeWallSign('KEDASH CORP', 4, 0.9);
+  logo.position.set(-7.5, 3.2, -10.84);
   scene.add(logo);
 
   // Posters on side walls
-  const p1 = makePoster('GROW', 'with Acme');
+  const p1 = makePoster('GROW', 'with Kedash');
   p1.position.set(-10.83, 2.0, -3); p1.rotation.y = Math.PI / 2; scene.add(p1);
   const p2 = makePoster('SHIP IT', 'every Friday');
   p2.position.set(10.83, 2.0, -3); p2.rotation.y = -Math.PI / 2; scene.add(p2);
@@ -608,19 +900,8 @@ function buildWorld() {
   scene.add(buildFilingCabinet(7.6, 4));
   scene.add(buildChair(6.2, 3, Math.PI));
 
-  // Door to chapter 2
-  const ch1Done = isTestDone('ch01-test');
-  const doorMat = new THREE.MeshStandardMaterial({ color: ch1Done ? 0x4caf50 : 0x5d4037 });
-  zone2Door = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.6, 0.2), doorMat);
-  zone2Door.position.set(0, 1.3, 10.99);
-  scene.add(zone2Door);
-  zone2DoorLabel = makeLabelSprite(
-    ch1Done ? 'Knowledge Library — Open' : 'Knowledge Library — Locked',
-    '#fff', ch1Done ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
-  );
-  zone2DoorLabel.position.set(0, 3.4, 11);
-  zone2DoorLabel.scale.set(3.0, 0.7, 1);
-  scene.add(zone2DoorLabel);
+  // Door from zone 1 → zone 2 (gated by ch01 test)
+  registerDoor(scene, 11, 'ch01', 'Knowledge Library');
 
   // ─── Zone 2 — Knowledge Library ──────────────────────────────────────────
   // Library starts at z = 11.5 going negative (since we use z=-22 for NPC positions, library is at z=-30 to -10)
@@ -641,56 +922,248 @@ function buildWorld() {
   libFloor.receiveShadow = true;
   scene.add(libFloor);
 
-  // Library walls
-  wall(22, wallH, 0.3, 0, wallH/2, 33);
+  // Library walls — back wall split with doorway to zone 3
+  wall(8.5, wallH, 0.3, -6.75, wallH/2, 33);
+  wall(8.5, wallH, 0.3,  6.75, wallH/2, 33);
+  wall(4, 1.2, 0.3, 0, wallH-0.6, 33);
   wall(0.3, wallH, 22, -11, wallH/2, 22);
   wall(0.3, wallH, 22, 11, wallH/2, 22);
-  // No front wall for library (door is the front into office at z=11)
 
-  // Library sign on back wall
+  // Library sign on side wall
   const libSign = makeWallSign('KNOWLEDGE LIBRARY', 8, 1.6, '#3e2723', '#d4af37');
-  libSign.position.set(0, 2.8, 32.84);
+  libSign.position.set(-10.83, 2.8, 22);
+  libSign.rotation.y = Math.PI / 2;
   scene.add(libSign);
 
   // Bookshelves along walls
   scene.add(buildBookshelf(-10.5, 14, Math.PI / 2));
   scene.add(buildBookshelf(-10.5, 18, Math.PI / 2));
-  scene.add(buildBookshelf(-10.5, 22, Math.PI / 2));
   scene.add(buildBookshelf(-10.5, 26, Math.PI / 2));
   scene.add(buildBookshelf(10.5, 14, -Math.PI / 2));
   scene.add(buildBookshelf(10.5, 18, -Math.PI / 2));
-  scene.add(buildBookshelf(10.5, 22, -Math.PI / 2));
   scene.add(buildBookshelf(10.5, 26, -Math.PI / 2));
-  scene.add(buildBookshelf(-3, 32, 0));
-  scene.add(buildBookshelf(3, 32, 0));
 
   // Reading tables
   scene.add(buildTable(0, 16));
   scene.add(buildTable(0, 22));
-  // chairs around tables
   scene.add(buildChair(-1.6, 16, Math.PI / 2, 0x4e342e));
   scene.add(buildChair(1.6, 16, -Math.PI / 2, 0x4e342e));
   scene.add(buildChair(-1.6, 22, Math.PI / 2, 0x4e342e));
   scene.add(buildChair(1.6, 22, -Math.PI / 2, 0x4e342e));
 
-  // Lamps
   scene.add(buildLamp(0, 16));
   scene.add(buildLamp(0, 22));
 
-  // Plants
   scene.add(buildPlant(-9.8, 13));
   scene.add(buildPlant(9.8, 13));
   scene.add(buildPlant(-9.8, 30));
   scene.add(buildPlant(9.8, 30));
+
+  // Door from zone 2 → zone 3
+  registerDoor(scene, 33, 'ch02', 'CLAUDE.md Atrium');
+
+  // ─── Zones 3 - 16 (generated from ZONE_THEMES) ──────────────────────────────
+  for (let zoneIdx = 2; zoneIdx < ZONE_COUNT; zoneIdx++) {
+    buildGenericZone(zoneIdx);
+  }
+}
+
+// ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
+function registerDoor(targetScene, atZ, gateChId, nextTitle) {
+  const passed = isTestDone(`${gateChId}-test`);
+  const doorMat = new THREE.MeshStandardMaterial({
+    color: passed ? 0x4caf50 : 0x5d4037,
+    metalness: 0.3, roughness: 0.6,
+  });
+  const door = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.6, 0.2), doorMat);
+  door.position.set(0, 1.3, atZ - 0.01);
+  targetScene.add(door);
+  const label = makeLabelSprite(
+    passed ? `${nextTitle} — Open` : `${nextTitle} — Locked`,
+    '#fff', passed ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+  );
+  label.scale.set(3.0, 0.7, 1);
+  label.position.set(0, 3.4, atZ + 0.05);
+  targetScene.add(label);
+  zoneDoors.push({ mesh: door, label, gateChapter: gateChId, nextTitle, lastOpen: passed });
+}
+
+function buildGenericZone(idx) {
+  const theme = ZONE_THEMES[idx];
+  if (!theme) return;
+  const cZ = idx * 22;
+  const startZ = cZ - 11;
+  const endZ = cZ + 11;
+  const wallH = 3.8;
+
+  // Floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({
+      color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
+    }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, 0, cZ);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Side walls
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
+  });
+  function w(width, height, depth, x, y, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
+    m.position.set(x, y, z);
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  }
+  w(0.3, wallH, 22, -11, wallH / 2, cZ);
+  w(0.3, wallH, 22,  11, wallH / 2, cZ);
+
+  // Front wall (split with doorway), or solid back wall if last zone
+  const isLast = idx === ZONE_COUNT - 1;
+  if (!isLast) {
+    w(8.5, wallH, 0.3, -6.75, wallH/2, endZ);
+    w(8.5, wallH, 0.3,  6.75, wallH/2, endZ);
+    w(4, 1.2, 0.3, 0, wallH - 0.6, endZ);
+    const nextTheme = ZONE_THEMES[idx + 1];
+    const nextTitle = nextTheme?.title || `Chapter ${idx + 2}`;
+    registerDoor(scene, endZ, ZONE_BOUNDS[idx].chapterId, nextTitle);
+  } else {
+    // Solid back wall for the last zone
+    w(22, wallH, 0.3, 0, wallH/2, endZ);
+    // Capstone trophy plaque
+    const trophy = makeWallSign('🏆 CAPSTONE COMPLETE 🏆', 8, 1.6, '#1a2744', '#ffd700');
+    trophy.position.set(0, 2.8, endZ - 0.16);
+    scene.add(trophy);
+  }
+
+  // Title sign on left wall
+  const sign = makeWallSign(theme.title.toUpperCase(), 7, 1.4, '#1a2744', theme.accent);
+  sign.position.set(-10.83, 2.6, cZ);
+  sign.rotation.y = Math.PI / 2;
+  scene.add(sign);
+
+  // Generic decor
+  scene.add(buildTable(0, cZ));
+  scene.add(buildPlant(-9.5, startZ + 1.5));
+  scene.add(buildPlant( 9.5, startZ + 1.5));
+  scene.add(buildPlant(-9.5, endZ - 1.5));
+  scene.add(buildPlant( 9.5, endZ - 1.5));
+  scene.add(buildLamp(0, cZ));
+
+  // Themed accent strip on floor — gets shinier with idx
+  const accentColor = parseInt(theme.accent.replace('#',''), 16);
+  const strip = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.0, 18),
+    new THREE.MeshStandardMaterial({
+      color: accentColor, metalness: 0.6, roughness: 0.2, emissive: accentColor, emissiveIntensity: theme.metal * 0.6,
+    }),
+  );
+  strip.rotation.x = -Math.PI / 2;
+  strip.position.set(0, 0.002, cZ);
+  scene.add(strip);
 }
 
 // ─── Player + NPCs ───────────────────────────────────────────────────────────
+function addPlayerAccessories(group, tier) {
+  // Tier 1+: name badge / lanyard
+  if (tier >= 1) {
+    const lan = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x1a237e }));
+    lan.position.set(0, 1.25, 0.18);
+    group.add(lan);
+    const badge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.012),
+      new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    badge.position.set(0, 1.0, 0.19);
+    group.add(badge);
+  }
+  // Tier 2+: tie
+  if (tier >= 2) {
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.42, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0xb71c1c, metalness: 0.1, roughness: 0.6 }));
+    tie.position.set(0, 1.05, 0.18);
+    group.add(tie);
+    const knot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x7f1313 }));
+    knot.position.set(0, 1.32, 0.17);
+    group.add(knot);
+  }
+  // Tier 3+: watch (small block on left wrist)
+  if (tier >= 3) {
+    const watch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x424242, metalness: 0.7, roughness: 0.3 }));
+    watch.position.set(-0.38, 0.84, 0.06);
+    group.add(watch);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0xfff59d }));
+    face.position.set(-0.38, 0.84, 0.082);
+    group.add(face);
+  }
+  // Tier 4+: vest (overlay on torso)
+  if (tier >= 4) {
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.78, 0.36),
+      new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.3, roughness: 0.5 }));
+    vest.position.set(0, 1.05, 0);
+    group.add(vest);
+    // gold buttons down the front
+    for (let i = 0; i < 3; i++) {
+      const btn = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0xc9a44c, metalness: 0.8, roughness: 0.2 }));
+      btn.position.set(0, 1.25 - i * 0.18, 0.19);
+      group.add(btn);
+    }
+  }
+  // Tier 5+: glasses
+  if (tier >= 5) {
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.3 });
+    const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 16), frameMat);
+    lensL.rotation.y = Math.PI / 2;
+    lensL.position.set(-0.07, 1.66, 0.2);
+    group.add(lensL);
+    const lensR = lensL.clone(); lensR.position.x = 0.07; group.add(lensR);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.01), frameMat);
+    bridge.position.set(0, 1.66, 0.21); group.add(bridge);
+  }
+  // Tier 6+: gold necklace
+  if (tier >= 6) {
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.012, 8, 32),
+      new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 }));
+    chain.rotation.x = Math.PI / 2;
+    chain.position.set(0, 1.32, 0.04);
+    chain.scale.set(1, 0.65, 1);
+    group.add(chain);
+    const pendant = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 }));
+    pendant.position.set(0, 1.18, 0.18);
+    group.add(pendant);
+  }
+  // Tier 7: lapel pin + sparkly halo crown
+  if (tier >= 7) {
+    const pin = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xff4081, metalness: 0.5, roughness: 0.2, emissive: 0x331122 }));
+    pin.position.set(-0.18, 1.28, 0.18);
+    group.add(pin);
+    // Halo
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.022, 12, 32),
+      new THREE.MeshStandardMaterial({ color: 0xffeb3b, metalness: 0.8, roughness: 0.2, emissive: 0x222200 }));
+    halo.position.set(0, 1.95, 0);
+    halo.rotation.x = Math.PI / 2;
+    group.add(halo);
+    group.userData.halo = halo;
+  }
+}
+
 function buildPlayer() {
   const o = getOutfit();
+  const tier = getCompletedChapterCount();
   player = makeCharacter({
     skin: 0xfdd9b5, hair: 0x3e2723, hairStyle: 'short',
     shirt: o.shirt, pants: o.pants, glasses: false, prop: null,
   });
+  addPlayerAccessories(player, tier);
 
   let startX = 0, startZ = 5;
   try {
@@ -700,11 +1173,14 @@ function buildPlayer() {
     }
   } catch {}
   player.position.set(startX, 0, startZ);
+  player.rotation.y = Math.PI; // face north (toward Linda) by default
+  player.userData.velocityY = 0;
+  player.userData.grounded = true;
   scene.add(player);
 
-  const tier = makeLabelSprite(o.label, '#1a2744', 'rgba(201,164,76,0.95)');
-  tier.position.set(0, 2.4, 0);
-  player.add(tier);
+  const tierTag = makeLabelSprite(o.label, '#1a2744', 'rgba(201,164,76,0.95)');
+  tierTag.position.set(0, 2.4, 0);
+  player.add(tierTag);
 }
 
 function spawnNPC(npcDef) {
@@ -724,7 +1200,12 @@ function spawnNPC(npcDef) {
 
 function buildNPCs() {
   npcMeshes = [];
+  // Hand-written NPCs for chapters 1 + 2
   NPCS.forEach(spawnNPC);
+  // Auto-generated NPCs for chapters 3-16
+  for (let i = 2; i < ZONE_COUNT; i++) {
+    generateChapterNPCs(i).forEach(spawnNPC);
+  }
 }
 
 // ─── Renderer & camera ───────────────────────────────────────────────────────
@@ -755,6 +1236,10 @@ function setupInput() {
     if (inputLocked) return;
     keys[e.key.toLowerCase()] = true;
     if (e.key === 'e' || e.key === 'E') tryInteract();
+    if (e.key === ' ' || e.code === 'Space') {
+      jumpRequested = true;
+      e.preventDefault();
+    }
   };
   keyUpListener = (e) => { keys[e.key.toLowerCase()] = false; };
   window.addEventListener('keydown', keyDownListener);
@@ -794,6 +1279,9 @@ function setupInput() {
     window.App.navigate('dashboard');
   });
   document.getElementById('play-interact-btn').addEventListener('click', tryInteract);
+  document.getElementById('play-jump-btn')?.addEventListener('click', () => {
+    if (!inputLocked) jumpRequested = true;
+  });
 
   resizeListener = () => resize();
   window.addEventListener('resize', resizeListener);
@@ -892,17 +1380,63 @@ function escapeHtml(s) {
 }
 
 // ─── Update loop ─────────────────────────────────────────────────────────────
+function applyDance(t) {
+  const p = player.userData.parts;
+  if (!p) return;
+  // bouncy spin + arms up
+  player.rotation.y += 0.08;
+  player.position.y = Math.abs(Math.sin(t * 8)) * 0.35;
+  p.leftArm.rotation.x = -2.2 + Math.sin(t * 12) * 0.3;
+  p.rightArm.rotation.x = -2.2 + Math.cos(t * 12) * 0.3;
+  p.leftArm.rotation.z = 0.4;
+  p.rightArm.rotation.z = -0.4;
+  p.leftLeg.rotation.x = Math.sin(t * 10) * 0.5;
+  p.rightLeg.rotation.x = -Math.sin(t * 10) * 0.5;
+}
+
 function update(dt) {
+  // Dance animation
+  if (performance.now() < danceUntil) {
+    applyDance(performance.now() * 0.001);
+    // camera circle around dancing player
+    const angle = (performance.now() * 0.001) * 1.2;
+    const camDist = 6;
+    camera.position.x = player.position.x + Math.sin(angle) * camDist;
+    camera.position.z = player.position.z + Math.cos(angle) * camDist;
+    camera.position.y = 4.0;
+    camera.lookAt(player.position.x, 1.0, player.position.z);
+    return;
+  }
+
   if (inputLocked) {
-    // smoothly idle animations
     const p = player.userData.parts;
     if (p) {
       p.leftLeg.rotation.x *= 0.85;
       p.rightLeg.rotation.x *= 0.85;
       p.leftArm.rotation.x *= 0.85;
       p.rightArm.rotation.x *= 0.85;
+      p.leftArm.rotation.z = 0;
+      p.rightArm.rotation.z = 0;
     }
     return;
+  }
+
+  // Jump
+  if (jumpRequested && player.userData.grounded) {
+    player.userData.velocityY = 6.5;
+    player.userData.grounded = false;
+  }
+  jumpRequested = false;
+
+  // Gravity + Y position
+  if (!player.userData.grounded || player.position.y > 0) {
+    player.userData.velocityY -= 18 * dt;
+    player.position.y += player.userData.velocityY * dt;
+    if (player.position.y <= 0) {
+      player.position.y = 0;
+      player.userData.velocityY = 0;
+      player.userData.grounded = true;
+    }
   }
 
   let mx = 0, mz = 0;
@@ -919,47 +1453,27 @@ function update(dt) {
     let nx = player.position.x + mx * speed * dt;
     let nz = player.position.z + mz * speed * dt;
 
-    // Bounds: office z in [-10.5,10.5], library z in [11.5,32.5], doorway corridor x in [-1.7,1.7] z in [10.5,11.5].
-    const oldZone = player.position.z < 11 ? 'office' : 'library';
-    if (oldZone === 'office') {
-      if (nz > 10.5) {
-        if (Math.abs(nx) < 1.7 && isZone2Open()) {
-          nx = Math.max(-1.7, Math.min(1.7, nx));
-          nz = Math.min(11.6, nz);
-        } else {
-          nz = 10.5;
-          nx = Math.max(-10.5, Math.min(10.5, nx));
-        }
-      } else {
-        nx = Math.max(-10.5, Math.min(10.5, nx));
-        nz = Math.max(-10.5, nz);
-      }
-    } else { // library
-      if (nz < 11.5) {
-        if (Math.abs(nx) < 1.7) {
-          nx = Math.max(-1.7, Math.min(1.7, nx));
-          nz = Math.max(10.4, nz);
-        } else {
-          nz = 11.5;
-          nx = Math.max(-10.5, Math.min(10.5, nx));
-        }
-      } else {
-        nx = Math.max(-10.5, Math.min(10.5, nx));
-        nz = Math.min(32.5, nz);
-      }
-    }
+    // Generic movement bounds across all zones with doorways
+    const clamped = clampMove(player.position.x, player.position.z, nx, nz);
+    nx = clamped.x; nz = clamped.z;
 
     player.position.x = nx;
     player.position.z = nz;
     player.rotation.y = Math.atan2(mx, mz);
 
-    const t = performance.now() * 0.012;
     const p = player.userData.parts;
-    if (p) {
+    if (player.userData.grounded && p) {
+      const t = performance.now() * 0.012;
       p.leftLeg.rotation.x = Math.sin(t) * 0.5;
       p.rightLeg.rotation.x = -Math.sin(t) * 0.5;
       p.leftArm.rotation.x = -Math.sin(t) * 0.4;
       p.rightArm.rotation.x = Math.sin(t) * 0.4;
+    } else if (p) {
+      // Airborne pose: arms forward slightly, legs tucked
+      p.leftLeg.rotation.x = -0.3;
+      p.rightLeg.rotation.x = -0.3;
+      p.leftArm.rotation.x = -0.6;
+      p.rightArm.rotation.x = -0.6;
     }
   } else {
     const p = player.userData.parts;
@@ -971,17 +1485,44 @@ function update(dt) {
     }
   }
 
-  // Camera follow
-  const camDist = 7, camH = 4.5;
-  camera.position.x += (player.position.x - camera.position.x) * 0.08;
-  camera.position.z += (player.position.z + camDist - camera.position.z) * 0.08;
-  camera.position.y = camH;
-  camera.lookAt(player.position.x, 1.0, player.position.z);
+  // Camera orbits behind the player based on facing direction
+  const camDist = 6.5, camH = 4.2;
+  const angle = player.rotation.y;
+  const targetCamX = player.position.x - Math.sin(angle) * camDist;
+  const targetCamZ = player.position.z - Math.cos(angle) * camDist;
+  camera.position.x += (targetCamX - camera.position.x) * 0.12;
+  camera.position.z += (targetCamZ - camera.position.z) * 0.12;
+  camera.position.y = camH + player.position.y * 0.3;
+  camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
-  // Update door state if zone 2 unlocks during play
-  if (zone2Door) {
-    const open = isZone2Open();
-    zone2Door.material.color.set(open ? 0x4caf50 : 0x5d4037);
+  // Update door colors live in case a chapter unlocks during play
+  for (const d of zoneDoors) {
+    const open = isTestDone(`${d.gateChapter}-test`);
+    d.mesh.material.color.set(open ? 0x4caf50 : 0x5d4037);
+    if (open !== d.lastOpen) {
+      // Refresh the label texture
+      const newSprite = makeLabelSprite(
+        open ? `${d.nextTitle} — Open` : `${d.nextTitle} — Locked`,
+        '#fff', open ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+      );
+      if (d.label.material.map) d.label.material.map.dispose();
+      d.label.material.map = newSprite.material.map;
+      d.label.material.needsUpdate = true;
+      d.lastOpen = open;
+    }
+  }
+
+  // Animate hearts around CEO portrait if all chapters complete
+  if (ceoHearts) {
+    const t = performance.now() * 0.001;
+    ceoHearts.children.forEach(h => {
+      const phase = (t * 0.5 + h.userData.phase) % 1;
+      const angle = phase * Math.PI * 2;
+      const radius = 1.4 + Math.sin(t * 2 + h.userData.phase * 6) * 0.15;
+      h.position.set(Math.cos(angle) * radius, Math.sin(angle) * 0.8 - 0.3, 0.15);
+      const s = 0.4 + Math.sin(t * 3 + h.userData.phase * 8) * 0.12;
+      h.scale.set(s, s, 1);
+    });
   }
 
   // Interaction proximity
@@ -1020,13 +1561,35 @@ export function start(host) {
   promptEl = document.getElementById('play-prompt');
   dialogueEl = document.getElementById('play-dialogue');
   clock = new THREE.Clock();
+  danceUntil = 0;
+  jumpRequested = false;
   setupRenderer();
   buildWorld();
   buildPlayer();
   buildNPCs();
   setupInput();
   showIntro();
+  // Trigger celebration dance if player just passed a test
+  try {
+    const danceFlag = sessionStorage.getItem('ccq_dance_for');
+    if (danceFlag) {
+      sessionStorage.removeItem('ccq_dance_for');
+      setTimeout(() => { danceUntil = performance.now() + 4500; showCelebrationToast(); }, 400);
+    }
+  } catch {}
   loop();
+}
+
+function showCelebrationToast() {
+  const toast = document.createElement('div');
+  toast.className = 'play-toast';
+  toast.textContent = '🎉 Chapter complete! New tier unlocked.';
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add('visible'), 50);
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 400);
+  }, 4000);
 }
 
 export function stop() {
@@ -1050,9 +1613,12 @@ export function stop() {
   }
   renderer = null; scene = null; camera = null;
   player = null; npcMeshes = []; interactionTarget = null;
-  zone2Door = null; zone2DoorLabel = null;
+  zoneDoors = [];
+  ceoHearts = null;
   keys = {}; touchVec = { x: 0, y: 0 };
   inputLocked = false;
+  jumpRequested = false;
+  danceUntil = 0;
 }
 
 window.Play = { start, stop };

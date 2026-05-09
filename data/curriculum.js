@@ -11,7 +11,7 @@ window.CURRICULUM = [
         id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/AJpK3YTTKZ4" title="Introducing Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Welcome to Acme Corp</h2>
+        content: `<h2>Welcome to Kedash Corp</h2>
 <p>Congratulations on your first day! You've been assigned an AI coding assistant: <strong>Claude Code</strong>. Think of it as a senior engineer who lives in your terminal — one who never sleeps, never gets annoyed at your questions, and has read every doc you've been putting off.</p>
 <p>Claude Code is Anthropic's official CLI tool that brings the Claude AI model directly into your development workflow. Unlike a chat interface, Claude Code operates <em>inside your project directory</em>. It can read your files, understand your codebase, make edits, run commands, and help you ship faster.</p>
 <h3>What Claude Code can do</h3>
@@ -268,8 +268,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     practicalTest: {
       id: 'ch02-test',
       scenarioType: 'email', scenarioFrom: 'Jordan Kim', scenarioRole: 'Head of Product', scenarioAvatar: '👩‍💼',
-      scenario: `From: jordan.kim@acmecorp.com\nSubject: Setting up our AI context library\n\nHi,\n\nWe keep re-explaining the same context to Claude Code in every session — who our customers are, what our brand voice is, how we make decisions. It's inefficient and inconsistent.\n\nI'd like you to set up a "Business Brain" folder structure for Acme Corp. We're a B2B SaaS company building developer tooling. Our tone is technical but approachable. Our key clients are mid-market engineering teams. Please write out the folder structure and what each key file should contain.`,
-      task: 'Design the Business Brain folder structure for Acme Corp and describe what each key file should contain.',
+      scenario: `From: jordan.kim@kedashcorp.com\nSubject: Setting up our AI context library\n\nHi,\n\nWe keep re-explaining the same context to Claude Code in every session — who our customers are, what our brand voice is, how we make decisions. It's inefficient and inconsistent.\n\nI'd like you to set up a "Business Brain" folder structure for Kedash Corp. We're a B2B SaaS company building developer tooling. Our tone is technical but approachable. Our key clients are mid-market engineering teams. Please write out the folder structure and what each key file should contain.`,
+      task: 'Design the Business Brain folder structure for Kedash Corp and describe what each key file should contain.',
       hint: 'Include at minimum: a brand/voice file, a client overview, and a team conventions file. Show the folder structure clearly.',
       minLength: 150, passThreshold: 70, xpReward: 350,
       criteria: [
@@ -379,7 +379,7 @@ Load the relevant file when the task requires it.</code></pre>
   <li><strong>Skill pointers</strong> — list available skills so every session knows what tools exist</li>
 </ul>
 <h3>Example lean CLAUDE.md</h3>
-<pre><code># Acme Billing Service
+<pre><code># Kedash Billing Service
 Stack: TypeScript 5, Node.js 20, PostgreSQL 15, Knex
 Test: \`npm test\`  Lint: \`npm run lint\`  Build: \`npm run build\`
 
@@ -400,8 +400,8 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
     practicalTest: {
       id: 'ch03-test',
       scenarioType: 'email', scenarioFrom: 'Priya Nair', scenarioRole: 'Tech Lead', scenarioAvatar: '👩‍💻',
-      scenario: `From: priya.nair@acmecorp.com\nSubject: Our CLAUDE.md is a mess\n\nHi,\n\nI just looked at our CLAUDE.md and it's 2,400 words. It has our entire brand history, a full explanation of the product, onboarding docs for new engineers, and the kitchen sink. Sessions are sluggish and Claude keeps ignoring instructions from the start of conversations.\n\nCan you rewrite it? Keep only what's essential. The project is: TypeScript, Node.js 20, PostgreSQL. Test command: npm test. Deploy: npm run deploy. Never commit to main. Error handling on all async functions. Business context is in .business-brain/.`,
-      task: 'Write a lean, well-structured CLAUDE.md for the Acme project using only the essential information provided.',
+      scenario: `From: priya.nair@kedashcorp.com\nSubject: Our CLAUDE.md is a mess\n\nHi,\n\nI just looked at our CLAUDE.md and it's 2,400 words. It has our entire brand history, a full explanation of the product, onboarding docs for new engineers, and the kitchen sink. Sessions are sluggish and Claude keeps ignoring instructions from the start of conversations.\n\nCan you rewrite it? Keep only what's essential. The project is: TypeScript, Node.js 20, PostgreSQL. Test command: npm test. Deploy: npm run deploy. Never commit to main. Error handling on all async functions. Business context is in .business-brain/.`,
+      task: 'Write a lean, well-structured CLAUDE.md for the Kedash project using only the essential information provided.',
       hint: 'A lean CLAUDE.md is under 200 words. Use pointers for business context rather than pasting it in. Include commands, constraints, and a structure note.',
       minLength: 100, passThreshold: 70, xpReward: 400,
       criteria: [
@@ -485,7 +485,7 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
     practicalTest: {
       id: 'ch04-test',
       scenarioType: 'slack', scenarioFrom: 'Priya Nair', scenarioRole: 'Tech Lead', scenarioAvatar: '👩‍💻',
-      scenario: `Welcome to the Acme platform team! Before you start contributing, I want you to design the memory layer setup for the new payments microservice. Here are the things we need Claude Code to know about:\n\n1. Test command: npm test\n2. Our brand voice guide (3,000-word document)\n3. Our PR description workflow (run it every time a PR is ready)\n4. The rule: never commit directly to main\n5. Lessons we've learned about when our PR skill produces weak output\n6. Your personal preference: always respond in British English\n7. Client profiles for our top 5 enterprise accounts\n\nFor each item, tell me which memory layer it belongs in and why. This tells me whether you understand how to keep our AI setup lean and efficient.`,
+      scenario: `Welcome to the Kedash platform team! Before you start contributing, I want you to design the memory layer setup for the new payments microservice. Here are the things we need Claude Code to know about:\n\n1. Test command: npm test\n2. Our brand voice guide (3,000-word document)\n3. Our PR description workflow (run it every time a PR is ready)\n4. The rule: never commit directly to main\n5. Lessons we've learned about when our PR skill produces weak output\n6. Your personal preference: always respond in British English\n7. Client profiles for our top 5 enterprise accounts\n\nFor each item, tell me which memory layer it belongs in and why. This tells me whether you understand how to keep our AI setup lean and efficient.`,
       task: 'Assign each of the 7 items to the correct Claude Code memory layer and explain your reasoning for each.',
       hint: 'The four layers: Global CLAUDE.md (~/.claude/CLAUDE.md), Project CLAUDE.md (./CLAUDE.md), Business Brain (.business-brain/), Skills + learnings.md (.claude/skills/). Use the always-active vs on-demand rule.',
       minLength: 150, passThreshold: 70, xpReward: 375,
@@ -585,7 +585,7 @@ Do not change the function signature or any callers.</code></pre>
     practicalTest: {
       id: 'ch05-test',
       scenarioType: 'jira', scenarioFrom: 'Marcus Webb', scenarioRole: 'Senior Engineer', scenarioAvatar: '👨‍💻',
-      scenario: `ACME-42 · In Review\n\nThe \`calculateDiscount()\` function in \`src/pricing.js\` is crashing when called with null or undefined product objects. We need it to return 0 in those cases instead of throwing. Assigned to you. Please write the prompt you'll give Claude Code to fix this.`,
+      scenario: `KEDASH-42 · In Review\n\nThe \`calculateDiscount()\` function in \`src/pricing.js\` is crashing when called with null or undefined product objects. We need it to return 0 in those cases instead of throwing. Assigned to you. Please write the prompt you'll give Claude Code to fix this.`,
       task: 'Write the prompt you would give Claude Code to fix the null-handling bug in calculateDiscount().',
       hint: 'A great prompt includes the file path, function name, the current problem, and what the correct behaviour should be.',
       minLength: 80, passThreshold: 70, xpReward: 350,
@@ -677,7 +677,7 @@ Do not change the function signature or any callers.</code></pre>
     practicalTest: {
       id: 'ch06-test',
       scenarioType: 'email', scenarioFrom: 'David Osei', scenarioRole: 'Tech Lead', scenarioAvatar: '👨‍🔧',
-      scenario: `From: david.osei@acmecorp.com\nSubject: Quick task — JSDoc for utils\n\nHi,\n\nWe have a new dev starting Monday and the \`utils/helpers.js\` file is completely undocumented. Can you add JSDoc comments to every function in that file before EOD Friday? Use Claude Code for this — should be a quick job. Thanks.`,
+      scenario: `From: david.osei@kedashcorp.com\nSubject: Quick task — JSDoc for utils\n\nHi,\n\nWe have a new dev starting Monday and the \`utils/helpers.js\` file is completely undocumented. Can you add JSDoc comments to every function in that file before EOD Friday? Use Claude Code for this — should be a quick job. Thanks.`,
       task: 'Write the Claude Code prompt you would use to add JSDoc comments to all functions in utils/helpers.js.',
       hint: 'Make sure to specify the exact file, what should be added, and that you want it on every function.',
       minLength: 60, passThreshold: 65, xpReward: 350,
@@ -989,7 +989,7 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
     practicalTest: {
       id: 'ch09-test',
       scenarioType: 'jira', scenarioFrom: 'Engineering Enablement Team', scenarioRole: 'Developer Experience', scenarioAvatar: '🛠️',
-      scenario: `ACME-DX-14 · Assigned to You\n\nWe want to build a skill for generating weekly status reports from git commits. Before writing the skill file, you've run the workflow manually three times. Here's what you observed:\n\n- Opening that worked: "Summarise this week's commits into a status report for non-technical stakeholders"\n- Always needed to add: "avoid jargon, focus on business impact"\n- Always needed to add: "group by feature area, not by commit"\n- Required input: the date range\n- Output should be: 3-5 bullet points per feature area, plain English\n\nWrite the skill.md file based on these observations.`,
+      scenario: `KEDASH-DX-14 · Assigned to You\n\nWe want to build a skill for generating weekly status reports from git commits. Before writing the skill file, you've run the workflow manually three times. Here's what you observed:\n\n- Opening that worked: "Summarise this week's commits into a status report for non-technical stakeholders"\n- Always needed to add: "avoid jargon, focus on business impact"\n- Always needed to add: "group by feature area, not by commit"\n- Required input: the date range\n- Output should be: 3-5 bullet points per feature area, plain English\n\nWrite the skill.md file based on these observations.`,
       task: 'Write the skill.md file for the weekly status report workflow based on the observed manual run notes.',
       hint: 'Encode the corrections (avoid jargon, group by feature area) as guardrails in the skill. Include $ARGUMENTS for the date range.',
       minLength: 120, passThreshold: 70, xpReward: 450,

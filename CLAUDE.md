@@ -1,6 +1,6 @@
 # Claude Code Quest
 
-A gamified Claude Code training app built as a vanilla JS SPA with an "Acme Corp" corporate theme.
+A gamified Claude Code training app built as a vanilla JS SPA with a "Kedash Corp" corporate theme.
 
 ## Running locally
 

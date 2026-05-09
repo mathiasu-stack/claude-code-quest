@@ -31,7 +31,7 @@ window.CURRICULUM.push(
     practicalTest: {
       id: 'ch10-test',
       scenarioType: 'jira', scenarioFrom: 'Platform Engineering', scenarioRole: 'Tech Lead', scenarioAvatar: '👷',
-      scenario: 'ACME-SKILLS-07 · Escalated\n\nOur code-review.md skill is producing inconsistent results:\n- It misses SQL injection risks in template literals\n- It doesn\'t flag hardcoded secrets (API keys, passwords)\n- When it finds issues, the descriptions are too vague to be actionable\n\nDiagnose these failures and write the updated skill instructions that fix all three issues. Also write a learnings.md entry for this update.',
+      scenario: 'KEDASH-SKILLS-07 · Escalated\n\nOur code-review.md skill is producing inconsistent results:\n- It misses SQL injection risks in template literals\n- It doesn\'t flag hardcoded secrets (API keys, passwords)\n- When it finds issues, the descriptions are too vague to be actionable\n\nDiagnose these failures and write the updated skill instructions that fix all three issues. Also write a learnings.md entry for this update.',
       task: 'Write updated skill instructions fixing the three issues, plus a learnings.md entry documenting the change.',
       hint: 'Encode each failure as a specific guardrail. The learnings.md entry should follow the Problem/Fix/Verified format.',
       minLength: 150, passThreshold: 70, xpReward: 500,
@@ -81,7 +81,7 @@ window.CURRICULUM.push(
     practicalTest: {
       id: 'ch11-test',
       scenarioType: 'jira', scenarioFrom: 'Onboarding System', scenarioRole: 'IT Helpdesk', scenarioAvatar: '🖥️',
-      scenario: 'ACME-ONBOARDING-11\n\nYou\'ve just been added to the Acme Payments repo. You\'ve cloned it and opened a terminal. List the first 3 Claude Code slash commands you would run and explain why.',
+      scenario: 'KEDASH-ONBOARDING-11\n\nYou\'ve just been added to the Kedash Payments repo. You\'ve cloned it and opened a terminal. List the first 3 Claude Code slash commands you would run and explain why.',
       task: 'List the first 3 Claude Code slash commands you would run in a new repo and explain the purpose of each.',
       hint: 'Think about setup, discovery, and understanding the project. Use numbered steps.',
       minLength: 100, passThreshold: 70, xpReward: 400,
@@ -180,7 +180,7 @@ window.CURRICULUM.push(
     practicalTest: {
       id: 'ch13-test',
       scenarioType: 'jira', scenarioFrom: 'Architecture Review Board', scenarioRole: 'Platform Team', scenarioAvatar: '🏗️',
-      scenario: 'ACME-ARCH-23 · Proposal Required\n\nThe dev experience team wants to connect Claude Code to the Acme billing Postgres database so engineers can query schemas and generate migrations during development. Describe how to set this up using MCP, including the configuration.',
+      scenario: 'KEDASH-ARCH-23 · Proposal Required\n\nThe dev experience team wants to connect Claude Code to the Kedash billing Postgres database so engineers can query schemas and generate migrations during development. Describe how to set this up using MCP, including the configuration.',
       task: 'Describe how to connect Claude Code to a Postgres database using MCP, including the settings.json configuration.',
       hint: 'Include what MCP is, the .mcp.json config block (or ~/.claude.json for user-level), and how Claude Code will use the Postgres tools.',
       minLength: 100, passThreshold: 70, xpReward: 500,
@@ -274,7 +274,7 @@ window.CURRICULUM.push(
     practicalTest: {
       id: 'ch15-test',
       scenarioType: 'jira', scenarioFrom: 'Elena Marchetti', scenarioRole: 'Principal Engineer', scenarioAvatar: '👩‍🏫',
-      scenario: 'ACME-SCALE-04 · Architecture Review\n\nA team member built a 5-agent system for generating marketing copy: Agent 1 researches, Agent 2 drafts, Agent 3 checks tone, Agent 4 checks SEO, Agent 5 posts to Slack. It\'s complex, unreliable, and hard to debug.\n\nDescribe how you\'d simplify this to a more maintainable approach. What\'s the minimum viable version? Where should the human gate be?',
+      scenario: 'KEDASH-SCALE-04 · Architecture Review\n\nA team member built a 5-agent system for generating marketing copy: Agent 1 researches, Agent 2 drafts, Agent 3 checks tone, Agent 4 checks SEO, Agent 5 posts to Slack. It\'s complex, unreliable, and hard to debug.\n\nDescribe how you\'d simplify this to a more maintainable approach. What\'s the minimum viable version? Where should the human gate be?',
       task: 'Redesign the 5-agent marketing copy system as a simpler, more maintainable workflow with a clear human approval gate.',
       hint: 'Apply "start minimal". A single agent with good skills + human review will likely outperform 5 shallow agents. Explain why.',
       minLength: 150, passThreshold: 70, xpReward: 600,
@@ -330,7 +330,7 @@ window.CURRICULUM.push(
     practicalTest: {
       id: 'ch16-test',
       scenarioType: 'jira', scenarioFrom: 'IT Department', scenarioRole: 'Infrastructure Team', scenarioAvatar: '🔧',
-      scenario: 'ACME-IT-099 · Final Assessment\n\nSet up a complete Claude Code environment on the office Synology DS925+ NAS:\n- SSH access with key authentication\n- Node.js via nvm\n- Claude Code authenticated via API key\n- Sessions persist after SSH disconnects (tmux)\n- Global CLAUDE.md configured for the NAS environment\n\nDocument the complete command sequence from first SSH connection to a working Claude Code session.',
+      scenario: 'KEDASH-IT-099 · Final Assessment\n\nSet up a complete Claude Code environment on the office Synology DS925+ NAS:\n- SSH access with key authentication\n- Node.js via nvm\n- Claude Code authenticated via API key\n- Sessions persist after SSH disconnects (tmux)\n- Global CLAUDE.md configured for the NAS environment\n\nDocument the complete command sequence from first SSH connection to a working Claude Code session.',
       task: 'Write the complete step-by-step command sequence to set up Claude Code on a Synology DS925+ NAS, from SSH connection to first working session.',
       hint: 'Cover: SSH connection, Claude Code install (native installer or nvm/npm path), API key setup, tmux for persistent sessions, and the NAS CLAUDE.md.',
       minLength: 150, passThreshold: 70, xpReward: 600,
