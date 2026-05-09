@@ -83,5 +83,103 @@ The previous "manga seductress" canvas drawing was unsettling and didn't match t
 ### P12 Scale + density check — DECISION: keep current 22×22 dimensions
 Reception now has ~30 distinct props on the floor / desks / walls. Library has ~15 plus 8 bookshelves + 2 tables. Both feel inhabited. Downscale not needed.
 
+---
+
+## Morning checklist
+
+Hard-refresh first. Web Station/browser caches are aggressive.
+
+### Characters — what to look for
+1. **Faces.** Every NPC and the player have a cartoon face. Linda has soft eyes + smile (kind), Marcus has narrow eyes + flat mouth (focused), Kenji has dot eyes + smirk (smug), Diana has angled brows + flat mouth (stern), Sarah is sharp/focused, Aisha is round/happy.
+2. **Blink.** Watch any NPC for 5 seconds; they should blink with a 100 ms closed eyelid. The player blinks too.
+3. **Look-at-player.** Walk within 4 m of any NPC; their head should turn toward you, smoothly. Walk away and the head returns to neutral.
+4. **Idle gestures.** Stand near each NPC for 5–10 s:
+   - Linda: occasional wave with the right arm.
+   - Marcus: periodic glasses-adjust.
+   - Aisha: typing in mid-air, hands jittering.
+   - Kenji: open-handed sweeping gesture.
+   - Diana: holds clipboard up, occasionally jabs to flip a page.
+   - Sarah: foot tap with the right leg.
+   - Elena/Raj: head tilted slightly, both arms raised reading.
+   - Mei: typing.
+   - Noor: clipboard.
+5. **Breathing.** Stand still and watch the player. Torso should oscillate ±2% Y-scale at ~1 Hz. Subtle.
+6. **Accent stripes.** Each NPC has a thin horizontal stripe across the upper chest in their accent color. They should be identifiable by colour from across the room.
+7. **Customization.** Click the 👤 button on the top-left (below the back arrow). Pick a different face style — the player should rebuild instantly with the new face. Try hair colour and skin tone too. Reload — your selection persists.
+
+### Reception — what to look for
+8. **Posters.** GROW / SHIP IT / STAY curious / BE KIND should be readable from 5 m away. Big, gold-on-navy.
+9. **Reception desk.** Should have a stapler, a pen cup with 4 pens, a sticky pad, a mug, a small succulent, a paper stack — all on the surface.
+10. **Doormat.** Dark mat at the front entrance.
+11. **Couches.** Two couches now have throw pillows in red, yellow, blue.
+12. **Wall clock.** On the left wall — minute hand should rotate visibly (1 deg/sec).
+13. **Ceiling lights.** Five recessed warm-glow discs in the ceiling. Look up.
+14. **Marcus's bench.** Open laptop, server tower with 5 LEDs (green, blinking individually), succulent on the desk.
+15. **Kenji's screens.** Three displays — one shows scrolling code, one a sine wave, one "LIVE". All animate (~3 fps refresh).
+16. **Diana's cabinets.** Each has a label (A–F, G–M, N–Z).
+17. **Whiteboard.** "Q4 GOALS" with bullet list on the right wall.
+18. **Skirting.** Dark wood trim along every wall edge.
+19. **CEO portrait.** Friendly cartoon now, NOT the unsettling manga. Big round teal eyes, soft smile, gold halftone background, navy blazer with gold lapel pin.
+
+### Library — what to look for
+20. **Reading tables.** Each has an open book with bookmark + a teacup.
+21. **Globe.** Spinning slowly on a stand to the left of the front tables.
+22. **Ladder.** 2.6 m wood library ladder against the left bookshelf.
+23. **Grandfather clock.** Back-left wall — pendulum should swing visibly, hands rotate.
+24. **Reading nook.** Armchair + sidetable + book stack at the back-right.
+25. **Librarian cart.** Wheeled cart with a stack of books.
+26. **Hanging plant.** Near the entrance, vines drooping down.
+27. **QUIET poster** on the right wall.
+
+### Material variety
+28. **Gold runway** — should look genuinely metallic, catching the warm directional. Reception gets brighter where it crosses the runway.
+29. **Filing cabinets** read as painted metal (visible specular highlights from the directional).
+30. **Monitors** glow even in the darkest part of the Library — emissive screens.
+31. **Couches** look matte fabric (no shine), pillows likewise.
+32. **Water cooler bottle** has a glassy sheen at the right viewing angle.
+
+### Mobile
+33. The new face textures are tiny (256×256, cached) and the new geometry is all primitives. Should still hit 30+ FPS.
+34. Customization panel should be tap-friendly (chip targets are 60×~36).
+35. Audio panel + customization panel both auto-close on outside-tap.
+
+### Files added (clean diff for review)
+- `play/characters/face.js` (~270 lines)
+- `play/characters/expressions.js` (~30)
+- `play/characters/idleAnimations.js` (~110)
+- `play/characters/customization.js` (~140)
+- `play/decorations/shared.js` (~370)
+- `play/decorations/reception.js` (~150)
+- `play/decorations/library.js` (~80)
+- `play/materials/presets.js` (~70)
+- `NIGHT_RUN_NOTES_POLISH.md` (this file)
+
+### Files modified
+- `play/play.js` — wiring + roster updates + a few inline material tunes + replaced `drawMangaCEO` with `drawCeoPortrait`.
+- `style.css` — customization panel CSS.
+
+### Known issues / follow-ups
+- Faces are flat planes pinned to the head's +Z; they don't billboard, so seen from directly behind, the back of the head is featureless (which is correct, but if you want hair-back detail you'd need extra geometry).
+- The "look-at-player" head turn ignores Y — the head doesn't tilt up/down even if the player jumps. Acceptable.
+- Marcus's gesture (glasses-adjust) writes to `rightArm.rotation.x` — same channel as his prop's tablet hand, so during a long gesture cycle the tablet visibly moves. Looks OK on review but could read odd.
+- The grandfather clock's pendulum and hour/minute hands run on a fictional fast clock (1 deg/sec on the minute hand) for visual interest, not real time. Easy to fix later by computing from `Date.now()`.
+- The new posters use bold serif "GROW" etc. — if you want a different typographic vibe, edit `buildPosterTexture` in `play/decorations/shared.js`.
+- The CEO portrait's easter-egg ending was preserved end-to-end: when all 16 chapters are passed, plaque turns pink and hearts orbit.
+
+### Commits to review (newest first)
+- `fc4efe0` P12 scale decision + log
+- `044b4d4` P11 friendly CEO portrait
+- `aba9e0b` P10 material variety
+- `db37c48` P8/P9 decoration density
+- `3ed567c` P7 player customization
+- `6cc7472` P5/P6 idle anim + signature gestures
+- `653ad1d` P4 expressions + accent stripes + emissive shirts
+- `d8cc7a6` P3 face roll-out + look-at-player
+- `055681c` P2 face system module
+- `5eb8241` P1 exploration
+
+If anything looks off, revert target is `055681c` (the moment the face system appeared). Reverting that brings the previous featureless silhouettes back.
+
+
 
 
