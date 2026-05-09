@@ -1931,12 +1931,14 @@ function update(dt) {
     }
   }
 
-  // Detect zone change → swap lighting/post-fx preset
+  // Detect zone change → swap lighting + post-fx preset together so the
+  // mood reads as one coordinated transition.
   if (lighting && player) {
     const idx = zoneIndexAt(player.position.z);
     if (idx >= 0 && idx !== lastZoneIdx) {
       lastZoneIdx = idx;
       lighting.applyPreset(idx);
+      if (postfx) postfx.applyPreset(lighting.getPostFx());
     }
   }
 
