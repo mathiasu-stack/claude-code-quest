@@ -34,7 +34,7 @@ const NPCS = [
     id: 'linda',  zone: 1, pos: [0, -7], face: 0,
     name: 'Linda Park', role: 'HR Director', portrait: '👩‍💼',
     chapterId: 'ch01', lessonId: 'ch01-l01', kind: 'lesson',
-    look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'bun', shirt: 0xc44a6e, pants: 0x263238, glasses: false, prop: 'clipboard' },
+    look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'bun', shirt: 0xd05a7e, pants: 0x263238, glasses: false, prop: 'clipboard', face: 'round', expression: 'kind', accent: 0xb71c1c, gesture: 'wave' },
     intro: "Welcome to Kedash Corp! I'm Linda from HR. Before you can start work, let's cover the basics — what Claude Code actually IS. Take a seat, this won't take long.",
     nextHint: "Done with me? Walk over to Marcus at the IT bench so he can get you set up.",
   },
@@ -42,7 +42,7 @@ const NPCS = [
     id: 'marcus', zone: 1, pos: [-6, -3], face: Math.PI / 2,
     name: 'Marcus Webb', role: 'IT Setup Lead', portrait: '👨‍🔧',
     chapterId: 'ch01', lessonId: 'ch01-l02', kind: 'lesson',
-    look: { skin: 0x8d5524, hair: 0x000000, hairStyle: 'short', shirt: 0x546e7a, pants: 0x263238, glasses: true, prop: 'tablet', beard: true },
+    look: { skin: 0x8d5524, hair: 0x1a1a1a, hairStyle: 'short', shirt: 0x6b8090, pants: 0x263238, glasses: true, prop: 'tablet', beard: true, face: 'sharp', expression: 'focused', accent: 0x1565c0, gesture: 'glasses' },
     intro: "Hey there, new hire. Marcus, IT. Let's get the actual software on your machine — installation and setup. Pull up a chair.",
     nextHint: "All set up? Aisha is at the workstation cluster. She'll show you your first session.",
   },
@@ -50,7 +50,7 @@ const NPCS = [
     id: 'aisha', zone: 1, pos: [6, -3], face: -Math.PI / 2,
     name: 'Aisha Mehta', role: 'Senior Engineer', portrait: '👩‍💻',
     chapterId: 'ch01', lessonId: 'ch01-l03', kind: 'lesson',
-    look: { skin: 0xc68642, hair: 0x1a1a1a, hairStyle: 'long', shirt: 0x90caf9, pants: 0x37474f, glasses: false, prop: 'mug' },
+    look: { skin: 0xc68642, hair: 0x1a1a1a, hairStyle: 'long', shirt: 0xa6d4ff, pants: 0x37474f, glasses: false, prop: 'mug', face: 'round', expression: 'happy', accent: 0xff7043, gesture: 'typing' },
     intro: "Hi! I'm Aisha. Forget the manual — let me walk you through your first real Claude session. We'll just open it up and try things.",
     nextHint: "Now find Kenji over by the demo screens — he'll explain the interface in detail.",
   },
@@ -58,7 +58,7 @@ const NPCS = [
     id: 'kenji',  zone: 1, pos: [-6, 3], face: Math.PI / 2,
     name: 'Kenji Tanaka', role: 'UX & Interface Lead', portrait: '🧑‍🎨',
     chapterId: 'ch01', lessonId: 'ch01-l04', kind: 'lesson',
-    look: { skin: 0xf1c27d, hair: 0x2e1f0e, hairStyle: 'short', shirt: 0xa5d6a7, pants: 0x263238, glasses: true, prop: 'tablet' },
+    look: { skin: 0xf1c27d, hair: 0x2e1f0e, hairStyle: 'short', shirt: 0xb9e2bb, pants: 0x263238, glasses: true, prop: 'tablet', face: 'dot', expression: 'smug', accent: 0x6a1b9a, gesture: 'gesture' },
     intro: "Yo. Kenji. Now that you've poked at it, let me actually walk you through the interface so you know what every part does.",
     nextHint: "Almost there. Diana at the filing cabinets has one more important thing — about how this training stays valid.",
   },
@@ -66,7 +66,7 @@ const NPCS = [
     id: 'diana',  zone: 1, pos: [6, 3], face: -Math.PI / 2,
     name: 'Diana Foley', role: 'Compliance Officer', portrait: '👩‍⚖️',
     chapterId: 'ch01', lessonId: 'ch01-l05', kind: 'lesson',
-    look: { skin: 0xfdd9b5, hair: 0xb87333, hairStyle: 'short', shirt: 0xffe082, pants: 0x4a148c, glasses: true, prop: 'clipboard' },
+    look: { skin: 0xfdd9b5, hair: 0xb87333, hairStyle: 'short', shirt: 0xfff0a3, pants: 0x4a148c, glasses: true, prop: 'clipboard', face: 'sharp', expression: 'stern', accent: 0x4a148c, gesture: 'clipboard' },
     intro: "I'm Diana, Compliance. One quick thing before you graduate this floor: this training has a shelf life. Let me explain why.",
     nextHint: "Now go see Sarah Chen by the back door — she runs the practical assessment.",
   },
@@ -74,7 +74,7 @@ const NPCS = [
     id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
     name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
     chapterId: 'ch01', testId: 'ch01-test', kind: 'test',
-    look: { skin: 0xf1c27d, hair: 0x000000, hairStyle: 'short', shirt: 0x1a237e, pants: 0x263238, glasses: false, prop: 'badge' },
+    look: { skin: 0xf1c27d, hair: 0x1a1a1a, hairStyle: 'short', shirt: 0x2c3a8f, pants: 0x263238, glasses: false, prop: 'badge', face: 'sharp', expression: 'focused', accent: 0xc9a44c, gesture: 'foottap' },
     intro: "Alright — last hurdle on this floor. I'm Sarah, EM. I'll send you a Slack-style scenario and want a real reply back. Pass and the door behind me opens.",
     nextHint: "Nice work. Walk through the door behind me — the Knowledge Library is open.",
   },
@@ -84,7 +84,7 @@ const NPCS = [
     id: 'elena',  zone: 2, pos: [-5, 18], face: Math.PI / 2,
     name: 'Dr. Elena Vasquez', role: 'Chief Strategist', portrait: '👩‍🏫',
     chapterId: 'ch02', lessonId: 'ch02-l01', kind: 'lesson',
-    look: { skin: 0xfdd9b5, hair: 0xc0c0c0, hairStyle: 'long', shirt: 0xce93d8, pants: 0x1a237e, glasses: true, prop: 'book' },
+    look: { skin: 0xfdd9b5, hair: 0xc0c0c0, hairStyle: 'long', shirt: 0xdba9e0, pants: 0x1a237e, glasses: true, prop: 'book', face: 'sharp', expression: 'smug', accent: 0x6a1b9a, gesture: 'reading' },
     intro: "Welcome to the Knowledge Library, kid. Elena. Doctor, technically. Forget prompt-engineering tricks — the real lever is centralised context. That's what a Business Brain is.",
     nextHint: "Find Raj over by the file shelves. He'll show you how to actually structure one.",
   },
@@ -92,7 +92,7 @@ const NPCS = [
     id: 'raj',    zone: 2, pos: [5, 18], face: -Math.PI / 2,
     name: 'Raj Patel', role: 'Information Architect', portrait: '🧑‍💼',
     chapterId: 'ch02', lessonId: 'ch02-l02', kind: 'lesson',
-    look: { skin: 0xc68642, hair: 0x2b1d0e, hairStyle: 'short', shirt: 0x81d4fa, pants: 0x263238, glasses: true, prop: 'book' },
+    look: { skin: 0xc68642, hair: 0x2b1d0e, hairStyle: 'short', shirt: 0xa3def9, pants: 0x263238, glasses: true, prop: 'book', face: 'round', expression: 'kind', accent: 0x37474f, gesture: 'reading' },
     intro: "Knowing what a Business Brain is doesn't help if you can't lay one out. I'm Raj — let me show you how to structure the folder.",
     nextHint: "Mei is at the back workstation. She'll walk through how it actually plays out day-to-day.",
   },
@@ -100,7 +100,7 @@ const NPCS = [
     id: 'mei',    zone: 2, pos: [0, 24], face: Math.PI,
     name: 'Mei Chen', role: 'Practitioner', portrait: '👩‍💻',
     chapterId: 'ch02', lessonId: 'ch02-l03', kind: 'lesson',
-    look: { skin: 0xf1c27d, hair: 0x1a1a1a, hairStyle: 'bun', shirt: 0xff8a65, pants: 0x263238, glasses: false, prop: 'mug' },
+    look: { skin: 0xf1c27d, hair: 0x1a1a1a, hairStyle: 'bun', shirt: 0xffa388, pants: 0x263238, glasses: false, prop: 'mug', face: 'round', expression: 'happy', accent: 0xff5722, gesture: 'typing' },
     intro: "Theory's nice. Let me show you what a real Business Brain looks like in practice on a live project.",
     nextHint: "Last stop: Noor at the lectern runs the practical for this chapter.",
   },
@@ -108,7 +108,7 @@ const NPCS = [
     id: 'noor',   zone: 2, pos: [-5, 30], face: Math.PI,
     name: 'Noor Ali', role: 'Senior Librarian', portrait: '👩‍🏫',
     chapterId: 'ch02', testId: 'ch02-test', kind: 'test',
-    look: { skin: 0x8d5524, hair: 0x000000, hairStyle: 'long', shirt: 0xa5d6a7, pants: 0x4a148c, glasses: true, prop: 'clipboard' },
+    look: { skin: 0x8d5524, hair: 0x1a1a1a, hairStyle: 'long', shirt: 0xb9e2bb, pants: 0x4a148c, glasses: true, prop: 'clipboard', face: 'sharp', expression: 'kind', accent: 0xc9a44c, gesture: 'clipboard' },
     intro: "Hi. I'm Noor. I run the practical test for this chapter. When you're confident in the Business Brain, come back and I'll send you a scenario.",
     nextHint: "Excellent. The library has nothing more to teach you — for now.",
   },
@@ -355,9 +355,22 @@ function makeCharacter(look) {
   const hairMat = new THREE.MeshStandardMaterial({ color: look.hair ?? 0x3e2723 });
   const shoeMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 
-  // Torso
+  // Torso (slight emissive so silhouettes don't disappear in shadow).
+  shirtMat.emissive = new THREE.Color(look.shirt);
+  shirtMat.emissiveIntensity = 0.08;
+  shirtMat.roughness = 0.85;
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.32), shirtMat);
   torso.position.y = 1.05; torso.castShadow = true; g.add(torso);
+
+  // Accent stripe / scarf across the upper chest — recognisable per NPC.
+  if (look.accent) {
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: look.accent, emissive: look.accent, emissiveIntensity: 0.2, roughness: 0.6,
+    });
+    const accent = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.34), accentMat);
+    accent.position.y = 1.32;
+    g.add(accent);
+  }
 
   // Neck
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.12, 12), skinMat);
