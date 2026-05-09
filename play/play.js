@@ -15,6 +15,8 @@ import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
+import { decorateReception } from './decorations/reception.js';
+import { decorateLibrary } from './decorations/library.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -270,6 +272,7 @@ let postfx = null;
 let dust = null;
 let lastZoneIdx = -1;
 let footstepAccum = 0; // distance accumulated since last footstep SFX
+let decoTickers = [];   // per-frame callbacks for animated decorations
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1395,6 +1398,11 @@ function buildWorld() {
   for (let zoneIdx = 2; zoneIdx < ZONE_COUNT; zoneIdx++) {
     buildGenericZone(zoneIdx);
   }
+
+  // ─── Decoration density passes ──────────────────────────────────────────────
+  decoTickers = [];
+  try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
+  try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
@@ -2047,6 +2055,11 @@ function update(dt) {
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
+  // Animated decorations (clock hands, server LEDs, demo screens, globe spin)
+  if (decoTickers.length) {
+    const _now = performance.now();
+    for (let i = 0; i < decoTickers.length; i++) decoTickers[i](dt, _now);
+  }
   // Update audio listener position so PannerNode sources track the camera.
   if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
 
@@ -2263,6 +2276,7 @@ export function stop() {
   try { unmountCustomization(); } catch {}
   lastZoneIdx = -1;
   footstepAccum = 0;
+  decoTickers = [];
   renderer = null; scene = null; camera = null;
   player = null; npcMeshes = []; interactionTarget = null;
   zoneDoors = [];
