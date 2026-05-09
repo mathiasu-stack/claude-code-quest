@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LightingManager } from './lighting/manager.js';
 import { isMobile } from './lighting/mobile.js';
+import { PostFxPipeline } from './postfx/composer.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -252,6 +253,7 @@ function generateChapterNPCs(chapterIdx) {
 // ─── Module state ────────────────────────────────────────────────────────────
 let renderer, scene, camera, clock;
 let lighting = null;
+let postfx = null;
 let lastZoneIdx = -1;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
@@ -1623,6 +1625,7 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  if (postfx) postfx.resize(w, h);
 }
 
 // ─── Input ───────────────────────────────────────────────────────────────────
@@ -1977,7 +1980,8 @@ function loop() {
   raf = requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
   update(dt);
-  renderer.render(scene, camera);
+  if (postfx) postfx.render();
+  else renderer.render(scene, camera);
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -2000,6 +2004,12 @@ export function start(host) {
     lighting.applyPreset(idx >= 0 ? idx : 0);
     lastZoneIdx = idx >= 0 ? idx : 0;
   }
+  // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
+  // initial bloom/vignette values to the current zone preset.
+  postfx = new PostFxPipeline(renderer, scene, camera, { mobile: isMobile() });
+  if (lighting) postfx.applyPreset(lighting.getPostFx());
+  // Re-sync size in case container has actual dimensions now.
+  if (container) postfx.resize(container.clientWidth, container.clientHeight);
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
@@ -2043,6 +2053,7 @@ export function stop() {
       }
     });
   }
+  if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
   lastZoneIdx = -1;
   renderer = null; scene = null; camera = null;
