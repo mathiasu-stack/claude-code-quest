@@ -2107,6 +2107,33 @@ export function start(host) {
   // Mount the audio settings gear inside the play container so it lives
   // alongside the back button and tier badge.
   mountAudioSettings(container);
+  // If after 1.5s the audio is still locked (mobile autoplay restriction),
+  // surface a brief hint. Auto-removes once a tap unlocks the context.
+  setTimeout(() => {
+    if (!audio.isUnlocked()) {
+      const hint = document.createElement('div');
+      hint.className = 'play-toast visible';
+      hint.style.background = 'rgba(26,39,68,0.92)';
+      hint.style.color = '#fff';
+      hint.textContent = '🔊 Tap anywhere to enable audio';
+      container.appendChild(hint);
+      const poll = setInterval(() => {
+        if (audio.isUnlocked()) {
+          clearInterval(poll);
+          hint.classList.remove('visible');
+          setTimeout(() => hint.remove(), 400);
+        }
+      }, 250);
+      // hard timeout so it never hangs around forever
+      setTimeout(() => {
+        clearInterval(poll);
+        if (hint.isConnected) {
+          hint.classList.remove('visible');
+          setTimeout(() => hint.remove(), 400);
+        }
+      }, 8000);
+    }
+  }, 1500);
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
