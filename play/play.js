@@ -604,14 +604,20 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
 
 function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
   const g = new THREE.Group();
+  // Glossy plastic stand + bezel
   const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.2, 12),
-    new THREE.MeshStandardMaterial({ color: 0x222 }));
+    new THREE.MeshStandardMaterial({ color: 0x222, metalness: 0.4, roughness: 0.4 }));
   stand.position.y = 0.88; g.add(stand);
   const back = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.05),
-    new THREE.MeshStandardMaterial({ color: 0x111 }));
+    new THREE.MeshStandardMaterial({ color: 0x111, metalness: 0.55, roughness: 0.4 }));
   back.position.y = 1.2; g.add(back);
+  // Screen — emissive so it reads as "on" without lights, slightly toned down
+  // by the post-fx bloom in the composer.
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4),
-    new THREE.MeshBasicMaterial({ color: screenColor }));
+    new THREE.MeshStandardMaterial({
+      color: screenColor, emissive: screenColor, emissiveIntensity: 0.7,
+      roughness: 0.4, metalness: 0,
+    }));
   screen.position.set(0, 1.2, 0.026); g.add(screen);
   g.position.set(x, 0, z); g.rotation.y = ry;
   return g;
@@ -632,11 +638,16 @@ function buildPlant(x, z) {
 
 function buildWaterCooler(x, z) {
   const g = new THREE.Group();
+  // Base reads as smooth painted plastic
   const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4),
-    new THREE.MeshStandardMaterial({ color: 0xeceff1 }));
+    new THREE.MeshStandardMaterial({ color: 0xeceff1, metalness: 0.45, roughness: 0.4 }));
   base.position.y = 0.4; base.castShadow = true; g.add(base);
+  // Glass-like bottle (transmission too expensive for mobile, fake with low opacity)
   const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.45, 16),
-    new THREE.MeshStandardMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.7 }));
+    new THREE.MeshStandardMaterial({
+      color: 0x80d8ff, metalness: 0.2, roughness: 0.05,
+      transparent: true, opacity: 0.6,
+    }));
   bottle.position.y = 1.05; g.add(bottle);
   g.position.set(x, 0, z);
   return g;
@@ -644,7 +655,8 @@ function buildWaterCooler(x, z) {
 
 function buildCouch(x, z, ry = 0) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+  // Fabric — high roughness, no metalness.
+  const mat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.95 });
   const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 0.8), mat);
   seat.position.y = 0.4; seat.castShadow = true; g.add(seat);
   const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.2), mat);
@@ -658,7 +670,8 @@ function buildCouch(x, z, ry = 0) {
 
 function buildFilingCabinet(x, z, ry = 0) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae });
+  // Painted metal — moderate metalness so it catches the directional.
+  const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, metalness: 0.6, roughness: 0.45 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.5), mat);
   body.position.y = 0.7; body.castShadow = true; g.add(body);
   // drawer lines
@@ -1249,7 +1262,9 @@ function buildWorld() {
   // Carpet runner
   const runner = new THREE.Mesh(
     new THREE.PlaneGeometry(2.4, 18),
-    new THREE.MeshStandardMaterial({ color: 0xc9a44c }),
+    new THREE.MeshStandardMaterial({
+      color: 0xc9a44c, metalness: 0.85, roughness: 0.18,
+    }),
   );
   runner.rotation.x = -Math.PI / 2;
   runner.position.set(0, 0.001, -1);
