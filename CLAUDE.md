@@ -109,3 +109,16 @@ active on the accessing device.
 
 Local-only access (when on home Wi-Fi, no Tailscale needed): 
 `http://192.168.70.9:8888`.
+
+## Deploying from the NAS
+
+When working in a Claude Code session on the NAS itself (not WSL),
+use `nas-deploy "commit message"` to commit and push to GitHub.
+
+This is different from `./deploy.sh` (which only exists on WSL and
+won't work here). `nas-deploy` is a system-wide command available
+from anywhere on the NAS — it stages, commits, and pushes.
+
+Web Station serves files directly from this folder, so the live game
+at http://ds925-urlacher:8888 reflects edits immediately — no separate
+deploy step is needed for visibility, only for syncing to GitHub.
