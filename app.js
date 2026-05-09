@@ -91,6 +91,7 @@ const App = {
 
   renderPlayView() {
     const main = document.getElementById('main-content');
+    const playerName = escHtml(this.progress?.playerName || 'New Hire');
     main.innerHTML = `
       <div class="play-view">
         <div class="play-canvas-host" id="play-canvas-host"></div>
@@ -102,6 +103,19 @@ const App = {
           <div class="play-joystick-thumb" id="play-joystick-thumb"></div>
         </div>
         <button class="play-interact-btn" id="play-interact-btn">Talk</button>
+
+        <div class="play-intro-overlay" id="play-intro-overlay">
+          <div class="intro-card">
+            <div class="intro-eyebrow">DAY 1 — ACME CORP HQ</div>
+            <h2>Welcome, <span class="intro-name">${playerName}</span>.</h2>
+            <p>You've just been hired. The reception floor is buzzing — this is where every Acme engineer learns the ropes of working with Claude Code.</p>
+            <p>Walk around with <strong>WASD</strong> (or the on-screen joystick on mobile). Approach a colleague and press <strong>E</strong> (or tap <strong>Talk</strong>) to learn what they teach. Each colleague will point you to the next.</p>
+            <p><strong>Start with Linda</strong> at the reception desk straight ahead of you.</p>
+            <button class="btn-primary intro-btn">Got it — let's go →</button>
+          </div>
+        </div>
+
+        <div class="play-dialogue" id="play-dialogue"></div>
       </div>
     `;
     const tryStart = (attempts = 0) => {

@@ -6,9 +6,10 @@ function renderTest(chapterId) {
   const main = document.getElementById('main-content');
   const prevResult = progress.testResults[test.id];
 
+  const fromPlay = !!window.App._currentParams?.fromPlay;
   main.innerHTML = `
     <div class="test-view">
-      <button class="back-btn" id="back-to-chapter">← ${ch.title}</button>
+      <button class="back-btn" id="back-to-chapter">← ${fromPlay ? 'Back to the office' : ch.title}</button>
 
       <div class="test-header">
         <div class="test-eyebrow">${ch.icon} ${ch.title} — Practical Assessment</div>
@@ -44,7 +45,8 @@ function renderTest(chapterId) {
   `;
 
   document.getElementById('back-to-chapter').addEventListener('click', () => {
-    window.App.navigate('chapter', { chapterId });
+    if (fromPlay) window.App.navigate('play');
+    else window.App.navigate('chapter', { chapterId });
   });
 
   const textarea = document.getElementById('test-submission');
@@ -179,6 +181,10 @@ function renderFeedback(result, test, wasAlreadyPassed) {
     ` : ''}
 
     ${result.passed && !wasAlreadyPassed ? '<div class="unlock-notice">🎉 Next chapter unlocked!</div>' : ''}
+
+    ${window.App._currentParams?.fromPlay
+      ? '<button class="btn-primary continue-cta" id="back-to-play-from-test" style="margin-top:16px">← Return to the office</button>'
+      : ''}
   `;
 
   feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -186,6 +192,9 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   if (result.passed) {
     Lesson.showXpToast(wasAlreadyPassed ? 0 : test.xpReward);
   }
+
+  const backToPlay = document.getElementById('back-to-play-from-test');
+  if (backToPlay) backToPlay.addEventListener('click', () => window.App.navigate('play'));
 }
 
 window.TestView = { renderTest };

@@ -1,14 +1,6 @@
 import * as THREE from 'three';
 
-let renderer, scene, camera, clock;
-let player, npc, ground;
-let keys = {};
-let touchVec = { x: 0, y: 0 };
-let interactionTarget = null;
-let raf = null;
-let resizeListener, keyDownListener, keyUpListener;
-let container, promptEl;
-
+// ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
   { shirt: 0xb0bec5, pants: 0x37474f, label: 'Intern' },
   { shirt: 0x90caf9, pants: 0x37474f, label: 'Junior Hire' },
@@ -20,86 +12,268 @@ const OUTFITS = [
   { shirt: 0xffd54f, pants: 0x4a148c, label: 'Director' },
 ];
 
+// ─── NPC roster ──────────────────────────────────────────────────────────────
+// Each NPC teaches exactly ONE lesson (or runs the practical test).
+const NPCS = [
+  // ── Zone 1: Onboarding office (chapter 1) ────
+  {
+    id: 'linda',  zone: 1, pos: [0, -7], face: 0,
+    name: 'Linda Park', role: 'HR Director', portrait: '👩‍💼',
+    chapterId: 'ch01', lessonId: 'ch01-l01', kind: 'lesson',
+    look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'bun', shirt: 0xc44a6e, pants: 0x263238, glasses: false, prop: 'clipboard' },
+    intro: "Welcome to Acme Corp! I'm Linda from HR. Before you can start work, let's cover the basics — what Claude Code actually IS. Take a seat, this won't take long.",
+    nextHint: "Done with me? Walk over to Marcus at the IT bench so he can get you set up.",
+  },
+  {
+    id: 'marcus', zone: 1, pos: [-6, -3], face: Math.PI / 2,
+    name: 'Marcus Webb', role: 'IT Setup Lead', portrait: '👨‍🔧',
+    chapterId: 'ch01', lessonId: 'ch01-l02', kind: 'lesson',
+    look: { skin: 0x8d5524, hair: 0x000000, hairStyle: 'short', shirt: 0x546e7a, pants: 0x263238, glasses: true, prop: 'tablet', beard: true },
+    intro: "Hey there, new hire. Marcus, IT. Let's get the actual software on your machine — installation and setup. Pull up a chair.",
+    nextHint: "All set up? Aisha is at the workstation cluster. She'll show you your first session.",
+  },
+  {
+    id: 'aisha', zone: 1, pos: [6, -3], face: -Math.PI / 2,
+    name: 'Aisha Mehta', role: 'Senior Engineer', portrait: '👩‍💻',
+    chapterId: 'ch01', lessonId: 'ch01-l03', kind: 'lesson',
+    look: { skin: 0xc68642, hair: 0x1a1a1a, hairStyle: 'long', shirt: 0x90caf9, pants: 0x37474f, glasses: false, prop: 'mug' },
+    intro: "Hi! I'm Aisha. Forget the manual — let me walk you through your first real Claude session. We'll just open it up and try things.",
+    nextHint: "Now find Kenji over by the demo screens — he'll explain the interface in detail.",
+  },
+  {
+    id: 'kenji',  zone: 1, pos: [-6, 3], face: Math.PI / 2,
+    name: 'Kenji Tanaka', role: 'UX & Interface Lead', portrait: '🧑‍🎨',
+    chapterId: 'ch01', lessonId: 'ch01-l04', kind: 'lesson',
+    look: { skin: 0xf1c27d, hair: 0x2e1f0e, hairStyle: 'short', shirt: 0xa5d6a7, pants: 0x263238, glasses: true, prop: 'tablet' },
+    intro: "Yo. Kenji. Now that you've poked at it, let me actually walk you through the interface so you know what every part does.",
+    nextHint: "Almost there. Diana at the filing cabinets has one more important thing — about how this training stays valid.",
+  },
+  {
+    id: 'diana',  zone: 1, pos: [6, 3], face: -Math.PI / 2,
+    name: 'Diana Foley', role: 'Compliance Officer', portrait: '👩‍⚖️',
+    chapterId: 'ch01', lessonId: 'ch01-l05', kind: 'lesson',
+    look: { skin: 0xfdd9b5, hair: 0xb87333, hairStyle: 'short', shirt: 0xffe082, pants: 0x4a148c, glasses: true, prop: 'clipboard' },
+    intro: "I'm Diana, Compliance. One quick thing before you graduate this floor: this training has a shelf life. Let me explain why.",
+    nextHint: "Now go see Sarah Chen by the back door — she runs the practical assessment.",
+  },
+  {
+    id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
+    name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
+    chapterId: 'ch01', testId: 'ch01-test', kind: 'test',
+    look: { skin: 0xf1c27d, hair: 0x000000, hairStyle: 'short', shirt: 0x1a237e, pants: 0x263238, glasses: false, prop: 'badge' },
+    intro: "Alright — last hurdle on this floor. I'm Sarah, EM. I'll send you a Slack-style scenario and want a real reply back. Pass and the door behind me opens.",
+    nextHint: "Nice work. Walk through the door behind me — the Knowledge Library is open.",
+  },
+
+  // ── Zone 2: Knowledge Library (chapter 2) — coords in library at z=12..32 ──
+  {
+    id: 'elena',  zone: 2, pos: [-5, 18], face: Math.PI / 2,
+    name: 'Dr. Elena Vasquez', role: 'Chief Strategist', portrait: '👩‍🏫',
+    chapterId: 'ch02', lessonId: 'ch02-l01', kind: 'lesson',
+    look: { skin: 0xfdd9b5, hair: 0xc0c0c0, hairStyle: 'long', shirt: 0xce93d8, pants: 0x1a237e, glasses: true, prop: 'book' },
+    intro: "Welcome to the Knowledge Library, kid. Elena. Doctor, technically. Forget prompt-engineering tricks — the real lever is centralised context. That's what a Business Brain is.",
+    nextHint: "Find Raj over by the file shelves. He'll show you how to actually structure one.",
+  },
+  {
+    id: 'raj',    zone: 2, pos: [5, 18], face: -Math.PI / 2,
+    name: 'Raj Patel', role: 'Information Architect', portrait: '🧑‍💼',
+    chapterId: 'ch02', lessonId: 'ch02-l02', kind: 'lesson',
+    look: { skin: 0xc68642, hair: 0x2b1d0e, hairStyle: 'short', shirt: 0x81d4fa, pants: 0x263238, glasses: true, prop: 'book' },
+    intro: "Knowing what a Business Brain is doesn't help if you can't lay one out. I'm Raj — let me show you how to structure the folder.",
+    nextHint: "Mei is at the back workstation. She'll walk through how it actually plays out day-to-day.",
+  },
+  {
+    id: 'mei',    zone: 2, pos: [0, 24], face: Math.PI,
+    name: 'Mei Chen', role: 'Practitioner', portrait: '👩‍💻',
+    chapterId: 'ch02', lessonId: 'ch02-l03', kind: 'lesson',
+    look: { skin: 0xf1c27d, hair: 0x1a1a1a, hairStyle: 'bun', shirt: 0xff8a65, pants: 0x263238, glasses: false, prop: 'mug' },
+    intro: "Theory's nice. Let me show you what a real Business Brain looks like in practice on a live project.",
+    nextHint: "Last stop: Noor at the lectern runs the practical for this chapter.",
+  },
+  {
+    id: 'noor',   zone: 2, pos: [-5, 30], face: Math.PI,
+    name: 'Noor Ali', role: 'Senior Librarian', portrait: '👩‍🏫',
+    chapterId: 'ch02', testId: 'ch02-test', kind: 'test',
+    look: { skin: 0x8d5524, hair: 0x000000, hairStyle: 'long', shirt: 0xa5d6a7, pants: 0x4a148c, glasses: true, prop: 'clipboard' },
+    intro: "Hi. I'm Noor. I run the practical test for this chapter. When you're confident in the Business Brain, come back and I'll send you a scenario.",
+    nextHint: "Excellent. The library has nothing more to teach you — for now.",
+  },
+];
+
+// ─── Module state ────────────────────────────────────────────────────────────
+let renderer, scene, camera, clock;
+let player, npcMeshes = [];
+let keys = {}, touchVec = { x: 0, y: 0 };
+let interactionTarget = null;
+let raf = null;
+let resizeListener, keyDownListener, keyUpListener;
+let container, promptEl, dialogueEl;
+let inputLocked = false;
+let zone2Door, zone2DoorLabel;
+
+function getProgress() { return window.App?.progress; }
+function isLessonDone(id) { return id && window.Progress.isLessonComplete(getProgress(), id); }
+function isTestDone(id) { return id && window.Progress.isTestPassed(getProgress(), id); }
+
 function getCompletedChapterCount() {
   if (!window.Progress || !window.CURRICULUM || !window.App) return 0;
-  const progress = window.App.progress;
   return window.CURRICULUM.filter(ch =>
-    window.Progress.isTestPassed(progress, ch.practicalTest.id)
+    window.Progress.isTestPassed(getProgress(), ch.practicalTest.id)
   ).length;
 }
-
 function getOutfit() {
-  const n = Math.min(getCompletedChapterCount(), OUTFITS.length - 1);
-  return OUTFITS[n];
+  return OUTFITS[Math.min(getCompletedChapterCount(), OUTFITS.length - 1)];
+}
+function isZone2Open() {
+  return isTestDone('ch01-test');
 }
 
-function makeCharacter(outfit, accentColor) {
-  const group = new THREE.Group();
+// ─── Character builder ───────────────────────────────────────────────────────
+function makeCharacter(look) {
+  const g = new THREE.Group();
+  const skinMat = new THREE.MeshStandardMaterial({ color: look.skin || 0xfdd9b5 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: look.shirt });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: look.pants });
+  const hairMat = new THREE.MeshStandardMaterial({ color: look.hair ?? 0x3e2723 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(0.6, 0.8, 0.35),
-    new THREE.MeshStandardMaterial({ color: outfit.shirt })
-  );
-  body.position.y = 1.0; body.castShadow = true;
-  group.add(body);
+  // Torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.32), shirtMat);
+  torso.position.y = 1.05; torso.castShadow = true; g.add(torso);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 16, 12),
-    new THREE.MeshStandardMaterial({ color: 0xfdd9b5 })
-  );
-  head.position.y = 1.62; head.castShadow = true;
-  group.add(head);
+  // Neck
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.12, 12), skinMat);
+  neck.position.y = 1.5; g.add(neck);
 
-  const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.235, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0x3e2723 })
-  );
-  hair.position.y = 1.62;
-  group.add(hair);
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 18, 14), skinMat);
+  head.position.y = 1.66; head.castShadow = true; g.add(head);
 
-  const pants = new THREE.Mesh(
-    new THREE.BoxGeometry(0.55, 0.55, 0.3),
-    new THREE.MeshStandardMaterial({ color: outfit.pants })
-  );
-  pants.position.y = 0.32; pants.castShadow = true;
-  group.add(pants);
-
-  const legGeom = new THREE.BoxGeometry(0.22, 0.5, 0.25);
-  const legMat = new THREE.MeshStandardMaterial({ color: outfit.pants });
-  const leftLeg = new THREE.Mesh(legGeom, legMat);
-  leftLeg.position.set(-0.13, 0.0, 0); leftLeg.castShadow = true;
-  group.add(leftLeg);
-  const rightLeg = new THREE.Mesh(legGeom, legMat);
-  rightLeg.position.set(0.13, 0.0, 0); rightLeg.castShadow = true;
-  group.add(rightLeg);
-
-  const armGeom = new THREE.BoxGeometry(0.18, 0.65, 0.25);
-  const armMat = new THREE.MeshStandardMaterial({ color: outfit.shirt });
-  const leftArm = new THREE.Mesh(armGeom, armMat);
-  leftArm.position.set(-0.4, 1.05, 0); leftArm.castShadow = true;
-  group.add(leftArm);
-  const rightArm = new THREE.Mesh(armGeom, armMat);
-  rightArm.position.set(0.4, 1.05, 0); rightArm.castShadow = true;
-  group.add(rightArm);
-
-  if (accentColor) {
-    const tie = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 0.4, 0.05),
-      new THREE.MeshStandardMaterial({ color: accentColor })
+  // Hair
+  if (look.hairStyle !== 'bald' && look.hairStyle !== undefined) {
+    const segY = look.hairStyle === 'long' ? Math.PI * 0.6 : Math.PI / 2;
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.225, 18, 14, 0, Math.PI * 2, 0, segY),
+      hairMat,
     );
-    tie.position.set(0, 1.0, 0.18);
-    group.add(tie);
+    hair.position.y = 1.66; g.add(hair);
+    if (look.hairStyle === 'bun') {
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), hairMat);
+      bun.position.set(0, 1.86, -0.05); g.add(bun);
+    }
+    if (look.hairStyle === 'long') {
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.32, 0.1), hairMat);
+      back.position.set(0, 1.5, -0.16); g.add(back);
+    }
   }
 
-  group.userData.parts = { body, head, hair, pants, leftLeg, rightLeg, leftArm, rightArm };
-  return group;
+  // Glasses
+  if (look.glasses) {
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 16), frameMat);
+    lensL.rotation.y = Math.PI / 2;
+    lensL.position.set(-0.07, 1.66, 0.2);
+    g.add(lensL);
+    const lensR = lensL.clone(); lensR.position.x = 0.07; g.add(lensR);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.01), frameMat);
+    bridge.position.set(0, 1.66, 0.21); g.add(bridge);
+  }
+
+  // Beard
+  if (look.beard) {
+    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.4), hairMat);
+    beard.position.set(0, 1.6, 0.02); g.add(beard);
+  }
+
+  // Pants block
+  const pants = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.3), pantsMat);
+  pants.position.y = 0.59; g.add(pants);
+
+  // Legs
+  const legGeom = new THREE.BoxGeometry(0.2, 0.55, 0.24);
+  const leftLeg = new THREE.Mesh(legGeom, pantsMat);
+  leftLeg.position.set(-0.13, 0.27, 0); leftLeg.castShadow = true; g.add(leftLeg);
+  const rightLeg = new THREE.Mesh(legGeom, pantsMat);
+  rightLeg.position.set(0.13, 0.27, 0); rightLeg.castShadow = true; g.add(rightLeg);
+
+  // Shoes
+  const shoeGeom = new THREE.BoxGeometry(0.22, 0.08, 0.34);
+  const leftShoe = new THREE.Mesh(shoeGeom, shoeMat);
+  leftShoe.position.set(-0.13, -0.04, 0.04); g.add(leftShoe);
+  const rightShoe = new THREE.Mesh(shoeGeom, shoeMat);
+  rightShoe.position.set(0.13, -0.04, 0.04); g.add(rightShoe);
+
+  // Arms
+  const armGeom = new THREE.BoxGeometry(0.16, 0.6, 0.22);
+  const leftArm = new THREE.Mesh(armGeom, shirtMat);
+  leftArm.position.set(-0.38, 1.1, 0); leftArm.castShadow = true; g.add(leftArm);
+  const rightArm = new THREE.Mesh(armGeom, shirtMat);
+  rightArm.position.set(0.38, 1.1, 0); rightArm.castShadow = true; g.add(rightArm);
+
+  // Hands
+  const handGeom = new THREE.SphereGeometry(0.09, 10, 8);
+  const leftHand = new THREE.Mesh(handGeom, skinMat);
+  leftHand.position.set(-0.38, 0.78, 0.03); g.add(leftHand);
+  const rightHand = new THREE.Mesh(handGeom, skinMat);
+  rightHand.position.set(0.38, 0.78, 0.03); g.add(rightHand);
+
+  // Prop
+  if (look.prop) {
+    const prop = new THREE.Group();
+    if (look.prop === 'clipboard') {
+      const board = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.02),
+        new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+      const clip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.025),
+        new THREE.MeshStandardMaterial({ color: 0x888888 }));
+      clip.position.y = 0.13; board.add(clip);
+      prop.add(board);
+    } else if (look.prop === 'tablet') {
+      const tab = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.02),
+        new THREE.MeshStandardMaterial({ color: 0x111111 }));
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.16),
+        new THREE.MeshBasicMaterial({ color: 0x4fc3f7 }));
+      screen.position.z = 0.012; tab.add(screen);
+      prop.add(tab);
+    } else if (look.prop === 'mug') {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 12),
+        new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 12),
+        new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      handle.rotation.y = Math.PI / 2;
+      handle.position.x = 0.07;
+      m.add(handle);
+      prop.add(m);
+    } else if (look.prop === 'book') {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.18),
+        new THREE.MeshStandardMaterial({ color: 0x6d4c41 }));
+      const pages = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.045, 0.165),
+        new THREE.MeshStandardMaterial({ color: 0xfff8e1 }));
+      pages.position.y = 0.001; b.add(pages);
+      b.rotation.x = -Math.PI / 2;
+      prop.add(b);
+    } else if (look.prop === 'badge') {
+      const lan = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.02),
+        new THREE.MeshStandardMaterial({ color: 0x1a237e }));
+      const badge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.01),
+        new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      lan.position.set(0, 1.3, 0.18);
+      badge.position.set(0, 1.05, 0.18);
+      g.add(lan); g.add(badge);
+    }
+    prop.position.set(0.42, 0.78, 0.18);
+    g.add(prop);
+  }
+
+  g.userData.parts = { leftLeg, rightLeg, leftArm, rightArm };
+  return g;
 }
 
-function makeLabelSprite(text, fg = '#ffffff', bg = 'rgba(26, 39, 68, 0.9)') {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512; canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  const r = 24, w = canvas.width, h = canvas.height;
+// ─── Sprite labels ───────────────────────────────────────────────────────────
+function makeLabelSprite(text, fg = '#fff', bg = 'rgba(26,39,68,0.92)') {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  const r = 24, w = c.width, h = c.height;
   ctx.fillStyle = bg;
   ctx.beginPath();
   ctx.moveTo(r, 0);
@@ -109,135 +283,451 @@ function makeLabelSprite(text, fg = '#ffffff', bg = 'rgba(26, 39, 68, 0.9)') {
   ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
   ctx.closePath(); ctx.fill();
   ctx.fillStyle = fg;
-  ctx.font = 'bold 56px sans-serif';
+  ctx.font = 'bold 50px sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(text, w / 2, h / 2);
-
-  const tex = new THREE.CanvasTexture(canvas);
+  const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
   sprite.scale.set(2.0, 0.5, 1);
   return sprite;
 }
 
-function makeWallSign(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024; canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#1a2744';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#c9a44c';
-  ctx.font = 'bold 140px serif';
+function makeWallSign(text, w = 8, h = 2, bg = '#1a2744', fg = '#c9a44c') {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = fg;
+  ctx.font = 'bold 130px serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-  const tex = new THREE.CanvasTexture(canvas);
+  ctx.fillText(text, c.width / 2, c.height / 2);
+  const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(
-    new THREE.PlaneGeometry(8, 2),
-    new THREE.MeshBasicMaterial({ map: tex })
-  );
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
 }
 
+function makePoster(title, subtitle, w = 1.6, h = 2.2, accent = '#c9a44c') {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 768;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, c.height);
+  grad.addColorStop(0, '#1a2744'); grad.addColorStop(1, '#2d4263');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = accent;
+  ctx.font = 'bold 70px serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(title, c.width / 2, c.height * 0.4);
+  ctx.fillStyle = '#fff';
+  ctx.font = '34px sans-serif';
+  ctx.fillText(subtitle, c.width / 2, c.height * 0.55);
+  ctx.strokeStyle = accent; ctx.lineWidth = 8;
+  ctx.strokeRect(20, 20, c.width - 40, c.height - 40);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+}
+
+// ─── Decor builders ──────────────────────────────────────────────────────────
+function buildChair(x, z, ry = 0, color = 0x37474f) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.6), mat);
+  seat.position.y = 0.5; seat.castShadow = true; g.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.1), mat);
+  back.position.set(0, 0.85, -0.25); g.add(back);
+  const legGeom = new THREE.BoxGeometry(0.06, 0.5, 0.06);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+  [[-0.25,-0.25],[0.25,-0.25],[-0.25,0.25],[0.25,0.25]].forEach(([lx,lz]) => {
+    const l = new THREE.Mesh(legGeom, legMat);
+    l.position.set(lx, 0.25, lz); g.add(l);
+  });
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), mat);
+  top.position.y = 0.75; top.castShadow = true; top.receiveShadow = true; g.add(top);
+  const legGeom = new THREE.BoxGeometry(0.08, 0.75, 0.08);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
+  const dx = w / 2 - 0.1, dz = d / 2 - 0.1;
+  [[-dx,-dz],[dx,-dz],[-dx,dz],[dx,dz]].forEach(([lx,lz]) => {
+    const l = new THREE.Mesh(legGeom, legMat);
+    l.position.set(lx, 0.375, lz); g.add(l);
+  });
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
+  const g = new THREE.Group();
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.2, 12),
+    new THREE.MeshStandardMaterial({ color: 0x222 }));
+  stand.position.y = 0.88; g.add(stand);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x111 }));
+  back.position.y = 1.2; g.add(back);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4),
+    new THREE.MeshBasicMaterial({ color: screenColor }));
+  screen.position.set(0, 1.2, 0.026); g.add(screen);
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildPlant(x, z) {
+  const g = new THREE.Group();
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.25, 14),
+    new THREE.MeshStandardMaterial({ color: 0x6d4c41 }));
+  pot.position.y = 0.13; pot.castShadow = true; g.add(pot);
+  const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12),
+    new THREE.MeshStandardMaterial({ color: 0x2e7d32 }));
+  leaves.position.y = 0.55; leaves.castShadow = true;
+  leaves.scale.set(1, 1.1, 1); g.add(leaves);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function buildWaterCooler(x, z) {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0xeceff1 }));
+  base.position.y = 0.4; base.castShadow = true; g.add(base);
+  const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.45, 16),
+    new THREE.MeshStandardMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.7 }));
+  bottle.position.y = 1.05; g.add(bottle);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function buildCouch(x, z, ry = 0) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 0.8), mat);
+  seat.position.y = 0.4; seat.castShadow = true; g.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.2), mat);
+  back.position.set(0, 0.75, -0.3); g.add(back);
+  const armGeom = new THREE.BoxGeometry(0.2, 0.6, 0.8);
+  const lA = new THREE.Mesh(armGeom, mat); lA.position.set(-1.1, 0.55, 0); g.add(lA);
+  const rA = new THREE.Mesh(armGeom, mat); rA.position.set(1.1, 0.55, 0); g.add(rA);
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildFilingCabinet(x, z, ry = 0) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.5), mat);
+  body.position.y = 0.7; body.castShadow = true; g.add(body);
+  // drawer lines
+  for (let i = 0; i < 3; i++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.01),
+      new THREE.MeshStandardMaterial({ color: 0x37474f }));
+    line.position.set(0, 0.3 + i * 0.4, 0.255); g.add(line);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x37474f }));
+    handle.position.set(0, 0.3 + i * 0.4 - 0.05, 0.27); g.add(handle);
+  }
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildBookshelf(x, z, ry = 0, w = 2.2) {
+  const g = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
+  const back = new THREE.Mesh(new THREE.BoxGeometry(w, 2.6, 0.05), woodMat);
+  back.position.set(0, 1.3, -0.18); g.add(back);
+  const sides = new THREE.BoxGeometry(0.08, 2.6, 0.4);
+  const left = new THREE.Mesh(sides, woodMat); left.position.set(-w/2, 1.3, 0); g.add(left);
+  const right = new THREE.Mesh(sides, woodMat); right.position.set(w/2, 1.3, 0); g.add(right);
+  for (let i = 0; i < 4; i++) {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.4), woodMat);
+    shelf.position.set(0, 0.4 + i * 0.65, 0); g.add(shelf);
+    // books
+    const colors = [0xb71c1c, 0x1a237e, 0x33691e, 0xff6f00, 0x4a148c, 0x004d40];
+    let bx = -w/2 + 0.15;
+    while (bx < w/2 - 0.1) {
+      const bw = 0.06 + Math.random() * 0.06;
+      const bh = 0.35 + Math.random() * 0.18;
+      const book = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.25),
+        new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)] }));
+      book.position.set(bx + bw/2, 0.4 + i * 0.65 + bh/2 + 0.02, 0);
+      g.add(book);
+      bx += bw + 0.005;
+    }
+  }
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildTable(x, z, ry = 0, w = 2.2) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x6d4c41 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, 1.2), mat);
+  top.position.y = 0.78; top.castShadow = true; top.receiveShadow = true; g.add(top);
+  const legGeom = new THREE.BoxGeometry(0.08, 0.78, 0.08);
+  [[-w/2+0.1,-0.5],[w/2-0.1,-0.5],[-w/2+0.1,0.5],[w/2-0.1,0.5]].forEach(([lx,lz]) => {
+    const l = new THREE.Mesh(legGeom, mat); l.position.set(lx, 0.39, lz); g.add(l);
+  });
+  // a stack of books on the table
+  const book = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.16),
+    new THREE.MeshStandardMaterial({ color: 0xb71c1c }));
+  book.position.set(0, 0.83, 0); g.add(book);
+  const book2 = book.clone();
+  book2.material = new THREE.MeshStandardMaterial({ color: 0x004d40 });
+  book2.position.y = 0.87; g.add(book2);
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  return g;
+}
+
+function buildLamp(x, z) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x37474f });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), mat);
+  base.position.y = 0.82; g.add(base);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), mat);
+  pole.position.y = 1.03; g.add(pole);
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.16, 12, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xfff59d, side: THREE.DoubleSide }));
+  shade.position.y = 1.3; g.add(shade);
+  const point = new THREE.PointLight(0xfff59d, 0.6, 4);
+  point.position.set(0, 1.2, 0); g.add(point);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+// ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xeaf3ff);
-  scene.fog = new THREE.Fog(0xeaf3ff, 25, 60);
+  scene.fog = new THREE.Fog(0xeaf3ff, 30, 70);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x99aab5, 0.7);
-  scene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-  dir.position.set(8, 12, 6);
+  // Lights
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x99aab5, 0.65));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+  dir.position.set(8, 14, 6);
   dir.castShadow = true;
-  dir.shadow.mapSize.set(1024, 1024);
-  dir.shadow.camera.left = -15; dir.shadow.camera.right = 15;
-  dir.shadow.camera.top = 15; dir.shadow.camera.bottom = -15;
+  dir.shadow.mapSize.set(2048, 2048);
+  dir.shadow.camera.left = -25; dir.shadow.camera.right = 25;
+  dir.shadow.camera.top = 25; dir.shadow.camera.bottom = -25;
+  dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 50;
   scene.add(dir);
 
-  ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(40, 40),
-    new THREE.MeshStandardMaterial({ color: 0x9aa9bc })
+  // ─── Zone 1 ground (office) ───
+  const officeFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({ color: 0x9aa9bc }),
   );
-  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
-  scene.add(ground);
+  officeFloor.rotation.x = -Math.PI / 2;
+  officeFloor.position.set(0, 0, 0);
+  officeFloor.receiveShadow = true;
+  scene.add(officeFloor);
 
+  // Carpet runner
   const runner = new THREE.Mesh(
     new THREE.PlaneGeometry(2.4, 18),
-    new THREE.MeshStandardMaterial({ color: 0xc9a44c })
+    new THREE.MeshStandardMaterial({ color: 0xc9a44c }),
   );
   runner.rotation.x = -Math.PI / 2;
-  runner.position.set(0, 0.001, -3);
+  runner.position.set(0, 0.001, -1);
   scene.add(runner);
 
+  // Office walls
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xf4ecd8 });
-  const wallH = 3.5;
-  function wall(w, h, d, x, y, z) {
+  const wallH = 3.8;
+  function wall(w, h, d, x, y, z, ry = 0) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-    m.position.set(x, y, z);
+    m.position.set(x, y, z); m.rotation.y = ry;
     m.castShadow = true; m.receiveShadow = true;
     scene.add(m);
     return m;
   }
-  wall(20, wallH, 0.3, 0, wallH / 2, -10);
-  wall(0.3, wallH, 20, -10, wallH / 2, 0);
-  wall(0.3, wallH, 20, 10, wallH / 2, 0);
-  wall(8, wallH, 0.3, -6, wallH / 2, 10);
-  wall(8, wallH, 0.3, 6, wallH / 2, 10);
-  wall(4, 1, 0.3, 0, wallH - 0.5, 10);
+  // back, left, right
+  wall(22, wallH, 0.3, 0, wallH/2, -11);
+  wall(0.3, wallH, 22, -11, wallH/2, 0);
+  wall(0.3, wallH, 22, 11, wallH/2, 0);
+  // front split with doorway at center (z = 11)
+  wall(8.5, wallH, 0.3, -6.75, wallH/2, 11);
+  wall(8.5, wallH, 0.3, 6.75, wallH/2, 11);
+  wall(4, 1.2, 0.3, 0, wallH - 0.6, 11);
 
+  // Logo on back wall
+  const logo = makeWallSign('ACME CORP — RECEPTION', 8, 1.6);
+  logo.position.set(0, 2.8, -10.84);
+  scene.add(logo);
+
+  // Posters on side walls
+  const p1 = makePoster('GROW', 'with Acme');
+  p1.position.set(-10.83, 2.0, -3); p1.rotation.y = Math.PI / 2; scene.add(p1);
+  const p2 = makePoster('SHIP IT', 'every Friday');
+  p2.position.set(10.83, 2.0, -3); p2.rotation.y = -Math.PI / 2; scene.add(p2);
+  const p3 = makePoster('LEARN', 'every day');
+  p3.position.set(-10.83, 2.0, 5); p3.rotation.y = Math.PI / 2; scene.add(p3);
+
+  // Reception desk
   const desk = new THREE.Mesh(
     new THREE.BoxGeometry(3, 1.0, 1.2),
-    new THREE.MeshStandardMaterial({ color: 0x6b4f3a })
+    new THREE.MeshStandardMaterial({ color: 0x6b4f3a }),
   );
-  desk.position.set(0, 0.5, -7);
+  desk.position.set(0, 0.5, -8);
   desk.castShadow = true; desk.receiveShadow = true;
   scene.add(desk);
 
-  const logo = makeWallSign('ACME CORP');
-  logo.position.set(0, 2.6, -9.84);
-  scene.add(logo);
+  // Decor
+  scene.add(buildPlant(-10.2, -10.2));
+  scene.add(buildPlant(10.2, -10.2));
+  scene.add(buildPlant(-10.2, 9.5));
+  scene.add(buildPlant(10.2, 9.5));
+  scene.add(buildWaterCooler(-9.5, -2));
+  scene.add(buildCouch(-8.5, 5, Math.PI / 2));
+  scene.add(buildCouch(8.5, 5, -Math.PI / 2));
 
-  const ch1Done = window.Progress && window.App &&
-    window.Progress.isTestPassed(window.App.progress, 'ch01-test');
-  const doorMat = new THREE.MeshStandardMaterial({
-    color: ch1Done ? 0x4caf50 : 0x5d4037,
-  });
-  const door = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.6, 0.2), doorMat);
-  door.position.set(0, 1.3, 9.9);
-  scene.add(door);
+  // IT bench (Marcus area, x=-6 z=-3)
+  scene.add(buildDesk(-7.5, -3, Math.PI / 2, 1.6, 0.8));
+  scene.add(buildMonitor(-7.5, -3.4, Math.PI / 2));
+  scene.add(buildMonitor(-7.5, -2.6, Math.PI / 2, 0x66bb6a));
+  scene.add(buildChair(-6.4, -3));
 
-  const doorLabel = makeLabelSprite(
-    ch1Done ? 'Chapter 2 — Open' : 'Chapter 2 — Locked',
-    '#ffffff',
-    ch1Done ? 'rgba(34,139,34,0.9)' : 'rgba(120,40,40,0.9)'
+  // Aisha area (x=6 z=-3)
+  scene.add(buildDesk(7.5, -3, -Math.PI / 2, 1.6, 0.8));
+  scene.add(buildMonitor(7.5, -3, -Math.PI / 2, 0xff8a65));
+  scene.add(buildChair(6.4, -3, Math.PI));
+
+  // Kenji area (x=-6 z=3) — multiple monitors / demo
+  scene.add(buildDesk(-7.5, 3, Math.PI / 2, 2.2, 0.8));
+  scene.add(buildMonitor(-7.5, 2.4, Math.PI / 2, 0xab47bc));
+  scene.add(buildMonitor(-7.5, 3.2, Math.PI / 2, 0x29b6f6));
+  scene.add(buildMonitor(-7.5, 4.0, Math.PI / 2, 0xffca28));
+  scene.add(buildChair(-6.4, 3));
+
+  // Diana area (x=6 z=3) — filing cabinets
+  scene.add(buildFilingCabinet(7.6, 2));
+  scene.add(buildFilingCabinet(7.6, 3));
+  scene.add(buildFilingCabinet(7.6, 4));
+  scene.add(buildChair(6.2, 3, Math.PI));
+
+  // Door to chapter 2
+  const ch1Done = isTestDone('ch01-test');
+  const doorMat = new THREE.MeshStandardMaterial({ color: ch1Done ? 0x4caf50 : 0x5d4037 });
+  zone2Door = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.6, 0.2), doorMat);
+  zone2Door.position.set(0, 1.3, 10.99);
+  scene.add(zone2Door);
+  zone2DoorLabel = makeLabelSprite(
+    ch1Done ? 'Knowledge Library — Open' : 'Knowledge Library — Locked',
+    '#fff', ch1Done ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
   );
-  doorLabel.position.set(0, 3.2, 9.9);
-  scene.add(doorLabel);
+  zone2DoorLabel.position.set(0, 3.4, 11);
+  zone2DoorLabel.scale.set(3.0, 0.7, 1);
+  scene.add(zone2DoorLabel);
+
+  // ─── Zone 2 — Knowledge Library ──────────────────────────────────────────
+  // Library starts at z = 11.5 going negative (since we use z=-22 for NPC positions, library is at z=-30 to -10)
+  // Wait — we positioned zone-2 NPCs at z around -22 to -28, that's BEHIND the back wall of zone 1.
+  // Restructure: zone 1 is z=-11..11 and zone 2 is z=-30..-12, accessed via the doorway at z=11... that doesn't match.
+  // Fix: relocate zone 2 to be on the FAR SIDE of the door — z > 11.
+  //   But our NPC positions are negative. Let me just remap: NPC z in NPCS for zone 2 are stored as -22, -22, -28, -27.
+  //   We'll add 35 to them for actual scene placement (so -22 -> 13, -28 -> 7, etc.)
+  //   That keeps the data clean. We do that in spawnNPC().
+
+  // Build library walls (at z = 12 to 32)
+  const libFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({ color: 0x8d6e63 }),
+  );
+  libFloor.rotation.x = -Math.PI / 2;
+  libFloor.position.set(0, 0, 22);
+  libFloor.receiveShadow = true;
+  scene.add(libFloor);
+
+  // Library walls
+  wall(22, wallH, 0.3, 0, wallH/2, 33);
+  wall(0.3, wallH, 22, -11, wallH/2, 22);
+  wall(0.3, wallH, 22, 11, wallH/2, 22);
+  // No front wall for library (door is the front into office at z=11)
+
+  // Library sign on back wall
+  const libSign = makeWallSign('KNOWLEDGE LIBRARY', 8, 1.6, '#3e2723', '#d4af37');
+  libSign.position.set(0, 2.8, 32.84);
+  scene.add(libSign);
+
+  // Bookshelves along walls
+  scene.add(buildBookshelf(-10.5, 14, Math.PI / 2));
+  scene.add(buildBookshelf(-10.5, 18, Math.PI / 2));
+  scene.add(buildBookshelf(-10.5, 22, Math.PI / 2));
+  scene.add(buildBookshelf(-10.5, 26, Math.PI / 2));
+  scene.add(buildBookshelf(10.5, 14, -Math.PI / 2));
+  scene.add(buildBookshelf(10.5, 18, -Math.PI / 2));
+  scene.add(buildBookshelf(10.5, 22, -Math.PI / 2));
+  scene.add(buildBookshelf(10.5, 26, -Math.PI / 2));
+  scene.add(buildBookshelf(-3, 32, 0));
+  scene.add(buildBookshelf(3, 32, 0));
+
+  // Reading tables
+  scene.add(buildTable(0, 16));
+  scene.add(buildTable(0, 22));
+  // chairs around tables
+  scene.add(buildChair(-1.6, 16, Math.PI / 2, 0x4e342e));
+  scene.add(buildChair(1.6, 16, -Math.PI / 2, 0x4e342e));
+  scene.add(buildChair(-1.6, 22, Math.PI / 2, 0x4e342e));
+  scene.add(buildChair(1.6, 22, -Math.PI / 2, 0x4e342e));
+
+  // Lamps
+  scene.add(buildLamp(0, 16));
+  scene.add(buildLamp(0, 22));
+
+  // Plants
+  scene.add(buildPlant(-9.8, 13));
+  scene.add(buildPlant(9.8, 13));
+  scene.add(buildPlant(-9.8, 30));
+  scene.add(buildPlant(9.8, 30));
 }
 
+// ─── Player + NPCs ───────────────────────────────────────────────────────────
 function buildPlayer() {
-  player = makeCharacter(getOutfit(), 0xc9a44c);
-  player.position.set(0, 0.25, 4);
+  const o = getOutfit();
+  player = makeCharacter({
+    skin: 0xfdd9b5, hair: 0x3e2723, hairStyle: 'short',
+    shirt: o.shirt, pants: o.pants, glasses: false, prop: null,
+  });
+
+  let startX = 0, startZ = 5;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('ccq_play_pos') || 'null');
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z)) {
+      startX = saved.x; startZ = saved.z;
+    }
+  } catch {}
+  player.position.set(startX, 0, startZ);
   scene.add(player);
 
-  const tier = getOutfit().label;
-  const tierTag = makeLabelSprite(tier, '#1a2744', 'rgba(201,164,76,0.95)');
-  tierTag.position.set(0, 2.4, 0);
-  player.add(tierTag);
+  const tier = makeLabelSprite(o.label, '#1a2744', 'rgba(201,164,76,0.95)');
+  tier.position.set(0, 2.4, 0);
+  player.add(tier);
 }
 
-function buildNPC() {
-  npc = makeCharacter({ shirt: 0xc44a6e, pants: 0x263238 }, null);
-  npc.position.set(0, 0.25, -7.5);
-  npc.rotation.y = Math.PI;
-  npc.userData.chapterId = 'ch01';
-  scene.add(npc);
+function spawnNPC(npcDef) {
+  const mesh = makeCharacter(npcDef.look);
+  mesh.position.set(npcDef.pos[0], 0, npcDef.pos[1]);
+  mesh.rotation.y = npcDef.face;
+  mesh.userData.npc = npcDef;
+  scene.add(mesh);
 
-  const tag = makeLabelSprite('Linda — Onboarding');
-  tag.position.set(0, 2.4, 0);
-  npc.add(tag);
+  const tag = makeLabelSprite(`${npcDef.portrait} ${npcDef.name}`);
+  tag.position.set(0, 2.45, 0);
+  tag.scale.set(2.6, 0.55, 1);
+  mesh.add(tag);
+
+  npcMeshes.push(mesh);
 }
 
+function buildNPCs() {
+  npcMeshes = [];
+  NPCS.forEach(spawnNPC);
+}
+
+// ─── Renderer & camera ───────────────────────────────────────────────────────
 function setupRenderer() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -246,23 +736,23 @@ function setupRenderer() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
 
-  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-  camera.position.set(0, 5, 10);
+  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+  camera.position.set(0, 5, 12);
   camera.lookAt(0, 1, 0);
   resize();
 }
-
 function resize() {
   if (!renderer || !container) return;
-  const w = container.clientWidth;
-  const h = container.clientHeight;
+  const w = container.clientWidth, h = container.clientHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 
+// ─── Input ───────────────────────────────────────────────────────────────────
 function setupInput() {
   keyDownListener = (e) => {
+    if (inputLocked) return;
     keys[e.key.toLowerCase()] = true;
     if (e.key === 'e' || e.key === 'E') tryInteract();
   };
@@ -270,37 +760,34 @@ function setupInput() {
   window.addEventListener('keydown', keyDownListener);
   window.addEventListener('keyup', keyUpListener);
 
-  const joystickEl = document.getElementById('play-joystick');
-  const thumbEl = document.getElementById('play-joystick-thumb');
+  const j = document.getElementById('play-joystick');
+  const t = document.getElementById('play-joystick-thumb');
   let active = false, baseX = 0, baseY = 0;
   const max = 50;
-
   const onStart = (e) => {
+    if (inputLocked) return;
     active = true;
-    const rect = joystickEl.getBoundingClientRect();
-    baseX = rect.left + rect.width / 2;
-    baseY = rect.top + rect.height / 2;
+    const rect = j.getBoundingClientRect();
+    baseX = rect.left + rect.width / 2; baseY = rect.top + rect.height / 2;
     onMove(e);
   };
   const onMove = (e) => {
     if (!active) return;
-    const t = (e.touches ? e.touches[0] : e);
-    let dx = t.clientX - baseX, dy = t.clientY - baseY;
+    const tt = (e.touches ? e.touches[0] : e);
+    let dx = tt.clientX - baseX, dy = tt.clientY - baseY;
     const dist = Math.hypot(dx, dy);
     if (dist > max) { dx = (dx / dist) * max; dy = (dy / dist) * max; }
-    thumbEl.style.transform = `translate(${dx}px, ${dy}px)`;
-    touchVec.x = dx / max;
-    touchVec.y = dy / max;
+    t.style.transform = `translate(${dx}px, ${dy}px)`;
+    touchVec.x = dx / max; touchVec.y = dy / max;
   };
   const onEnd = () => {
-    active = false;
-    touchVec.x = 0; touchVec.y = 0;
-    thumbEl.style.transform = 'translate(0,0)';
+    active = false; touchVec.x = 0; touchVec.y = 0;
+    t.style.transform = 'translate(0,0)';
   };
-  joystickEl.addEventListener('touchstart', onStart, { passive: true });
-  joystickEl.addEventListener('touchmove', onMove, { passive: true });
-  joystickEl.addEventListener('touchend', onEnd);
-  joystickEl.addEventListener('touchcancel', onEnd);
+  j.addEventListener('touchstart', onStart, { passive: true });
+  j.addEventListener('touchmove', onMove, { passive: true });
+  j.addEventListener('touchend', onEnd);
+  j.addEventListener('touchcancel', onEnd);
 
   document.getElementById('play-prompt').addEventListener('click', tryInteract);
   document.getElementById('play-back-btn').addEventListener('click', () => {
@@ -312,31 +799,158 @@ function setupInput() {
   window.addEventListener('resize', resizeListener);
 }
 
-function tryInteract() {
-  if (!interactionTarget) return;
-  const chapterId = interactionTarget.userData.chapterId;
-  window.App.navigate('chapter', { chapterId });
+// ─── Dialogue & intro ────────────────────────────────────────────────────────
+function showIntro() {
+  const seen = localStorage.getItem('ccq_play_intro_seen') === '1';
+  if (seen) return;
+  const overlay = document.getElementById('play-intro-overlay');
+  if (!overlay) return;
+  const playerName = getProgress()?.playerName || 'New Hire';
+  overlay.querySelector('.intro-name').textContent = playerName;
+  overlay.classList.add('visible');
+  inputLocked = true;
+  overlay.querySelector('.intro-btn').onclick = () => {
+    overlay.classList.remove('visible');
+    inputLocked = false;
+    localStorage.setItem('ccq_play_intro_seen', '1');
+  };
 }
 
+function tryInteract() {
+  if (!interactionTarget || inputLocked) return;
+  const npc = interactionTarget.userData.npc;
+  openDialogue(npc);
+}
+
+function openDialogue(npc) {
+  inputLocked = true;
+  const d = dialogueEl;
+  const done = npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId);
+
+  // Determine status & next-step pointer
+  let statusLine = '';
+  if (done) {
+    statusLine = `<div class="dlg-status dlg-done">✓ You've already completed this with ${npc.name.split(' ')[0]}.</div>`;
+  }
+  let nextHint = done ? `<div class="dlg-next">${npc.nextHint}</div>` : '';
+
+  d.innerHTML = `
+    <div class="dlg-card">
+      <button class="dlg-close" aria-label="Close">×</button>
+      <div class="dlg-header">
+        <div class="dlg-portrait">${npc.portrait}</div>
+        <div class="dlg-who">
+          <div class="dlg-name">${npc.name}</div>
+          <div class="dlg-role">${npc.role}</div>
+        </div>
+      </div>
+      ${statusLine}
+      <div class="dlg-body">${escapeHtml(npc.intro)}</div>
+      ${nextHint}
+      <div class="dlg-actions">
+        <button class="btn-primary dlg-go">${
+          npc.kind === 'test'
+            ? (done ? 'Retake practical →' : 'Take the practical →')
+            : (done ? 'Revisit lesson →' : `Start lesson — ${getLessonTitle(npc) || 'Begin'} →`)
+        }</button>
+        <button class="btn-secondary dlg-cancel">Maybe later</button>
+      </div>
+    </div>
+  `;
+  d.classList.add('visible');
+
+  d.querySelector('.dlg-cancel').onclick = closeDialogue;
+  d.querySelector('.dlg-close').onclick = closeDialogue;
+  d.querySelector('.dlg-go').onclick = () => {
+    if (player) {
+      sessionStorage.setItem('ccq_play_pos', JSON.stringify({
+        x: player.position.x, z: player.position.z,
+      }));
+    }
+    if (npc.kind === 'test') {
+      window.App.navigate('test', { chapterId: npc.chapterId, fromPlay: true });
+    } else {
+      window.App.navigate('lesson', { chapterId: npc.chapterId, lessonId: npc.lessonId, fromPlay: true });
+    }
+  };
+}
+
+function getLessonTitle(npc) {
+  const ch = window.CURRICULUM?.find(c => c.id === npc.chapterId);
+  const l = ch?.lessons.find(x => x.id === npc.lessonId);
+  return l?.title || '';
+}
+
+function closeDialogue() {
+  dialogueEl.classList.remove('visible');
+  dialogueEl.innerHTML = '';
+  inputLocked = false;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Update loop ─────────────────────────────────────────────────────────────
 function update(dt) {
+  if (inputLocked) {
+    // smoothly idle animations
+    const p = player.userData.parts;
+    if (p) {
+      p.leftLeg.rotation.x *= 0.85;
+      p.rightLeg.rotation.x *= 0.85;
+      p.leftArm.rotation.x *= 0.85;
+      p.rightArm.rotation.x *= 0.85;
+    }
+    return;
+  }
+
   let mx = 0, mz = 0;
   if (keys['w'] || keys['arrowup']) mz -= 1;
   if (keys['s'] || keys['arrowdown']) mz += 1;
   if (keys['a'] || keys['arrowleft']) mx -= 1;
   if (keys['d'] || keys['arrowright']) mx += 1;
-  if (touchVec.x !== 0 || touchVec.y !== 0) {
-    mx += touchVec.x;
-    mz += touchVec.y;
-  }
+  if (touchVec.x !== 0 || touchVec.y !== 0) { mx += touchVec.x; mz += touchVec.y; }
+
   const len = Math.hypot(mx, mz);
-  const moving = len > 0.05;
-  if (moving) {
+  if (len > 0.05) {
     mx /= len; mz /= len;
-    const speed = 4.0;
-    player.position.x += mx * speed * dt;
-    player.position.z += mz * speed * dt;
-    player.position.x = Math.max(-9.5, Math.min(9.5, player.position.x));
-    player.position.z = Math.max(-9.5, Math.min(9.5, player.position.z));
+    const speed = 4.4;
+    let nx = player.position.x + mx * speed * dt;
+    let nz = player.position.z + mz * speed * dt;
+
+    // Bounds: office z in [-10.5,10.5], library z in [11.5,32.5], doorway corridor x in [-1.7,1.7] z in [10.5,11.5].
+    const oldZone = player.position.z < 11 ? 'office' : 'library';
+    if (oldZone === 'office') {
+      if (nz > 10.5) {
+        if (Math.abs(nx) < 1.7 && isZone2Open()) {
+          nx = Math.max(-1.7, Math.min(1.7, nx));
+          nz = Math.min(11.6, nz);
+        } else {
+          nz = 10.5;
+          nx = Math.max(-10.5, Math.min(10.5, nx));
+        }
+      } else {
+        nx = Math.max(-10.5, Math.min(10.5, nx));
+        nz = Math.max(-10.5, nz);
+      }
+    } else { // library
+      if (nz < 11.5) {
+        if (Math.abs(nx) < 1.7) {
+          nx = Math.max(-1.7, Math.min(1.7, nx));
+          nz = Math.max(10.4, nz);
+        } else {
+          nz = 11.5;
+          nx = Math.max(-10.5, Math.min(10.5, nx));
+        }
+      } else {
+        nx = Math.max(-10.5, Math.min(10.5, nx));
+        nz = Math.min(32.5, nz);
+      }
+    }
+
+    player.position.x = nx;
+    player.position.z = nz;
     player.rotation.y = Math.atan2(mx, mz);
 
     const t = performance.now() * 0.012;
@@ -347,28 +961,43 @@ function update(dt) {
       p.leftArm.rotation.x = -Math.sin(t) * 0.4;
       p.rightArm.rotation.x = Math.sin(t) * 0.4;
     }
-  } else if (player.userData.parts) {
+  } else {
     const p = player.userData.parts;
-    p.leftLeg.rotation.x *= 0.85;
-    p.rightLeg.rotation.x *= 0.85;
-    p.leftArm.rotation.x *= 0.85;
-    p.rightArm.rotation.x *= 0.85;
+    if (p) {
+      p.leftLeg.rotation.x *= 0.85;
+      p.rightLeg.rotation.x *= 0.85;
+      p.leftArm.rotation.x *= 0.85;
+      p.rightArm.rotation.x *= 0.85;
+    }
   }
 
-  const camDist = 6, camH = 4;
+  // Camera follow
+  const camDist = 7, camH = 4.5;
   camera.position.x += (player.position.x - camera.position.x) * 0.08;
   camera.position.z += (player.position.z + camDist - camera.position.z) * 0.08;
   camera.position.y = camH;
   camera.lookAt(player.position.x, 1.0, player.position.z);
 
-  const dx = player.position.x - npc.position.x;
-  const dz = player.position.z - npc.position.z;
-  const dist = Math.hypot(dx, dz);
-  if (dist < 2.4) {
-    if (interactionTarget !== npc) {
-      interactionTarget = npc;
+  // Update door state if zone 2 unlocks during play
+  if (zone2Door) {
+    const open = isZone2Open();
+    zone2Door.material.color.set(open ? 0x4caf50 : 0x5d4037);
+  }
+
+  // Interaction proximity
+  let nearest = null, nearestDist = Infinity;
+  for (const m of npcMeshes) {
+    const dx = player.position.x - m.position.x;
+    const dz = player.position.z - m.position.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 2.4 && d < nearestDist) { nearest = m; nearestDist = d; }
+  }
+  if (nearest) {
+    if (interactionTarget !== nearest) {
+      interactionTarget = nearest;
+      const npc = nearest.userData.npc;
       promptEl.classList.add('visible');
-      promptEl.textContent = 'Press E or tap to talk to Linda';
+      promptEl.textContent = `Talk to ${npc.name.split(' ')[0]} — press E or tap`;
       document.getElementById('play-interact-btn').classList.add('visible');
     }
   } else if (interactionTarget) {
@@ -385,15 +1014,18 @@ function loop() {
   renderer.render(scene, camera);
 }
 
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
 export function start(host) {
   container = host;
   promptEl = document.getElementById('play-prompt');
+  dialogueEl = document.getElementById('play-dialogue');
   clock = new THREE.Clock();
   setupRenderer();
   buildWorld();
   buildPlayer();
-  buildNPC();
+  buildNPCs();
   setupInput();
+  showIntro();
   loop();
 }
 
@@ -404,9 +1036,7 @@ export function stop() {
   if (keyDownListener) window.removeEventListener('keydown', keyDownListener);
   if (keyUpListener) window.removeEventListener('keyup', keyUpListener);
   if (renderer) {
-    if (renderer.domElement && renderer.domElement.parentNode) {
-      renderer.domElement.parentNode.removeChild(renderer.domElement);
-    }
+    if (renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     renderer.dispose();
   }
   if (scene) {
@@ -414,17 +1044,15 @@ export function stop() {
       if (obj.geometry) obj.geometry.dispose();
       if (obj.material) {
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        mats.forEach(m => {
-          if (m.map) m.map.dispose();
-          m.dispose();
-        });
+        mats.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
       }
     });
   }
   renderer = null; scene = null; camera = null;
-  player = null; npc = null; ground = null;
-  interactionTarget = null;
+  player = null; npcMeshes = []; interactionTarget = null;
+  zone2Door = null; zone2DoorLabel = null;
   keys = {}; touchVec = { x: 0, y: 0 };
+  inputLocked = false;
 }
 
 window.Play = { start, stop };

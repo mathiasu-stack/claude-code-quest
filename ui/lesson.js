@@ -8,11 +8,12 @@ function renderLesson(chapterId, lessonId) {
   const alreadyDone = Progress.isLessonComplete(progress, lessonId);
   const checkResolved = !lesson.check || Progress.isKnowledgeCheckPassed(progress, lessonId) || (progress.knowledgeChecks?.[lessonId]?.attempts > 0);
   const lessonIdx = ch.lessons.findIndex(l => l.id === lessonId);
+  const fromPlay = !!window.App._currentParams?.fromPlay;
   const main = document.getElementById('main-content');
 
   main.innerHTML = `
     <div class="lesson-view">
-      <button class="back-btn" id="back-to-chapter">← ${ch.title}</button>
+      <button class="back-btn" id="back-to-chapter">← ${fromPlay ? 'Back to the office' : ch.title}</button>
 
       <div class="lesson-header">
         <div class="lesson-meta-top">
@@ -43,19 +44,24 @@ function renderLesson(chapterId, lessonId) {
       <div class="lesson-footer">
         ${alreadyDone
           ? `<div class="already-done">✓ You've completed this lesson</div>
-             ${buildContinueCta(ch, lessonId)}`
+             ${fromPlay
+               ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office</button>'
+               : buildContinueCta(ch, lessonId)}`
           : `<button class="btn-primary complete-btn ${checkResolved ? '' : 'is-locked'}" id="mark-complete" ${checkResolved ? '' : 'disabled'}>
                ${checkResolved ? `Mark as Complete — Earn ${lesson.xpReward} PP →` : 'Answer the knowledge check above to continue'}
              </button>`
         }
-        ${buildLessonNav(ch, lessonId)}
+        ${fromPlay ? '' : buildLessonNav(ch, lessonId)}
       </div>
     </div>
   `;
 
   document.getElementById('back-to-chapter').addEventListener('click', () => {
-    window.App.navigate('chapter', { chapterId });
+    if (fromPlay) window.App.navigate('play');
+    else window.App.navigate('chapter', { chapterId });
   });
+  const backToPlay = document.getElementById('back-to-play');
+  if (backToPlay) backToPlay.addEventListener('click', () => window.App.navigate('play'));
 
   if (!alreadyDone) {
     const completeBtn = document.getElementById('mark-complete');
@@ -96,13 +102,20 @@ function completeLesson(ch, lesson) {
 
   const btn = document.getElementById('mark-complete');
   if (btn) {
+    const fromPlay = !!window.App._currentParams?.fromPlay;
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
       <div class="already-done">✓ Lesson complete!</div>
-      ${buildContinueCta(ch, lesson.id)}
+      ${fromPlay
+        ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office</button>'
+        : buildContinueCta(ch, lesson.id)}
     `;
     btn.replaceWith(...Array.from(wrapper.childNodes));
-    bindContinueCta();
+    if (fromPlay) {
+      document.getElementById('back-to-play').addEventListener('click', () => window.App.navigate('play'));
+    } else {
+      bindContinueCta();
+    }
   }
 }
 
