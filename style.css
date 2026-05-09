@@ -934,8 +934,13 @@ body {
   .nav-chapter-title { display: block; }
   .nav-item { padding: 14px 16px; min-height: 48px; font-size: 14px; }
 
-  /* Main content */
-  #main-content { padding: 20px 14px; flex: 1; overflow-y: auto; min-height: 0; }
+  /* Main content — generous bottom padding to clear mobile browser chrome (URL bar, toolbar, home indicator) */
+  #main-content {
+    padding: 20px 14px calc(96px + env(safe-area-inset-bottom, 0px));
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
 
   /* Touch targets */
   .btn-primary { padding: 16px 24px; min-height: 48px; font-size: 15px; width: 100%; }
@@ -1003,7 +1008,7 @@ body {
 }
 
 @media (max-width: 480px) {
-  #main-content { padding: 14px 10px; }
+  #main-content { padding: 14px 10px calc(96px + env(safe-area-inset-bottom, 0px)); }
   .chapter-grid { gap: 10px; }
   .welcome-name { font-size: 22px; }
 }
