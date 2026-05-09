@@ -1834,12 +1834,31 @@ function update(dt) {
     }
   }
 
-  let mx = 0, mz = 0;
-  if (keys['w'] || keys['arrowup']) mz -= 1;
-  if (keys['s'] || keys['arrowdown']) mz += 1;
-  if (keys['a'] || keys['arrowleft']) mx -= 1;
-  if (keys['d'] || keys['arrowright']) mx += 1;
-  if (touchVec.x !== 0 || touchVec.y !== 0) { mx += touchVec.x; mz += touchVec.y; }
+  // Camera-relative input. W/up = forward in camera direction, A/left =
+  // perpendicular (camera-left), etc. Holding A continuously rotates the
+  // character (and camera following it) in a circle, because each frame
+  // "left" is recomputed against the camera's CURRENT facing direction.
+  let inputForward = 0, inputRight = 0;
+  if (keys['w'] || keys['arrowup'])    inputForward += 1;
+  if (keys['s'] || keys['arrowdown'])  inputForward -= 1;
+  if (keys['a'] || keys['arrowleft'])  inputRight   -= 1;
+  if (keys['d'] || keys['arrowright']) inputRight   += 1;
+  inputRight   += touchVec.x;
+  inputForward -= touchVec.y; // joystick up (touchVec.y < 0) → forward
+
+  // Project camera forward onto the XZ plane.
+  const camFwd = new THREE.Vector3();
+  camera.getWorldDirection(camFwd);
+  camFwd.y = 0;
+  const camFwdLen = Math.hypot(camFwd.x, camFwd.z);
+  if (camFwdLen > 0.001) { camFwd.x /= camFwdLen; camFwd.z /= camFwdLen; }
+  else { camFwd.x = 0; camFwd.z = -1; }
+  // camRight: 90° clockwise of camFwd in XZ plane (so +X is to camera's right).
+  const camRightX = -camFwd.z;
+  const camRightZ =  camFwd.x;
+
+  let mx = camRightX * inputRight + camFwd.x * inputForward;
+  let mz = camRightZ * inputRight + camFwd.z * inputForward;
 
   const len = Math.hypot(mx, mz);
   if (len > 0.05) {
@@ -1880,13 +1899,15 @@ function update(dt) {
     }
   }
 
-  // Camera orbits behind the player based on facing direction
+  // Camera orbits behind the player based on facing direction.
+  // dt-aware exponential smoothing so the same feel survives 30fps & 60fps.
   const camDist = 6.5, camH = 4.2;
   const angle = player.rotation.y;
   const targetCamX = player.position.x - Math.sin(angle) * camDist;
   const targetCamZ = player.position.z - Math.cos(angle) * camDist;
-  camera.position.x += (targetCamX - camera.position.x) * 0.12;
-  camera.position.z += (targetCamZ - camera.position.z) * 0.12;
+  const camLerp = 1 - Math.exp(-dt * 9); // stiffness ~9 (snappier than the old 0.12 @ 60fps)
+  camera.position.x += (targetCamX - camera.position.x) * camLerp;
+  camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   camera.position.y = camH + player.position.y * 0.3;
   camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
