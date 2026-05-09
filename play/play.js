@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LightingManager } from './lighting/manager.js';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
+import { DustMotes } from './lighting/dust-motes.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -254,6 +255,7 @@ function generateChapterNPCs(chapterIdx) {
 let renderer, scene, camera, clock;
 let lighting = null;
 let postfx = null;
+let dust = null;
 let lastZoneIdx = -1;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
@@ -1948,6 +1950,9 @@ function update(dt) {
     }
   }
 
+  // Drift dust motes around the player (desktop-only; mobile is a no-op).
+  if (dust && player) dust.update(dt, player.position);
+
   // Animate hearts around CEO portrait if all chapters complete
   if (ceoHearts) {
     const t = performance.now() * 0.001;
@@ -2018,6 +2023,8 @@ export function start(host) {
   if (lighting) postfx.applyPreset(lighting.getPostFx());
   // Re-sync size in case container has actual dimensions now.
   if (container) postfx.resize(container.clientWidth, container.clientHeight);
+  // Dust motes (desktop only — mobile gets count=0 and renders nothing).
+  dust = new DustMotes(scene, { mobile: isMobile() });
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
@@ -2061,6 +2068,7 @@ export function stop() {
       }
     });
   }
+  if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
   lastZoneIdx = -1;
