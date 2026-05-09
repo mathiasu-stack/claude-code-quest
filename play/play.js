@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LightingManager } from './lighting/manager.js';
-import { isMobile } from './lighting/mobile.js';
+import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
@@ -1607,8 +1607,8 @@ function buildNPCs() {
 
 // ─── Renderer & camera ───────────────────────────────────────────────────────
 function setupRenderer() {
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer = new THREE.WebGLRenderer({ antialias: !isMobile() });
+  renderer.setPixelRatio(effectivePixelRatio());
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
