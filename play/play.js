@@ -11,6 +11,7 @@ import {
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
 } from './audio/procedural.js';
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
+import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -2103,6 +2104,9 @@ export function start(host) {
   dust = new DustMotes(scene, { mobile: isMobile() });
   // Audio: attach unlock listeners (no-op once unlocked) and start zone music.
   audio.ensureUnlocked(document.body);
+  // Mount the audio settings gear inside the play container so it lives
+  // alongside the back button and tier badge.
+  mountAudioSettings(container);
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
@@ -2161,6 +2165,7 @@ export function stop() {
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
   try { audio.stopMusic(800); } catch {}
+  try { unmountAudioSettings(); } catch {}
   lastZoneIdx = -1;
   footstepAccum = 0;
   renderer = null; scene = null; camera = null;
