@@ -90,6 +90,8 @@ function showAchievementToast(achievement) {
     toast.classList.remove('visible');
     setTimeout(() => toast.remove(), 400);
   }, 4200);
+  // Audio chime — uses the Play module's SFX bridge if loaded.
+  try { window.PlayAudio?.achievement?.(); } catch {}
 }
 
 window.Achievements = {

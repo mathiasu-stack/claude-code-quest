@@ -78,6 +78,8 @@ function renderLesson(chapterId, lessonId) {
 
 function completeLesson(ch, lesson) {
   let progress = window.App.progress;
+  const levelBefore = Scoring.getLevel(progress.totalXP).label;
+
   progress = Progress.markLessonComplete(progress, lesson.id, lesson.xpReward);
 
   const streakBefore = progress.currentStreak || 0;
@@ -99,6 +101,12 @@ function completeLesson(ch, lesson) {
 
   window.App.refreshSidebar();
   showXpToast(lesson.xpReward);
+  // Audio: PP ping always; level-up fanfare if the tier label changed.
+  try { window.PlayAudio?.ppPing?.(); } catch {}
+  const levelAfter = Scoring.getLevel(progress.totalXP).label;
+  if (levelAfter !== levelBefore) {
+    try { window.PlayAudio?.levelUp?.(); } catch {}
+  }
 
   const btn = document.getElementById('mark-complete');
   if (btn) {
@@ -177,6 +185,12 @@ function handleCheckAnswer(ch, lesson, chosenIdx) {
   const wasFirstAttempt = !progress.knowledgeChecks?.[lesson.id];
   const alreadyPassed = Progress.isKnowledgeCheckPassed(progress, lesson.id);
 
+  // KC tone (rising for correct, falling for incorrect).
+  try {
+    if (correct) window.PlayAudio?.kcCorrect?.();
+    else         window.PlayAudio?.kcIncorrect?.();
+  } catch {}
+
   let bonus = 0;
   if (correct && wasFirstAttempt && !alreadyPassed) {
     bonus = 5;
@@ -215,7 +229,10 @@ function handleCheckAnswer(ch, lesson, chosenIdx) {
     </div>
   `;
 
-  if (bonus) showXpToast(bonus);
+  if (bonus) {
+    showXpToast(bonus);
+    try { window.PlayAudio?.ppPing?.(); } catch {}
+  }
 
   const completeBtn = document.getElementById('mark-complete');
   if (completeBtn && !completeBtn.dataset.unlocked) {

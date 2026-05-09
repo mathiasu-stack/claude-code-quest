@@ -93,6 +93,7 @@ function handleTestSubmit(ch, test) {
   const result = Evaluator.evaluate(submission, test.criteria, test.minLength, test.passThreshold);
 
   let progress = window.App.progress;
+  const levelBefore = window.Scoring ? Scoring.getLevel(progress.totalXP).label : null;
   const wasAlreadyPassed = Progress.isTestPassed(progress, test.id);
   const attemptsBefore = progress.testResults[test.id]?.attempts || 0;
   progress = Progress.recordTestResult(progress, test.id, result, test.xpReward);
@@ -193,7 +194,18 @@ function renderFeedback(result, test, wasAlreadyPassed) {
     Lesson.showXpToast(wasAlreadyPassed ? 0 : test.xpReward);
     if (!wasAlreadyPassed) {
       try { sessionStorage.setItem('ccq_dance_for', test.id); } catch {}
+      // Fanfare + PP ping; level-up fanfare overrides if level changed.
+      try {
+        const levelAfter = window.Scoring ? Scoring.getLevel(window.App.progress.totalXP).label : null;
+        if (levelAfter && levelBefore && levelAfter !== levelBefore) {
+          window.PlayAudio?.levelUp?.();
+        } else {
+          window.PlayAudio?.ppPing?.();
+        }
+      } catch {}
     }
+  } else {
+    try { window.PlayAudio?.kcIncorrect?.(); } catch {}
   }
 
   const backToPlay = document.getElementById('back-to-play-from-test');

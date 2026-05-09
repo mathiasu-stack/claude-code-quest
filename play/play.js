@@ -2104,7 +2104,18 @@ export function start(host) {
     const danceFlag = sessionStorage.getItem('ccq_dance_for');
     if (danceFlag) {
       sessionStorage.removeItem('ccq_dance_for');
-      setTimeout(() => { danceUntil = performance.now() + 4500; showCelebrationToast(); }, 400);
+      setTimeout(() => {
+        danceUntil = performance.now() + 4500;
+        showCelebrationToast();
+        // Crowd cheer + level-up fanfare-ish stinger over the celebration.
+        try {
+          playCrowdCheer(4.0);
+          playLevelUpFanfare();
+          // Switch zone music to the celebration stinger; it falls back to
+          // silence if the file isn't present.
+          audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+        } catch {}
+      }, 400);
     }
   } catch {}
   loop();
@@ -2156,3 +2167,18 @@ export function stop() {
 }
 
 window.Play = { start, stop };
+
+// Bridge for non-module scripts (engine/achievements.js, ui/lesson.js, ui/test.js).
+// These scripts can fire game audio without importing modules directly.
+window.PlayAudio = {
+  achievement: () => playAchievementChime(),
+  levelUp:     () => playLevelUpFanfare(),
+  ppPing:      () => playPpPing(),
+  kcCorrect:   () => playKcCorrectTone(),
+  kcIncorrect: () => playKcIncorrectTone(),
+  uiClick:     () => playUi('click'),
+  uiHover:     () => playUi('hover'),
+  uiConfirm:   () => playUi('confirm'),
+  uiCancel:    () => playUi('cancel'),
+  cheer:       (d) => playCrowdCheer(d),
+};
