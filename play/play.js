@@ -3,6 +3,14 @@ import { LightingManager } from './lighting/manager.js';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
+import { audio } from './audio/AudioManager.js';
+import {
+  playFootstep, playJumpGrunt, playLandThud,
+  playUi, playDialogueBlip, blipPitchForNpc,
+  playAchievementChime, playLevelUpFanfare, playPpPing,
+  playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
+} from './audio/procedural.js';
+import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -257,6 +265,7 @@ let lighting = null;
 let postfx = null;
 let dust = null;
 let lastZoneIdx = -1;
+let footstepAccum = 0; // distance accumulated since last footstep SFX
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1831,10 +1840,12 @@ function update(dt) {
   if (jumpRequested && player.userData.grounded) {
     player.userData.velocityY = 6.5;
     player.userData.grounded = false;
+    playJumpGrunt();
   }
   jumpRequested = false;
 
   // Gravity + Y position
+  const wasAirborne = !player.userData.grounded;
   if (!player.userData.grounded || player.position.y > 0) {
     player.userData.velocityY -= 18 * dt;
     player.position.y += player.userData.velocityY * dt;
@@ -1842,6 +1853,7 @@ function update(dt) {
       player.position.y = 0;
       player.userData.velocityY = 0;
       player.userData.grounded = true;
+      if (wasAirborne) playLandThud();
     }
   }
 
@@ -1881,6 +1893,19 @@ function update(dt) {
     // Generic movement bounds across all zones with doorways
     const clamped = clampMove(player.position.x, player.position.z, nx, nz);
     nx = clamped.x; nz = clamped.z;
+
+    // Footstep accumulator: trigger a step every ~0.65m of horizontal movement
+    // while grounded. Surface comes from the current zone's audio config.
+    if (player.userData.grounded) {
+      const stepDx = nx - player.position.x;
+      const stepDz = nz - player.position.z;
+      footstepAccum += Math.hypot(stepDx, stepDz);
+      if (footstepAccum > 0.65) {
+        footstepAccum = 0;
+        const idx = zoneIndexAt(nz);
+        playFootstep(surfaceForZone(idx));
+      }
+    }
 
     player.position.x = nx;
     player.position.z = nz;
@@ -2025,6 +2050,8 @@ export function start(host) {
   if (container) postfx.resize(container.clientWidth, container.clientHeight);
   // Dust motes (desktop only — mobile gets count=0 and renders nothing).
   dust = new DustMotes(scene, { mobile: isMobile() });
+  // Audio: attach unlock listeners (no-op once unlocked) and start zone music.
+  audio.ensureUnlocked(document.body);
   showIntro();
   // Trigger celebration dance if player just passed a test
   try {
