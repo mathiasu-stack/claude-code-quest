@@ -754,422 +754,199 @@ function buildLamp(x, z) {
 // ─── CEO portrait ────────────────────────────────────────────────────────────
 let ceoHearts = null;
 
-// Hand-drawn manga-style CEO portrait. All paths/strokes — no external image.
-function drawMangaCEO(canvas) {
+// Friendly cartoon CEO portrait — flat color blocks, large round eyes,
+// soft smile, matches the blocky in-game style. No realism / no manga.
+function drawCeoPortrait(canvas) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const X = (n) => n * W;
   const Y = (n) => n * H;
 
-  // ── Background: soft pink-purple gradient with sparkles ──
-  const bg = ctx.createRadialGradient(X(0.5), Y(0.4), W * 0.1, X(0.5), Y(0.5), W * 0.9);
-  bg.addColorStop(0, '#ffe4ee');
-  bg.addColorStop(0.55, '#f4b6c8');
-  bg.addColorStop(1, '#7e3958');
+  // Background — warm gold gradient with subtle dots
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#f4d2a3');
+  bg.addColorStop(1, '#c98c52');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-  // sparkles
-  for (let i = 0; i < 80; i++) {
-    const sx = Math.random() * W, sy = Math.random() * H * 0.7;
-    const sz = Math.random() * 3 + 0.6;
-    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.6 + 0.15})`;
+  // Soft halftone dots
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H * 0.85;
+    const r = 4 + Math.random() * 6;
     ctx.beginPath();
-    ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  // 4-point sparkles (anime-style)
-  const sparkle = (cx, cy, r, alpha = 0.95) => {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r * 0.2, -r * 0.2);
-    ctx.lineTo(r, 0);
-    ctx.lineTo(r * 0.2, r * 0.2);
-    ctx.lineTo(0, r);
-    ctx.lineTo(-r * 0.2, r * 0.2);
-    ctx.lineTo(-r, 0);
-    ctx.lineTo(-r * 0.2, -r * 0.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  };
-  sparkle(X(0.18), Y(0.18), 12);
-  sparkle(X(0.82), Y(0.22), 10);
-  sparkle(X(0.12), Y(0.34), 7);
-  sparkle(X(0.88), Y(0.4), 8);
 
-  // ── Hair back layer (long, flowing) ──
-  const hairDark = '#1a0d2b';
-  const hairMid = '#2e1a4a';
-  const hairLight = '#4a2868';
-  ctx.fillStyle = hairDark;
+  // Hair back layer (warm brown)
+  ctx.fillStyle = '#3e2723';
   ctx.beginPath();
-  ctx.moveTo(X(0.18), Y(0.32));
-  ctx.bezierCurveTo(X(0.12), Y(0.5), X(0.10), Y(0.85), X(0.22), Y(1.0));
-  ctx.lineTo(X(0.78), Y(1.0));
-  ctx.bezierCurveTo(X(0.90), Y(0.85), X(0.88), Y(0.5), X(0.82), Y(0.32));
-  ctx.bezierCurveTo(X(0.78), Y(0.18), X(0.22), Y(0.18), X(0.18), Y(0.32));
+  ctx.ellipse(X(0.5), Y(0.46), W * 0.30, H * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Hair side waves
+  ctx.beginPath();
+  ctx.moveTo(X(0.20), Y(0.4));
+  ctx.bezierCurveTo(X(0.18), Y(0.6), X(0.28), Y(0.7), X(0.32), Y(0.62));
+  ctx.lineTo(X(0.36), Y(0.52));
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(X(0.80), Y(0.4));
+  ctx.bezierCurveTo(X(0.82), Y(0.6), X(0.72), Y(0.7), X(0.68), Y(0.62));
+  ctx.lineTo(X(0.64), Y(0.52));
   ctx.closePath();
   ctx.fill();
 
-  // Long side strands extending down past shoulders
-  ctx.fillStyle = hairMid;
+  // Body / blazer (deep navy)
+  ctx.fillStyle = '#1a2744';
   ctx.beginPath();
-  ctx.moveTo(X(0.18), Y(0.42));
-  ctx.bezierCurveTo(X(0.10), Y(0.6), X(0.16), Y(0.85), X(0.22), Y(1.0));
-  ctx.lineTo(X(0.30), Y(1.0));
-  ctx.bezierCurveTo(X(0.28), Y(0.78), X(0.26), Y(0.55), X(0.30), Y(0.45));
+  ctx.moveTo(X(0.05), Y(1.0));
+  ctx.lineTo(X(0.05), Y(0.85));
+  ctx.bezierCurveTo(X(0.20), Y(0.72), X(0.40), Y(0.66), X(0.50), Y(0.66));
+  ctx.bezierCurveTo(X(0.60), Y(0.66), X(0.80), Y(0.72), X(0.95), Y(0.85));
+  ctx.lineTo(X(0.95), Y(1.0));
   ctx.closePath();
   ctx.fill();
+  // White shirt v-neck
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.moveTo(X(0.82), Y(0.42));
-  ctx.bezierCurveTo(X(0.90), Y(0.6), X(0.84), Y(0.85), X(0.78), Y(1.0));
-  ctx.lineTo(X(0.70), Y(1.0));
-  ctx.bezierCurveTo(X(0.72), Y(0.78), X(0.74), Y(0.55), X(0.70), Y(0.45));
+  ctx.moveTo(X(0.42), Y(0.72));
+  ctx.lineTo(X(0.50), Y(0.92));
+  ctx.lineTo(X(0.58), Y(0.72));
+  ctx.bezierCurveTo(X(0.55), Y(0.71), X(0.45), Y(0.71), X(0.42), Y(0.72));
   ctx.closePath();
   ctx.fill();
-
-  // ── Neck ──
-  const skin = '#ffe1c5';
-  const skinShadow = '#e3b896';
-  ctx.fillStyle = skin;
-  ctx.beginPath();
-  ctx.moveTo(X(0.41), Y(0.55));
-  ctx.lineTo(X(0.41), Y(0.68));
-  ctx.bezierCurveTo(X(0.45), Y(0.7), X(0.55), Y(0.7), X(0.59), Y(0.68));
-  ctx.lineTo(X(0.59), Y(0.55));
-  ctx.closePath();
-  ctx.fill();
-  // neck shadow
-  ctx.fillStyle = skinShadow;
-  ctx.beginPath();
-  ctx.moveTo(X(0.41), Y(0.62));
-  ctx.bezierCurveTo(X(0.45), Y(0.66), X(0.55), Y(0.66), X(0.59), Y(0.62));
-  ctx.lineTo(X(0.59), Y(0.68));
-  ctx.bezierCurveTo(X(0.55), Y(0.7), X(0.45), Y(0.7), X(0.41), Y(0.68));
-  ctx.closePath();
-  ctx.fill();
-
-  // ── Blazer / corporate jacket ──
-  const blazer = '#1c1c2e';
-  const blazerLight = '#2c2c44';
-  ctx.fillStyle = blazer;
-  ctx.beginPath();
-  ctx.moveTo(X(0.0), Y(1.0));
-  ctx.lineTo(X(0.0), Y(0.92));
-  ctx.bezierCurveTo(X(0.12), Y(0.78), X(0.32), Y(0.66), X(0.42), Y(0.7));
-  ctx.lineTo(X(0.5), Y(1.0));
-  ctx.lineTo(X(0.0), Y(1.0));
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(X(1.0), Y(1.0));
-  ctx.lineTo(X(1.0), Y(0.92));
-  ctx.bezierCurveTo(X(0.88), Y(0.78), X(0.68), Y(0.66), X(0.58), Y(0.7));
-  ctx.lineTo(X(0.5), Y(1.0));
-  ctx.lineTo(X(1.0), Y(1.0));
-  ctx.closePath();
-  ctx.fill();
-
-  // Lapel highlights
-  ctx.fillStyle = blazerLight;
-  ctx.beginPath();
-  ctx.moveTo(X(0.42), Y(0.7));
-  ctx.lineTo(X(0.5), Y(1.0));
-  ctx.lineTo(X(0.46), Y(1.0));
-  ctx.lineTo(X(0.38), Y(0.74));
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(X(0.58), Y(0.7));
-  ctx.lineTo(X(0.5), Y(1.0));
-  ctx.lineTo(X(0.54), Y(1.0));
-  ctx.lineTo(X(0.62), Y(0.74));
-  ctx.closePath();
-  ctx.fill();
-
-  // White camisole / shirt under blazer (low V-neck)
-  ctx.fillStyle = '#fff8f0';
-  ctx.beginPath();
-  ctx.moveTo(X(0.43), Y(0.69));
-  ctx.lineTo(X(0.5), Y(0.92));
-  ctx.lineTo(X(0.57), Y(0.69));
-  ctx.bezierCurveTo(X(0.55), Y(0.68), X(0.45), Y(0.68), X(0.43), Y(0.69));
-  ctx.closePath();
-  ctx.fill();
-  // Collar shadow
-  ctx.strokeStyle = '#1a1a1a';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(X(0.43), Y(0.69));
-  ctx.lineTo(X(0.5), Y(0.92));
-  ctx.lineTo(X(0.57), Y(0.69));
-  ctx.stroke();
-
   // Gold lapel pin
-  ctx.fillStyle = '#ffd700';
+  ctx.fillStyle = '#ffd54f';
   ctx.beginPath();
-  ctx.arc(X(0.4), Y(0.78), 9, 0, Math.PI * 2);
+  ctx.arc(X(0.40), Y(0.80), 11, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#fff8c8';
+  ctx.fillStyle = '#fff8c4';
   ctx.beginPath();
-  ctx.arc(X(0.398), Y(0.778), 3, 0, Math.PI * 2);
+  ctx.arc(X(0.398), Y(0.798), 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // ── Face ──
-  const cx = X(0.5), cy = Y(0.41);
-  const fw = W * 0.155, fh = H * 0.165;
-  ctx.fillStyle = skin;
-  // Slightly pointy oval face
+  // Face — big rounded shape, friendly proportions
+  const cx = X(0.5), cy = Y(0.42);
+  ctx.fillStyle = '#fde0c5';
   ctx.beginPath();
-  ctx.moveTo(cx - fw, cy - fh * 0.4);
-  ctx.bezierCurveTo(cx - fw, cy - fh * 1.1, cx + fw, cy - fh * 1.1, cx + fw, cy - fh * 0.4);
-  ctx.bezierCurveTo(cx + fw * 1.0, cy + fh * 0.5, cx + fw * 0.4, cy + fh * 1.05, cx, cy + fh * 1.1);
-  ctx.bezierCurveTo(cx - fw * 0.4, cy + fh * 1.05, cx - fw * 1.0, cy + fh * 0.5, cx - fw, cy - fh * 0.4);
+  ctx.ellipse(cx, cy, W * 0.18, H * 0.20, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hair front (bangs swept right)
+  ctx.fillStyle = '#3e2723';
+  ctx.beginPath();
+  ctx.moveTo(X(0.32), Y(0.32));
+  ctx.bezierCurveTo(X(0.40), Y(0.20), X(0.60), Y(0.20), X(0.68), Y(0.32));
+  ctx.bezierCurveTo(X(0.62), Y(0.36), X(0.50), Y(0.32), X(0.42), Y(0.36));
+  ctx.bezierCurveTo(X(0.36), Y(0.34), X(0.34), Y(0.34), X(0.32), Y(0.32));
   ctx.closePath();
   ctx.fill();
 
-  // Cheek shadow (subtle)
-  ctx.fillStyle = '#f5cfb3';
-  ctx.beginPath();
-  ctx.ellipse(cx - fw * 0.85, cy + fh * 0.2, fw * 0.15, fh * 0.35, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + fw * 0.85, cy + fh * 0.2, fw * 0.15, fh * 0.35, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Eyes — large, round, friendly (matches the in-game face system)
+  drawCeoEye(ctx, X(0.42), Y(0.43));
+  drawCeoEye(ctx, X(0.58), Y(0.43));
 
-  // ── Hair bangs over forehead ──
-  ctx.fillStyle = hairDark;
-  ctx.beginPath();
-  ctx.moveTo(X(0.30), Y(0.30));
-  ctx.bezierCurveTo(X(0.36), Y(0.20), X(0.65), Y(0.20), X(0.72), Y(0.31));
-  ctx.bezierCurveTo(X(0.66), Y(0.36), X(0.6), Y(0.34), X(0.55), Y(0.36));
-  ctx.bezierCurveTo(X(0.5),  Y(0.30), X(0.45), Y(0.36), X(0.4),  Y(0.36));
-  ctx.bezierCurveTo(X(0.36), Y(0.34), X(0.32), Y(0.36), X(0.30), Y(0.30));
-  ctx.closePath();
-  ctx.fill();
-
-  // Hair shine highlights
-  ctx.strokeStyle = '#9b6cba';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(X(0.32), Y(0.28));
-  ctx.bezierCurveTo(X(0.42), Y(0.23), X(0.58), Y(0.23), X(0.66), Y(0.28));
-  ctx.stroke();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#c499dd';
-  ctx.beginPath();
-  ctx.moveTo(X(0.34), Y(0.27));
-  ctx.bezierCurveTo(X(0.43), Y(0.22), X(0.55), Y(0.22), X(0.64), Y(0.27));
-  ctx.stroke();
-
-  // Side hair locks dropping over face
-  ctx.fillStyle = hairDark;
-  ctx.beginPath();
-  ctx.moveTo(X(0.30), Y(0.32));
-  ctx.bezierCurveTo(X(0.27), Y(0.42), X(0.32), Y(0.5), X(0.34), Y(0.55));
-  ctx.lineTo(X(0.36), Y(0.55));
-  ctx.bezierCurveTo(X(0.34), Y(0.45), X(0.34), Y(0.38), X(0.34), Y(0.32));
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(X(0.70), Y(0.32));
-  ctx.bezierCurveTo(X(0.73), Y(0.42), X(0.68), Y(0.5), X(0.66), Y(0.55));
-  ctx.lineTo(X(0.64), Y(0.55));
-  ctx.bezierCurveTo(X(0.66), Y(0.45), X(0.66), Y(0.38), X(0.66), Y(0.32));
-  ctx.closePath();
-  ctx.fill();
-
-  // ── Eyes (large anime-style) ──
-  const eyeY = Y(0.43);
-  const eyeRX = W * 0.058;
-  const eyeRY = H * 0.06;
-  const eyeLX = X(0.40);
-  const eyeRtX = X(0.60);
-
-  // Lash shadow (thick top arc)
-  ctx.strokeStyle = '#0d0316';
-  ctx.lineWidth = 8;
+  // Eyebrows — soft arched
+  ctx.strokeStyle = '#2e1d0f';
+  ctx.lineWidth = 7;
   ctx.lineCap = 'round';
-  for (const ex of [eyeLX, eyeRtX]) {
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY, eyeRX, eyeRY, 0, Math.PI * 1.05, Math.PI * 1.95);
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.moveTo(X(0.36), Y(0.36));
+  ctx.quadraticCurveTo(X(0.42), Y(0.33), X(0.46), Y(0.36));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(X(0.54), Y(0.36));
+  ctx.quadraticCurveTo(X(0.58), Y(0.33), X(0.64), Y(0.36));
+  ctx.stroke();
 
-  // Eye whites
-  ctx.fillStyle = '#fff';
-  for (const ex of [eyeLX, eyeRtX]) {
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY, eyeRX * 0.95, eyeRY * 0.92, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Iris (gradient violet)
-  for (const ex of [eyeLX, eyeRtX]) {
-    const ig = ctx.createRadialGradient(ex - 4, eyeY - 4, 4, ex, eyeY, eyeRX * 0.78);
-    ig.addColorStop(0, '#c180ff');
-    ig.addColorStop(0.4, '#7a3aab');
-    ig.addColorStop(1, '#3d1357');
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY + 4, eyeRX * 0.65, eyeRY * 0.78, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Pupil
-  ctx.fillStyle = '#000';
-  for (const ex of [eyeLX, eyeRtX]) {
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY + 5, eyeRX * 0.25, eyeRY * 0.38, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Highlights (sparkly anime eyes — 2-3 spots per eye)
-  ctx.fillStyle = '#fff';
-  for (const ex of [eyeLX, eyeRtX]) {
-    ctx.beginPath();
-    ctx.ellipse(ex - 8, eyeY - 8, 9, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(ex + 9, eyeY + 12, 4, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(ex - 14, eyeY + 6, 2, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Lower eye accent line
-  ctx.strokeStyle = '#5a2a8a';
-  ctx.lineWidth = 2;
-  for (const ex of [eyeLX, eyeRtX]) {
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY, eyeRX * 0.85, eyeRY * 0.85, 0, 0.2, Math.PI - 0.2);
-    ctx.stroke();
-  }
-
-  // Long eyelashes (3 strokes per side)
-  ctx.strokeStyle = '#0d0316';
+  // Nose — single small line
+  ctx.strokeStyle = '#c79a78';
   ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
-  for (const ex of [eyeLX, eyeRtX]) {
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(ex + i * eyeRX * 0.3, eyeY - eyeRY * 0.95);
-      ctx.lineTo(ex + i * eyeRX * 0.45, eyeY - eyeRY * 1.35 - Math.abs(i) * 2);
-      ctx.stroke();
-    }
-  }
+  ctx.beginPath();
+  ctx.moveTo(X(0.50), Y(0.46));
+  ctx.lineTo(X(0.51), Y(0.50));
+  ctx.stroke();
 
-  // ── Eyebrows (thin, arched) ──
-  ctx.strokeStyle = hairDark;
+  // Cheeks (round blush dots)
+  ctx.fillStyle = 'rgba(255,160,180,0.6)';
+  ctx.beginPath();
+  ctx.arc(X(0.39), Y(0.50), 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(X(0.61), Y(0.50), 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth — gentle smile
+  ctx.strokeStyle = '#a0263c';
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(X(0.355), Y(0.355));
-  ctx.quadraticCurveTo(X(0.40), Y(0.335), X(0.44), Y(0.36));
+  ctx.arc(X(0.50), Y(0.54), 22, 0.2 * Math.PI, 0.8 * Math.PI);
   ctx.stroke();
+  // Subtle lip color
+  ctx.strokeStyle = '#c2456b';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(X(0.56), Y(0.36));
-  ctx.quadraticCurveTo(X(0.60), Y(0.335), X(0.645), Y(0.355));
-  ctx.stroke();
-
-  // ── Nose (subtle) ──
-  ctx.strokeStyle = '#d8a583';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(X(0.495), Y(0.47));
-  ctx.lineTo(X(0.505), Y(0.495));
+  ctx.arc(X(0.50), Y(0.541), 22, 0.2 * Math.PI, 0.8 * Math.PI);
   ctx.stroke();
 
-  // ── Cheek blush ──
-  ctx.fillStyle = 'rgba(255, 130, 165, 0.45)';
+  // Earrings (small gold dots)
+  ctx.fillStyle = '#ffd54f';
   ctx.beginPath();
-  ctx.ellipse(X(0.38), Y(0.49), W * 0.035, H * 0.022, 0, 0, Math.PI * 2);
+  ctx.arc(X(0.32), Y(0.46), 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(X(0.62), Y(0.49), W * 0.035, H * 0.022, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // tiny diagonal blush lines
-  ctx.strokeStyle = 'rgba(255, 100, 145, 0.5)';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    ctx.moveTo(X(0.36) + i * 8, Y(0.485));
-    ctx.lineTo(X(0.36) + i * 8 + 6, Y(0.495));
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(X(0.60) + i * 8, Y(0.485));
-    ctx.lineTo(X(0.60) + i * 8 + 6, Y(0.495));
-    ctx.stroke();
-  }
-
-  // ── Lips (red, full, slight smirk) ──
-  // Upper lip (darker)
-  ctx.fillStyle = '#a8174a';
-  ctx.beginPath();
-  ctx.moveTo(X(0.46), Y(0.535));
-  ctx.bezierCurveTo(X(0.475), Y(0.522), X(0.49), Y(0.532), X(0.5), Y(0.532));
-  ctx.bezierCurveTo(X(0.51), Y(0.532), X(0.525), Y(0.522), X(0.54), Y(0.535));
-  ctx.bezierCurveTo(X(0.52), Y(0.54), X(0.48), Y(0.54), X(0.46), Y(0.535));
-  ctx.closePath();
-  ctx.fill();
-  // Lower lip (lighter, glossy)
-  ctx.fillStyle = '#d62867';
-  ctx.beginPath();
-  ctx.moveTo(X(0.46), Y(0.538));
-  ctx.bezierCurveTo(X(0.48), Y(0.555), X(0.52), Y(0.555), X(0.54), Y(0.538));
-  ctx.bezierCurveTo(X(0.52), Y(0.548), X(0.48), Y(0.548), X(0.46), Y(0.538));
-  ctx.closePath();
-  ctx.fill();
-  // Lip highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.beginPath();
-  ctx.ellipse(X(0.5), Y(0.547), W * 0.012, H * 0.0035, 0, 0, Math.PI * 2);
+  ctx.arc(X(0.68), Y(0.46), 5, 0, Math.PI * 2);
   ctx.fill();
 
-  // ── Earrings — long gold dangle ──
-  ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.arc(X(0.32), Y(0.45), 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(X(0.32) - 1.5, Y(0.45), 3, 18);
-  ctx.beginPath();
-  ctx.arc(X(0.32), Y(0.45) + 22, 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(X(0.68), Y(0.45), 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(X(0.68) - 1.5, Y(0.45), 3, 18);
-  ctx.beginPath();
-  ctx.arc(X(0.68), Y(0.45) + 22, 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Choker / necklace (thin black ribbon with gold pendant) ──
-  ctx.fillStyle = '#0d0d0d';
-  ctx.fillRect(X(0.41), Y(0.62), W * 0.18, 6);
-  ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.arc(X(0.5), Y(0.635), 8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#fff8c8';
-  ctx.beginPath();
-  ctx.arc(X(0.498), Y(0.633), 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Subtle chin shadow ──
-  ctx.fillStyle = 'rgba(180, 130, 100, 0.25)';
-  ctx.beginPath();
-  ctx.ellipse(X(0.5), Y(0.56), W * 0.06, H * 0.012, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Border / vignette ──
+  // Border
   ctx.strokeStyle = '#3e2723';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 8;
   ctx.strokeRect(0, 0, W, H);
+}
+
+// Big round friendly eye — white sphere + dark iris + sparkle dot.
+function drawCeoEye(ctx, cx, cy) {
+  // White
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#1a1010';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 22, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Iris — dark teal so it's not too aggressive
+  ctx.fillStyle = '#2c5b6b';
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, cy + 1, 11, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Pupil
+  ctx.fillStyle = '#0d0508';
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, cy + 2, 5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Sparkle
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(cx - 4, cy - 4, 4, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 6, cy + 6, 1.7, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Lash
+  ctx.strokeStyle = '#0d0508';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - 18, cy - 14);
+  ctx.lineTo(cx - 24, cy - 22);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + 18, cy - 14);
+  ctx.lineTo(cx + 24, cy - 22);
+  ctx.stroke();
 }
 
 function buildCeoPortrait(targetScene) {
@@ -1198,7 +975,7 @@ function buildCeoPortrait(targetScene) {
   // Manga-style portrait drawn on canvas (no external image needed)
   const portraitCanvas = document.createElement('canvas');
   portraitCanvas.width = 768; portraitCanvas.height = 1024;
-  drawMangaCEO(portraitCanvas);
+  drawCeoPortrait(portraitCanvas);
   const portraitTex = new THREE.CanvasTexture(portraitCanvas);
   portraitTex.colorSpace = THREE.SRGBColorSpace;
   portraitTex.anisotropy = 8;
