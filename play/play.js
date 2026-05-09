@@ -12,6 +12,7 @@ import {
 } from './audio/procedural.js';
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
+import { attachFace, updateFace, setExpression } from './characters/face.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -481,7 +482,9 @@ function makeCharacter(look) {
     g.add(prop);
   }
 
-  g.userData.parts = { leftLeg, rightLeg, leftArm, rightArm };
+  g.userData.parts = { leftLeg, rightLeg, leftArm, rightArm, head, torso };
+  // Procedural cartoon face on the head's front. Reads in any lighting.
+  g.userData.face = attachFace(g, head, look);
   return g;
 }
 
@@ -2027,6 +2030,32 @@ function update(dt) {
   if (dust && player) dust.update(dt, player.position);
   // Update audio listener position so PannerNode sources track the camera.
   if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
+
+  // Drive face animations (blink + idle look-at-player) on every character.
+  const nowMs = performance.now();
+  if (player?.userData?.face) updateFace(player.userData.face, nowMs);
+  for (const m of npcMeshes) {
+    if (m.userData?.face) updateFace(m.userData.face, nowMs);
+    // Look-at-player: when player within 4m of NPC, gently rotate the head
+    // toward the player. Otherwise reset slowly.
+    const head = m.userData?.parts?.head;
+    if (head && player) {
+      const dx = player.position.x - m.position.x;
+      const dz = player.position.z - m.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 4.0 && dist > 0.05) {
+        const desired = Math.atan2(dx, dz) - m.rotation.y;
+        // wrap to [-π, π]
+        let d = ((desired + Math.PI) % (Math.PI * 2)) - Math.PI;
+        if (d < -Math.PI) d += Math.PI * 2;
+        // Clamp to a moderate cone so heads don't snap backward.
+        d = Math.max(-0.7, Math.min(0.7, d));
+        head.rotation.y += (d - head.rotation.y) * (1 - Math.exp(-dt * 4));
+      } else {
+        head.rotation.y += (0 - head.rotation.y) * (1 - Math.exp(-dt * 2));
+      }
+    }
+  }
 
   // Animate hearts around CEO portrait if all chapters complete
   if (ceoHearts) {
