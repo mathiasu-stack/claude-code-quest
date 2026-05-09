@@ -115,10 +115,16 @@ export class PostFxPipeline {
 
   resize(w, h) {
     this.composer.setSize(w, h);
-    this.bloom.resolution.set(
-      Math.max(64, Math.floor(w * this._bloomScale)),
-      Math.max(64, Math.floor(h * this._bloomScale)),
-    );
+    // composer.setSize calls bloom.setSize(w, h) internally, which then
+    // halves to (w/2, h/2). To downscale further on mobile, call bloom
+    // setSize again with scaled dimensions so its internal /2 gives us
+    // the target resolution.
+    if (this._bloomScale < 1.0) {
+      this.bloom.setSize(
+        Math.max(128, Math.floor(w * this._bloomScale)),
+        Math.max(128, Math.floor(h * this._bloomScale)),
+      );
+    }
     this.vignettePass.material.uniforms.uResolution.value.set(w, h);
   }
 
