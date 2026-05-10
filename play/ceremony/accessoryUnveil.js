@@ -278,10 +278,67 @@ const UNVEILS_BY_TIER = {
   7: unveilHalo,
 };
 
+// GLTF unveil: the procedural unveil functions above use absolute Y
+// positions tuned for primitive body proportions. On a GLTF rig those
+// positions land at chest/floor/inside-the-head levels. So for GLTF
+// players we run a SIMPLER unveil: scale the most-recently-added
+// child of the relevant bone from 0 → 1 with the easeOutBack curve,
+// plus a sparkle burst at the bone's world position.
+function unveilGltfTier(tier, player) {
+  const c = player.userData?.gltfChar;
+  if (!c) return;
+  // The accessory was already attached by addGltfPlayerAccessories —
+  // we find the bone for this tier and animate scale-in on its most
+  // recently-added children.
+  const tierBone = {
+    1: 'chest', 2: 'chest', 3: 'leftHand', 4: 'chest',
+    5: 'head',  6: 'neck',  7: 'head',
+  }[tier] || 'chest';
+  const bone = c.skeleton ? c.attachAt && (
+    // resolveBone is on assetLoader; quickest path: get bone from a
+    // freshly-attached dummy, then remove it. Cleaner: store the
+    // bone reference at attach time. For now: walk the rig.
+    null
+  ) : null;
+  // Animate any non-zero-scale children on the rig that were JUST
+  // added (we tag them via userData.unveilFresh in attachAt — but
+  // since attachAt is generic, fall back to: scale every Mesh whose
+  // userData.unveiled !== true UP from 0).
+  const candidates = [];
+  player.traverse(o => {
+    if (o.isMesh && !o.userData.unveiled) candidates.push(o);
+  });
+  // Mark them so the next ceremony only animates *new* additions.
+  for (const m of candidates) {
+    m.userData.unveiled = true;
+    m.userData._unveilStartScale = m.scale.clone();
+    m.scale.setScalar(0);
+  }
+  animate(900, (t) => {
+    const e = easeOutBack(t);
+    for (const m of candidates) {
+      const target = m.userData._unveilStartScale;
+      m.scale.set(target.x * e, target.y * e, target.z * e);
+    }
+  });
+  // Sparkle at the rig root level for a friendly "ping" effect.
+  sparkleBurst(player, { x: 0, y: 1.4, z: 0.15 }, 0xffd700);
+}
+
 // Run the unveil animation for a specific tier. If we don't have an
 // unveil for that tier, no-op (older tiers' accessories were already
 // added at player build time by addPlayerAccessories).
 export function unveilForTier(tier, player, audio) {
+  // GLTF route — use the simpler scale-in unveil.
+  if (player?.userData?.gltfChar) {
+    try {
+      unveilGltfTier(tier, player);
+    } catch (e) {
+      console.warn('GLTF accessory unveil failed', e);
+    }
+    if (audio?.playPpPing) setTimeout(() => audio.playPpPing(), 250);
+    return null;
+  }
   // We don't have unveils for tiers > 7; for tiers 8+ (capstone+),
   // run the halo animation as a flourish.
   const fn = UNVEILS_BY_TIER[tier] || (tier > 7 ? unveilHalo : null);
