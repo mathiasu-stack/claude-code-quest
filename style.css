@@ -1039,16 +1039,16 @@ body {
    the touch-target media query) interacts with flex-wrap. */
 @media (max-width: 768px) {
   .play-cta-row {
-    display: block;
+    display: block !important;
     margin: 8px 0 20px;
     padding: 14px;
   }
   .play-cta-btn {
-    display: block;
-    width: 100%;
+    display: block !important;
+    width: 100% !important;
     margin-bottom: 10px;
-    /* Ensure visible even if a parent flex shrinks to zero. */
-    min-height: 48px;
+    min-height: 48px !important;
+    visibility: visible !important;
   }
   .play-cta-sub {
     display: block;
@@ -1057,6 +1057,38 @@ body {
     line-height: 1.4;
   }
 }
+
+/* Fallback FAB — fixed-position Play button on the dashboard, hidden in
+   play mode + on lesson/test pages (those replace #main-content content,
+   so the button is removed from DOM). Visible on all viewports as a
+   guaranteed entry point — fixes Firefox Android cases where the inline
+   CTA fails to render. */
+.play-fab {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  z-index: 60;
+  background: var(--gold);
+  color: var(--navy-dark);
+  border: 2px solid var(--navy);
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.play-fab:hover { background: var(--gold-light); }
+.play-fab:active { transform: translateY(1px); }
+.play-fab-icon { font-size: 18px; }
+
+/* Hide the FAB whenever play mode is active. */
+body.in-play .play-fab { display: none !important; }
 
 /* ==================== PLAY MODE (3D) ==================== */
 

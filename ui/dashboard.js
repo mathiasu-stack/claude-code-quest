@@ -41,6 +41,11 @@ function renderDashboard() {
         ${CURRICULUM.map(ch => renderChapterCard(ch, progress)).join('')}
       </div>
     </div>
+    <!-- Fallback FAB: fixed-position so it's reachable even if any
+         layout/cascade issue (Firefox Android) hides the inline CTA. -->
+    <button class="play-fab" id="play-fab-btn" aria-label="Play in 3D">
+      <span class="play-fab-icon">🎮</span><span class="play-fab-text">Play 3D</span>
+    </button>
   `;
 
   main.querySelectorAll('.chapter-card.unlocked').forEach(card => {
@@ -52,6 +57,8 @@ function renderDashboard() {
 
   const playBtn = document.getElementById('play-cta-btn');
   if (playBtn) playBtn.addEventListener('click', () => window.App.navigate('play'));
+  const fabBtn = document.getElementById('play-fab-btn');
+  if (fabBtn) fabBtn.addEventListener('click', () => window.App.navigate('play'));
 }
 
 function renderChapterCard(ch, progress) {
