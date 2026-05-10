@@ -1086,7 +1086,8 @@ function buildWorld() {
   officeFloor.receiveShadow = true;
   scene.add(officeFloor);
 
-  // Carpet runner
+  // Carpet runner — bumped to y=0.0025 (Bug D fix) so it sits cleanly
+  // above the atrium marble overlay (now at y=0.001) without z-fight.
   const runner = new THREE.Mesh(
     new THREE.PlaneGeometry(2.4, 18),
     new THREE.MeshStandardMaterial({
@@ -1094,7 +1095,7 @@ function buildWorld() {
     }),
   );
   runner.rotation.x = -Math.PI / 2;
-  runner.position.set(0, 0.001, -1);
+  runner.position.set(0, 0.0025, -1);
   scene.add(runner);
 
   // Office walls

@@ -153,9 +153,15 @@ export function decorateReception(scene, decoTickers) {
   whiteboard.rotation.y = -Math.PI / 2;
   scene.add(whiteboard);
 
-  // Bigger / more legible posters along walls (replacing the small ones)
+  // Bigger / more legible posters along walls (replacing the small ones).
+  // Bug E fix: GROW was previously at z=0 on the west wall — directly
+  // behind the atrium staircase (steps span world z=-3.0..-0.54), and
+  // its z-extent (±0.8) overlapped the stair's top steps at z=-0.7..-0.5.
+  // Moved south to z=+5 so it sits clear of the stair footprint, in the
+  // open wall section between the stair (z<+0.7) and the doorway corner
+  // (z>+9). The other three posters were already clear.
   const posters = [
-    { title: 'GROW',      sub: 'with Kedash',     pos: [-10.83, 2.2,  0], rot: Math.PI / 2 },
+    { title: 'GROW',      sub: 'with Kedash',     pos: [-10.83, 2.2,  5], rot: Math.PI / 2 },
     { title: 'SHIP IT',   sub: 'every Friday',    pos: [10.83, 2.2,  0], rot: -Math.PI / 2 },
     { title: 'STAY',      sub: 'curious',         pos: [-10.83, 2.2,  8], rot: Math.PI / 2 },
     { title: 'BE KIND',   sub: 'always',          pos: [10.83, 2.2,  8], rot: -Math.PI / 2 },

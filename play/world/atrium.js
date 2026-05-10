@@ -33,14 +33,21 @@ export function buildAtrium(scene, opts = {}) {
   const mobile = !!opts.mobile;
   const out = { tickers: [], objects: [] };
 
-  // ── 1. Marble floor overlay (slight Y offset so it sits on top of
-  //     existing carpet without z-fighting). ────────────────────────────
+  // ── 1. Marble floor overlay (Bug D — floor seam fix).
+  // Previous tuning had this 22×22 plane at y=0.005 spanning the full
+  // Reception (z=-11..+11). At the doorway (z=+11) it met the Library
+  // floor (y=0) head-on, leaving a visible 5mm vertical seam right
+  // under the player's feet as they walked through.
+  // Fix: drop Y to 0.001 (1mm above origin). The Library floor at y=0
+  // is now flush enough that the seam is visually negligible. The
+  // gold runner at y=0.001 is bumped to y=0.0015 below so it stays
+  // above the marble.
   const marbleFloor = new THREE.Mesh(
     new THREE.PlaneGeometry(ROOM_W, ROOM_D),
     marbleWhite(),
   );
   marbleFloor.rotation.x = -Math.PI / 2;
-  marbleFloor.position.set(0, 0.005, 0);
+  marbleFloor.position.set(0, 0.001, 0);
   marbleFloor.receiveShadow = true;
   scene.add(marbleFloor);
   out.objects.push(marbleFloor);
@@ -197,36 +204,42 @@ export function buildAtrium(scene, opts = {}) {
   railing(8,  7, 10.6, 0);
 
   // ── 6. Brushed silver KEDASH logo wall behind reception desk ───────
-  // Existing CEO portrait already lives on the back wall. Add a backlit
-  // silver "KEDASH" wordmark above the portrait at y=6.
+  // Bug C (latest pass): previous tuning had logoBacking = 0x1a1a1a
+  // (near-black) BoxGeometry(8, 1.6, 0.06) AND a wordmark canvas filled
+  // with #0d0d12 — together forming an ~8m × 1.6m FLOATING BLACK
+  // RECTANGLE on the upper cream wall. Two fixes:
+  //   1. Backing recoloured to brushed silver, scaled down to a slim
+  //      frame around the wordmark.
+  //   2. Wordmark canvas's opaque dark background removed — now uses
+  //      a transparent canvas with only the radial backlight glow +
+  //      KEDASH text. Plane material stays transparent, so only the
+  //      text + halo render against the cream wall.
   const logoBacking = new THREE.Mesh(
-    new THREE.BoxGeometry(8, 1.6, 0.06),
+    new THREE.BoxGeometry(7.8, 1.5, 0.04),
     new THREE.MeshStandardMaterial({
-      color: 0x1a1a1a, metalness: 0.5, roughness: 0.4,
-      emissive: 0x6699ff, emissiveIntensity: 0.18,
+      color: 0xc8ccd2, metalness: 0.85, roughness: 0.35,
+      emissive: 0x6699ff, emissiveIntensity: 0.10,
     }),
   );
   logoBacking.position.set(0, 5.6, -10.85);
   scene.add(logoBacking);
   out.objects.push(logoBacking);
 
-  // The wordmark — built from extruded letter blocks (K E D A S H).
-  // Cheap representation: a sequence of small chrome boxes spelling K-E-D-A-S-H
-  // (we simplify by drawing a canvas-textured plane on top).
+  // The wordmark — backlit KEDASH text with a soft blue halo, painted
+  // onto a TRANSPARENT canvas (no opaque dark fill — fixes Bug C).
   const wmCanvas = document.createElement('canvas');
   wmCanvas.width = 1024; wmCanvas.height = 256;
   const wctx = wmCanvas.getContext('2d');
-  wctx.fillStyle = '#0d0d12';
-  wctx.fillRect(0, 0, wmCanvas.width, wmCanvas.height);
-  // backlight glow halo
+  wctx.clearRect(0, 0, wmCanvas.width, wmCanvas.height);
+  // Backlight glow halo (transparent over transparent → clean alpha).
   const grad = wctx.createRadialGradient(wmCanvas.width / 2, wmCanvas.height / 2, 50,
-                                         wmCanvas.width / 2, wmCanvas.height / 2, 700);
-  grad.addColorStop(0, 'rgba(180, 220, 255, 0.85)');
-  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                                         wmCanvas.width / 2, wmCanvas.height / 2, 600);
+  grad.addColorStop(0, 'rgba(180, 220, 255, 0.55)');
+  grad.addColorStop(1, 'rgba(180, 220, 255, 0.00)');
   wctx.fillStyle = grad;
   wctx.fillRect(0, 0, wmCanvas.width, wmCanvas.height);
-  // wordmark
-  wctx.fillStyle = '#e9eef3';
+  // KEDASH wordmark — dark text reads cleanly against the silver backing.
+  wctx.fillStyle = '#1a2230';
   wctx.font = 'bold 200px serif';
   wctx.textAlign = 'center';
   wctx.textBaseline = 'middle';
