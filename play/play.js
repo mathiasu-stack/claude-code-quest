@@ -31,6 +31,12 @@ import {
   updateInteractables, listInteractables,
 } from './world/interactables.js';
 import { buildComputer } from './world/objectTypes/computer.js';
+import { buildBook } from './world/objectTypes/book.js';
+import { buildWhiteboardObject } from './world/objectTypes/whiteboard.js';
+import { buildServerRack } from './world/objectTypes/serverRack.js';
+import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
+import { buildPhone } from './world/objectTypes/phone.js';
+import { LESSON_DELIVERY } from './world/lessonRegistry.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -1223,33 +1229,48 @@ function buildWorld() {
   try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
   try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
 
-  // ─── Interactable objects (Pillar 2) ─────────────────────────────────────
-  // For now: a single computer workstation on Aisha's desk delivering
-  // ch04 (Memory Framework). Acts as the proof-of-concept lesson.
-  // Other object types are wired up in Pass 2 below.
+  // ─── Interactable objects (Pillar 2) — driven by lessonRegistry ──────────
+  // Each chapter's delivery config either spawns an object or stays
+  // NPC-delivered. NPC-delivered chapters need no object here.
   clearInteractables();
   interactObjects = [];
-  try {
-    const comp = buildComputer({
-      scene,
-      position: [7.5, 1.0, -3],   // Aisha's desk top
-      lookAt: -Math.PI / 2,
-      chapterId: 'ch04',
-      lessonId: 'ch04-l01',
-      onInteract: (info) => {
-        // Open the lesson overlay if available; fall back to the legacy
-        // 2D route otherwise.
-        if (window.LessonOverlay?.open) {
-          window.LessonOverlay.open(info);
-        } else {
-          window.App?.navigate?.('lesson', {
-            chapterId: info.chapterId, lessonId: info.lessonId, fromPlay: true,
-          });
-        }
-      },
-    });
-    interactObjects.push(comp);
-  } catch (e) { console.warn('computer build failed', e); }
+  const buildersByKind = {
+    computer:    buildComputer,
+    book:        buildBook,
+    whiteboard:  buildWhiteboardObject,
+    server:      buildServerRack,
+    display:     buildDemoScreenObject,
+    phone:       buildPhone,
+  };
+  const onObjectInteract = (info) => {
+    if (window.LessonOverlay?.open) {
+      window.LessonOverlay.open(info);
+    } else {
+      window.App?.navigate?.('lesson', {
+        chapterId: info.chapterId, lessonId: info.lessonId, fromPlay: true,
+      });
+    }
+  };
+  for (const [chapterId, cfg] of Object.entries(LESSON_DELIVERY)) {
+    if (!cfg.delivery || cfg.delivery === 'npc') continue;
+    const builder = buildersByKind[cfg.delivery];
+    if (!builder) continue;
+    const loc = cfg.objectLocation;
+    if (!loc?.position) continue;
+    try {
+      const obj = builder({
+        scene,
+        position: loc.position,
+        lookAt: 0,
+        chapterId: cfg.chapterId || chapterId,
+        lessonId: cfg.lessonId,
+        onInteract: onObjectInteract,
+      });
+      interactObjects.push(obj);
+    } catch (e) {
+      console.warn(`object build failed for ${chapterId} (${cfg.delivery})`, e);
+    }
+  }
 
   // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
   try {
