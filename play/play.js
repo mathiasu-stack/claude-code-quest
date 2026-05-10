@@ -18,6 +18,7 @@ import { loadCustomization, mountCustomization, unmountCustomization } from './c
 import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
+import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -1197,6 +1198,10 @@ function buildWorld() {
   for (let zoneIdx = 2; zoneIdx < ZONE_COUNT; zoneIdx++) {
     buildGenericZone(zoneIdx);
   }
+
+  // ─── Ceilings + crown molding + fixtures (architectural finish) ────────────
+  try { buildReceptionCeiling(scene); } catch (e) { console.warn('reception ceiling failed', e); }
+  try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
 
   // ─── Decoration density passes ──────────────────────────────────────────────
   decoTickers = [];
