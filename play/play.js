@@ -1758,6 +1758,13 @@ function openDialogue(npc) {
   playUi('confirm');
   // Typewriter the intro line — plays a blip per character (rate-limited).
   startTypewriter(d.querySelector('[data-typewriter]'), npc.intro, blipPitchForNpc(npc.id));
+  // Pulse the speaking NPC's mouth while the intro reveals.
+  const speakingMesh = npcMeshes.find(m => m.userData?.npc?.id === npc.id);
+  if (speakingMesh?.userData?.face && speakingMesh.userData.faceKind === 'flat') {
+    const charCount = npc.intro?.length || 60;
+    const talkMs = Math.min(8000, charCount * 22);
+    talkPulse(speakingMesh.userData.face, true, talkMs);
+  }
 
   d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
   d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
