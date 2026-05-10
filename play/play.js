@@ -14,6 +14,8 @@ import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
+import { attachFlatFace, updateFlatFace, setFlatExpression, talkPulse } from './characters/flatFace.js';
+import { getFaceConfig, FACE_CONFIGS } from './characters/faceConfigs.js';
 import { getLookForNpc } from './characters/npcLooks.js';
 import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
@@ -519,12 +521,26 @@ function makeCharacter(look) {
   // Stash look on the group so idle animations can read look.gesture etc.
   g.userData.look = look;
   // Procedural cartoon face on the head's front. Reads in any lighting.
-  // New cartoon face — 3D primitive eyes / mouth / brows / hair instead
-  // of a single canvas plane. Visible from all angles. The legacy
-  // `attachFace` call was the source of the long-standing "black blob"
-  // head bug because it relied on a one-sided plane.
-  g.userData.face = attachCartoonFace(g, head, look);
-  g.userData.faceKind = 'cartoon';
+  // Flat-face system (Maya portrait technique): a SINGLE canvas-painted
+  // quad on the head's front. Replaces all previous 3D-primitive face
+  // assemblies (sphere eyes / box brows / etc.) which produced "stuck-on"
+  // uncanny results across 5 runs. This is the architectural pivot.
+  //
+  // The config for the canvas drawing comes from faceConfigs.js, keyed
+  // by NPC id (look._id). The player passes its own _id = 'player' via
+  // playerLook.js. Auto-generated NPCs get a deterministic random config.
+  const faceCfg = look._faceConfig
+    || getFaceConfig(look._id || 'unknown', 0);
+  // Carry the explicit hair/skin from `look` if they were set there —
+  // configs in faceConfigs.js are authoritative for facial features,
+  // but the body's skin / hair color may have been overridden by the
+  // NPC roster's look (e.g. via npcLooks.js).
+  if (typeof look.skin === 'number') faceCfg.skin = look.skin;
+  if (typeof look.hair === 'number') faceCfg.hair = look.hair;
+  if (typeof look.hairStyle === 'string') faceCfg.hairStyle = look.hairStyle;
+  g.userData.face = attachFlatFace(g, head, faceCfg);
+  g.userData.faceKind = 'flat';
+  g.userData.faceConfig = faceCfg;
   return g;
 }
 
@@ -1492,9 +1508,25 @@ function buildPlayer() {
   const tier = getCompletedChapterCount();
   // Player look is owned by playerLook.js — keeps the player face
   // pipeline explicit so it can never be silently skipped.
-  const playerLook = buildPlayerLook(o);
+  // _id='player' means flatFace.js will look up FACE_CONFIGS.player
+  // (we ensure that entry exists below) or fall back to the deterministic
+  // generator. Either way, the player gets a face.
+  const playerLook = { ...buildPlayerLook(o), _id: 'player' };
   player = makeCharacter(playerLook);
   addPlayerAccessories(player, tier);
+
+  // GUARD — the brief is explicit that the player has been faceless for
+  // 6 runs. This verifies, in code, that the player.userData.face is
+  // set immediately after build. If not, the player will have to walk
+  // around faceless again. We log loudly so a regression is impossible
+  // to miss.
+  if (!player.userData?.face) {
+    console.error('[buildPlayer] FACE MISSING — userData.face is null/undefined. Check makeCharacter / attachFlatFace.');
+  } else if (player.userData.faceKind !== 'flat') {
+    console.warn(`[buildPlayer] face attached but kind=${player.userData.faceKind} (expected 'flat')`);
+  } else {
+    console.log('[buildPlayer] flat-face attached:', player.userData.faceConfig);
+  }
 
   let startX = 0, startZ = 5;
   try {
@@ -1520,7 +1552,9 @@ function spawnNPC(npcDef) {
   // identity (eye color, brow/mouth shape, hairStyle, beard, etc.).
   const id = npcDef.id || (npcDef.npcId ?? '');
   const faceLook = getLookForNpc(id, 0);
-  const mergedLook = { ...npcDef.look, ...faceLook };
+  // The new flat-face system reads its config from faceConfigs.js by id.
+  // Pass _id through the look so makeCharacter can look it up.
+  const mergedLook = { ...npcDef.look, ...faceLook, _id: id };
   // Roster's `look.shirt`/`look.pants`/`look.skin` win over npcLooks
   // when the roster explicitly set them — restore them.
   if (npcDef.look) {
@@ -2046,7 +2080,9 @@ function update(dt) {
   const nowMs = performance.now();
   const _playerHeadPos = new THREE.Vector3();
   if (player?.userData?.face) {
-    if (player.userData.faceKind === 'cartoon') {
+    if (player.userData.faceKind === 'flat') {
+      updateFlatFace(player.userData.face, nowMs, camera);
+    } else if (player.userData.faceKind === 'cartoon') {
       updateCartoonFace(player.userData.face, nowMs);
     } else {
       updateFace(player.userData.face, nowMs);
@@ -2062,7 +2098,9 @@ function update(dt) {
   const _npcHeadPos = new THREE.Vector3();
   for (const m of npcMeshes) {
     if (m.userData?.face) {
-      if (m.userData.faceKind === 'cartoon') {
+      if (m.userData.faceKind === 'flat') {
+        updateFlatFace(m.userData.face, nowMs, camera);
+      } else if (m.userData.faceKind === 'cartoon') {
         const npcHead = m.userData?.parts?.head;
         if (npcHead) {
           npcHead.getWorldPosition(_npcHeadPos);

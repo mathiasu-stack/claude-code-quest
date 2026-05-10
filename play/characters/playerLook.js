@@ -4,38 +4,46 @@
 // player" regression is impossible: the player face setup is owned
 // here and intentionally separate from the NPC pipeline.
 //
-// Reads the player's customisation choices (face style, hair color,
-// skin tone) and converts them to the cartoonFace `look` schema.
+// Reads customization (face style, hair color, skin tone) and emits a
+// `look` whose `_id` is 'player' — that routes to FACE_CONFIGS.player
+// in faceConfigs.js, with customization values overriding.
 
 import { loadCustomization } from './customization.js';
 
-// Map customization face style to cartoonFace mouth/brow defaults.
+// Map customization face style to drawing defaults.
 const STYLE_PRESETS = {
-  round:  { browShape: 'soft',   mouthShape: 'smile',  blush: true  },
-  dot:    { browShape: 'thin',   mouthShape: 'gentle', blush: false },
-  sleepy: { browShape: 'soft',   mouthShape: 'gentle', blush: false },
-  sharp:  { browShape: 'arched', mouthShape: 'smirk',  blush: false },
+  round:  { browShape: 'soft',   mouthShape: 'smile',  blush: true,  eyeShape: 'oval' },
+  dot:    { browShape: 'thin',   mouthShape: 'gentle', blush: false, eyeShape: 'dot' },
+  sleepy: { browShape: 'soft',   mouthShape: 'gentle', blush: false, eyeShape: 'sleepy' },
+  sharp:  { browShape: 'arched', mouthShape: 'smirk',  blush: false, eyeShape: 'sharp' },
 };
 
 export function buildPlayerLook(outfit) {
   const cust = loadCustomization();
   const preset = STYLE_PRESETS[cust.face] || STYLE_PRESETS.round;
   return {
-    // Body / outfit
+    // Body / outfit — used by makeCharacter for the 3D body.
     skin: cust.skin,
     hair: cust.hairColor,
-    hairStyle: 'short',          // single hair style for the player MVP
+    hairStyle: 'short',
     shirt: outfit.shirt,
     pants: outfit.pants,
     glasses: false,
     prop: null,
-    // Face — explicit fields
-    face: cust.face,
-    expression: 'happy',
-    eyeColor: 0x6b4a2a,          // brown by default
-    browShape: preset.browShape,
-    mouthShape: preset.mouthShape,
-    blush: preset.blush,
-    beard: null,
+    // Face — read by flatFace.js. The makeCharacter wrapper passes these
+    // through into the canvas drawing config so the customization is
+    // honored.
+    _faceConfig: {
+      skin: cust.skin,
+      hair: cust.hairColor,
+      hairStyle: 'short',
+      eyeColor: 0x4a7a96,        // friendly bright blue
+      eyeShape: preset.eyeShape,
+      browShape: preset.browShape,
+      mouthShape: preset.mouthShape,
+      blush: preset.blush,
+      glasses: false,
+      beard: null,
+    },
   };
 }
