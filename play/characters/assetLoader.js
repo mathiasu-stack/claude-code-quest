@@ -30,6 +30,7 @@ export class AssetLoader {
     this._gltfLoader = new GLTFLoader();
     this._manifest = null;
     this._cache = new Map();        // id -> Promise<GLTF | null>
+    this._resolved = new Map();     // id -> GLTF (sync-accessible after warmCache)
     this._animClips = new Map();    // name -> THREE.AnimationClip
     this._animLoaded = false;
   }
@@ -139,6 +140,28 @@ export class AssetLoader {
       loaded += 1;
       onProgress?.(loaded, total);
     }));
+  }
+
+  // Like preload(), but ALSO populates the sync-accessible resolved
+  // cache. Call this once at scene boot so makeCharacter can look up
+  // assets synchronously without await.
+  async warmCache(ids, onProgress) {
+    const total = ids.length;
+    let loaded = 0;
+    await Promise.all(ids.map(async (id) => {
+      const gltf = await this.get(id);
+      if (gltf) this._resolved.set(id, gltf);
+      loaded += 1;
+      onProgress?.(loaded, total);
+    }));
+    return this._resolved.size;
+  }
+
+  // Sync accessor — returns the parsed GLTF (or null) for an id that
+  // was previously warmed via warmCache(). Returns null for misses
+  // (caller falls back to procedural).
+  getResolved(id) {
+    return this._resolved.get(id) || null;
   }
 
   // Load the optional shared animation pack. Returns true if it

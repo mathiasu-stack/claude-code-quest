@@ -24,17 +24,38 @@
 //   • Construct primitive limbs. The GLTF skeleton replaces them.
 
 import * as THREE from 'three';
+import { clone as cloneSkeletal } from 'three/addons/utils/SkeletonUtils.js';
 
 // Character variant id → asset id. The mapping lives in npcCasting.js;
 // this module just consumes look._gltfAsset (already resolved) or the
 // look._id (we resolve via npcCasting if needed).
+//
+// NOTE: this builder is SYNCHRONOUS by design. The caller must have
+// already warmed the asset cache with assetLoader.warmCache() — we
+// reach into the resolved map and clone synchronously. Returning null
+// signals "asset not loaded; fall back to procedural makeCharacter".
 
-export async function makeGltfCharacter(look, assetLoader) {
+export function makeGltfCharacter(look, assetLoader) {
   const assetId = look._gltfAsset;
   if (!assetId) return null;
 
-  const inst = await assetLoader.getInstance(assetId);
-  if (!inst) return null;
+  const gltf = assetLoader.getResolved(assetId);
+  if (!gltf || !gltf.scene) return null;
+
+  // Build a per-instance copy. Skeleton-aware clone so two instances
+  // don't share rig state.
+  const root = cloneSkeletal(gltf.scene);
+  const entry = assetLoader.entryFor(assetId);
+  if (entry?.scale && entry.scale !== 1.0) root.scale.setScalar(entry.scale);
+  if (entry?.yOffset) root.position.y = entry.yOffset;
+
+  // Find the SkinnedMesh skeleton + ensure shadow flags.
+  let skeleton = null;
+  root.traverse((obj) => {
+    if (!skeleton && obj.isSkinnedMesh) skeleton = obj.skeleton;
+    if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+  });
+  const inst = { root, skeleton, animations: gltf.animations || [] };
 
   const group = new THREE.Group();
   group.add(inst.root);

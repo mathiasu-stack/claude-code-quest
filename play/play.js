@@ -20,6 +20,10 @@ import { getLookForNpc } from './characters/npcLooks.js';
 import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
+import { getAssetLoader, gltfOptInEnabled } from './characters/assetLoader.js';
+import { makeGltfCharacter } from './characters/gltfCharacter.js';
+import { resolveAssetForCharacter } from './characters/npcCasting.js';
+import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
@@ -404,7 +408,34 @@ function clampMove(oldX, oldZ, newX, newZ) {
 }
 
 // ─── Character builder ───────────────────────────────────────────────────────
+// GLTF assetLoader singleton — populated in start() if the opt-in flag
+// is set and assets are available. Otherwise stays null and every
+// makeCharacter() call falls through to the procedural path.
+let gltfAssetLoader = null;
+
 function makeCharacter(look) {
+  // Try GLTF first when:
+  //   1. localStorage.ccq_use_gltf_characters is '1' (gltfOptInEnabled),
+  //   2. the asset loader is ready and has resolved assets,
+  //   3. either look._gltfAsset is explicitly set or look._id maps to
+  //      an available asset via npcCasting.resolveAssetForCharacter.
+  // If any of those fail, fall through to the procedural path
+  // unchanged. This preserves backwards compat for everyone who
+  // hasn't dropped GLBs into play/assets/characters/.
+  if (gltfAssetLoader && gltfOptInEnabled()) {
+    let assetId = look._gltfAsset;
+    if (!assetId && look._id) {
+      assetId = resolveAssetForCharacter(look._id, gltfAssetLoader);
+    }
+    if (assetId) {
+      const gltfGroup = makeGltfCharacter(
+        { ...look, _gltfAsset: assetId },
+        gltfAssetLoader,
+      );
+      if (gltfGroup) return gltfGroup;
+    }
+  }
+
   const g = new THREE.Group();
   // Skin material gets a tiny self-emissive tint so the head never reads
   // pure black under shadow — the face plane is DoubleSide so you can
@@ -2220,7 +2251,38 @@ function loop() {
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
-export function start(host) {
+// Preload GLTF assets if the opt-in flag is set. Resolves once the
+// resolved-cache is warm (or immediately, if the flag is off).
+//   • Manifest fetch failures are logged and swallowed — game still
+//     boots with procedural characters.
+//   • Per-asset 404s are logged and that character falls back.
+async function _preloadGltfAssets() {
+  if (!gltfOptInEnabled()) return;
+  const loader = getAssetLoader();
+  await loader.loadManifest();
+  if (!loader.hasAnyAssets) {
+    console.info('[play] GLTF flag on but no assets available in manifest; running procedural.');
+    return;
+  }
+  // Show progress overlay while loading.
+  const overlay = createLoadingOverlay();
+  overlay.show('Loading characters...');
+  // Warm just the named NPCs + player up front. Auto chapter NPCs and
+  // ambient agents pick up the cache as they're constructed.
+  const ids = [
+    'casual_male_01', 'casual_male_02', 'casual_male_03',
+    'casual_female_01', 'casual_female_02', 'casual_female_03',
+    'business_female_01', 'business_female_02', 'business_female_03',
+    'glasses_female_01', 'beard_male_01', 'hijab_female_01',
+    'hoodie_male_01',
+  ];
+  await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
+  await loader.loadAnimations();   // optional shared anim pack
+  gltfAssetLoader = loader;
+  overlay.hide();
+}
+
+export async function start(host) {
   container = host;
   promptEl = document.getElementById('play-prompt');
   dialogueEl = document.getElementById('play-dialogue');
@@ -2229,6 +2291,10 @@ export function start(host) {
   jumpRequested = false;
   setupRenderer();
   buildWorld();
+  // Preload GLTF assets BEFORE buildPlayer so the player can use one
+  // if the flag is on and the manifest has available assets. This is
+  // a no-op when the flag is off (default).
+  await _preloadGltfAssets();
   buildPlayer();
   buildNPCs();
   setupInput();
