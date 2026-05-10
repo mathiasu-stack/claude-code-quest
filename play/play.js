@@ -1785,7 +1785,12 @@ function update(dt) {
 
     player.position.x = nx;
     player.position.z = nz;
-    player.rotation.y = Math.atan2(mx, mz);
+    // Smoother rotation: lerp toward target heading instead of snapping.
+    const targetRot = Math.atan2(mx, mz);
+    let dRot = ((targetRot - player.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (dRot < -Math.PI) dRot += Math.PI * 2;
+    const rotLerp = 1 - Math.exp(-dt * 7); // slower than camera so the camera trails the body
+    player.rotation.y += dRot * rotLerp;
 
     const p = player.userData.parts;
     if (player.userData.grounded && p) {
@@ -1817,7 +1822,9 @@ function update(dt) {
   const angle = player.rotation.y;
   const targetCamX = player.position.x - Math.sin(angle) * camDist;
   const targetCamZ = player.position.z - Math.cos(angle) * camDist;
-  const camLerp = 1 - Math.exp(-dt * 9); // stiffness ~9 (snappier than the old 0.12 @ 60fps)
+  // Stiffness 5 reads as smooth camera trail — the body lerps at 7 above
+  // so the camera lags slightly behind direction changes (more cinematic).
+  const camLerp = 1 - Math.exp(-dt * 5);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   camera.position.y = camH + player.position.y * 0.3;

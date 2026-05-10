@@ -113,14 +113,18 @@ function completeLesson(ch, lesson) {
     const fromPlay = !!window.App._currentParams?.fromPlay;
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
-      <div class="already-done">✓ Lesson complete!</div>
+      <div class="already-done">✓ Lesson complete! ${fromPlay ? 'Heading back to the office…' : ''}</div>
       ${fromPlay
-        ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office</button>'
+        ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office now</button>'
         : buildContinueCta(ch, lesson.id)}
     `;
     btn.replaceWith(...Array.from(wrapper.childNodes));
     if (fromPlay) {
       document.getElementById('back-to-play').addEventListener('click', () => window.App.navigate('play'));
+      // Auto-return after a short beat so the user isn't stuck in the lesson UI.
+      setTimeout(() => {
+        if (window.App._currentView === 'lesson') window.App.navigate('play');
+      }, 1400);
     } else {
       bindContinueCta();
     }

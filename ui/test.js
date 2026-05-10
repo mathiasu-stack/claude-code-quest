@@ -209,7 +209,17 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   }
 
   const backToPlay = document.getElementById('back-to-play-from-test');
-  if (backToPlay) backToPlay.addEventListener('click', () => window.App.navigate('play'));
+  if (backToPlay) {
+    backToPlay.addEventListener('click', () => window.App.navigate('play'));
+    // Auto-return on PASSED tests so the player isn't stuck on the feedback
+    // page. Failed tests do NOT auto-return — they stay so the player can
+    // read the feedback and retry.
+    if (result.passed) {
+      setTimeout(() => {
+        if (window.App._currentView === 'test') window.App.navigate('play');
+      }, 2600);
+    }
+  }
 }
 
 window.TestView = { renderTest };
