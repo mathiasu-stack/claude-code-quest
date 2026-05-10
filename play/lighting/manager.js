@@ -53,6 +53,7 @@ export class LightingManager {
     if (zoneIdx === this.currentIdx) return; // no-op
     const preset = getPresetForZone(zoneIdx);
     this.currentIdx = zoneIdx;
+    this._lastPreset = preset; // exposed for timeOfDay.js to read baseline
 
     // Ambient
     this.hemi.color.setHex(preset.ambient.skyColor);

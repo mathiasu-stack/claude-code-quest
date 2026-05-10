@@ -20,6 +20,7 @@ import { decorateLibrary } from './decorations/library.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
+import { TimeOfDay } from './world/timeOfDay.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -280,6 +281,7 @@ let skyDome = null;
 let receptionWindows = null;
 let libraryWindow = null;
 let receptionHallway = null;
+let timeOfDay = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1876,6 +1878,8 @@ function update(dt) {
         skyDome.applyPreset(skyP.sky);
         if (skyP.fog) scene.fog = new THREE.Fog(skyP.fog.color, skyP.fog.near, skyP.fog.far);
       }
+      // Time-of-day baseline scales the preset values, so re-apply on transition.
+      if (timeOfDay) timeOfDay.reapply();
       // Crossfade zone music. fail-silent inside AudioManager.
       try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
     }
@@ -1887,6 +1891,9 @@ function update(dt) {
   if (receptionWindows?.update && player) {
     receptionWindows.update(dt, performance.now(), player.position);
   }
+
+  // Time-of-day self-throttles to 1Hz internally; cheap to call each frame.
+  if (timeOfDay) timeOfDay.tick(performance.now());
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
@@ -1996,6 +2003,9 @@ export function start(host) {
     // Initial zone music — silent fallback if the file isn't there.
     try { audio.startMusic(`zone-${lastZoneIdx}`, musicForZone(lastZoneIdx), 2500); } catch {}
   }
+  // Time-of-day modulates the current preset (intensity, sun, sky, exposure).
+  timeOfDay = new TimeOfDay({ lighting, skyDome, renderer, receptionWindows });
+  timeOfDay.tick(performance.now());
   // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
   // initial bloom/vignette values to the current zone preset.
   postfx = new PostFxPipeline(renderer, scene, camera, { mobile: isMobile() });
