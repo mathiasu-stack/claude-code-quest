@@ -22,6 +22,7 @@ import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js'
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
+import { NameTagSystem } from './ui/nameTags.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -284,6 +285,8 @@ let libraryWindow = null;
 let receptionHallway = null;
 let timeOfDay = null;
 let liveAgents = null;
+let nameTags = null;
+let occluderWalls = [];
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1901,6 +1904,8 @@ function update(dt) {
   if (liveAgents && player) {
     liveAgents.update(dt, performance.now(), player.position);
   }
+  // Name tag fade pass (distance + closest-NPC emphasis).
+  if (nameTags) nameTags.update();
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
@@ -2016,6 +2021,12 @@ export function start(host) {
   // Live world: routines for Marcus/Aisha/Linda + a few ambient workers.
   liveAgents = new LiveAgents({
     scene, npcMeshes, makeCharacter, isMobile: isMobile(),
+  });
+  // Name-tag fade system. We pass `walls=[]` so occlusion is disabled
+  // (wall meshes aren't tagged for raycast — see notes file). Distance
+  // fade + closest-NPC emphasis still apply.
+  nameTags = new NameTagSystem({
+    camera, npcMeshes, walls: [], mobile: isMobile(),
   });
   // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
   // initial bloom/vignette values to the current zone preset.
