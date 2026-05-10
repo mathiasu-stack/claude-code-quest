@@ -130,15 +130,17 @@ export class SkyDome {
 //   fog:  { color, near, far }    (or null = no fog)
 const RECEPTION = {
   sky: {
-    top:     0xa5cffb,
-    horizon: 0xffe4b5,
-    bottom:  0xb88a52,
+    top:     0x4b8ed8,   // strong blue so the gradient reads vertically
+    horizon: 0xffd9a0,   // warm horizon band
+    bottom:  0x8c5a2c,   // earthy lower band
     sunColor: 0xffe7b0,
-    sunOpacity: 0.9,
-    sunSize:  1.2,
+    sunOpacity: 0.95,
+    sunSize:  1.3,
     sunDir:   { x: 0.5, y: 0.55, z: -0.7 },
   },
-  fog: { color: 0xfbe0c2, near: 22, far: 75 },
+  // Pull fog far in and lighten so it doesn't wash out the skydome behind
+  // the windows (was previously eating the gradient with cream haze).
+  fog: { color: 0xf8e2c5, near: 28, far: 95 },
 };
 const LIBRARY = {
   sky: {

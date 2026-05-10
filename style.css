@@ -1417,6 +1417,66 @@ body.in-play #mobile-header { display: none !important; }
   outline-offset: 1px;
 }
 
+.play-promotion-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%) scale(0.92);
+  z-index: 30;
+  background: linear-gradient(135deg, rgba(26,39,68,0.95), rgba(40,55,95,0.95));
+  color: #fff;
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 22px 36px;
+  text-align: center;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 60px rgba(201,164,76,0.4);
+  opacity: 0;
+  transition: opacity 0.4s, transform 0.6s cubic-bezier(.2,1.5,.4,1);
+  pointer-events: none;
+}
+.play-promotion-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.play-promotion-toast .prom-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.18em;
+  margin-bottom: 8px;
+}
+.play-promotion-toast .prom-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.play-congrats-bubble {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translate(-50%, 0) scale(0.9);
+  z-index: 28;
+  background: rgba(255,255,255,0.96);
+  color: var(--navy);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.play-congrats-bubble.visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
 .play-toast {
   position: absolute;
   top: 80px;

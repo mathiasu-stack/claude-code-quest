@@ -14,18 +14,39 @@ export function buildReceptionCenterpiece(scene, decoTickers) {
   const group = new THREE.Group();
   group.position.set(0, 0, 1); // a metre south of room centre
 
-  // Plinth — black marble base + brass top
-  const baseMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.3, roughness: 0.4 });
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.0, 0.5, 32), baseMat);
-  base.position.y = 0.25;
+  // Plinth — brushed silver column + glass disc top, reads as a modern
+  // corporate awards sculpture rather than the previous "black bowl".
+  const baseMat = new THREE.MeshStandardMaterial({
+    color: 0xb8c0c8, metalness: 0.85, roughness: 0.32,
+  });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 0.55, 32), baseMat);
+  base.position.y = 0.275;
   base.castShadow = true; base.receiveShadow = true;
   group.add(base);
-  const topPlate = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.85, 0.85, 0.04, 32),
-    new THREE.MeshStandardMaterial({ color: 0xc9a44c, metalness: 0.85, roughness: 0.18 }),
+  // Pinch-waist trim band for visual interest
+  const band = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.78, 0.78, 0.04, 32),
+    new THREE.MeshStandardMaterial({ color: 0x6a6a6a, metalness: 0.9, roughness: 0.2 }),
   );
-  topPlate.position.y = 0.52;
+  band.position.y = 0.46;
+  group.add(band);
+  // Glass disc top — clear, slight tint, with a brass ring around it
+  const topPlate = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.85, 0.05, 32),
+    new THREE.MeshStandardMaterial({
+      color: 0xe6f0fa, metalness: 0.6, roughness: 0.05,
+      transparent: true, opacity: 0.6,
+    }),
+  );
+  topPlate.position.y = 0.555;
   group.add(topPlate);
+  const topRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.86, 0.04, 12, 32),
+    new THREE.MeshStandardMaterial({ color: 0xc9a44c, metalness: 0.92, roughness: 0.15 }),
+  );
+  topRing.rotation.x = Math.PI / 2;
+  topRing.position.y = 0.555;
+  group.add(topRing);
 
   // Floor ring (gold, slightly emissive so it reads as decorative).
   const ring = new THREE.Mesh(

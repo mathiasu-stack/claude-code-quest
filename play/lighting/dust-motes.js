@@ -14,8 +14,10 @@
 
 import * as THREE from 'three';
 
-const DEFAULT_COUNT = 100;
-const VOLUME = { x: 12, y: 4.5, z: 12 }; // half-extents around the player
+const DEFAULT_COUNT = 80;
+// Smaller volume so motes stay near the player rather than drifting
+// out through doorways and reading as "stars inside the room".
+const VOLUME = { x: 5, y: 3.0, z: 5 };
 
 export class DustMotes {
   constructor(scene, opts = {}) {

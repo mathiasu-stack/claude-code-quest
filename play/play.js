@@ -23,6 +23,9 @@ import { decorateLibrary } from './decorations/library.js';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
+import { buildAtrium } from './world/atrium.js';
+import { buildElevator } from './world/elevator.js';
+import { CeremonyManager } from './ceremony/ceremonyManager.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -297,6 +300,7 @@ let timeOfDay = null;
 let liveAgents = null;
 let nameTags = null;
 let occluderWalls = [];
+let ceremony = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -378,7 +382,13 @@ function clampMove(oldX, oldZ, newX, newZ) {
 // ─── Character builder ───────────────────────────────────────────────────────
 function makeCharacter(look) {
   const g = new THREE.Group();
-  const skinMat = new THREE.MeshStandardMaterial({ color: look.skin || 0xfdd9b5 });
+  // Skin material gets a tiny self-emissive tint so the head never reads
+  // pure black under shadow — the face plane is DoubleSide so you can
+  // see the face from any angle.
+  const skinColor = look.skin || 0xfdd9b5;
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: skinColor, emissive: skinColor, emissiveIntensity: 0.08, roughness: 0.85,
+  });
   const shirtMat = new THREE.MeshStandardMaterial({ color: look.shirt });
   const pantsMat = new THREE.MeshStandardMaterial({ color: look.pants });
   const hairMat = new THREE.MeshStandardMaterial({ color: look.hair ?? 0x3e2723 });
@@ -1076,13 +1086,10 @@ function buildWorld() {
   logo.position.set(-7.5, 3.2, -10.84);
   scene.add(logo);
 
-  // Posters on side walls
-  const p1 = makePoster('GROW', 'with Kedash');
-  p1.position.set(-10.83, 2.0, -3); p1.rotation.y = Math.PI / 2; scene.add(p1);
-  const p2 = makePoster('SHIP IT', 'every Friday');
-  p2.position.set(10.83, 2.0, -3); p2.rotation.y = -Math.PI / 2; scene.add(p2);
-  const p3 = makePoster('LEARN', 'every day');
-  p3.position.set(-10.83, 2.0, 5); p3.rotation.y = Math.PI / 2; scene.add(p3);
+  // Wall posters are placed once by decorateReception() (decorations/reception.js)
+  // — no inline posters here. The previous duplicate-GROW bug was caused
+  // by adding both this set AND the decorator's set, both labeled GROW
+  // on adjacent left-wall positions.
 
   // Reception desk
   const desk = new THREE.Mesh(
@@ -1193,8 +1200,7 @@ function buildWorld() {
     buildGenericZone(zoneIdx);
   }
 
-  // ─── Ceilings + crown molding + fixtures (architectural finish) ────────────
-  try { buildReceptionCeiling(scene); } catch (e) { console.warn('reception ceiling failed', e); }
+  // ─── Library ceiling (Reception is now an atrium, built later) ────────────
   try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
 
   // ─── Depth: windows + skyline + library arched window ──────────────────────
@@ -1210,6 +1216,18 @@ function buildWorld() {
   try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
   try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
   try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
+
+  // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
+  try {
+    const atrium = buildAtrium(scene, { mobile: isMobile() });
+    if (atrium?.tickers) for (const t of atrium.tickers) decoTickers.push(t);
+  } catch (e) { console.warn('atrium failed', e); }
+
+  // ─── Glass elevator — visible centerpiece of the atrium ──────────────────
+  try {
+    const elev = buildElevator(scene, { mobile: isMobile() });
+    if (elev?.tick) decoTickers.push((dt, now) => elev.tick(dt, now));
+  } catch (e) { console.warn('elevator failed', e); }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
@@ -1224,7 +1242,7 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
   targetScene.add(door);
   const label = makeLabelSprite(
     passed ? `${nextTitle} — Open` : `${nextTitle} — Locked`,
-    '#fff', passed ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+    '#fff', passed ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
   );
   label.scale.set(3.0, 0.7, 1);
   label.position.set(0, 3.4, atZ + 0.05);
@@ -1401,6 +1419,19 @@ function addPlayerAccessories(group, tier) {
 }
 
 function buildPlayer() {
+  // Defensive cleanup of any previous player mesh — fixes "duplicate
+  // tier tag" where customization rebuilds left an old player in the
+  // graph because the reference path missed something.
+  if (player && scene) {
+    scene.remove(player);
+    player.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose?.();
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => { if (m && m.map) m.map.dispose?.(); m && m.dispose?.(); });
+      }
+    });
+  }
   const o = getOutfit();
   const tier = getCompletedChapterCount();
   // Player look is owned by playerLook.js — keeps the player face
@@ -1449,9 +1480,13 @@ function spawnNPC(npcDef) {
   mesh.userData.npc = npcDef;
   scene.add(mesh);
 
+  // Consistent base scale for every NPC tag (was inconsistent before —
+  // led to giant Linda/Sarah tags). NameTagSystem applies opacity fade
+  // on top per-frame; scale stays put.
   const tag = makeLabelSprite(`${npcDef.portrait} ${npcDef.name}`);
   tag.position.set(0, 2.45, 0);
-  tag.scale.set(2.6, 0.55, 1);
+  tag.scale.set(2.4, 0.5, 1);
+  mesh.userData._isNameTag = true;
   mesh.add(tag);
 
   npcMeshes.push(mesh);
@@ -1884,7 +1919,7 @@ function update(dt) {
       // Refresh the label texture
       const newSprite = makeLabelSprite(
         open ? `${d.nextTitle} — Open` : `${d.nextTitle} — Locked`,
-        '#fff', open ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+        '#fff', open ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
       );
       if (d.label.material.map) d.label.material.map.dispose();
       d.label.material.map = newSprite.material.map;
@@ -1928,6 +1963,9 @@ function update(dt) {
   }
   // Name tag fade pass (distance + closest-NPC emphasis).
   if (nameTags) nameTags.update();
+
+  // Ceremony tick (cinematic camera + spotlight + reactions).
+  if (ceremony) ceremony.update(dt, performance.now());
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
@@ -2129,23 +2167,48 @@ export function start(host) {
     }
   }, 1500);
   showIntro();
-  // Trigger celebration dance if player just passed a test
+  // ── Ceremony manager — replaces the simple dance trigger ───────────
+  ceremony = new CeremonyManager({
+    getPlayer: () => player,
+    getCamera: () => camera,
+    getScene:  () => scene,
+    getNpcMeshes: () => npcMeshes,
+    setInputLocked: (b) => { inputLocked = !!b; },
+    setDanceUntil: (ms) => { danceUntil = ms; },
+    audio: {
+      playFanfare: () => playLevelUpFanfare(),
+      playCheer:   (sec) => playCrowdCheer(sec),
+      playPpPing:  () => playPpPing(),
+    },
+  });
+
+  // Trigger ceremony if the player just passed a test (`ccq_promotion_for`).
+  // Falls through to a plain dance if only `ccq_dance_for` is set
+  // (compatibility with older flag).
   try {
-    const danceFlag = sessionStorage.getItem('ccq_dance_for');
-    if (danceFlag) {
-      sessionStorage.removeItem('ccq_dance_for');
-      setTimeout(() => {
-        danceUntil = performance.now() + 4500;
-        showCelebrationToast();
-        // Crowd cheer + level-up fanfare-ish stinger over the celebration.
-        try {
-          playCrowdCheer(4.0);
-          playLevelUpFanfare();
-          // Switch zone music to the celebration stinger; it falls back to
-          // silence if the file isn't present.
-          audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
-        } catch {}
-      }, 400);
+    const promotionFor = sessionStorage.getItem('ccq_promotion_for');
+    if (promotionFor) {
+      // Pause briefly so the scene is on screen before the spotlight.
+      setTimeout(() => ceremony.maybeStartFromFlag(), 400);
+      // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
+      // and the dance via setDanceUntil internally.
+      try {
+        audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+      } catch {}
+    } else {
+      const danceFlag = sessionStorage.getItem('ccq_dance_for');
+      if (danceFlag) {
+        sessionStorage.removeItem('ccq_dance_for');
+        setTimeout(() => {
+          danceUntil = performance.now() + 4500;
+          showCelebrationToast();
+          try {
+            playCrowdCheer(4.0);
+            playLevelUpFanfare();
+            audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+          } catch {}
+        }, 400);
+      }
     }
   } catch {}
   loop();
@@ -2182,6 +2245,7 @@ export function stop() {
       }
     });
   }
+  if (ceremony) { ceremony.dispose(); ceremony = null; }
   if (liveAgents) { liveAgents.dispose(); liveAgents = null; }
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
