@@ -17,6 +17,7 @@ import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
@@ -1226,6 +1227,7 @@ function buildWorld() {
   decoTickers = [];
   try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
   try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
+  try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
