@@ -82,11 +82,23 @@ export class LiveAgents {
     if (!this.makeCharacter) return null;
     const palettes = [0xffd180, 0xb39ddb, 0xa5d6a7, 0xff8a65];
     const skinTones = [0xfdd9b5, 0xf1c27d, 0xc68642, 0x8d5524];
+    const hairColors = [0x1a1a1a, 0x2c1810, 0x4a2c0f, 0xc8a572];
+    const hairStyles = ['short', 'long', 'bob', 'bun', 'ponytail', 'side-part'];
+    const eyeColors = [0x4a2a14, 0x6b4a2a, 0x4a7a96, 0x4a7a3f, 0x6a6a6a];
+    const browShapes = ['soft', 'arched', 'flat'];
+    const mouthShapes = ['smile', 'gentle', 'flat'];
     const look = {
-      skin: skinTones[seed % skinTones.length],
-      hair: 0x3e2723, hairStyle: seed % 2 ? 'short' : 'long',
-      shirt: palettes[seed % palettes.length], pants: 0x37474f,
-      face: 'dot', expression: 'neutral',
+      skin:       skinTones[seed % skinTones.length],
+      hair:       hairColors[(seed * 3) % hairColors.length],
+      hairStyle:  hairStyles[(seed * 5) % hairStyles.length],
+      shirt:      palettes[seed % palettes.length],
+      pants:      0x37474f,
+      eyeColor:   eyeColors[(seed * 7) % eyeColors.length],
+      browShape:  browShapes[seed % browShapes.length],
+      mouthShape: mouthShapes[(seed + 1) % mouthShapes.length],
+      blush:      (seed % 3) !== 0,
+      glasses:    (seed % 4) === 0,
+      beard:      (seed % 7) === 0 ? 'stubble' : null,
     };
     const mesh = this.makeCharacter(look);
     // Spawn in Library so they don't crowd Reception.

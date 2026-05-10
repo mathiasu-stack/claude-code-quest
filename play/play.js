@@ -14,6 +14,8 @@ import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
+import { getLookForNpc } from './characters/npcLooks.js';
+import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { decorateReception } from './decorations/reception.js';
@@ -1401,12 +1403,10 @@ function addPlayerAccessories(group, tier) {
 function buildPlayer() {
   const o = getOutfit();
   const tier = getCompletedChapterCount();
-  const cust = loadCustomization();
-  player = makeCharacter({
-    skin: cust.skin, hair: cust.hairColor, hairStyle: 'short',
-    shirt: o.shirt, pants: o.pants, glasses: false, prop: null,
-    face: cust.face, expression: 'happy',
-  });
+  // Player look is owned by playerLook.js — keeps the player face
+  // pipeline explicit so it can never be silently skipped.
+  const playerLook = buildPlayerLook(o);
+  player = makeCharacter(playerLook);
   addPlayerAccessories(player, tier);
 
   let startX = 0, startZ = 5;
@@ -1428,7 +1428,22 @@ function buildPlayer() {
 }
 
 function spawnNPC(npcDef) {
-  const mesh = makeCharacter(npcDef.look);
+  // Merge per-NPC face config (npcLooks.js) into the roster's look.
+  // The roster's `look` defines the body/outfit; npcLooks adds face
+  // identity (eye color, brow/mouth shape, hairStyle, beard, etc.).
+  const id = npcDef.id || (npcDef.npcId ?? '');
+  const faceLook = getLookForNpc(id, 0);
+  const mergedLook = { ...npcDef.look, ...faceLook };
+  // Roster's `look.shirt`/`look.pants`/`look.skin` win over npcLooks
+  // when the roster explicitly set them — restore them.
+  if (npcDef.look) {
+    if (typeof npcDef.look.skin === 'number')   mergedLook.skin = npcDef.look.skin;
+    if (typeof npcDef.look.shirt === 'number')  mergedLook.shirt = npcDef.look.shirt;
+    if (typeof npcDef.look.pants === 'number')  mergedLook.pants = npcDef.look.pants;
+    if (typeof npcDef.look.accent === 'number') mergedLook.accent = npcDef.look.accent;
+    if (npcDef.look.gesture) mergedLook.gesture = npcDef.look.gesture;
+  }
+  const mesh = makeCharacter(mergedLook);
   mesh.position.set(npcDef.pos[0], 0, npcDef.pos[1]);
   mesh.rotation.y = npcDef.face;
   mesh.userData.npc = npcDef;
