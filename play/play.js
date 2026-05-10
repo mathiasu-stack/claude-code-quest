@@ -1106,13 +1106,10 @@ function buildWorld() {
   logo.position.set(-7.5, 3.2, -10.84);
   scene.add(logo);
 
-  // Posters on side walls
-  const p1 = makePoster('GROW', 'with Kedash');
-  p1.position.set(-10.83, 2.0, -3); p1.rotation.y = Math.PI / 2; scene.add(p1);
-  const p2 = makePoster('SHIP IT', 'every Friday');
-  p2.position.set(10.83, 2.0, -3); p2.rotation.y = -Math.PI / 2; scene.add(p2);
-  const p3 = makePoster('LEARN', 'every day');
-  p3.position.set(-10.83, 2.0, 5); p3.rotation.y = Math.PI / 2; scene.add(p3);
+  // Wall posters are placed once by decorateReception() (decorations/reception.js)
+  // — no inline posters here. The previous duplicate-GROW bug was caused
+  // by adding both this set AND the decorator's set, both labeled GROW
+  // on adjacent left-wall positions.
 
   // Reception desk
   const desk = new THREE.Mesh(
@@ -1254,7 +1251,7 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
   targetScene.add(door);
   const label = makeLabelSprite(
     passed ? `${nextTitle} — Open` : `${nextTitle} — Locked`,
-    '#fff', passed ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+    '#fff', passed ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
   );
   label.scale.set(3.0, 0.7, 1);
   label.position.set(0, 3.4, atZ + 0.05);
@@ -1431,6 +1428,19 @@ function addPlayerAccessories(group, tier) {
 }
 
 function buildPlayer() {
+  // Defensive cleanup of any previous player mesh — fixes "duplicate
+  // tier tag" where customization rebuilds left an old player in the
+  // graph because the reference path missed something.
+  if (player && scene) {
+    scene.remove(player);
+    player.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose?.();
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => { if (m && m.map) m.map.dispose?.(); m && m.dispose?.(); });
+      }
+    });
+  }
   const o = getOutfit();
   const tier = getCompletedChapterCount();
   const cust = loadCustomization();
@@ -1466,9 +1476,13 @@ function spawnNPC(npcDef) {
   mesh.userData.npc = npcDef;
   scene.add(mesh);
 
+  // Consistent base scale for every NPC tag (was inconsistent before —
+  // led to giant Linda/Sarah tags). NameTagSystem applies opacity fade
+  // on top per-frame; scale stays put.
   const tag = makeLabelSprite(`${npcDef.portrait} ${npcDef.name}`);
   tag.position.set(0, 2.45, 0);
-  tag.scale.set(2.6, 0.55, 1);
+  tag.scale.set(2.4, 0.5, 1);
+  mesh.userData._isNameTag = true;
   mesh.add(tag);
 
   npcMeshes.push(mesh);
@@ -1901,7 +1915,7 @@ function update(dt) {
       // Refresh the label texture
       const newSprite = makeLabelSprite(
         open ? `${d.nextTitle} — Open` : `${d.nextTitle} — Locked`,
-        '#fff', open ? 'rgba(34,139,34,0.92)' : 'rgba(120,40,40,0.92)',
+        '#fff', open ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
       );
       if (d.label.material.map) d.label.material.map.dispose();
       d.label.material.map = newSprite.material.map;

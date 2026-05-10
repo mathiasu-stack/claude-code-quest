@@ -71,8 +71,11 @@ const RECEPTION_PRESET = {
       castShadow: false },
     // Cool rim from the doorway side to balance the warm sun.
     { type: 'point',  color: 0xb8d8ff, intensity: 0.35, distance: 16, decay: 2.0, position: [0, 2.8, 9]   },
-    // Centerpiece pool — gold light over the new K sculpture so it pops.
-    { type: 'point', color: 0xffd680, intensity: 0.6, distance: 6, decay: 1.4, position: [0, 3.4, 1] },
+    // Centerpiece pool — light is emitted FROM INSIDE the rotating K
+    // sculpture (1.7m up, where the K's body sits) instead of floating
+    // above unanchored. Gives the K an internal glow without a phantom
+    // light blob on the floor.
+    { type: 'point', color: 0xffd680, intensity: 0.55, distance: 5, decay: 1.6, position: [0, 1.7, 1] },
   ],
   background: 0xf3e7d2,
   fog: { color: 0xf3e7d2, near: 30, far: 75 },

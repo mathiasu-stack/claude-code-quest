@@ -105,11 +105,14 @@ export function decorateReception(scene, decoTickers) {
   aishaPapers.position.set(7.5, 1.0, -2.7);
   scene.add(aishaPapers);
 
-  // Kenji's demo screens — three animated displays attached to existing screens
+  // Kenji's demo screens — three animated displays attached to existing
+  // monitors. Tightened spacing and pulled them forward so they cluster
+  // on Kenji's desk instead of drifting toward the couch (which sits at
+  // z = 5 and was reading as having a 'LIVE' panel pasted on its back).
   const screens = [
-    { x: -7.5, z: 2.4, kind: 'code'  },
-    { x: -7.5, z: 3.2, kind: 'graph' },
-    { x: -7.5, z: 4.0, kind: 'live'  },
+    { x: -7.5, z: 2.2, kind: 'code'  },
+    { x: -7.5, z: 3.0, kind: 'graph' },
+    { x: -7.5, z: 3.8, kind: 'live'  },
   ];
   for (const s of screens) {
     const dem = buildDemoScreen(s.kind);
