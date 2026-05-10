@@ -1034,6 +1034,30 @@ body {
   min-width: 200px;
 }
 
+/* Mobile — stack the CTA so the button is always visible above the
+   description, regardless of how `.btn-primary { width: 100% }` (set in
+   the touch-target media query) interacts with flex-wrap. */
+@media (max-width: 768px) {
+  .play-cta-row {
+    display: block;
+    margin: 8px 0 20px;
+    padding: 14px;
+  }
+  .play-cta-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    /* Ensure visible even if a parent flex shrinks to zero. */
+    min-height: 48px;
+  }
+  .play-cta-sub {
+    display: block;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}
+
 /* ==================== PLAY MODE (3D) ==================== */
 
 body.in-play #main-content {
