@@ -21,6 +21,7 @@ import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js';
+import { buildElevator } from './world/elevator.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -1239,11 +1240,16 @@ function buildWorld() {
   try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
 
   // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
-  // Built last so its objects sit on top of the existing Reception room.
   try {
     const atrium = buildAtrium(scene, { mobile: isMobile() });
     if (atrium?.tickers) for (const t of atrium.tickers) decoTickers.push(t);
   } catch (e) { console.warn('atrium failed', e); }
+
+  // ─── Glass elevator — visible centerpiece of the atrium ──────────────────
+  try {
+    const elev = buildElevator(scene, { mobile: isMobile() });
+    if (elev?.tick) decoTickers.push((dt, now) => elev.tick(dt, now));
+  } catch (e) { console.warn('elevator failed', e); }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
