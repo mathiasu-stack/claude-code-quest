@@ -1763,12 +1763,21 @@ function update(dt) {
     }
   }
 
-  // Q / E rotate the camera yaw directly. WASD moves the character but
-  // never alters cameraYaw — so walking backward (S) or strafing (A/D)
-  // doesn't whip the view.
-  const yawRate = 1.6; // rad/sec
+  // Camera yaw — slowly auto-follows the character's heading, with Q / E
+  // available as a manual offset (desktop). On mobile, with no Q/E, the
+  // auto-follow alone gives a smooth third-person feel.
+  const yawRate = 1.6; // rad/sec for manual Q/E rotation
   if (keys['q']) cameraYaw -= yawRate * dt;
   if (keys['e']) cameraYaw += yawRate * dt;
+  // Drift toward player rotation each frame. Stiffness 1.2 → noticeably
+  // slower than the body's rotation lerp (dt*4 below), so the camera
+  // trails behind direction changes instead of locking to them.
+  if (player) {
+    const targetYaw = player.rotation.y;
+    let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    cameraYaw += dYaw * (1 - Math.exp(-dt * 1.2));
+  }
 
   // WASD input → camera-relative direction (using cameraYaw, not the
   // camera's matrix — independent of camera lerp state).
