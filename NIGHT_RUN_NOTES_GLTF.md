@@ -209,4 +209,161 @@ already handles her well).
   `gltfCharacter.js` covers both; if a third pack is dropped in,
   add an entry to `BONE_ALIASES`.
 
-(Run-execution log is appended below as commits land.)
+---
+
+## Run-execution log
+
+Commits land in this order on `feature/gltf-characters` (forked from
+`bugfix/flat-faces`).
+
+| # | Commit | Subject |
+|---|---|---|
+| G1 | `b213da1` | Audit + decisions |
+| G2 | (combined w/ G3 in tasks) | GLTFLoader infrastructure — assetLoader, manifest, loading overlay |
+| G4+G5 | `…`     | gltfCharacter builder + NPC asset casting table |
+| G6 | `925aec1` | Wire opt-in flag into makeCharacter + async asset preload |
+| G7 | `fecdca9` | AnimationMixer integration — idle/walk/run states for player + NPCs |
+| G8 | `bf3e80d` | Outfit + accessory rebuild — bone-attached primitives |
+| G9 | `23fabd0` | Ceremony unveil + integration verification for GLTF |
+| G10 | `1980c4b` | Performance pass — explicit frustum culling, ambient cap kept procedural |
+| G11 | (this commit) | Final notes |
+
+---
+
+## Morning checklist
+
+In order:
+
+1. **Pull the branch** (`git checkout feature/gltf-characters`,
+   `git pull` if pushing). Do NOT merge to `main`.
+
+2. **Verify the game still runs unchanged** with the flag OFF (default):
+   open `http://localhost:8080`, walk around. Should look identical
+   to the previous run's `bugfix/flat-faces` tip — same procedural
+   characters, same flat faces, all the bug fixes from B5–B7
+   carried forward.
+
+3. **Download the Quaternius pack** from
+   <https://quaternius.com> → Ultimate Modular Characters. Fallback:
+   <https://kenney.nl/assets> Modular Characters. Both CC0.
+
+4. **Drop the GLB files** into
+   `/volume1/projects/claude-code-quest/play/assets/characters/`.
+
+5. **Open `play/assets/characters/manifest.json`** and flip
+   `available: true` on each entry whose GLB you placed. (Keep
+   anything missing as `false` — that character falls back to
+   procedural cleanly.)
+
+6. **Optional**: drop a shared-animations pack named
+   `Animations.glb` and flip `animations.available: true`. Map clip
+   names in `manifest.json` to the semantic names the engine looks
+   for (idle / walk / run / wave / jump).
+
+7. **Flip the flag** in browser dev console:
+   ```js
+   localStorage.setItem('ccq_use_gltf_characters', '1'); location.reload();
+   ```
+   You should see "Loading characters..." with a progress bar, then
+   the play scene with GLTF characters.
+
+8. **Visual checks** (the things I couldn't test from here):
+   - Player has a real 3D character body & face (not stuck-on
+     primitives).
+   - Named NPCs each have distinct GLTF variants matching the
+     casting table in `play/characters/npcCasting.js`.
+   - Walking transitions to the walk clip; sprint (Shift) to run.
+   - Tier accessories appear at the right bone — tie hangs from
+     chest, watch on left wrist, glasses on the head, halo above
+     the head.
+   - Promotion ceremony: the unveil scale-in plays; character spins;
+     title transitions; halo appears on tier 7+.
+   - Marcus walks to the water cooler and back (LiveAgents
+     routine + walk clip together).
+   - Aisha walks to the library and back through the doorway.
+
+9. **If accessories misplace** (Quaternius bone axes differ from my
+   guess): tweak `addGltfPlayerAccessories` local offsets in
+   `play/play.js`. Common adjustments:
+   - Glasses landing in the forehead → swap Y/Z in the glasses
+     section: `(0, 0.03, 0.10)` → `(0, 0.10, 0.03)`.
+   - Halo too low → increase Y in the halo section from `0.30` to
+     `0.45`.
+
+10. **If a named NPC's GLB is missing** from your download, leave
+    its manifest entry `available: false` — the loader falls back
+    to that NPC's `fallbackAssetId` (defined in
+    `play/characters/npcCasting.js`), then to procedural. The game
+    won't break.
+
+11. **Mobile FPS check** — load on a phone with the flag on. Target
+    is 30+. If FPS drops, the most likely culprit is too many
+    GLTF instances active at once. Mitigations:
+    - Lower the LiveAgents ambient cap (it's already procedural-
+      only, so that's not it).
+    - Set every chapter NPC's casting to a single shared variant
+      so the SkeletonUtils.clone reuses geometry buffers.
+
+---
+
+## Dead code — for a future cleanup run
+
+Now superseded by `gltfCharacter.js` + `assetLoader.js`. Keep for
+fallback during GLTF transition; remove in a later cleanup run once
+GLTF has been verified live.
+
+- `play/characters/face.js` — original 3D-primitive face system
+  (used only when `faceKind === 'face'`, which no current code
+  path sets).
+- `play/characters/cartoonFace.js` — superseded by flatFace; only
+  used when `faceKind === 'cartoon'`, also unused in current paths.
+- `play/characters/flatFace.js` — still in active use as the
+  procedural-character face renderer (when GLTF unavailable). Keep
+  until GLTF assets are verified working in production.
+
+When cleaning up, delete the import lines at top of `play.js`
+(lines 15-17) for whichever face systems are no longer needed,
+remove the corresponding faceKind branches in the per-frame loop
+(`updateFlatFace` / `updateCartoonFace` / `updateFace`), and delete
+the files.
+
+---
+
+## What I tested vs. what needs human verification
+
+I CAN verify (and did):
+  • All JS files parse cleanly (`node --check`)
+  • Manifest is valid JSON (`python3 json.load`)
+  • Code paths are gated correctly: flag-off default has zero
+    behavior change; flag-on with no assets falls back cleanly per
+    character; flag-on with assets activates GLTF.
+  • The `look._id`-driven casting resolution works regardless of
+    whether the named NPC has an explicit entry.
+  • Bone-alias table covers Mixamo and Kenney conventions.
+  • Three.js `cloneSkeletal` import path resolves through the
+    existing importmap.
+
+I CANNOT verify (need a human in a browser):
+  • That the actual Quaternius rig loads and renders correctly.
+  • That walk/idle clip names match the loader's `.toLowerCase()
+    .includes(want)` heuristic. If they don't (e.g. clip is named
+    "Animation_Idle_v2"), the heuristic still finds it — but
+    "T-Pose" without an Idle clip would leave the character
+    motionless.
+  • Bone-relative accessory positions look right (head Y vs Z is
+    the most likely tweak — see step 9).
+  • Mobile FPS impact (no device available from here).
+
+---
+
+## Why the `bugfix/flat-faces` parent matters
+
+The four bug-carry-forward items in the brief are all FIXED on the
+parent branch:
+- Bug A (Library brightness): commit `b1545c9`
+- Bug B (Staircase support + collision): commit `3811eac`
+- Bug C/D/E (Reception sweep): commit `e504b70`
+
+Branching `feature/gltf-characters` from `bugfix/flat-faces` instead
+of from `main` carries them forward automatically. When eventually
+merging to `main`, those commits land alongside the GLTF system.
