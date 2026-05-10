@@ -1444,6 +1444,14 @@ function buildGenericZone(idx) {
 
 // ─── Player + NPCs ───────────────────────────────────────────────────────────
 function addPlayerAccessories(group, tier) {
+  // GLTF route — when the player is a rigged Quaternius character,
+  // attach accessories to bones via gltfChar.attachAt instead of
+  // adding them at hard-coded absolute Y positions (which are tuned
+  // for the procedural body and would float/clip on a real rig).
+  if (group.userData.gltfChar) {
+    addGltfPlayerAccessories(group, tier);
+    return;
+  }
   // Tier 1+: name badge / lanyard
   if (tier >= 1) {
     const lan = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.02),
@@ -1527,6 +1535,145 @@ function addPlayerAccessories(group, tier) {
     halo.position.set(0, 1.95, 0);
     halo.rotation.x = Math.PI / 2;
     group.add(halo);
+    group.userData.halo = halo;
+  }
+}
+
+// Bone-attached accessories for the GLTF player. Local offsets are
+// expressed RELATIVE TO THE BONE — the bone's world transform supplies
+// the absolute position. Quaternius/Mixamo bone convention assumed:
+//   • Head bone +Z is forward (face direction); +Y is up.
+//   • Chest (Spine2) +Y is up the body.
+//   • LeftHand/RightHand bone is at the wrist; +Y is down the palm.
+// If a bone doesn't exist on the rig, attachAt falls back to attaching
+// to the group root and logs a warning — better than crashing.
+function addGltfPlayerAccessories(group, tier) {
+  const c = group.userData.gltfChar;
+  if (!c) return;
+
+  // Tier 1: lanyard + name badge on chest.
+  if (tier >= 1) {
+    const lan = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.30, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x1a237e }),
+    );
+    lan.position.set(0, -0.05, 0.08);
+    c.attachAt('chest', lan);
+    const badge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.18, 0.012),
+      new THREE.MeshStandardMaterial({ color: 0xffffff }),
+    );
+    badge.position.set(0, -0.20, 0.09);
+    c.attachAt('chest', badge);
+  }
+  // Tier 2: tie hanging from chest.
+  if (tier >= 2) {
+    const tie = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.42, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0xb71c1c, metalness: 0.1, roughness: 0.6 }),
+    );
+    tie.position.set(0, -0.25, 0.10);
+    c.attachAt('chest', tie);
+    const knot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.08, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x7f1313 }),
+    );
+    knot.position.set(0, 0.02, 0.10);
+    c.attachAt('chest', knot);
+  }
+  // Tier 3: watch on left wrist (the bone's frame, not the body's).
+  if (tier >= 3) {
+    const watch = new THREE.Mesh(
+      new THREE.BoxGeometry(0.10, 0.06, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x424242, metalness: 0.7, roughness: 0.3 }),
+    );
+    watch.position.set(0, 0, 0.05);
+    c.attachAt('leftHand', watch);
+    const face = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.06, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0xfff59d }),
+    );
+    face.position.set(0, 0, 0.072);
+    c.attachAt('leftHand', face);
+  }
+  // Tier 4: vest material override on the body's torso material —
+  // safer than overlaying a vest box (would clip the rig).
+  // We swap the first material on the SkinnedMesh whose material's
+  // current colour looks like a shirt (highest brightness).
+  if (tier >= 4) {
+    let bodyMesh = null;
+    group.traverse(o => {
+      if (!bodyMesh && o.isSkinnedMesh && o.material?.color) bodyMesh = o;
+    });
+    if (bodyMesh && bodyMesh.material) {
+      const mat = bodyMesh.material.clone();
+      mat.color.set(0x263238);
+      mat.metalness = 0.3;
+      mat.roughness = 0.5;
+      bodyMesh.material = mat;
+      group.userData._vestMaterial = mat;
+    }
+    // Three small gold buttons down the chest (still primitives).
+    for (let i = 0; i < 3; i++) {
+      const btn = new THREE.Mesh(
+        new THREE.SphereGeometry(0.022, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0xc9a44c, metalness: 0.8, roughness: 0.2 }),
+      );
+      btn.position.set(0, -0.05 - i * 0.10, 0.10);
+      c.attachAt('chest', btn);
+    }
+  }
+  // Tier 5: glasses on the head bone.
+  if (tier >= 5) {
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: 0x111111, metalness: 0.6, roughness: 0.3,
+    });
+    const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 16), frameMat);
+    lensL.rotation.y = Math.PI / 2;
+    lensL.position.set(-0.07, 0.03, 0.10);
+    c.attachAt('head', lensL);
+    const lensR = lensL.clone(); lensR.position.x = 0.07;
+    c.attachAt('head', lensR);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.01), frameMat);
+    bridge.position.set(0, 0.03, 0.11);
+    c.attachAt('head', bridge);
+  }
+  // Tier 6: gold necklace on the chest/neck.
+  if (tier >= 6) {
+    const chain = new THREE.Mesh(
+      new THREE.TorusGeometry(0.16, 0.012, 8, 32),
+      new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 }),
+    );
+    chain.rotation.x = Math.PI / 2;
+    chain.position.set(0, 0.05, 0);
+    chain.scale.set(1, 0.65, 1);
+    c.attachAt('neck', chain);
+    const pendant = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 }),
+    );
+    pendant.position.set(0, -0.06, 0.10);
+    c.attachAt('neck', pendant);
+  }
+  // Tier 7: lapel pin + halo crown.
+  if (tier >= 7) {
+    const pin = new THREE.Mesh(
+      new THREE.SphereGeometry(0.035, 12, 10),
+      new THREE.MeshStandardMaterial({
+        color: 0xff4081, metalness: 0.5, roughness: 0.2, emissive: 0x331122,
+      }),
+    );
+    pin.position.set(-0.14, -0.05, 0.10);
+    c.attachAt('chest', pin);
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.22, 0.022, 12, 32),
+      new THREE.MeshStandardMaterial({
+        color: 0xffeb3b, metalness: 0.8, roughness: 0.2, emissive: 0x222200,
+      }),
+    );
+    halo.position.set(0, 0.30, 0);
+    halo.rotation.x = Math.PI / 2;
+    c.attachAt('head', halo);
     group.userData.halo = halo;
   }
 }
