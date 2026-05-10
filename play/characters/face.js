@@ -234,15 +234,19 @@ export function attachFace(group, head, look = {}) {
   const openTex = getCachedTexture(faceStyle, expression, false);
   const blinkTex = getCachedTexture(faceStyle, expression, true);
 
+  // DoubleSide so the face is visible from any viewing angle. The face
+  // plane sits 0.225 from head center (head sphere radius 0.21), so it's
+  // safely outside the sphere — no z-fighting. Without DoubleSide, third
+  // person views from behind showed the back of the plane (invisible).
   const planeMat = new THREE.MeshBasicMaterial({
     map: openTex,
     transparent: true,
     depthTest: true,
     depthWrite: false,
+    side: THREE.DoubleSide,
   });
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), planeMat);
-  // Place just in front of the head's +Z face (head sphere radius 0.21).
-  plane.position.set(0, 0, 0.205);
+  plane.position.set(0, 0, 0.225);
   head.add(plane);
 
   const face = {

@@ -375,7 +375,13 @@ function clampMove(oldX, oldZ, newX, newZ) {
 // ─── Character builder ───────────────────────────────────────────────────────
 function makeCharacter(look) {
   const g = new THREE.Group();
-  const skinMat = new THREE.MeshStandardMaterial({ color: look.skin || 0xfdd9b5 });
+  // Skin material gets a tiny self-emissive tint so the head never reads
+  // pure black under shadow — the face plane is DoubleSide so you can
+  // see the face from any angle.
+  const skinColor = look.skin || 0xfdd9b5;
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: skinColor, emissive: skinColor, emissiveIntensity: 0.08, roughness: 0.85,
+  });
   const shirtMat = new THREE.MeshStandardMaterial({ color: look.shirt });
   const pantsMat = new THREE.MeshStandardMaterial({ color: look.pants });
   const hairMat = new THREE.MeshStandardMaterial({ color: look.hair ?? 0x3e2723 });
