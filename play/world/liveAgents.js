@@ -87,7 +87,10 @@ export class LiveAgents {
     const eyeColors = [0x4a2a14, 0x6b4a2a, 0x4a7a96, 0x4a7a3f, 0x6a6a6a];
     const browShapes = ['soft', 'arched', 'flat'];
     const mouthShapes = ['smile', 'gentle', 'flat'];
+    // _id ensures the flatFace system gives each ambient agent a unique
+    // deterministic face via id hashing (faceConfigs.getFaceConfig).
     const look = {
+      _id: `ambient-${seed}`,
       skin:       skinTones[seed % skinTones.length],
       hair:       hairColors[(seed * 3) % hairColors.length],
       hairStyle:  hairStyles[(seed * 5) % hairStyles.length],
