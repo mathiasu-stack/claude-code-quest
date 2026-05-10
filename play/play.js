@@ -13,6 +13,7 @@ import {
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
+import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { decorateReception } from './decorations/reception.js';
@@ -406,41 +407,9 @@ function makeCharacter(look) {
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 18, 14), skinMat);
   head.position.y = 1.66; head.castShadow = true; g.add(head);
 
-  // Hair
-  if (look.hairStyle !== 'bald' && look.hairStyle !== undefined) {
-    const segY = look.hairStyle === 'long' ? Math.PI * 0.6 : Math.PI / 2;
-    const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.225, 18, 14, 0, Math.PI * 2, 0, segY),
-      hairMat,
-    );
-    hair.position.y = 1.66; g.add(hair);
-    if (look.hairStyle === 'bun') {
-      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), hairMat);
-      bun.position.set(0, 1.86, -0.05); g.add(bun);
-    }
-    if (look.hairStyle === 'long') {
-      const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.32, 0.1), hairMat);
-      back.position.set(0, 1.5, -0.16); g.add(back);
-    }
-  }
-
-  // Glasses
-  if (look.glasses) {
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const lensL = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 16), frameMat);
-    lensL.rotation.y = Math.PI / 2;
-    lensL.position.set(-0.07, 1.66, 0.2);
-    g.add(lensL);
-    const lensR = lensL.clone(); lensR.position.x = 0.07; g.add(lensR);
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.01), frameMat);
-    bridge.position.set(0, 1.66, 0.21); g.add(bridge);
-  }
-
-  // Beard
-  if (look.beard) {
-    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.4), hairMat);
-    beard.position.set(0, 1.6, 0.02); g.add(beard);
-  }
+  // Hair / glasses / beard are now ALL owned by the new cartoonFace
+  // system (parented to head). The legacy makeCharacter add-ons here
+  // were skipped to avoid double-rendering — see cartoonFace.js.
 
   // Pants block
   const pants = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.3), pantsMat);
@@ -525,7 +494,12 @@ function makeCharacter(look) {
   // Stash look on the group so idle animations can read look.gesture etc.
   g.userData.look = look;
   // Procedural cartoon face on the head's front. Reads in any lighting.
-  g.userData.face = attachFace(g, head, look);
+  // New cartoon face — 3D primitive eyes / mouth / brows / hair instead
+  // of a single canvas plane. Visible from all angles. The legacy
+  // `attachFace` call was the source of the long-standing "black blob"
+  // head bug because it relied on a one-sided plane.
+  g.userData.face = attachCartoonFace(g, head, look);
+  g.userData.faceKind = 'cartoon';
   return g;
 }
 
@@ -1950,15 +1924,40 @@ function update(dt) {
   // Update audio listener position so PannerNode sources track the camera.
   if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
 
-  // Drive face animations (blink + idle look-at-player) on every character.
+  // Drive face animations (blink + pupil-track-player) on every character.
+  // Routes to the cartoonFace updater for new-style faces and the legacy
+  // updater for any old plane-only faces still around.
   const nowMs = performance.now();
-  if (player?.userData?.face) updateFace(player.userData.face, nowMs);
-  // Player breathing/head-bob — applyIdle is safe because player has no
-  // signature gesture (`look.gesture` undefined ⇒ gesture switch falls
-  // through to the no-op default).
+  const _playerHeadPos = new THREE.Vector3();
+  if (player?.userData?.face) {
+    if (player.userData.faceKind === 'cartoon') {
+      updateCartoonFace(player.userData.face, nowMs);
+    } else {
+      updateFace(player.userData.face, nowMs);
+    }
+  }
   if (player) applyIdle(player, dt, nowMs);
+  // Pre-compute the player's head world position for NPC pupil-track.
+  if (player?.userData?.parts?.head) {
+    player.userData.parts.head.getWorldPosition(_playerHeadPos);
+  } else if (player) {
+    _playerHeadPos.set(player.position.x, 1.66, player.position.z);
+  }
+  const _npcHeadPos = new THREE.Vector3();
   for (const m of npcMeshes) {
-    if (m.userData?.face) updateFace(m.userData.face, nowMs);
+    if (m.userData?.face) {
+      if (m.userData.faceKind === 'cartoon') {
+        const npcHead = m.userData?.parts?.head;
+        if (npcHead) {
+          npcHead.getWorldPosition(_npcHeadPos);
+          updateCartoonFace(m.userData.face, nowMs, _playerHeadPos, _npcHeadPos);
+        } else {
+          updateCartoonFace(m.userData.face, nowMs);
+        }
+      } else {
+        updateFace(m.userData.face, nowMs);
+      }
+    }
     // Idle breathing + signature gesture per NPC.
     applyIdle(m, dt, nowMs);
     // Look-at-player: when player within 4m of NPC, gently rotate the head
