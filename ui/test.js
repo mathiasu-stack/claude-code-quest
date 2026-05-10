@@ -183,9 +183,7 @@ function renderFeedback(result, test, wasAlreadyPassed) {
 
     ${result.passed && !wasAlreadyPassed ? '<div class="unlock-notice">🎉 Next chapter unlocked!</div>' : ''}
 
-    ${window.App._currentParams?.fromPlay
-      ? '<button class="btn-primary continue-cta" id="back-to-play-from-test" style="margin-top:16px">← Return to the office</button>'
-      : ''}
+    <button class="btn-primary continue-cta" id="back-to-play-from-test" style="margin-top:16px">🎮 ${window.App._currentParams?.fromPlay ? 'Return to the office' : 'Back to the 3D world'}</button>
   `;
 
   feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });

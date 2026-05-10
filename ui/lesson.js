@@ -44,9 +44,8 @@ function renderLesson(chapterId, lessonId) {
       <div class="lesson-footer">
         ${alreadyDone
           ? `<div class="already-done">✓ You've completed this lesson</div>
-             ${fromPlay
-               ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office</button>'
-               : buildContinueCta(ch, lessonId)}`
+             <button class="btn-primary continue-cta" id="back-to-play">🎮 ${fromPlay ? 'Return to the office' : 'Back to the 3D world'}</button>
+             ${fromPlay ? '' : buildContinueCta(ch, lessonId)}`
           : `<button class="btn-primary complete-btn ${checkResolved ? '' : 'is-locked'}" id="mark-complete" ${checkResolved ? '' : 'disabled'}>
                ${checkResolved ? `Mark as Complete — Earn ${lesson.xpReward} PP →` : 'Answer the knowledge check above to continue'}
              </button>`
@@ -112,16 +111,17 @@ function completeLesson(ch, lesson) {
   if (btn) {
     const fromPlay = !!window.App._currentParams?.fromPlay;
     const wrapper = document.createElement('div');
+    // Always include a "Return to 3D World" button. When the lesson was
+    // entered via play mode, also auto-redirect after 1.4s. When entered
+    // from the dashboard, the button stays so the user can choose.
     wrapper.innerHTML = `
-      <div class="already-done">✓ Lesson complete! ${fromPlay ? 'Heading back to the office…' : ''}</div>
-      ${fromPlay
-        ? '<button class="btn-primary continue-cta" id="back-to-play">← Return to the office now</button>'
-        : buildContinueCta(ch, lesson.id)}
+      <div class="already-done">✓ Lesson complete!${fromPlay ? ' Heading back to the office…' : ''}</div>
+      <button class="btn-primary continue-cta" id="back-to-play">🎮 ${fromPlay ? 'Return to the office now' : 'Back to the 3D world'}</button>
+      ${fromPlay ? '' : buildContinueCta(ch, lesson.id)}
     `;
     btn.replaceWith(...Array.from(wrapper.childNodes));
+    document.getElementById('back-to-play').addEventListener('click', () => window.App.navigate('play'));
     if (fromPlay) {
-      document.getElementById('back-to-play').addEventListener('click', () => window.App.navigate('play'));
-      // Auto-return after a short beat so the user isn't stuck in the lesson UI.
       setTimeout(() => {
         if (window.App._currentView === 'lesson') window.App.navigate('play');
       }, 1400);
