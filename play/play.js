@@ -20,6 +20,7 @@ import { decorateLibrary } from './decorations/library.js';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
+import { buildAtrium } from './world/atrium.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -1220,8 +1221,7 @@ function buildWorld() {
     buildGenericZone(zoneIdx);
   }
 
-  // ─── Ceilings + crown molding + fixtures (architectural finish) ────────────
-  try { buildReceptionCeiling(scene); } catch (e) { console.warn('reception ceiling failed', e); }
+  // ─── Library ceiling (Reception is now an atrium, built later) ────────────
   try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
 
   // ─── Depth: windows + skyline + library arched window ──────────────────────
@@ -1237,6 +1237,13 @@ function buildWorld() {
   try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
   try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
   try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
+
+  // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
+  // Built last so its objects sit on top of the existing Reception room.
+  try {
+    const atrium = buildAtrium(scene, { mobile: isMobile() });
+    if (atrium?.tickers) for (const t of atrium.tickers) decoTickers.push(t);
+  } catch (e) { console.warn('atrium failed', e); }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
