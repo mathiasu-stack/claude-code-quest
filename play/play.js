@@ -21,6 +21,7 @@ import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
+import { LiveAgents } from './world/liveAgents.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -282,6 +283,7 @@ let receptionWindows = null;
 let libraryWindow = null;
 let receptionHallway = null;
 let timeOfDay = null;
+let liveAgents = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1895,6 +1897,11 @@ function update(dt) {
   // Time-of-day self-throttles to 1Hz internally; cheap to call each frame.
   if (timeOfDay) timeOfDay.tick(performance.now());
 
+  // Live agent routines (named NPC pathing + ambient workers).
+  if (liveAgents && player) {
+    liveAgents.update(dt, performance.now(), player.position);
+  }
+
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
   // Animated decorations (clock hands, server LEDs, demo screens, globe spin)
@@ -2006,6 +2013,10 @@ export function start(host) {
   // Time-of-day modulates the current preset (intensity, sun, sky, exposure).
   timeOfDay = new TimeOfDay({ lighting, skyDome, renderer, receptionWindows });
   timeOfDay.tick(performance.now());
+  // Live world: routines for Marcus/Aisha/Linda + a few ambient workers.
+  liveAgents = new LiveAgents({
+    scene, npcMeshes, makeCharacter, isMobile: isMobile(),
+  });
   // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
   // initial bloom/vignette values to the current zone preset.
   postfx = new PostFxPipeline(renderer, scene, camera, { mobile: isMobile() });
@@ -2113,6 +2124,7 @@ export function stop() {
       }
     });
   }
+  if (liveAgents) { liveAgents.dispose(); liveAgents = null; }
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
