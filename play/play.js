@@ -37,6 +37,7 @@ import { buildServerRack } from './world/objectTypes/serverRack.js';
 import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js';
+import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -2224,6 +2225,12 @@ export function start(host) {
       player.rotation.y = oldRot;
     }
   });
+  // ─── In-world lesson overlay (Pillar 3) ────────────────────────────
+  mountLessonOverlay({
+    setInputLocked: (b) => { inputLocked = !!b; },
+    duckMusic:      () => { try { audio.duckMusic?.(0.5); } catch {} },
+    restoreMusic:   () => { try { audio.duckMusic?.(1.0); } catch {} },
+  });
   // If after 1.5s the audio is still locked (mobile autoplay restriction),
   // surface a brief hint. Auto-removes once a tap unlocks the context.
   setTimeout(() => {
@@ -2337,6 +2344,7 @@ export function stop() {
   if (lighting) { lighting.dispose(); lighting = null; }
   try { audio.stopMusic(800); } catch {}
   try { unmountAudioSettings(); } catch {}
+  try { unmountLessonOverlay(); } catch {}
   try { unmountCustomization(); } catch {}
   lastZoneIdx = -1;
   footstepAccum = 0;

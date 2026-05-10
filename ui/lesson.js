@@ -1,4 +1,4 @@
-function renderLesson(chapterId, lessonId) {
+function renderLesson(chapterId, lessonId, targetEl = null) {
   const ch = CURRICULUM.find(c => c.id === chapterId);
   if (!ch) return;
   const lesson = ch.lessons.find(l => l.id === lessonId);
@@ -9,7 +9,10 @@ function renderLesson(chapterId, lessonId) {
   const checkResolved = !lesson.check || Progress.isKnowledgeCheckPassed(progress, lessonId) || (progress.knowledgeChecks?.[lessonId]?.attempts > 0);
   const lessonIdx = ch.lessons.findIndex(l => l.id === lessonId);
   const fromPlay = !!window.App._currentParams?.fromPlay;
-  const main = document.getElementById('main-content');
+  // Allow the lesson to render into a custom container (e.g. the in-world
+  // lesson overlay). Falls back to the dashboard's #main-content for
+  // backwards-compatibility with the legacy 2D route.
+  const main = targetEl || document.getElementById('main-content');
 
   main.innerHTML = `
     <div class="lesson-view">
@@ -56,11 +59,19 @@ function renderLesson(chapterId, lessonId) {
   `;
 
   document.getElementById('back-to-chapter').addEventListener('click', () => {
-    if (fromPlay) window.App.navigate('play');
-    else window.App.navigate('chapter', { chapterId });
+    if (window.LessonOverlay?.isOpen?.()) {
+      window.LessonOverlay.close();
+    } else if (fromPlay) {
+      window.App.navigate('play');
+    } else {
+      window.App.navigate('chapter', { chapterId });
+    }
   });
   const backToPlay = document.getElementById('back-to-play');
-  if (backToPlay) backToPlay.addEventListener('click', () => window.App.navigate('play'));
+  if (backToPlay) backToPlay.addEventListener('click', () => {
+    if (window.LessonOverlay?.isOpen?.()) window.LessonOverlay.close();
+    else window.App.navigate('play');
+  });
 
   if (!alreadyDone) {
     const completeBtn = document.getElementById('mark-complete');
@@ -123,7 +134,11 @@ function completeLesson(ch, lesson) {
     document.getElementById('back-to-play').addEventListener('click', () => window.App.navigate('play'));
     if (fromPlay) {
       setTimeout(() => {
-        if (window.App._currentView === 'lesson') window.App.navigate('play');
+        if (window.LessonOverlay?.isOpen?.()) {
+          window.LessonOverlay.close();
+        } else if (window.App._currentView === 'lesson') {
+          window.App.navigate('play');
+        }
       }, 1400);
     } else {
       bindContinueCta();
