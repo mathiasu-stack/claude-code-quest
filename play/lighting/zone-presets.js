@@ -92,18 +92,26 @@ const RECEPTION_PRESET = {
   },
 };
 
-// Zone 1 — Knowledge Library. Dim + cozy, but readable now.
-// Tuning notes: lifted ambient slightly so faces near desks aren't
-// completely in shadow; pendant lamps already in geometry add the rest.
+// Zone 1 — Knowledge Library.
+//
+// CRITICAL BRIGHTNESS LIFT (Bug A): the previous tuning was so dim that
+// faces read as silhouettes and Mei's name plate was illegible. Lift:
+//   • ambient   0.5  → 0.95   (almost double — bulk of the work)
+//   • directional 0.55 → 0.95
+//   • desk lamps 1.9 → 2.1 (already point lights; verified emitting)
+//   • added a soft head-height fill at [0,1.7,20] so faces have key
+//   • bloomThreshold 0.7 → 0.82 so general lift doesn't over-bloom
+//   • vignette 0.55 → 0.32 (corners were eating characters)
+//   • fog pushed back so the far wall doesn't disappear into black
 const LIBRARY_PRESET = {
   ambient: {
-    skyColor: 0x8898c0,    // was 0x6c7da3 — slightly lighter
-    groundColor: 0x2a1f17, // warmer wood bounce
-    intensity: 0.5,         // was 0.35
+    skyColor: 0xa9b4d0,    // brighter cool sky
+    groundColor: 0x4a3a25, // warmer wood bounce (was 0x2a1f17)
+    intensity: 0.95,        // was 0.5 — critical brightness lift
   },
   directional: {
-    color: 0xb6c5e5,
-    intensity: 0.55,        // was 0.4
+    color: 0xc8d4f0,        // slightly cleaner cool key
+    intensity: 0.95,        // was 0.55
     position: [-6, 14, 18],
     castShadow: true,
     shadowMapSize: 1024,
@@ -111,22 +119,28 @@ const LIBRARY_PRESET = {
     shadowBias: -0.0005,
   },
   accents: [
-    // Two tungsten desk lamps — bumped slightly for clearer pools.
-    { type: 'point', color: 0xffb95c, intensity: 1.9, distance: 8,  decay: 1.4, position: [0, 2.1, 16] },
-    { type: 'point', color: 0xffb95c, intensity: 1.9, distance: 8,  decay: 1.4, position: [0, 2.1, 22] },
-    // Warm light "streaming" from the new arched window onto the floor.
-    { type: 'point', color: 0xfff1c5, intensity: 0.8, distance: 10, decay: 1.6, position: [8, 2.5, 24] },
-    // Cool rim from the back wall.
-    { type: 'point', color: 0x7db0ff, intensity: 0.45, distance: 16, decay: 2.0, position: [0, 3.0, 30] },
+    // Two tungsten table-area point lights at z=16 and z=22 — paired
+    // with the pendant cone shades built in world/ceilings.js:209-225.
+    // These are real PointLights (consumed by LightingManager), not
+    // just emissive meshes — verified Bug A pass.
+    { type: 'point', color: 0xffb95c, intensity: 2.1, distance: 9,  decay: 1.4, position: [0, 2.1, 16] },
+    { type: 'point', color: 0xffb95c, intensity: 2.1, distance: 9,  decay: 1.4, position: [0, 2.1, 22] },
+    // NEW: soft fill at average character head height — lifts faces out
+    // of the "silhouette only" look from the previous tuning.
+    { type: 'point', color: 0xfff1c5, intensity: 0.85, distance: 14, decay: 1.4, position: [0, 1.7, 20] },
+    // Warm light "streaming" from the arched window onto the floor.
+    { type: 'point', color: 0xfff1c5, intensity: 1.10, distance: 12, decay: 1.5, position: [8, 2.5, 24] },
+    // Cool rim from the back wall — slightly stronger to read depth.
+    { type: 'point', color: 0x7db0ff, intensity: 0.65, distance: 18, decay: 2.0, position: [0, 3.0, 30] },
   ],
-  background: 0x1a1d2a,
-  fog: { color: 0x1a1d2a, near: 18, far: 55 },
+  background: 0x232838,                       // was 0x1a1d2a — lifted
+  fog: { color: 0x232838, near: 22, far: 65 },// pushed back; far wall now visible
   postfx: {
-    bloomStrength: 0.85,
-    bloomRadius: 0.85,
-    bloomThreshold: 0.7,
-    vignette: 0.55,
-    grain: 0.06,
+    bloomStrength: 0.65,    // was 0.85 — the brighter base no longer needs heavy bloom
+    bloomRadius: 0.80,
+    bloomThreshold: 0.82,   // was 0.70 — only true highlights bloom
+    vignette: 0.32,         // was 0.55 — corners were eating characters
+    grain: 0.04,
   },
 };
 
