@@ -316,22 +316,42 @@ export function buildAtrium(scene, opts = {}) {
   });
 
   // ── 9. Sculptural staircase against the west wall ─────────────────
-  // Pushed flush to the west wall (player movement clamps at x=-10.5,
-  // so the staircase sits in unreachable territory — no clipping).
-  // Now has a proper vertical chrome pillar supporting the underside,
-  // and a top platform that visually meets the mezzanine railing.
+  // Bug B (latest pass): previous tuning had steps spanning world x =
+  // -10.53 to -9.13 — the +0.7 half-width meant they reached well
+  // inside the player's movement clamp at x = -10.5 → player walked
+  // through them. Also "looked floating" because the only visible
+  // support was a single pillar to the side of the stair, not under
+  // each step. Two fixes in tandem:
+  //   1. Slanted CHROME STRINGER running directly under all 14 steps —
+  //      reads as the structural backbone, kills the "floating" look.
+  //   2. Collision rectangle added in play.js clampMove — pushes the
+  //      player east of x = -9.0 inside the stair Z range.
   const stairGroup = new THREE.Group();
   stairGroup.position.set(-10.2, 0, -3);
   scene.add(stairGroup);
   out.objects.push(stairGroup);
 
-  // Vertical chrome support pillar (the staircase isn't floating now).
+  // Vertical chrome support pillar at the FAR (top) end of the stair.
   const supportPillar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.10, 0.10, MEZZ_HEIGHT + 0.3, 12),
     polishedChrome(),
   );
   supportPillar.position.set(0.4, (MEZZ_HEIGHT + 0.3) / 2, 1.5);
   stairGroup.add(supportPillar);
+
+  // NEW: Slanted stringer running under all 14 steps (Bug B fix).
+  // Steps span y=0.05 → y=4.21 along z = -2.7 → -0.54. Build a tilted
+  // box that follows that diagonal so each step has visible support
+  // directly beneath it.
+  const stringerLen = Math.hypot(4.16, 2.16);  // y-rise × z-run
+  const stringerAngle = Math.atan2(4.16, 2.16);
+  const stringer = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.16, stringerLen),
+    polishedChrome(),
+  );
+  stringer.position.set(0.20, (0.05 + 4.21) / 2 - 0.10, (0.30 + 2.16) / 2);
+  stringer.rotation.x = -(Math.PI / 2 - stringerAngle);
+  stairGroup.add(stringer);
 
   // Steps — sit against the west wall, curve gently inward.
   for (let i = 0; i < 14; i++) {

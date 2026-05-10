@@ -348,6 +348,15 @@ function clampMove(oldX, oldZ, newX, newZ) {
   // X always within zone width
   newX = Math.max(-10.5, Math.min(10.5, newX));
 
+  // Bug B (atrium staircase): steps span world x≈-10.53→-9.13,
+  // z≈-2.7→-0.54 (built in play/world/atrium.js section 9). Player
+  // body half-width is ~0.28 (torso BoxGeometry 0.55 wide), so to keep
+  // the body fully clear of the step's east edge (-9.13) the center
+  // must be at x ≥ -8.85. Atrium-only (zone 0).
+  if (newZ >= -3.4 && newZ <= 0.7 && newX < -8.85 && zoneIndexAt(newZ) === 0) {
+    newX = -8.85;
+  }
+
   // First, find what zone we're trying to be in
   // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
   for (let i = 1; i < ZONE_COUNT; i++) {
