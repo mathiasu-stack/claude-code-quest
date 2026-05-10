@@ -191,7 +191,12 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   if (result.passed) {
     Lesson.showXpToast(wasAlreadyPassed ? 0 : test.xpReward);
     if (!wasAlreadyPassed) {
-      try { sessionStorage.setItem('ccq_dance_for', test.id); } catch {}
+      try {
+        sessionStorage.setItem('ccq_dance_for', test.id);
+        // Promotion flag — read once on entry to play, kicks off the
+        // full ceremony. ch.id is the chapter ID like 'ch01'.
+        sessionStorage.setItem('ccq_promotion_for', ch.id);
+      } catch {}
       // Fanfare + PP ping; level-up fanfare overrides if level changed.
       try {
         const levelAfter = window.Scoring ? Scoring.getLevel(window.App.progress.totalXP).label : null;

@@ -22,6 +22,7 @@ import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js';
 import { buildElevator } from './world/elevator.js';
+import { CeremonyManager } from './ceremony/ceremonyManager.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -296,6 +297,7 @@ let timeOfDay = null;
 let liveAgents = null;
 let nameTags = null;
 let occluderWalls = [];
+let ceremony = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1973,6 +1975,9 @@ function update(dt) {
   // Name tag fade pass (distance + closest-NPC emphasis).
   if (nameTags) nameTags.update();
 
+  // Ceremony tick (cinematic camera + spotlight + reactions).
+  if (ceremony) ceremony.update(dt, performance.now());
+
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
   // Animated decorations (clock hands, server LEDs, demo screens, globe spin)
@@ -2148,23 +2153,48 @@ export function start(host) {
     }
   }, 1500);
   showIntro();
-  // Trigger celebration dance if player just passed a test
+  // ── Ceremony manager — replaces the simple dance trigger ───────────
+  ceremony = new CeremonyManager({
+    getPlayer: () => player,
+    getCamera: () => camera,
+    getScene:  () => scene,
+    getNpcMeshes: () => npcMeshes,
+    setInputLocked: (b) => { inputLocked = !!b; },
+    setDanceUntil: (ms) => { danceUntil = ms; },
+    audio: {
+      playFanfare: () => playLevelUpFanfare(),
+      playCheer:   (sec) => playCrowdCheer(sec),
+      playPpPing:  () => playPpPing(),
+    },
+  });
+
+  // Trigger ceremony if the player just passed a test (`ccq_promotion_for`).
+  // Falls through to a plain dance if only `ccq_dance_for` is set
+  // (compatibility with older flag).
   try {
-    const danceFlag = sessionStorage.getItem('ccq_dance_for');
-    if (danceFlag) {
-      sessionStorage.removeItem('ccq_dance_for');
-      setTimeout(() => {
-        danceUntil = performance.now() + 4500;
-        showCelebrationToast();
-        // Crowd cheer + level-up fanfare-ish stinger over the celebration.
-        try {
-          playCrowdCheer(4.0);
-          playLevelUpFanfare();
-          // Switch zone music to the celebration stinger; it falls back to
-          // silence if the file isn't present.
-          audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
-        } catch {}
-      }, 400);
+    const promotionFor = sessionStorage.getItem('ccq_promotion_for');
+    if (promotionFor) {
+      // Pause briefly so the scene is on screen before the spotlight.
+      setTimeout(() => ceremony.maybeStartFromFlag(), 400);
+      // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
+      // and the dance via setDanceUntil internally.
+      try {
+        audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+      } catch {}
+    } else {
+      const danceFlag = sessionStorage.getItem('ccq_dance_for');
+      if (danceFlag) {
+        sessionStorage.removeItem('ccq_dance_for');
+        setTimeout(() => {
+          danceUntil = performance.now() + 4500;
+          showCelebrationToast();
+          try {
+            playCrowdCheer(4.0);
+            playLevelUpFanfare();
+            audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+          } catch {}
+        }, 400);
+      }
     }
   } catch {}
   loop();
@@ -2201,6 +2231,7 @@ export function stop() {
       }
     });
   }
+  if (ceremony) { ceremony.dispose(); ceremony = null; }
   if (liveAgents) { liveAgents.dispose(); liveAgents = null; }
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
