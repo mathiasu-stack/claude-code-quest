@@ -279,10 +279,12 @@ let postfx = null;
 let dust = null;
 let lastZoneIdx = -1;
 let footstepAccum = 0; // distance accumulated since last footstep SFX
-// Camera yaw rotated explicitly by Q/E. WASD movement is camera-relative
-// to this yaw, but pressing WASD never modifies it. yaw=0 → camera looks
-// -Z (north, toward Linda) and the camera sits at +Z side of the player.
-let cameraYaw = 0;
+// Camera yaw uses the SAME rotation convention as player.rotation.y
+// (atan2(mx, mz) — see movement code below): θ=π → looking -Z (north).
+// This alignment is critical: the auto-follow lerp targets
+// player.rotation.y, so they must use the same convention or the lerp
+// pulls the camera to the wrong side.
+let cameraYaw = Math.PI;
 let decoTickers = [];   // per-frame callbacks for animated decorations
 let skyDome = null;
 let receptionWindows = null;
@@ -1789,13 +1791,16 @@ function update(dt) {
   inputRight   += touchVec.x;
   inputForward -= touchVec.y; // joystick up (touchVec.y < 0) → forward
 
-  // Build camera-relative basis from cameraYaw.
-  // yaw=0   → camFwd points -Z (north).  yaw=π → +Z (south).
+  // Build camera-relative basis from cameraYaw using the SAME convention
+  // as player.rotation.y (= atan2(mx, mz)):
+  //   yaw=0  → forward = (0, 0, 1) = +Z (south)
+  //   yaw=π  → forward = (0, 0, -1) = -Z (north)  ← initial state
+  //   yaw=π/2 → forward = (1, 0, 0) = +X (east)
+  // camRight is 90° clockwise of camFwd in XZ plane (player's right).
   const camFwdX = Math.sin(cameraYaw);
-  const camFwdZ = -Math.cos(cameraYaw);
-  // camRight: 90° clockwise of camFwd in XZ plane (so +X is to camera's right).
-  const camRightX = Math.cos(cameraYaw);
-  const camRightZ = Math.sin(cameraYaw);
+  const camFwdZ = Math.cos(cameraYaw);
+  const camRightX = -Math.cos(cameraYaw);
+  const camRightZ =  Math.sin(cameraYaw);
 
   let mx = camRightX * inputRight + camFwdX * inputForward;
   let mz = camRightZ * inputRight + camFwdZ * inputForward;
@@ -1868,16 +1873,15 @@ function update(dt) {
     }
   }
 
-  // Camera position is now driven by `cameraYaw` (Q/E controlled),
-  // independent of the player's body orientation. Walking backward or
-  // strafing no longer flips the view.
+  // Camera sits behind the cameraYaw direction relative to player. Using
+  // the same convention as player.rotation.y so the auto-follow lerp
+  // (above) pulls the camera to the correct side of the player.
+  // Camera position = player.pos − camFwd * camDist
+  //   camFwd = (sin(yaw), 0, cos(yaw))
   const camDist = 6.5, camH = 4.2;
-  // Camera should sit behind the cameraYaw direction relative to player.
-  // Use the same camFwd basis we built above for movement.
   const targetCamX = player.position.x - Math.sin(cameraYaw) * camDist;
-  const targetCamZ = player.position.z + Math.cos(cameraYaw) * camDist;
-  const camLerp = 1 - Math.exp(-dt * 6); // can be snappier now that it
-                                         // doesn't react to WASD direction.
+  const targetCamZ = player.position.z - Math.cos(cameraYaw) * camDist;
+  const camLerp = 1 - Math.exp(-dt * 6);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   camera.position.y = camH + player.position.y * 0.3;
