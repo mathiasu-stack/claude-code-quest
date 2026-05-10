@@ -59,6 +59,8 @@ function renderDashboard() {
   if (playBtn) playBtn.addEventListener('click', () => window.App.navigate('play'));
   const fabBtn = document.getElementById('play-fab-btn');
   if (fabBtn) fabBtn.addEventListener('click', () => window.App.navigate('play'));
+  const trophyPlayBtn = document.getElementById('trophy-play-btn');
+  if (trophyPlayBtn) trophyPlayBtn.addEventListener('click', () => window.App.navigate('play'));
 }
 
 function renderChapterCard(ch, progress) {
@@ -179,6 +181,7 @@ function renderTrophyCabinet(progress) {
       <div class="trophy-header">
         <h2 class="trophy-title">Trophy Cabinet</h2>
         <div class="trophy-meta">
+          <button class="btn-primary trophy-play-btn" id="trophy-play-btn">🎮 Play in 3D</button>
           <span class="trophy-count">${unlockedCount} / ${all.length} unlocked</span>
           ${streak > 0 ? `<span class="trophy-streak">🔥 ${streak}-day streak</span>` : ''}
         </div>

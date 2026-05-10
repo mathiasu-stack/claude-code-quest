@@ -279,6 +279,10 @@ let postfx = null;
 let dust = null;
 let lastZoneIdx = -1;
 let footstepAccum = 0; // distance accumulated since last footstep SFX
+// Camera yaw rotated explicitly by Q/E. WASD movement is camera-relative
+// to this yaw, but pressing WASD never modifies it. yaw=0 → camera looks
+// -Z (north, toward Linda) and the camera sits at +Z side of the player.
+let cameraYaw = 0;
 let decoTickers = [];   // per-frame callbacks for animated decorations
 let skyDome = null;
 let receptionWindows = null;
@@ -1759,10 +1763,15 @@ function update(dt) {
     }
   }
 
-  // Camera-relative input. W/up = forward in camera direction, A/left =
-  // perpendicular (camera-left), etc. Holding A continuously rotates the
-  // character (and camera following it) in a circle, because each frame
-  // "left" is recomputed against the camera's CURRENT facing direction.
+  // Q / E rotate the camera yaw directly. WASD moves the character but
+  // never alters cameraYaw — so walking backward (S) or strafing (A/D)
+  // doesn't whip the view.
+  const yawRate = 1.6; // rad/sec
+  if (keys['q']) cameraYaw -= yawRate * dt;
+  if (keys['e']) cameraYaw += yawRate * dt;
+
+  // WASD input → camera-relative direction (using cameraYaw, not the
+  // camera's matrix — independent of camera lerp state).
   let inputForward = 0, inputRight = 0;
   if (keys['w'] || keys['arrowup'])    inputForward += 1;
   if (keys['s'] || keys['arrowdown'])  inputForward -= 1;
@@ -1771,24 +1780,25 @@ function update(dt) {
   inputRight   += touchVec.x;
   inputForward -= touchVec.y; // joystick up (touchVec.y < 0) → forward
 
-  // Project camera forward onto the XZ plane.
-  const camFwd = new THREE.Vector3();
-  camera.getWorldDirection(camFwd);
-  camFwd.y = 0;
-  const camFwdLen = Math.hypot(camFwd.x, camFwd.z);
-  if (camFwdLen > 0.001) { camFwd.x /= camFwdLen; camFwd.z /= camFwdLen; }
-  else { camFwd.x = 0; camFwd.z = -1; }
+  // Build camera-relative basis from cameraYaw.
+  // yaw=0   → camFwd points -Z (north).  yaw=π → +Z (south).
+  const camFwdX = Math.sin(cameraYaw);
+  const camFwdZ = -Math.cos(cameraYaw);
   // camRight: 90° clockwise of camFwd in XZ plane (so +X is to camera's right).
-  const camRightX = -camFwd.z;
-  const camRightZ =  camFwd.x;
+  const camRightX = Math.cos(cameraYaw);
+  const camRightZ = Math.sin(cameraYaw);
 
-  let mx = camRightX * inputRight + camFwd.x * inputForward;
-  let mz = camRightZ * inputRight + camFwd.z * inputForward;
+  let mx = camRightX * inputRight + camFwdX * inputForward;
+  let mz = camRightZ * inputRight + camFwdZ * inputForward;
 
   const len = Math.hypot(mx, mz);
   if (len > 0.05) {
     mx /= len; mz /= len;
-    const speed = 4.4;
+    // Hold Shift to sprint (2x speed). Touch joystick has no Shift; user
+    // can hold their phone joystick further from centre for more speed
+    // (existing magnitude already feeds in via inputForward/inputRight).
+    const sprint = (keys['shift']) ? 2.0 : 1.0;
+    const speed = 4.4 * sprint;
     let nx = player.position.x + mx * speed * dt;
     let nz = player.position.z + mz * speed * dt;
 
@@ -1849,15 +1859,16 @@ function update(dt) {
     }
   }
 
-  // Camera orbits behind the player based on facing direction.
-  // dt-aware exponential smoothing so the same feel survives 30fps & 60fps.
+  // Camera position is now driven by `cameraYaw` (Q/E controlled),
+  // independent of the player's body orientation. Walking backward or
+  // strafing no longer flips the view.
   const camDist = 6.5, camH = 4.2;
-  const angle = player.rotation.y;
-  const targetCamX = player.position.x - Math.sin(angle) * camDist;
-  const targetCamZ = player.position.z - Math.cos(angle) * camDist;
-  // Reduced stiffness (3) per user feedback — the camera should glide,
-  // not whip. Body lerps at 4 above so the camera still trails slightly.
-  const camLerp = 1 - Math.exp(-dt * 3);
+  // Camera should sit behind the cameraYaw direction relative to player.
+  // Use the same camFwd basis we built above for movement.
+  const targetCamX = player.position.x - Math.sin(cameraYaw) * camDist;
+  const targetCamZ = player.position.z + Math.cos(cameraYaw) * camDist;
+  const camLerp = 1 - Math.exp(-dt * 6); // can be snappier now that it
+                                         // doesn't react to WASD direction.
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   camera.position.y = camH + player.position.y * 0.3;
