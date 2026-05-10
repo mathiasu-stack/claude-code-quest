@@ -1,0 +1,133 @@
+{
+  "_doc": "Registry of character GLB assets. The loader attempts to load entries with available=true; entries with available=false are skipped (the character falls back to procedural). Update available flags after dropping the corresponding GLB into this directory.",
+  "_pack": "Quaternius Ultimate Modular Characters (CC0). Fallback: Kenney Modular Characters (CC0).",
+  "_boneAliases": {
+    "_doc": "Bone-name aliases used by gltfCharacter.js to attach accessories to the right joint regardless of pack convention.",
+    "head":       ["mixamorig:Head", "Head", "head", "Bip01_Head", "DEF-spine.006"],
+    "neck":       ["mixamorig:Neck", "Neck", "neck"],
+    "spine":      ["mixamorig:Spine2", "Spine2", "spine_02", "Bip01_Spine2"],
+    "chest":      ["mixamorig:Spine1", "Spine1", "chest"],
+    "leftHand":   ["mixamorig:LeftHand", "LeftHand", "hand_l", "Bip01_L_Hand"],
+    "rightHand":  ["mixamorig:RightHand", "RightHand", "hand_r", "Bip01_R_Hand"],
+    "leftWrist":  ["mixamorig:LeftForeArm", "LeftForeArm", "lowerarm_l"],
+    "rightWrist": ["mixamorig:RightForeArm", "RightForeArm", "lowerarm_r"]
+  },
+  "characters": [
+    {
+      "id": "casual_male_01",
+      "file": "Character_Casual_01.glb",
+      "available": false,
+      "tags": ["male", "casual"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "casual_male_02",
+      "file": "Character_Casual_02.glb",
+      "available": false,
+      "tags": ["male", "casual", "stubble"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "casual_male_03",
+      "file": "Character_Casual_03.glb",
+      "available": false,
+      "tags": ["male", "casual", "energetic"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "casual_female_01",
+      "file": "Character_Casual_Female_01.glb",
+      "available": false,
+      "tags": ["female", "casual"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "casual_female_02",
+      "file": "Character_Casual_Female_02.glb",
+      "available": false,
+      "tags": ["female", "casual"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "casual_female_03",
+      "file": "Character_Casual_Female_03.glb",
+      "available": false,
+      "tags": ["female", "casual", "bob-bangs"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "business_female_01",
+      "file": "Character_Business_Female_01.glb",
+      "available": false,
+      "tags": ["female", "business", "professional"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "business_female_02",
+      "file": "Character_Business_Female_02.glb",
+      "available": false,
+      "tags": ["female", "business"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "business_female_03",
+      "file": "Character_Business_Female_03.glb",
+      "available": false,
+      "tags": ["female", "business"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "glasses_female_01",
+      "file": "Character_Glasses_Female_01.glb",
+      "available": false,
+      "tags": ["female", "glasses"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "beard_male_01",
+      "file": "Character_Beard_Male_01.glb",
+      "available": false,
+      "tags": ["male", "beard"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "hijab_female_01",
+      "file": "Character_Hijab_Female_01.glb",
+      "available": false,
+      "tags": ["female", "hijab"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
+      "id": "hoodie_male_01",
+      "file": "Character_Hoodie_01.glb",
+      "available": false,
+      "tags": ["male", "casual", "hoodie"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    }
+  ],
+  "animations": {
+    "_doc": "Optional separate animation pack. If provided as a single GLB containing only animation clips, the loader retargets them to each character's skeleton.",
+    "file": "Animations.glb",
+    "available": false,
+    "clips": {
+      "idle":    "Idle",
+      "walk":    "Walk",
+      "run":     "Run",
+      "wave":    "Wave",
+      "jump":    "Jump"
+    }
+  }
+}
