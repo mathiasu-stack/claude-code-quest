@@ -40,18 +40,17 @@ export const DEFAULT_PRESET = {
 };
 
 // Zone 0 — Reception. Warm sunlight through implied windows + soft fill.
-// CEO portrait gets its own accent so the gilded frame catches highlights.
+// Tuning notes (env run): bumped ambient intensity and added more fill
+// so the room reads brighter overall while still keeping the warm key.
 const RECEPTION_PRESET = {
   ambient: {
     skyColor: 0xfff5e0,    // warm sky
     groundColor: 0x4a3a2a, // warm bounce off carpet
-    intensity: 0.55,
+    intensity: 0.85,        // was 0.55 — too dim per latest screenshots
   },
   directional: {
     color: 0xffd9a0,       // golden-hour sun
-    intensity: 1.05,
-    // Coming through the right wall (positive X) at a low angle, simulating
-    // tall windows on the east side of the office.
+    intensity: 1.25,        // was 1.05
     position: [14, 11, 4],
     castShadow: true,
     shadowMapSize: 1536,
@@ -59,40 +58,45 @@ const RECEPTION_PRESET = {
     shadowBias: -0.0005,
   },
   accents: [
-    // Soft warm front-fill so faces aren't pure shadow on the back side.
-    { type: 'point',  color: 0xffe2bc, intensity: 0.45, distance: 16, decay: 1.6, position: [-4, 3.0, 4]  },
+    // Soft warm front-fill — bumped so faces are visible everywhere.
+    { type: 'point',  color: 0xffe2bc, intensity: 0.7, distance: 18, decay: 1.5, position: [-4, 3.0, 4]  },
+    // Second front-fill on the east side balancing the directional.
+    { type: 'point',  color: 0xffe2bc, intensity: 0.5, distance: 14, decay: 1.6, position: [4, 3.0, 4]   },
     // Spotlight on the CEO portrait (back wall, centred).
     { type: 'spot',
-      color: 0xfff1d4, intensity: 1.4, distance: 9, decay: 1.4,
+      color: 0xfff1d4, intensity: 1.6, distance: 9, decay: 1.4,
       angle: 0.42, penumbra: 0.55,
       position: [0, 3.4, -7],
       target:   [0, 2.0, -10.86],
       castShadow: false },
     // Cool rim from the doorway side to balance the warm sun.
-    { type: 'point',  color: 0xb8d8ff, intensity: 0.25, distance: 14, decay: 2.0, position: [0, 2.8, 9]   },
+    { type: 'point',  color: 0xb8d8ff, intensity: 0.35, distance: 16, decay: 2.0, position: [0, 2.8, 9]   },
+    // Centerpiece pool — gold light over the new K sculpture so it pops.
+    { type: 'point', color: 0xffd680, intensity: 0.6, distance: 6, decay: 1.4, position: [0, 3.4, 1] },
   ],
   background: 0xf3e7d2,
-  fog: { color: 0xf3e7d2, near: 28, far: 70 },
+  fog: { color: 0xf3e7d2, near: 30, far: 75 },
   postfx: {
-    bloomStrength: 0.55,
-    bloomRadius: 0.75,
-    bloomThreshold: 0.8,
-    vignette: 0.35,
-    grain: 0.04,
+    bloomStrength: 0.6,
+    bloomRadius: 0.78,
+    bloomThreshold: 0.82,
+    vignette: 0.30,
+    grain: 0.03,
   },
 };
 
-// Zone 1 — Knowledge Library. Dim, warm tungsten lamps with cool ambient.
-// Long shadows pulled from bookshelves with a low directional sun.
+// Zone 1 — Knowledge Library. Dim + cozy, but readable now.
+// Tuning notes: lifted ambient slightly so faces near desks aren't
+// completely in shadow; pendant lamps already in geometry add the rest.
 const LIBRARY_PRESET = {
   ambient: {
-    skyColor: 0x6c7da3,    // cool dusk
-    groundColor: 0x231a12, // dark-wood bounce
-    intensity: 0.35,
+    skyColor: 0x8898c0,    // was 0x6c7da3 — slightly lighter
+    groundColor: 0x2a1f17, // warmer wood bounce
+    intensity: 0.5,         // was 0.35
   },
   directional: {
-    color: 0xb6c5e5,       // pale moonish daylight through skylights
-    intensity: 0.4,
+    color: 0xb6c5e5,
+    intensity: 0.55,        // was 0.4
     position: [-6, 14, 18],
     castShadow: true,
     shadowMapSize: 1024,
@@ -100,14 +104,13 @@ const LIBRARY_PRESET = {
     shadowBias: -0.0005,
   },
   accents: [
-    // Two tungsten desk lamps over the reading tables (matching geometry
-    // already placed at z=16 and z=22). These REPLACE the weak 0.6-intensity
-    // PointLights baked into buildLamp(). The originals are left in place
-    // since they're embedded in the geometry; LightingManager dims them.
-    { type: 'point', color: 0xffb95c, intensity: 1.6, distance: 7,  decay: 1.4, position: [0, 2.1, 16] },
-    { type: 'point', color: 0xffb95c, intensity: 1.6, distance: 7,  decay: 1.4, position: [0, 2.1, 22] },
-    // Cool rim from the back / Capstone doorway side to give bookshelves edges.
-    { type: 'point', color: 0x7db0ff, intensity: 0.35, distance: 16, decay: 2.0, position: [0, 3.0, 30] },
+    // Two tungsten desk lamps — bumped slightly for clearer pools.
+    { type: 'point', color: 0xffb95c, intensity: 1.9, distance: 8,  decay: 1.4, position: [0, 2.1, 16] },
+    { type: 'point', color: 0xffb95c, intensity: 1.9, distance: 8,  decay: 1.4, position: [0, 2.1, 22] },
+    // Warm light "streaming" from the new arched window onto the floor.
+    { type: 'point', color: 0xfff1c5, intensity: 0.8, distance: 10, decay: 1.6, position: [8, 2.5, 24] },
+    // Cool rim from the back wall.
+    { type: 'point', color: 0x7db0ff, intensity: 0.45, distance: 16, decay: 2.0, position: [0, 3.0, 30] },
   ],
   background: 0x1a1d2a,
   fog: { color: 0x1a1d2a, near: 18, far: 55 },
