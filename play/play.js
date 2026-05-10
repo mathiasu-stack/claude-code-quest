@@ -19,6 +19,7 @@ import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
+import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -276,6 +277,9 @@ let lastZoneIdx = -1;
 let footstepAccum = 0; // distance accumulated since last footstep SFX
 let decoTickers = [];   // per-frame callbacks for animated decorations
 let skyDome = null;
+let receptionWindows = null;
+let libraryWindow = null;
+let receptionHallway = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1203,6 +1207,14 @@ function buildWorld() {
   try { buildReceptionCeiling(scene); } catch (e) { console.warn('reception ceiling failed', e); }
   try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
 
+  // ─── Depth: windows + skyline + library arched window ──────────────────────
+  // Note: the planned hallway-peek feature was skipped — see
+  // NIGHT_RUN_NOTES_ENVIRONMENT.md for why (it conflicted with the
+  // existing room layout). Windows + skyline + Library doorway already
+  // give plenty of depth signal.
+  try { receptionWindows = buildReceptionWindows(scene); } catch (e) { console.warn('reception windows failed', e); }
+  try { libraryWindow    = buildLibraryArchedWindow(scene); } catch (e) { console.warn('library window failed', e); }
+
   // ─── Decoration density passes ──────────────────────────────────────────────
   decoTickers = [];
   try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
@@ -1870,6 +1882,11 @@ function update(dt) {
   }
   // Skydome anchors to camera each frame so the player never reaches it.
   if (skyDome && camera) skyDome.followCamera(camera);
+
+  // Parallax skyline shifts opposite to player X.
+  if (receptionWindows?.update && player) {
+    receptionWindows.update(dt, performance.now(), player.position);
+  }
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
