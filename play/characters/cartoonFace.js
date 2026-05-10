@@ -51,7 +51,8 @@ const browSoftMat = (color) => mat(`brow-${color}`, () => new THREE.MeshStandard
   color, roughness: 0.6, metalness: 0,
 }));
 const blushMat = () => mat('blush', () => new THREE.MeshBasicMaterial({
-  color: 0xff8aa6, transparent: true, opacity: 0.55, depthWrite: false,
+  color: 0xff8aa6, transparent: true, opacity: 0.55,
+  depthWrite: false, side: THREE.DoubleSide,
 }));
 const lipMat = (color) => new THREE.MeshStandardMaterial({
   color, roughness: 0.45, metalness: 0,
@@ -304,34 +305,35 @@ function buildEye(eyeColor, side /* -1 left, +1 right */) {
   const g = new THREE.Group();
   // Eye white — slightly squashed sphere, biased forward.
   const white = new THREE.Mesh(
-    new THREE.SphereGeometry(0.038, 14, 10),
+    new THREE.SphereGeometry(0.040, 14, 10),
     eyeWhiteMat(),
   );
-  white.scale.set(1.0, 0.85, 0.55);
+  white.scale.set(1.0, 0.85, 0.6);
   g.add(white);
 
-  // Iris — disc placed on the front of the eye white.
+  // Iris — small 3D sphere (not a flat disc) so it's visible from
+  // any angle, including slightly off-axis camera positions.
   const iris = new THREE.Mesh(
-    new THREE.CircleGeometry(0.026, 24),
+    new THREE.SphereGeometry(0.022, 12, 8),
     irisMat(eyeColor),
   );
-  iris.position.z = 0.024;
+  iris.position.z = 0.014;
   g.add(iris);
 
-  // Pupil — smaller dark disc on top of iris.
+  // Pupil — smaller dark sphere on the front of the iris.
   const pupil = new THREE.Mesh(
-    new THREE.CircleGeometry(0.013, 18),
+    new THREE.SphereGeometry(0.011, 10, 8),
     pupilMat(),
   );
   pupil.position.z = 0.025;
   g.add(pupil);
 
-  // Catchlight — tiny white dot offset upward-and-toward-nose.
+  // Catchlight — tiny bright dot offset upward-and-toward-nose.
   const catchlight = new THREE.Mesh(
-    new THREE.CircleGeometry(0.005, 10),
+    new THREE.SphereGeometry(0.005, 8, 6),
     catchlightMat(),
   );
-  catchlight.position.set(side * 0.005, 0.008, 0.026);
+  catchlight.position.set(side * 0.006, 0.010, 0.030);
   g.add(catchlight);
 
   return { group: g, white, iris, pupil, catchlight };
@@ -465,6 +467,11 @@ function reshadeHead(head, skinColor) {
 
 // ── Public API ─────────────────────────────────────────────────────────────
 export function attachCartoonFace(group, head, look = {}) {
+  // Defensive guards — the brief is explicit that this system MUST be
+  // applied universally. Failing silently here is how we lost faces in
+  // previous runs. If anything's wrong, log it loudly.
+  if (!group) { console.warn('[cartoonFace] missing group'); return null; }
+  if (!head)  { console.warn('[cartoonFace] missing head'); return null; }
   const eyeColor = look.eyeColor ?? 0x6b4a2a;          // brown default
   const browColor = look.hair ?? 0x3a2010;
   const browShape = look.browShape ?? 'soft';
@@ -475,43 +482,46 @@ export function attachCartoonFace(group, head, look = {}) {
   reshadeHead(head, look.skin ?? 0xfdd9b5);
 
   // Eyes — parented to the head so they ride along on head turns.
+  // Z position pushed forward to 0.230 so the eyes protrude clearly past
+  // the head sphere surface (radius 0.21) — otherwise they'd be hidden
+  // INSIDE the head, which was the silent root cause of "no face".
   const leftEye = buildEye(eyeColor, -1);
   const rightEye = buildEye(eyeColor, +1);
-  leftEye.group.position.set(-0.075, 0.015, 0.165);
-  rightEye.group.position.set( 0.075, 0.015, 0.165);
+  leftEye.group.position.set(-0.075, 0.015, 0.180);
+  rightEye.group.position.set( 0.075, 0.015, 0.180);
   head.add(leftEye.group);
   head.add(rightEye.group);
 
-  // Eyebrows — slightly above the eyes.
+  // Eyebrows — above the eyes, pushed forward to clear the head sphere.
   const leftBrow = buildEyebrow(browShape, browColor, -1);
   const rightBrow = buildEyebrow(browShape, browColor, +1);
-  leftBrow.position.set(-0.075, 0.075, 0.180);
-  rightBrow.position.set( 0.075, 0.075, 0.180);
+  leftBrow.position.set(-0.075, 0.085, 0.205);
+  rightBrow.position.set( 0.075, 0.085, 0.205);
   head.add(leftBrow);
   head.add(rightBrow);
 
-  // Mouth.
+  // Mouth — small mesh, pushed forward.
   const mouth = buildMouth(mouthShape);
-  mouth.position.set(0, -0.085, 0.180);
+  mouth.position.set(0, -0.075, 0.215);
   head.add(mouth);
 
-  // Cheek blush.
+  // Cheek blush — small soft circles on the cheeks.
   let leftBlush = null, rightBlush = null;
   if (blush) {
     const bm = blushMat();
-    leftBlush = new THREE.Mesh(new THREE.CircleGeometry(0.026, 14), bm);
-    rightBlush = leftBlush.clone();
-    leftBlush.position.set(-0.105, -0.030, 0.170);
-    rightBlush.position.set( 0.105, -0.030, 0.170);
+    leftBlush = new THREE.Mesh(new THREE.CircleGeometry(0.030, 16), bm);
+    rightBlush = new THREE.Mesh(new THREE.CircleGeometry(0.030, 16), bm);
+    leftBlush.position.set(-0.118, -0.020, 0.198);
+    rightBlush.position.set( 0.118, -0.020, 0.198);
     head.add(leftBlush);
     head.add(rightBlush);
   }
 
-  // Glasses.
+  // Glasses — frames sit just in front of the eyes.
   let glasses = null;
   if (look.glasses) {
     glasses = buildGlasses();
-    glasses.position.set(0, 0.015, 0.140);
+    glasses.position.set(0, 0.015, 0.205);
     head.add(glasses);
   }
 
