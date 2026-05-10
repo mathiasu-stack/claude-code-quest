@@ -26,6 +26,11 @@ import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js'
 import { buildAtrium } from './world/atrium.js';
 import { buildElevator } from './world/elevator.js';
 import { CeremonyManager } from './ceremony/ceremonyManager.js';
+import {
+  registerInteractable, clearInteractables,
+  updateInteractables, listInteractables,
+} from './world/interactables.js';
+import { buildComputer } from './world/objectTypes/computer.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
@@ -306,6 +311,7 @@ let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
 let danceUntil = 0;
 let interactionTarget = null;
+let interactObjects = []; // built interactable objects with per-frame update()
 let raf = null;
 let resizeListener, keyDownListener, keyUpListener;
 let container, promptEl, dialogueEl;
@@ -1217,6 +1223,34 @@ function buildWorld() {
   try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
   try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
 
+  // ─── Interactable objects (Pillar 2) ─────────────────────────────────────
+  // For now: a single computer workstation on Aisha's desk delivering
+  // ch04 (Memory Framework). Acts as the proof-of-concept lesson.
+  // Other object types are wired up in Pass 2 below.
+  clearInteractables();
+  interactObjects = [];
+  try {
+    const comp = buildComputer({
+      scene,
+      position: [7.5, 1.0, -3],   // Aisha's desk top
+      lookAt: -Math.PI / 2,
+      chapterId: 'ch04',
+      lessonId: 'ch04-l01',
+      onInteract: (info) => {
+        // Open the lesson overlay if available; fall back to the legacy
+        // 2D route otherwise.
+        if (window.LessonOverlay?.open) {
+          window.LessonOverlay.open(info);
+        } else {
+          window.App?.navigate?.('lesson', {
+            chapterId: info.chapterId, lessonId: info.lessonId, fromPlay: true,
+          });
+        }
+      },
+    });
+    interactObjects.push(comp);
+  } catch (e) { console.warn('computer build failed', e); }
+
   // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
   try {
     const atrium = buildAtrium(scene, { mobile: isMobile() });
@@ -1617,6 +1651,13 @@ function showIntro() {
 
 function tryInteract() {
   if (!interactionTarget || inputLocked) return;
+  // Object interactable takes precedence (it's set explicitly when the
+  // proximity loop picks an interactable as nearer than any NPC).
+  const inter = interactionTarget.userData?._interactable;
+  if (inter) {
+    try { inter.onInteract?.(); } catch (e) { console.warn('interactable onInteract failed', e); }
+    return;
+  }
   const npc = interactionTarget.userData.npc;
   openDialogue(npc);
 }
@@ -2047,20 +2088,43 @@ function update(dt) {
     });
   }
 
-  // Interaction proximity
-  let nearest = null, nearestDist = Infinity;
+  // Interaction proximity — checks NPCs AND interactable objects.
+  let nearest = null, nearestDist = Infinity, nearestKind = null;
   for (const m of npcMeshes) {
     const dx = player.position.x - m.position.x;
     const dz = player.position.z - m.position.z;
     const d = Math.hypot(dx, dz);
-    if (d < 2.4 && d < nearestDist) { nearest = m; nearestDist = d; }
+    if (d < 2.4 && d < nearestDist) { nearest = m; nearestDist = d; nearestKind = 'npc'; }
   }
+  // Interactables (computers, books, whiteboards, etc.)
+  const hoveredObj = updateInteractables(dt, performance.now(), player.position);
+  if (hoveredObj) {
+    const dx = player.position.x - hoveredObj.position[0];
+    const dz = player.position.z - hoveredObj.position[1];
+    const d = Math.hypot(dx, dz);
+    if (d < nearestDist) {
+      nearest = hoveredObj.mesh;
+      nearestDist = d;
+      nearestKind = 'object';
+      nearest.userData._interactable = hoveredObj;
+    }
+  }
+  // Per-frame screen wake on interactable objects.
+  for (const obj of (interactObjects || [])) {
+    if (obj?.update) obj.update(dt, hoveredObj === obj.interactable);
+  }
+
   if (nearest) {
     if (interactionTarget !== nearest) {
       interactionTarget = nearest;
-      const npc = nearest.userData.npc;
       promptEl.classList.add('visible');
-      promptEl.textContent = `Talk to ${npc.name.split(' ')[0]} — press E or tap`;
+      if (nearestKind === 'npc') {
+        const npc = nearest.userData.npc;
+        promptEl.textContent = `Talk to ${npc.name.split(' ')[0]} — press E or tap`;
+      } else if (nearestKind === 'object') {
+        const it = nearest.userData._interactable;
+        promptEl.textContent = it.getPromptText();
+      }
       document.getElementById('play-interact-btn').classList.add('visible');
     }
   } else if (interactionTarget) {
@@ -2257,6 +2321,8 @@ export function stop() {
   footstepAccum = 0;
   decoTickers = [];
   renderer = null; scene = null; camera = null;
+  clearInteractables();
+  interactObjects = [];
   player = null; npcMeshes = []; interactionTarget = null;
   zoneDoors = [];
   ceoHearts = null;
