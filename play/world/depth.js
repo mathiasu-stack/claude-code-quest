@@ -60,8 +60,13 @@ function buildSkylineGroup(opts = {}) {
     const w = 0.6 + Math.random() * 1.4;
     const h = 1.5 + Math.random() * 4.5;
     const d = 0.8 + Math.random() * 1.0;
+    // Slight self-emissive so the buildings catch light through the
+    // transmission curtain wall — without this they read as solid black
+    // silhouettes regardless of time of day.
+    const baseColor = colors[i % colors.length];
     const mat = new THREE.MeshStandardMaterial({
-      color: colors[i % colors.length], roughness: 0.7, metalness: 0.2,
+      color: baseColor, roughness: 0.7, metalness: 0.2,
+      emissive: baseColor, emissiveIntensity: 0.18,
     });
     const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     // Spread along X across a wide span, with random Z for layered depth.
@@ -125,9 +130,12 @@ export function buildReceptionWindows(scene) {
   }
 
   // Skyline behind those windows. Place beyond the wall (positive X).
+  // renderOrder=-1 ensures the skyline draws BEFORE the curtain wall
+  // glass, so transmission shows the skyline through the glass.
   const skyline = buildSkylineGroup({ count: 14 });
   skyline.position.set(20, 0, 0);
   skyline.rotation.y = -Math.PI / 2;
+  skyline.traverse((o) => { if (o.isMesh) o.renderOrder = -1; });
   scene.add(skyline);
   out.skyline = skyline;
 

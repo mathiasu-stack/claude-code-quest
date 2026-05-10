@@ -315,28 +315,66 @@ export function buildAtrium(scene, opts = {}) {
     });
   });
 
-  // ── 9. Sculptural staircase visible from atrium (decorative only) ──
-  // A glass-and-steel curving stair against the west wall.
+  // ── 9. Sculptural staircase against the west wall ─────────────────
+  // Pushed flush to the west wall (player movement clamps at x=-10.5,
+  // so the staircase sits in unreachable territory — no clipping).
+  // Now has a proper vertical chrome pillar supporting the underside,
+  // and a top platform that visually meets the mezzanine railing.
   const stairGroup = new THREE.Group();
-  stairGroup.position.set(-9.5, 0, -3);
+  stairGroup.position.set(-10.2, 0, -3);
   scene.add(stairGroup);
   out.objects.push(stairGroup);
-  for (let i = 0; i < 14; i++) {
-    const step = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.05, 0.45),
-      brushedSilver(),
-    );
-    const a = (i / 14) * 0.6;
-    step.position.set(Math.cos(a) * 0.4, i * 0.32, Math.sin(a) * 0.4 + i * 0.18);
-    stairGroup.add(step);
-  }
-  // Glass railing along the stair
-  const stairRail = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, 0.85, 0.05),
+
+  // Vertical chrome support pillar (the staircase isn't floating now).
+  const supportPillar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.10, 0.10, MEZZ_HEIGHT + 0.3, 12),
     polishedChrome(),
   );
-  stairRail.position.set(0.85, 2.2, 1.5);
-  stairGroup.add(stairRail);
+  supportPillar.position.set(0.4, (MEZZ_HEIGHT + 0.3) / 2, 1.5);
+  stairGroup.add(supportPillar);
+
+  // Steps — sit against the west wall, curve gently inward.
+  for (let i = 0; i < 14; i++) {
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.06, 0.42),
+      brushedSilver(),
+    );
+    const a = (i / 14) * 0.45;  // gentler curve so it stays close to the wall
+    step.position.set(
+      Math.cos(a) * 0.30 + 0.10,
+      i * 0.32 + 0.05,
+      Math.sin(a) * 0.30 + i * 0.18,
+    );
+    step.castShadow = true;
+    stairGroup.add(step);
+
+    // Small under-side bracket for each step (visible structural detail)
+    const bracket = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.40, 0.05),
+      polishedChrome(),
+    );
+    bracket.position.set(step.position.x + 0.50, step.position.y - 0.20, step.position.z);
+    stairGroup.add(bracket);
+  }
+
+  // Top platform meets the mezzanine railing visually.
+  const topPlat = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 0.06, 0.7),
+    brushedSilver(),
+  );
+  topPlat.position.set(0.30, MEZZ_HEIGHT - 0.04, 3.5);
+  topPlat.castShadow = true;
+  stairGroup.add(topPlat);
+
+  // Glass railing along the stair (full height now).
+  for (let i = 0; i < 4; i++) {
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.85, 0.05),
+      polishedChrome(),
+    );
+    post.position.set(0.85, 0.5 + i * 0.95, i * 0.95 + 0.4);
+    stairGroup.add(post);
+  }
 
   // ── 10. Cove lighting strip around the perimeter at MEZZ_HEIGHT ────
   const coveMat = coveLight(0xfff5d4);

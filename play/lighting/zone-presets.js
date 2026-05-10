@@ -43,25 +43,29 @@ export const DEFAULT_PRESET = {
 // Tuning notes (env run): bumped ambient intensity and added more fill
 // so the room reads brighter overall while still keeping the warm key.
 const RECEPTION_PRESET = {
+  // Atrium needs to feel BRIGHT and grand, not dim/murky.
   ambient: {
-    skyColor: 0xfff5e0,    // warm sky
-    groundColor: 0x4a3a2a, // warm bounce off carpet
-    intensity: 0.85,        // was 0.55 — too dim per latest screenshots
+    skyColor: 0xfff8ec,
+    groundColor: 0x6a5240,
+    intensity: 1.20,
   },
   directional: {
-    color: 0xffd9a0,       // golden-hour sun
-    intensity: 1.25,        // was 1.05
-    position: [14, 11, 4],
+    color: 0xffe4b8,
+    intensity: 1.50,
+    position: [14, 14, 4],
     castShadow: true,
     shadowMapSize: 1536,
-    shadowBounds: 16,
+    shadowBounds: 18,
     shadowBias: -0.0005,
   },
   accents: [
+    // High-up atrium fill near the chandelier — gives the tall space
+    // overall warmth and reads as a chandelier source.
+    { type: 'point',  color: 0xfff1c5, intensity: 2.2, distance: 24, decay: 1.4, position: [0, 10, 0]   },
     // Soft warm front-fill — bumped so faces are visible everywhere.
-    { type: 'point',  color: 0xffe2bc, intensity: 0.7, distance: 18, decay: 1.5, position: [-4, 3.0, 4]  },
+    { type: 'point',  color: 0xffe2bc, intensity: 0.85, distance: 18, decay: 1.5, position: [-4, 3.0, 4]  },
     // Second front-fill on the east side balancing the directional.
-    { type: 'point',  color: 0xffe2bc, intensity: 0.5, distance: 14, decay: 1.6, position: [4, 3.0, 4]   },
+    { type: 'point',  color: 0xffe2bc, intensity: 0.65, distance: 14, decay: 1.6, position: [4, 3.0, 4]   },
     // Spotlight on the CEO portrait (back wall, centred).
     { type: 'spot',
       color: 0xfff1d4, intensity: 1.6, distance: 9, decay: 1.4,

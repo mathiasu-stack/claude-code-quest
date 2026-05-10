@@ -35,60 +35,93 @@ function cachedTex(key, builder) {
 // muted base. Two-pass for depth.
 function marbleTexture(baseHex, veinHex, accentHex, repeat = 4) {
   return cachedTex(`marble-${baseHex.toString(16)}-${veinHex.toString(16)}`, () => {
+    // Real Carrara-style marble — low contrast, long flowing veins,
+    // large feature scale. Rebuilt from scratch from the previous
+    // version which read as leopard print / moldy concrete.
     const c = document.createElement('canvas');
-    c.width = 512; c.height = 512;
+    c.width = 1024; c.height = 1024;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#' + baseHex.toString(16).padStart(6, '0');
+    const baseR = (baseHex >> 16) & 0xff;
+    const baseG = (baseHex >> 8) & 0xff;
+    const baseB = baseHex & 0xff;
+    ctx.fillStyle = `rgb(${baseR},${baseG},${baseB})`;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    // Coarse cloudy noise for stone variation
-    for (let i = 0; i < 1200; i++) {
-      const v = Math.random();
-      const a = 0.04 + v * 0.06;
-      ctx.fillStyle = `rgba(0,0,0,${a})`;
-      ctx.beginPath();
-      ctx.arc(Math.random() * c.width, Math.random() * c.height,
-        4 + Math.random() * 16, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // VERY subtle cloud variation as one big radial gradient — replaces
+    // the old "1200 dark blob spots" approach.
+    const cloud = ctx.createRadialGradient(
+      c.width * 0.3, c.height * 0.4, 0,
+      c.width * 0.5, c.height * 0.5, c.width * 0.7,
+    );
+    cloud.addColorStop(0, 'rgba(255,255,255,0.10)');
+    cloud.addColorStop(1, 'rgba(0,0,0,0.05)');
+    ctx.fillStyle = cloud;
+    ctx.fillRect(0, 0, c.width, c.height);
 
-    // Veins — bezier strokes
+    // Long flowing veins — only 3 per tile, traversing the whole tile
+    // edge-to-edge. Soft alpha. Each vein gets a wider halo for depth.
     ctx.strokeStyle = '#' + veinHex.toString(16).padStart(6, '0');
-    for (let v = 0; v < 14; v++) {
-      ctx.lineWidth = 0.6 + Math.random() * 1.6;
-      ctx.globalAlpha = 0.35 + Math.random() * 0.5;
+    ctx.lineCap = 'round';
+    function pointOnEdge(e) {
+      if (e === 0) return [Math.random() * c.width, 0];
+      if (e === 1) return [c.width, Math.random() * c.height];
+      if (e === 2) return [Math.random() * c.width, c.height];
+      return [0, Math.random() * c.height];
+    }
+    for (let v = 0; v < 3; v++) {
+      const edge0 = v % 4;
+      const edge1 = (v + 2) % 4;
+      const [x0, y0] = pointOnEdge(edge0);
+      const [x1, y1] = pointOnEdge(edge1);
+      // Soft halo first (wide, low alpha)
+      ctx.lineWidth = 6 + Math.random() * 5;
+      ctx.globalAlpha = 0.05 + Math.random() * 0.04;
       ctx.beginPath();
-      const x0 = Math.random() * c.width;
-      const y0 = Math.random() * c.height;
+      let prevX = x0, prevY = y0;
       ctx.moveTo(x0, y0);
-      let x = x0, y = y0;
-      const steps = 6 + Math.floor(Math.random() * 6);
-      for (let s = 0; s < steps; s++) {
-        const cx = x + (Math.random() - 0.5) * 200;
-        const cy = y + (Math.random() - 0.5) * 200;
-        x += (Math.random() - 0.5) * 200;
-        y += (Math.random() - 0.5) * 200;
-        ctx.quadraticCurveTo(cx, cy, x, y);
+      const seg = 4;
+      const steps = [];
+      for (let s = 1; s <= seg; s++) {
+        const t = s / seg;
+        const tx = x0 + (x1 - x0) * t + (Math.random() - 0.5) * 220;
+        const ty = y0 + (y1 - y0) * t + (Math.random() - 0.5) * 220;
+        const cx = (prevX + tx) / 2 + (Math.random() - 0.5) * 80;
+        const cy = (prevY + ty) / 2 + (Math.random() - 0.5) * 80;
+        steps.push([cx, cy, tx, ty]);
+        ctx.quadraticCurveTo(cx, cy, tx, ty);
+        prevX = tx; prevY = ty;
       }
+      ctx.stroke();
+      // Sharper inner stroke (thin, mid alpha) along same path
+      ctx.lineWidth = 1.2 + Math.random() * 1.6;
+      ctx.globalAlpha = 0.20 + Math.random() * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      for (const [cx, cy, tx, ty] of steps) ctx.quadraticCurveTo(cx, cy, tx, ty);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
 
-    // Accent flecks (gold or silver)
+    // A handful of faint gold accents — only marbles that opt in.
     if (accentHex !== null && accentHex !== undefined) {
       ctx.fillStyle = '#' + accentHex.toString(16).padStart(6, '0');
-      for (let i = 0; i < 80; i++) {
-        ctx.fillRect(Math.random() * c.width, Math.random() * c.height,
-          0.6 + Math.random() * 1.5, 0.6 + Math.random() * 1.5);
+      ctx.globalAlpha = 0.40;
+      for (let i = 0; i < 18; i++) {
+        ctx.fillRect(
+          Math.random() * c.width, Math.random() * c.height,
+          0.7 + Math.random() * 1.0, 0.7 + Math.random() * 1.0,
+        );
       }
+      ctx.globalAlpha = 1;
     }
 
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(repeat, repeat);
-    tex.anisotropy = 4;
+    // Low repeat — one tile = ~6m of marble. Big features, no leopard.
+    tex.repeat.set(Math.max(1, repeat * 0.5), Math.max(1, repeat * 0.5));
+    tex.anisotropy = 8;
     return tex;
   });
 }
@@ -153,11 +186,13 @@ function brushedTexture(baseHex) {
 
 export function marbleWhite() {
   return _matCache.get('marbleWhite') || (() => {
+    // White Carrara reference — base near pure white, veins soft warm grey.
+    // No accents (real Carrara doesn't sparkle).
     const m = new THREE.MeshStandardMaterial({
-      map: marbleTexture(0xeeeae3, 0xb0a48b, null, 3),
+      map: marbleTexture(0xf3efe8, 0x9b8e75, null, 1.6),
       color: 0xffffff,
-      metalness: 0.06,
-      roughness: 0.18,
+      metalness: 0.04,
+      roughness: 0.22,
       envMapIntensity: 1.0,
     });
     _matCache.set('marbleWhite', m);
