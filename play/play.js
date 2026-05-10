@@ -17,6 +17,7 @@ import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
+import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -273,6 +274,7 @@ let dust = null;
 let lastZoneIdx = -1;
 let footstepAccum = 0; // distance accumulated since last footstep SFX
 let decoTickers = [];   // per-frame callbacks for animated decorations
+let skyDome = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
 let jumpRequested = false;
@@ -1017,14 +1019,19 @@ function buildCeoPortrait(targetScene) {
 // ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
-  // Background + fog get set by LightingManager.applyPreset(); these are
-  // safe defaults in case the manager hasn't run yet.
-  scene.background = new THREE.Color(0xeaf3ff);
+  // Skydome replaces the previous flat scene.background. Fog still set
+  // per zone by LightingManager / SkyDome together so geometry doesn't
+  // pop into existence at the boundary.
+  scene.background = null;
   scene.fog = new THREE.Fog(0xeaf3ff, 30, 70);
 
   // All scene lighting is now driven by LightingManager + per-zone presets.
   // See play/lighting/zone-presets.js to author/tune zones (incl. 3-16).
   lighting = new LightingManager(scene, { mobile: isMobile() });
+
+  // Skydome — gradient + sun. Per-zone preset applied alongside lighting.
+  skyDome = new SkyDome(scene);
+  skyDome.applyPreset(getSkyPresetForZone(0).sky);
 
   // ─── Zone 1 ground (office) ───
   const officeFloor = new THREE.Mesh(
@@ -1833,17 +1840,24 @@ function update(dt) {
     }
   }
 
-  // Detect zone change → swap lighting, post-fx, and music together.
+  // Detect zone change → swap lighting, post-fx, sky, and music together.
   if (lighting && player) {
     const idx = zoneIndexAt(player.position.z);
     if (idx >= 0 && idx !== lastZoneIdx) {
       lastZoneIdx = idx;
       lighting.applyPreset(idx);
       if (postfx) postfx.applyPreset(lighting.getPostFx());
+      if (skyDome) {
+        const skyP = getSkyPresetForZone(idx);
+        skyDome.applyPreset(skyP.sky);
+        if (skyP.fog) scene.fog = new THREE.Fog(skyP.fog.color, skyP.fog.near, skyP.fog.far);
+      }
       // Crossfade zone music. fail-silent inside AudioManager.
       try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
     }
   }
+  // Skydome anchors to camera each frame so the player never reaches it.
+  if (skyDome && camera) skyDome.followCamera(camera);
 
   // Drift dust motes around the player (desktop-only; mobile is a no-op).
   if (dust && player) dust.update(dt, player.position);
