@@ -1811,12 +1811,19 @@ function update(dt) {
 
     player.position.x = nx;
     player.position.z = nz;
-    // Smoother rotation: lerp toward target heading instead of snapping.
-    const targetRot = Math.atan2(mx, mz);
-    let dRot = ((targetRot - player.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (dRot < -Math.PI) dRot += Math.PI * 2;
-    const rotLerp = 1 - Math.exp(-dt * 7); // slower than camera so the camera trails the body
-    player.rotation.y += dRot * rotLerp;
+    // Rotation: keep the body facing forward when the player is walking
+    // PURELY backward (S only) — no spin / no camera flip. Otherwise lerp
+    // toward the input heading at a relaxed rate so casual A/D taps don't
+    // whip the camera.
+    const isPureBack = (inputForward < -0.3) && (Math.abs(inputRight) < 0.3);
+    if (!isPureBack) {
+      const targetRot = Math.atan2(mx, mz);
+      let dRot = ((targetRot - player.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (dRot < -Math.PI) dRot += Math.PI * 2;
+      // Reduced from dt*7 → dt*4 per user feedback (turning was too quick).
+      const rotLerp = 1 - Math.exp(-dt * 4);
+      player.rotation.y += dRot * rotLerp;
+    }
 
     const p = player.userData.parts;
     if (player.userData.grounded && p) {
@@ -1848,9 +1855,9 @@ function update(dt) {
   const angle = player.rotation.y;
   const targetCamX = player.position.x - Math.sin(angle) * camDist;
   const targetCamZ = player.position.z - Math.cos(angle) * camDist;
-  // Stiffness 5 reads as smooth camera trail — the body lerps at 7 above
-  // so the camera lags slightly behind direction changes (more cinematic).
-  const camLerp = 1 - Math.exp(-dt * 5);
+  // Reduced stiffness (3) per user feedback — the camera should glide,
+  // not whip. Body lerps at 4 above so the camera still trails slightly.
+  const camLerp = 1 - Math.exp(-dt * 3);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   camera.position.y = camH + player.position.y * 0.3;
