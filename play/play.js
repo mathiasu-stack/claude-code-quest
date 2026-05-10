@@ -2018,27 +2018,40 @@ function update(dt) {
       player.rotation.y += dRot * rotLerp;
     }
 
+    // Procedural arm/leg swing — only when the body has primitive limbs
+    // (procedural builder). GLTF characters use an AnimationMixer
+    // walk clip instead, set below.
     const p = player.userData.parts;
-    if (player.userData.grounded && p) {
+    const isGltf = player.userData.faceKind === 'gltf';
+    if (!isGltf && player.userData.grounded && p && p.leftLeg) {
       const t = performance.now() * 0.012;
       p.leftLeg.rotation.x = Math.sin(t) * 0.5;
       p.rightLeg.rotation.x = -Math.sin(t) * 0.5;
       p.leftArm.rotation.x = -Math.sin(t) * 0.4;
       p.rightArm.rotation.x = Math.sin(t) * 0.4;
-    } else if (p) {
+    } else if (!isGltf && p && p.leftLeg) {
       // Airborne pose: arms forward slightly, legs tucked
       p.leftLeg.rotation.x = -0.3;
       p.rightLeg.rotation.x = -0.3;
       p.leftArm.rotation.x = -0.6;
       p.rightArm.rotation.x = -0.6;
     }
+    // GLTF: switch to walk clip (sprint → run if available).
+    if (isGltf && player.userData.gltfChar) {
+      const sprintNow = (keys['shift']) ? 'run' : 'walk';
+      player.userData.gltfChar.setMotion(sprintNow);
+    }
   } else {
     const p = player.userData.parts;
-    if (p) {
+    const isGltf = player.userData.faceKind === 'gltf';
+    if (!isGltf && p && p.leftLeg) {
       p.leftLeg.rotation.x *= 0.85;
       p.rightLeg.rotation.x *= 0.85;
       p.leftArm.rotation.x *= 0.85;
       p.rightArm.rotation.x *= 0.85;
+    }
+    if (isGltf && player.userData.gltfChar) {
+      player.userData.gltfChar.setMotion('idle');
     }
   }
 
@@ -2136,7 +2149,11 @@ function update(dt) {
       updateFace(player.userData.face, nowMs);
     }
   }
-  if (player) applyIdle(player, dt, nowMs);
+  // GLTF AnimationMixer tick. Skipped cleanly when faceKind !== 'gltf'.
+  if (player?.userData?.gltfChar) player.userData.gltfChar.update(dt, nowMs);
+  // Procedural idle (breathing/head-bob/signature gestures) only fires
+  // for non-GLTF chars — for GLTF the AnimationMixer drives idle.
+  if (player && player.userData.faceKind !== 'gltf') applyIdle(player, dt, nowMs);
   // Pre-compute the player's head world position for NPC pupil-track.
   if (player?.userData?.parts?.head) {
     player.userData.parts.head.getWorldPosition(_playerHeadPos);
@@ -2160,8 +2177,17 @@ function update(dt) {
         updateFace(m.userData.face, nowMs);
       }
     }
-    // Idle breathing + signature gesture per NPC.
-    applyIdle(m, dt, nowMs);
+    // GLTF mixer tick (no-op for procedural NPCs).
+    if (m.userData.gltfChar) {
+      // Detect movement from frame to frame to drive walk vs idle.
+      const lp = m.userData._lastPos || { x: m.position.x, z: m.position.z };
+      const moved = Math.hypot(m.position.x - lp.x, m.position.z - lp.z);
+      m.userData._lastPos = { x: m.position.x, z: m.position.z };
+      m.userData.gltfChar.setMotion(moved > 0.005 ? 'walk' : 'idle');
+      m.userData.gltfChar.update(dt, nowMs);
+    }
+    // Idle breathing + signature gesture only for non-GLTF NPCs.
+    if (m.userData.faceKind !== 'gltf') applyIdle(m, dt, nowMs);
     // Look-at-player: when player within 4m of NPC, gently rotate the head
     // toward the player. Otherwise reset slowly.
     const head = m.userData?.parts?.head;
