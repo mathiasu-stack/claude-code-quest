@@ -50,10 +50,16 @@ export function makeGltfCharacter(look, assetLoader) {
   if (entry?.yOffset) root.position.y = entry.yOffset;
 
   // Find the SkinnedMesh skeleton + ensure shadow flags.
+  // Three.js does frustum-culling by default per Mesh; explicit reaffirm
+  // here so a future asset-conversion step can't silently disable it.
   let skeleton = null;
   root.traverse((obj) => {
     if (!skeleton && obj.isSkinnedMesh) skeleton = obj.skeleton;
-    if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+      obj.frustumCulled = true;
+    }
   });
   const inst = { root, skeleton, animations: gltf.animations || [] };
 
