@@ -764,6 +764,7 @@ function buildChair(x, z, ry = 0, color = 0x37474f) {
     l.position.set(lx, 0.25, lz); g.add(l);
   });
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -780,6 +781,7 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
     l.position.set(lx, 0.375, lz); g.add(l);
   });
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -801,6 +803,7 @@ function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
     }));
   screen.position.set(0, 1.2, 0.026); g.add(screen);
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'top'; // sits on the desk top below it
   return g;
 }
 
@@ -814,6 +817,7 @@ function buildPlant(x, z) {
   leaves.position.y = 0.55; leaves.castShadow = true;
   leaves.scale.set(1, 1.1, 1); g.add(leaves);
   g.position.set(x, 0, z);
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -831,6 +835,7 @@ function buildWaterCooler(x, z) {
     }));
   bottle.position.y = 1.05; g.add(bottle);
   g.position.set(x, 0, z);
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -846,6 +851,7 @@ function buildCouch(x, z, ry = 0) {
   const lA = new THREE.Mesh(armGeom, mat); lA.position.set(-1.1, 0.55, 0); g.add(lA);
   const rA = new THREE.Mesh(armGeom, mat); rA.position.set(1.1, 0.55, 0); g.add(rA);
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -865,6 +871,7 @@ function buildFilingCabinet(x, z, ry = 0) {
     handle.position.set(0, 0.3 + i * 0.4 - 0.05, 0.27); g.add(handle);
   }
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -893,6 +900,7 @@ function buildBookshelf(x, z, ry = 0, w = 2.2) {
     }
   }
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -913,6 +921,7 @@ function buildTable(x, z, ry = 0, w = 2.2) {
   book2.material = new THREE.MeshStandardMaterial({ color: 0x004d40 });
   book2.position.y = 0.87; g.add(book2);
   g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
   return g;
 }
 
@@ -929,6 +938,7 @@ function buildLamp(x, z) {
   const point = new THREE.PointLight(0xfff59d, 0.6, 4);
   point.position.set(0, 1.2, 0); g.add(point);
   g.position.set(x, 0, z);
+  g.userData.surface = 'top'; // sits on a table at y≈0.78
   return g;
 }
 
@@ -1458,8 +1468,73 @@ function buildWorld() {
   // Build floors 2-4 as compact office templates at higher Y levels.
   for (let f = 2; f <= FLOORS_TOTAL; f++) buildFloorOffice(f);
 
+  // Surface-attachment rule — snap any static object tagged
+  // userData.surface = 'floor' or 'top' to its proper resting surface.
+  // Skip 'wall' / 'ceiling' / untagged (left at builder-defined Y).
+  settleStaticObjects();
+
   // Initial visibility — show floor 1 only.
   applyFloorVisibility();
+}
+
+// ─── Surface-attachment rule ────────────────────────────────────────────────
+// Static objects must "touch" a surface. Each builder declares the
+// object's intended surface via userData.surface:
+//
+//   'floor'    — rests on the floor plate. Snap bbox.min.y to
+//                floorBaseY(obj.userData.floor || 1).
+//   'top'      — rests on top of another object below. Raycast down,
+//                snap bbox.min.y to the hit surface (falls back to
+//                floor Y if nothing's directly underneath).
+//   'wall'     — mounted on a wall (poster, sign, monitor on a desk
+//                back). Builder owns position; settler leaves alone.
+//   'ceiling'  — hangs from the ceiling (chandelier, hanging plant).
+//                Builder owns position; settler leaves alone.
+//   'mounted'  — child of a parent that already has a known position.
+//   undefined  — untagged; settler leaves alone (safe default).
+//
+// Run after buildWorld + buildFloorOffice. Anything added later (live
+// agents, ceremony effects) is responsible for its own positioning.
+function settleStaticObjects() {
+  if (!scene) return;
+  const raycaster = new THREE.Raycaster();
+  const down = new THREE.Vector3(0, -1, 0);
+  // Snapshot children list so re-positioning doesn't affect iteration.
+  const candidates = [];
+  for (const obj of scene.children) {
+    const s = obj.userData?.surface;
+    if (s === 'floor' || s === 'top') candidates.push(obj);
+  }
+  for (const obj of candidates) {
+    const bbox = new THREE.Box3().setFromObject(obj);
+    if (bbox.isEmpty()) continue;
+    const objFloor = obj.userData.floor || 1;
+    let targetY;
+    if (obj.userData.surface === 'floor') {
+      targetY = floorBaseY(objFloor);
+    } else {
+      // 'top' — find the surface directly beneath. Start the ray a bit
+      // ABOVE the object's bottom to avoid the raycaster starting inside
+      // a thin overlapping surface.
+      raycaster.set(
+        new THREE.Vector3(obj.position.x, bbox.min.y + 0.1, obj.position.z),
+        down,
+      );
+      const hits = raycaster.intersectObjects(scene.children, true)
+        .filter(h => !isAncestorOrSelf(obj, h.object) && h.point.y < bbox.min.y + 0.05);
+      targetY = hits.length ? hits[0].point.y : floorBaseY(objFloor);
+    }
+    const gap = bbox.min.y - targetY;
+    if (Math.abs(gap) > 0.05) {
+      obj.position.y -= gap;
+    }
+  }
+}
+
+function isAncestorOrSelf(ancestor, node) {
+  let p = node;
+  while (p) { if (p === ancestor) return true; p = p.parent; }
+  return false;
 }
 
 let elevatorRef = null;
