@@ -31,6 +31,7 @@ export function buildElevator(scene, opts = {}) {
 
   const shaftGroup = new THREE.Group();
   shaftGroup.position.set(SHAFT_X, 0, SHAFT_Z);
+  shaftGroup.userData.crossFloor = true;
   scene.add(shaftGroup);
 
   // ── 1. Shaft — glass tube ──────────────────────────────────────────
@@ -162,6 +163,7 @@ export function buildElevator(scene, opts = {}) {
     brushedSilver(),
   );
   btnHousing.position.set(SHAFT_X + (SHAFT_W / 2) + 0.4, 1.2, SHAFT_Z + 0.5);
+  btnHousing.userData.crossFloor = true;
   scene.add(btnHousing);
   const btnUp = new THREE.Mesh(
     new THREE.SphereGeometry(0.04, 12, 8),
@@ -170,7 +172,9 @@ export function buildElevator(scene, opts = {}) {
     }),
   );
   btnUp.position.set(SHAFT_X + (SHAFT_W / 2) + 0.4, 1.32, SHAFT_Z + 0.53);
+  btnUp.userData.crossFloor = true;
   scene.add(btnUp);
+  out.callButton = btnHousing; // expose for proximity detection
 
   // ── 4. Floor signage on the south wall of each floor ──────────────
   // (For floors above the atrium that aren't built yet, this is a
@@ -194,8 +198,20 @@ export function buildElevator(scene, opts = {}) {
     );
     sign.position.set(SHAFT_X + (SHAFT_W / 2) + 0.06, f * FLOOR_HEIGHT + 0.4, SHAFT_Z);
     sign.rotation.y = -Math.PI / 2;
+    sign.userData.crossFloor = true;
     scene.add(sign);
   }
+
+  // Expose constants the host needs (call-button XZ for proximity, floor
+  // height for floor-Y math, cab snap for teleport).
+  out.callButtonPos = { x: SHAFT_X + (SHAFT_W / 2) + 0.4, z: SHAFT_Z + 0.5 };
+  out.snapCabToFloor = (floorIdx) => {
+    currentY = (floorIdx - 1) * FLOOR_HEIGHT;
+    targetY = currentY;
+    nextDecide = performance.now() + 6000;
+    cab.position.y = currentY;
+    paintIndicator(floorIdx);
+  };
 
   // ── 5. tick() — animate cab between floors slowly ──────────────────
   let nextDecide = 0;

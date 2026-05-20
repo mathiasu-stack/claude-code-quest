@@ -11,6 +11,10 @@ const DEFAULT_PROGRESS = {
   currentStreak: 0,
   longestStreak: 0,
   knowledgeChecks: {},
+  // Corporate badge: the highest floor the player has access to. Each
+  // floor holds 4 chapters; passing all 4 chapters' practical tests on a
+  // floor bumps badgeFloor to the next one. Floor 1 is always accessible.
+  badgeFloor: 1,
 };
 
 function loadProgress() {
@@ -162,6 +166,31 @@ function addBonusXP(progress, amount) {
   return { ...progress, totalXP: progress.totalXP + amount };
 }
 
+// Recompute the player's badgeFloor from the testResults map. Idempotent
+// — call after recording any test result. Floor N is "complete" when
+// all 4 chapters on it have their `chNN-test` passed. Each complete
+// floor grants access to the next, capped at floor 4.
+const CHAPTERS_PER_FLOOR = 4;
+const FLOORS_TOTAL = 4;
+function applyBadgeBumpsIfDue(progress) {
+  let badge = progress.badgeFloor || 1;
+  for (let floor = 1; floor <= FLOORS_TOTAL; floor++) {
+    let allPassed = true;
+    for (let c = (floor - 1) * CHAPTERS_PER_FLOOR + 1; c <= floor * CHAPTERS_PER_FLOOR; c++) {
+      const testId = `ch${String(c).padStart(2, '0')}-test`;
+      if (!isTestPassed(progress, testId)) { allPassed = false; break; }
+    }
+    if (allPassed) badge = Math.max(badge, Math.min(FLOORS_TOTAL, floor + 1));
+  }
+  return badge === progress.badgeFloor ? progress : { ...progress, badgeFloor: badge };
+}
+
+function floorForChapter(chapterId) {
+  const m = (chapterId || '').match(/^ch(\d+)$/);
+  if (!m) return 1;
+  return Math.min(FLOORS_TOTAL, Math.ceil(parseInt(m[1], 10) / CHAPTERS_PER_FLOOR));
+}
+
 window.Progress = {
   load: loadProgress,
   save: saveProgress,
@@ -179,4 +208,8 @@ window.Progress = {
   recordKnowledgeCheck,
   isKnowledgeCheckPassed,
   addBonusXP,
+  applyBadgeBumpsIfDue,
+  floorForChapter,
+  CHAPTERS_PER_FLOOR,
+  FLOORS_TOTAL,
 };

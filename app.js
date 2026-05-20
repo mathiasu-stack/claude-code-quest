@@ -98,6 +98,19 @@ const App = {
         <button class="play-back-btn" id="play-back-btn">← Dashboard</button>
         <div class="play-tier-badge" id="play-tier-badge">Tier: ${this.getCurrentTierLabel()}</div>
         <div class="play-help">WASD or arrows to walk · E to interact</div>
+        <div class="play-badge-hud" id="play-badge-hud" title="Corporate badge — elevator access">
+          <span class="badge-icon">🪪</span>
+          <span class="badge-label">F<span id="play-badge-level">1</span></span>
+        </div>
+        <div class="play-elevator-modal" id="play-elevator-modal">
+          <div class="elev-panel">
+            <div class="elev-title">Elevator</div>
+            <div class="elev-badge-line">Badge: floors 1–<span id="elev-badge-cap">1</span></div>
+            <div class="elev-floors" id="elev-floors"></div>
+            <button class="btn-secondary elev-cancel" id="elev-cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="play-fade" id="play-fade"></div>
         <div class="play-prompt" id="play-prompt"></div>
         <div class="play-joystick" id="play-joystick">
           <div class="play-joystick-thumb" id="play-joystick-thumb"></div>

@@ -149,8 +149,31 @@ const NPCS = [
   },
 ];
 
+// ─── Floor / chapter layout ─────────────────────────────────────────────────
+// 16 chapters split across 4 floors (4 chapters per floor). Floor 1 holds
+// chapters 1-4 in the existing hand-built atrium + library + procedural
+// zones at y=0. Floors 2-4 are compact office rooms built at higher Y;
+// the elevator shaft passes through all four. Only ONE floor is visible
+// at a time — non-current floors get hidden via userData.floor tagging.
+const FLOORS_TOTAL = 4;
+const CHAPTERS_PER_FLOOR = 4;
+const FLOOR_HEIGHT_Y = 4.5;          // matches elevator.js FLOOR_HEIGHT
+function floorBaseY(n) {
+  return (Math.max(1, Math.min(FLOORS_TOTAL, n)) - 1) * FLOOR_HEIGHT_Y;
+}
+function floorForChapterNum(chapterNum) {
+  return Math.min(FLOORS_TOTAL, Math.ceil(chapterNum / CHAPTERS_PER_FLOOR));
+}
+function floorForChapterId(chId) {
+  const m = (chId || '').match(/^ch(\d+)$/);
+  return m ? floorForChapterNum(parseInt(m[1], 10)) : 1;
+}
+let currentFloor = 1;
+
 // ─── Zone layout ─────────────────────────────────────────────────────────────
 // Each zone is 22m wide and 22m deep. Zones extend along +Z.
+// Floor 1's zones occupy z=-11..77 (ch01-04 only). Chapters 5+ are
+// rendered on floors 2-4 in compact office rooms (see buildFloorOffice).
 const ZONE_COUNT = 16;
 const ZONE_BOUNDS = Array.from({ length: ZONE_COUNT }, (_, i) => ({
   startZ: i * 22 - 11,
@@ -356,8 +379,8 @@ function isZone2Open() {
 // Populated once after world build via addColliderAABB. clampMove pushes the
 // player out if a move would land them inside any of these boxes.
 const colliders = [];
-function addColliderAABB(minX, maxX, minZ, maxZ) {
-  colliders.push({ minX, maxX, minZ, maxZ });
+function addColliderAABB(minX, maxX, minZ, maxZ, floor = 1) {
+  colliders.push({ minX, maxX, minZ, maxZ, floor });
 }
 const PLAYER_RADIUS = 0.30;
 
@@ -380,8 +403,15 @@ function stairGroundY(x, z) {
 }
 
 function clampMove(oldX, oldZ, newX, newZ) {
-  // X always within zone width
+  // X always within room/zone width
   newX = Math.max(-10.5, Math.min(10.5, newX));
+
+  // Floors 2-4: simple 22x22 room — clamp Z to room and skip the
+  // floor-1 zone-boundary corridor logic. Static-collider + NPC checks
+  // (below) still apply.
+  if (currentFloor !== 1) {
+    newZ = Math.max(-10.5, Math.min(10.5, newZ));
+  } else {
 
   // First, find what zone we're trying to be in
   // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
@@ -426,10 +456,13 @@ function clampMove(oldX, oldZ, newX, newZ) {
     while (lastOpen >= 0 && !isZoneIdxOpen(lastOpen)) lastOpen--;
     if (lastOpen >= 0) newZ = ZONE_BOUNDS[lastOpen].endZ - 0.61;
   }
+  } // close the floor===1 branch
 
   // Static furniture AABBs — push out along the shortest axis.
+  // Only consider colliders for the player's current floor.
   const R = PLAYER_RADIUS;
   for (const c of colliders) {
+    if (c.floor !== currentFloor) continue;
     if (newX > c.minX - R && newX < c.maxX + R &&
         newZ > c.minZ - R && newZ < c.maxZ + R) {
       const dxLeft  = (newX) - (c.minX - R);
@@ -445,10 +478,12 @@ function clampMove(oldX, oldZ, newX, newZ) {
   }
 
   // NPC repulsion — treat each as a small cylinder so the player can't
-  // walk through them. Skip the player's own mesh.
+  // walk through them. Skip the player's own mesh and any NPC on
+  // another floor.
   const NPC_R = 0.55;
   for (const npc of npcMeshes) {
     if (!npc || npc === player) continue;
+    if ((npc.userData.floor || 1) !== currentFloor) continue;
     const dx = newX - npc.position.x;
     const dz = newZ - npc.position.z;
     const distSq = dx * dx + dz * dz;
@@ -1320,8 +1355,9 @@ function buildWorld() {
   // Door from zone 2 → zone 3
   registerDoor(scene, 33, 'ch02', 'CLAUDE.md Atrium');
 
-  // ─── Zones 3 - 16 (generated from ZONE_THEMES) ──────────────────────────────
-  for (let zoneIdx = 2; zoneIdx < ZONE_COUNT; zoneIdx++) {
+  // ─── Floor 1 zones 3 - 4 (ch03 + ch04, generated from ZONE_THEMES) ───────
+  // Chapters 5+ live on floors 2-4 in compact office rooms (built below).
+  for (let zoneIdx = 2; zoneIdx < CHAPTERS_PER_FLOOR; zoneIdx++) {
     buildGenericZone(zoneIdx);
   }
 
@@ -1395,9 +1431,191 @@ function buildWorld() {
   try {
     const elev = buildElevator(scene, { mobile: isMobile() });
     if (elev?.tick) decoTickers.push((dt, now) => elev.tick(dt, now));
+    elevatorRef = elev;
   } catch (e) { console.warn('elevator failed', e); }
 
   registerStaticColliders();
+
+  // Tag everything built up to here as floor 1. The elevator shaft is
+  // an exception — it spans all floors and stays visible.
+  tagSceneFloor1();
+
+  // Build floors 2-4 as compact office templates at higher Y levels.
+  for (let f = 2; f <= FLOORS_TOTAL; f++) buildFloorOffice(f);
+
+  // Initial visibility — show floor 1 only.
+  applyFloorVisibility();
+}
+
+let elevatorRef = null;
+
+// Walk up the parent chain; return true if any ancestor (or self) has
+// userData.crossFloor === true. Used to opt-out of floor tagging /
+// visibility toggling — the elevator's shaft and signage span floors.
+function isCrossFloor(obj) {
+  let p = obj;
+  while (p && p !== scene) {
+    if (p.userData && p.userData.crossFloor === true) return true;
+    p = p.parent;
+  }
+  return false;
+}
+
+// Mark every floor-untagged mesh as belonging to floor 1, so the
+// visibility toggle knows what to hide when the player rides up.
+// Cross-floor objects (elevator, sky, lights) are skipped along with
+// their descendants.
+function tagSceneFloor1() {
+  scene.traverse((obj) => {
+    if (obj === scene) return;
+    if (isCrossFloor(obj)) return;
+    // Lights illuminate every floor — never hide them per-floor.
+    if (obj.isLight) { obj.userData.crossFloor = true; return; }
+    if (obj.userData.floor === undefined) {
+      obj.userData.floor = 1;
+    }
+  });
+  // Sky dome + sun pivot stay visible across floors.
+  if (skyDome?.mesh) skyDome.mesh.userData.crossFloor = true;
+  if (skyDome?.sunPivot) skyDome.sunPivot.userData.crossFloor = true;
+}
+
+// Build a compact 22×22 office room at floorBaseY(floorIdx) holding the
+// 4 chapters' NPC clusters. Floors 2-4 only — floor 1 keeps the rich
+// existing atrium build. Walls + ceiling + floor plate; the elevator
+// shaft passes through one corner of the south wall.
+function buildFloorOffice(floorIdx) {
+  const y0 = floorBaseY(floorIdx);
+  const wallH = 3.8;
+  // Theme: take the first chapter on this floor's theme as the floor's
+  // overall look. ZONE_THEMES is 0-indexed by chapterNum-1.
+  const themeIdx = (floorIdx - 1) * CHAPTERS_PER_FLOOR;
+  const theme = ZONE_THEMES[themeIdx] || { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', metal: 0.1, title: floorThemeName(floorIdx) };
+
+  // Floor plate
+  const floorMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({
+      color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
+    }),
+  );
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.position.set(0, y0, 0);
+  floorMesh.receiveShadow = true;
+  floorMesh.userData.floor = floorIdx;
+  scene.add(floorMesh);
+
+  // Ceiling
+  const ceilingMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
+  );
+  ceilingMesh.rotation.x = Math.PI / 2;
+  ceilingMesh.position.set(0, y0 + wallH + 0.2, 0);
+  ceilingMesh.userData.floor = floorIdx;
+  scene.add(ceilingMesh);
+
+  // Perimeter walls — leave a gap on the south wall around the elevator
+  // shaft (shaft center at x=8.5, half-width 1.2).
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
+  });
+  function addWall(w, h, d, x, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+    m.position.set(x, y0 + h / 2, z);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData.floor = floorIdx;
+    scene.add(m);
+  }
+  // North + east + west walls — solid 22m.
+  addWall(22, wallH, 0.3, 0, 11);
+  addWall(0.3, wallH, 22, -11, 0);
+  addWall(0.3, wallH, 22,  11, 0);
+  // South wall — split around the elevator opening at x∈[6.9, 10.1].
+  addWall(17.0, wallH, 0.3, -2.5, -11);  // west chunk: x in [-11, 6]
+  addWall(0.9,  wallH, 0.3, 10.55, -11); // east stub: x in [10.1, 11]
+  // Lintel above the elevator opening (top edge of the wall, 1.2m tall).
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 0.3), wallMat);
+  lintel.position.set(8.5, y0 + wallH - 0.6, -11);
+  lintel.castShadow = true; lintel.receiveShadow = true;
+  lintel.userData.floor = floorIdx;
+  scene.add(lintel);
+
+  // Floor title sign on north wall
+  const sign = makeWallSign(`FLOOR ${floorIdx} — ${(theme.title || '').toUpperCase()}`, 9, 1.4, '#1a2744', theme.accent || '#ffd54f');
+  sign.position.set(0, y0 + 2.6, 11 - 0.16);
+  sign.rotation.y = Math.PI;
+  sign.userData.floor = floorIdx;
+  scene.add(sign);
+
+  // Simple chapter-cluster desks: one buildDesk per chapter slot.
+  // Cluster centers at the 4 corners of the room interior.
+  const slots = [
+    { x: -5.5, z: -5.5, face: 0 },
+    { x:  5.5, z: -5.5, face: 0 },
+    { x: -5.5, z:  5.5, face: Math.PI },
+    { x:  5.5, z:  5.5, face: Math.PI },
+  ];
+  for (let s = 0; s < CHAPTERS_PER_FLOOR; s++) {
+    const slot = slots[s];
+    const desk = buildDesk(slot.x, slot.z, slot.face, 1.6, 0.8);
+    desk.position.y = y0;
+    desk.traverse((o) => { o.userData.floor = floorIdx; });
+    scene.add(desk);
+    // Chapter label sign above the desk
+    const chapterNum = (floorIdx - 1) * CHAPTERS_PER_FLOOR + s + 1;
+    const chTheme = ZONE_THEMES[chapterNum - 1];
+    const chTitle = chTheme?.title || (window.CURRICULUM?.[chapterNum - 1]?.title) || `Chapter ${chapterNum}`;
+    const chSign = makeWallSign(`CH${String(chapterNum).padStart(2, '0')} — ${chTitle.toUpperCase()}`, 4.5, 0.55, '#1a2744', chTheme?.accent || '#ffd54f');
+    chSign.position.set(slot.x, y0 + 2.4, slot.z);
+    chSign.rotation.y = slot.face;
+    chSign.userData.floor = floorIdx;
+    scene.add(chSign);
+  }
+}
+
+// Compute the override XZ position for a chapter-5+ NPC, placing it in
+// the appropriate floor's office layout near its chapter's desk slot.
+// Lesson NPCs cluster around the desk; the test NPC stands behind it.
+function floorOfficePositionForNPC(npcDef) {
+  const chId = npcDef.chapterId;
+  const f = floorForChapterId(chId);
+  if (f <= 1) return null; // floor 1 keeps original positions
+  const m = (chId || '').match(/^ch(\d+)$/);
+  if (!m) return null;
+  const chapterNum = parseInt(m[1], 10);
+  const slotIdx = (chapterNum - 1) % CHAPTERS_PER_FLOOR; // 0..3 within floor
+  const slots = [
+    { cx: -5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
+    { cx:  5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
+    { cx: -5.5, cz:  5.5, face: Math.PI,  rearZ:  7.0 },
+    { cx:  5.5, cz:  5.5, face: Math.PI,  rearZ:  7.0 },
+  ];
+  const slot = slots[slotIdx];
+  // Spread lesson NPCs in a small arc in front of the desk; test NPC
+  // stands behind the desk (closer to the wall).
+  if (npcDef.kind === 'test') {
+    return { pos: [slot.cx, slot.rearZ], face: slot.face + Math.PI, y: floorBaseY(f) };
+  }
+  // Lesson NPCs — distribute along x within ±2m of cluster center
+  // based on lesson index (extract from lessonId like 'ch05-l02').
+  const lm = (npcDef.lessonId || '').match(/-l(\d+)$/);
+  const lessonIdx = lm ? Math.max(0, parseInt(lm[1], 10) - 1) : 0;
+  const dx = (lessonIdx - 1) * 1.4; // -1.4, 0, +1.4, +2.8 (rare 5th)
+  const dz = (slot.cz > 0) ? -1.6 : 1.6; // step IN from cluster center toward the room center
+  return { pos: [slot.cx + dx, slot.cz + dz], face: slot.face, y: floorBaseY(f) };
+}
+
+// Iterate scene and toggle visibility based on userData.floor.
+// Skip cross-floor objects (and their descendants).
+function applyFloorVisibility() {
+  scene.traverse((obj) => {
+    if (obj === scene) return;
+    if (isCrossFloor(obj)) return;
+    const f = obj.userData.floor;
+    if (f === undefined) return;
+    obj.visible = (f === currentFloor);
+  });
 }
 
 // Register AABBs for the chest-height+ static furniture so the player
@@ -1442,6 +1660,17 @@ function registerStaticColliders() {
   // Grandfather clock at (-9.5,31), library cart at (8,14).
   addColliderAABB(-9.85, -9.15, 30.70, 31.30);
   addColliderAABB( 7.55,  8.45, 13.65, 14.35);
+
+  // Floors 2-4: four chapter-desks per floor at the cluster centers.
+  // buildDesk default is 1.6×0.8 with face=0 → footprint 1.6×0.8 in XZ.
+  for (let f = 2; f <= FLOORS_TOTAL; f++) {
+    const slots = [
+      [-5.5, -5.5], [5.5, -5.5], [-5.5, 5.5], [5.5, 5.5],
+    ];
+    for (const [cx, cz] of slots) {
+      addColliderAABB(cx - 0.85, cx + 0.85, cz - 0.45, cz + 0.45, f);
+    }
+  }
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
@@ -1498,9 +1727,13 @@ function buildGenericZone(idx) {
   w(0.3, wallH, 22, -11, wallH / 2, cZ);
   w(0.3, wallH, 22,  11, wallH / 2, cZ);
 
-  // Front wall (split with doorway), or solid back wall if last zone
+  // Front wall (split with doorway), or solid back wall if it's the last
+  // zone on its floor. Chapters 5+ live on upper floors, so zone 3
+  // (chapter 4) is now floor-1's terminus — solid wall, take the
+  // elevator to continue.
   const isLast = idx === ZONE_COUNT - 1;
-  if (!isLast) {
+  const isFloor1End = idx === CHAPTERS_PER_FLOOR - 1;
+  if (!isLast && !isFloor1End) {
     w(8.5, wallH, 0.3, -6.75, wallH/2, endZ);
     w(8.5, wallH, 0.3,  6.75, wallH/2, endZ);
     w(4, 1.2, 0.3, 0, wallH - 0.6, endZ);
@@ -1508,12 +1741,22 @@ function buildGenericZone(idx) {
     const nextTitle = nextTheme?.title || `Chapter ${idx + 2}`;
     registerDoor(scene, endZ, ZONE_BOUNDS[idx].chapterId, nextTitle);
   } else {
-    // Solid back wall for the last zone
+    // Solid back wall — capstone (zone 15) OR end of floor 1 (zone 3).
     w(22, wallH, 0.3, 0, wallH/2, endZ);
-    // Capstone trophy plaque
-    const trophy = makeWallSign('🏆 CAPSTONE COMPLETE 🏆', 8, 1.6, '#1a2744', '#ffd700');
-    trophy.position.set(0, 2.8, endZ - 0.16);
-    scene.add(trophy);
+    if (isLast) {
+      // Capstone trophy plaque (only for actual chapter-16 zone, but
+      // chapters 5-16 now live on upper floors so this branch only
+      // runs if buildGenericZone is ever called for the capstone zone
+      // again — kept defensively).
+      const trophy = makeWallSign('🏆 CAPSTONE COMPLETE 🏆', 8, 1.6, '#1a2744', '#ffd700');
+      trophy.position.set(0, 2.8, endZ - 0.16);
+      scene.add(trophy);
+    } else {
+      // End of floor 1 — point the player at the elevator.
+      const sign = makeWallSign('TAKE THE ELEVATOR ↗', 7, 1.4, '#1a2744', '#ffd54f');
+      sign.position.set(0, 2.6, endZ - 0.16);
+      scene.add(sign);
+    }
   }
 
   // Title sign on left wall
@@ -1854,9 +2097,20 @@ function spawnNPC(npcDef) {
     if (npcDef.look.gesture) mergedLook.gesture = npcDef.look.gesture;
   }
   const mesh = makeCharacter(mergedLook);
-  mesh.position.set(npcDef.pos[0], 0, npcDef.pos[1]);
+  // Relocate ch05+ NPCs to their floor's office layout — their original
+  // positions assumed a single Z-corridor that no longer extends past
+  // ch04. Lesson NPCs cluster around the desk; the test NPC stands rear.
+  const npcFloor = floorForChapterId(npcDef.chapterId) || 1;
+  if (npcFloor > 1) {
+    const override = floorOfficePositionForNPC(npcDef);
+    if (override) {
+      npcDef = { ...npcDef, pos: override.pos, face: override.face };
+    }
+  }
+  mesh.position.set(npcDef.pos[0], floorBaseY(npcFloor), npcDef.pos[1]);
   mesh.rotation.y = npcDef.face;
   mesh.userData.npc = npcDef;
+  mesh.userData.floor = npcFloor;
   scene.add(mesh);
 
   // Consistent base scale for every NPC tag (was inconsistent before —
@@ -1985,6 +2239,9 @@ function setupInput() {
 
   resizeListener = () => resize();
   window.addEventListener('resize', resizeListener);
+
+  wireElevatorModal();
+  updateBadgeHud();
 }
 
 // ─── Dialogue & intro ────────────────────────────────────────────────────────
@@ -2004,8 +2261,14 @@ function showIntro() {
   };
 }
 
+const ELEVATOR_TARGET = { __elevator: true };
+
 function tryInteract() {
   if (!interactionTarget || inputLocked) return;
+  if (interactionTarget === ELEVATOR_TARGET) {
+    openElevatorModal();
+    return;
+  }
   // Object interactable takes precedence (it's set explicitly when the
   // proximity loop picks an interactable as nearer than any NPC).
   const inter = interactionTarget.userData?._interactable;
@@ -2180,9 +2443,12 @@ function update(dt) {
   jumpRequested = false;
 
   // Gravity + Y position. `groundY` is the floor height for the current
-  // XZ — normally 0, but rises to follow the atrium staircase.
+  // XZ — floorBaseY for the player's current floor, plus the stair
+  // ramp (floor 1 only).
   const wasAirborne = !player.userData.grounded;
-  const groundY = stairGroundY(player.position.x, player.position.z);
+  const baseY = floorBaseY(currentFloor);
+  const stairExtra = (currentFloor === 1) ? stairGroundY(player.position.x, player.position.z) : 0;
+  const groundY = baseY + stairExtra;
   if (!player.userData.grounded || player.position.y > groundY) {
     player.userData.velocityY -= 18 * dt;
     player.position.y += player.userData.velocityY * dt;
@@ -2330,7 +2596,10 @@ function update(dt) {
   const camLerp = 1 - Math.exp(-dt * 6);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
-  camera.position.y = camH + player.position.y * 0.3;
+  // Camera height = floor baseline + camH (constant ride height), plus
+  // a small bob from the player's jump above their floor.
+  const floorY = floorBaseY(currentFloor);
+  camera.position.y = floorY + camH + Math.max(0, player.position.y - floorY) * 0.3;
   camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
   // Update door colors live in case a chapter unlocks during play
@@ -2486,13 +2755,24 @@ function update(dt) {
     });
   }
 
-  // Interaction proximity — checks NPCs AND interactable objects.
+  // Interaction proximity — checks NPCs, interactable objects, and the
+  // elevator call button. NPCs on other floors are skipped.
   let nearest = null, nearestDist = Infinity, nearestKind = null;
   for (const m of npcMeshes) {
+    if ((m.userData.floor || 1) !== currentFloor) continue;
     const dx = player.position.x - m.position.x;
     const dz = player.position.z - m.position.z;
     const d = Math.hypot(dx, dz);
     if (d < 2.4 && d < nearestDist) { nearest = m; nearestDist = d; nearestKind = 'npc'; }
+  }
+  if (elevatorRef && elevatorRef.callButtonPos) {
+    const cp = elevatorRef.callButtonPos;
+    const dx = player.position.x - cp.x;
+    const dz = player.position.z - cp.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 2.4 && d < nearestDist) {
+      nearest = ELEVATOR_TARGET; nearestDist = d; nearestKind = 'elevator';
+    }
   }
   // Interactables (computers, books, whiteboards, etc.)
   const hoveredObj = updateInteractables(dt, performance.now(), player.position);
@@ -2522,6 +2802,8 @@ function update(dt) {
       } else if (nearestKind === 'object') {
         const it = nearest.userData._interactable;
         promptEl.textContent = it.getPromptText();
+      } else if (nearestKind === 'elevator') {
+        promptEl.textContent = 'Press E to call the elevator';
       }
       document.getElementById('play-interact-btn').classList.add('visible');
     }
@@ -2727,6 +3009,105 @@ function showCelebrationToast() {
     toast.classList.remove('visible');
     setTimeout(() => toast.remove(), 400);
   }, 4000);
+}
+
+// ─── Elevator modal + floor transitions ──────────────────────────────────────
+// Wired from setupInput() so the listeners are attached after the DOM
+// renders. openElevatorModal builds the floor buttons each time using
+// the player's current badgeFloor (from Progress) for gating.
+
+function wireElevatorModal() {
+  const modal = document.getElementById('play-elevator-modal');
+  if (!modal) return;
+  const cancelBtn = document.getElementById('elev-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeElevatorModal);
+}
+
+function openElevatorModal() {
+  const modal = document.getElementById('play-elevator-modal');
+  if (!modal) return;
+  const progress = window.App?.progress || (window.Progress?.load?.() || { badgeFloor: 1 });
+  const badge = Math.max(1, Math.min(FLOORS_TOTAL, progress.badgeFloor || 1));
+  const cap = document.getElementById('elev-badge-cap');
+  if (cap) cap.textContent = String(badge);
+  const list = document.getElementById('elev-floors');
+  if (list) {
+    list.innerHTML = '';
+    // List floors top-down so F4 is at the top.
+    for (let f = FLOORS_TOTAL; f >= 1; f--) {
+      const locked = f > badge;
+      const isCurrent = f === currentFloor;
+      const btn = document.createElement('button');
+      btn.className = 'elev-floor-btn' + (locked ? ' locked' : '') + (isCurrent ? ' current' : '');
+      const themeIdx = (f - 1) * CHAPTERS_PER_FLOOR + 2;
+      const themeTitle = ZONE_THEMES[themeIdx]?.title || floorThemeName(f);
+      btn.textContent = `F${f} — ${themeTitle}${locked ? ' 🔒' : ''}${isCurrent ? '  (here)' : ''}`;
+      if (!locked && !isCurrent) {
+        btn.addEventListener('click', () => requestFloorChange(f));
+      } else {
+        btn.disabled = true;
+      }
+      list.appendChild(btn);
+    }
+  }
+  modal.classList.add('visible');
+  inputLocked = true;
+}
+
+function closeElevatorModal() {
+  const modal = document.getElementById('play-elevator-modal');
+  if (modal) modal.classList.remove('visible');
+  inputLocked = false;
+}
+
+function floorThemeName(f) {
+  return ({ 1: 'Onboarding', 2: 'Operations', 3: 'Architect', 4: 'Executive' })[f] || `Floor ${f}`;
+}
+
+function requestFloorChange(targetFloor) {
+  if (targetFloor === currentFloor) { closeElevatorModal(); return; }
+  closeElevatorModal();
+  inputLocked = true;
+  const fade = document.getElementById('play-fade');
+  if (fade) fade.classList.add('opaque');
+  // Snap the cab to the target floor so the camera reveal lands on it.
+  if (elevatorRef?.snapCabToFloor) elevatorRef.snapCabToFloor(targetFloor);
+  setTimeout(() => {
+    currentFloor = targetFloor;
+    applyFloorVisibility();
+    spawnPlayerOnFloor(targetFloor);
+    updateBadgeHud();
+    if (fade) fade.classList.remove('opaque');
+    setTimeout(() => { inputLocked = false; }, 450);
+  }, 450);
+}
+
+// Move the player to a sensible spawn point on a given floor. Just
+// outside the elevator opening, facing into the room. Also snaps the
+// camera so the fade-in lands without a jarring lerp.
+function spawnPlayerOnFloor(f) {
+  if (!player) return;
+  const cp = elevatorRef?.callButtonPos || { x: 8.5, z: -8.5 };
+  // Spawn 2m in front of the call button, on the room side.
+  player.position.set(cp.x - 1.5, floorBaseY(f), cp.z + 2.0);
+  player.userData.velocityY = 0;
+  player.userData.grounded = true;
+  player.rotation.y = 0; // face north (away from the elevator)
+  cameraYaw = 0;
+  if (camera) {
+    // Snap camera behind the player along cameraYaw so the lerp doesn't
+    // visibly travel across the room when the fade lifts.
+    const camDist = cameraDist;
+    camera.position.x = player.position.x - Math.sin(cameraYaw) * camDist;
+    camera.position.z = player.position.z - Math.cos(cameraYaw) * camDist;
+    camera.position.y = floorBaseY(f) + 4.2;
+  }
+}
+
+function updateBadgeHud() {
+  const progress = window.App?.progress || (window.Progress?.load?.() || { badgeFloor: 1 });
+  const el = document.getElementById('play-badge-level');
+  if (el) el.textContent = String(progress.badgeFloor || 1);
 }
 
 export function stop() {

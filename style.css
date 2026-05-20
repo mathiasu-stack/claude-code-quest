@@ -1168,6 +1168,102 @@ body.in-play #mobile-header { display: none !important; }
   letter-spacing: 0.04em;
 }
 
+.play-badge-hud {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 24, 40, 0.92);
+  color: #ffd54f;
+  border: 1px solid rgba(255, 213, 79, 0.35);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.play-badge-hud .badge-icon { font-size: 16px; }
+.play-badge-hud .badge-label { color: #ffd54f; }
+
+.play-elevator-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 18, 0.72);
+}
+.play-elevator-modal.visible { display: flex; }
+.play-elevator-modal .elev-panel {
+  background: linear-gradient(180deg, #1a2540 0%, #0d1428 100%);
+  border: 2px solid rgba(255, 213, 79, 0.55);
+  border-radius: 12px;
+  padding: 24px 28px;
+  min-width: 280px;
+  color: #ffd54f;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.play-elevator-modal .elev-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+}
+.play-elevator-modal .elev-badge-line {
+  font-size: 11px;
+  color: #c9a44c;
+  letter-spacing: 0.08em;
+  margin-bottom: 18px;
+}
+.play-elevator-modal .elev-floors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.play-elevator-modal .elev-floor-btn {
+  background: rgba(255, 213, 79, 0.12);
+  border: 1px solid rgba(255, 213, 79, 0.4);
+  color: #ffd54f;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.play-elevator-modal .elev-floor-btn:hover {
+  background: rgba(255, 213, 79, 0.22);
+}
+.play-elevator-modal .elev-floor-btn.locked {
+  opacity: 0.40;
+  cursor: not-allowed;
+  background: rgba(140, 140, 140, 0.10);
+  border-color: rgba(140, 140, 140, 0.35);
+  color: #8a8a8a;
+}
+.play-elevator-modal .elev-floor-btn.current {
+  outline: 2px solid rgba(255, 213, 79, 0.85);
+  outline-offset: 2px;
+}
+
+.play-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease-in-out;
+}
+.play-fade.opaque { opacity: 1; }
+
 .play-prompt {
   position: absolute;
   bottom: 32px;

@@ -105,6 +105,9 @@ function handleTestSubmit(ch, test) {
       progress = Progress.unlockChapter(progress, nextCh.id);
     }
     progress = Progress.recordTestResult(progress, ch.id + '_chapter_bonus', { passed: true, score: 100 }, ch.xpReward);
+    // Recompute badge floor — if this test was the last chapter of its
+    // floor, the player gains elevator access to the next floor.
+    progress = Progress.applyBadgeBumpsIfDue(progress);
   }
 
   const streakBefore = progress.currentStreak || 0;
