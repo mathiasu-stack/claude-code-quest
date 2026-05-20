@@ -309,6 +309,10 @@ let footstepAccum = 0; // distance accumulated since last footstep SFX
 // player.rotation.y, so they must use the same convention or the lerp
 // pulls the camera to the wrong side.
 let cameraYaw = Math.PI;
+// Third-person camera distance — adjustable with the mouse wheel.
+let cameraDist = 6.5;
+const CAM_DIST_MIN = 2.5;
+const CAM_DIST_MAX = 18.0;
 let decoTickers = [];   // per-frame callbacks for animated decorations
 let skyDome = null;
 let receptionWindows = null;
@@ -326,7 +330,7 @@ let danceUntil = 0;
 let interactionTarget = null;
 let interactObjects = []; // built interactable objects with per-frame update()
 let raf = null;
-let resizeListener, keyDownListener, keyUpListener;
+let resizeListener, keyDownListener, keyUpListener, wheelListener;
 let container, promptEl, dialogueEl;
 let inputLocked = false;
 let zoneDoors = []; // each: { mesh, label, gateChapter }
@@ -1824,6 +1828,16 @@ function setupInput() {
   window.addEventListener('keydown', keyDownListener);
   window.addEventListener('keyup', keyUpListener);
 
+  // Mouse wheel → zoom camera in/out. deltaY > 0 is scroll-down → zoom out.
+  wheelListener = (e) => {
+    if (inputLocked) return;
+    cameraDist += e.deltaY * 0.005;
+    if (cameraDist < CAM_DIST_MIN) cameraDist = CAM_DIST_MIN;
+    if (cameraDist > CAM_DIST_MAX) cameraDist = CAM_DIST_MAX;
+    e.preventDefault();
+  };
+  window.addEventListener('wheel', wheelListener, { passive: false });
+
   const j = document.getElementById('play-joystick');
   const t = document.getElementById('play-joystick-thumb');
   let active = false, baseX = 0, baseY = 0;
@@ -2081,21 +2095,13 @@ function update(dt) {
     }
   }
 
-  // Camera yaw — slowly auto-follows the character's heading, with Q / E
-  // available as a manual offset (desktop). On mobile, with no Q/E, the
-  // auto-follow alone gives a smooth third-person feel.
+  // Camera yaw — Q / E rotate freely without cap. The auto-follow drift
+  // toward the character's heading only runs while the player is walking
+  // (see the moving block below); when idle, cameraYaw stays where the
+  // user left it.
   const yawRate = 1.6; // rad/sec for manual Q/E rotation
   if (keys['q']) cameraYaw -= yawRate * dt;
   if (keys['e']) cameraYaw += yawRate * dt;
-  // Drift toward player rotation each frame. Stiffness 1.2 → noticeably
-  // slower than the body's rotation lerp (dt*4 below), so the camera
-  // trails behind direction changes instead of locking to them.
-  if (player) {
-    const targetYaw = player.rotation.y;
-    let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
-    cameraYaw += dYaw * (1 - Math.exp(-dt * 1.2));
-  }
 
   // WASD input → camera-relative direction (using cameraYaw, not the
   // camera's matrix — independent of camera lerp state).
@@ -2188,6 +2194,15 @@ function update(dt) {
       const sprintNow = (keys['shift']) ? 'run' : 'walk';
       player.userData.gltfChar.setMotion(sprintNow);
     }
+
+    // Auto-follow: while walking, drift cameraYaw toward the player's
+    // heading so the camera trails behind. Stiffness 1.2 → noticeably
+    // slower than the body's rotation lerp (dt*4 above). When idle, this
+    // block doesn't run, so manual Q/E rotation is preserved.
+    const targetYaw = player.rotation.y;
+    let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    cameraYaw += dYaw * (1 - Math.exp(-dt * 1.2));
   } else {
     const p = player.userData.parts;
     const isGltf = player.userData.faceKind === 'gltf';
@@ -2207,9 +2222,9 @@ function update(dt) {
   // (above) pulls the camera to the correct side of the player.
   // Camera position = player.pos − camFwd * camDist
   //   camFwd = (sin(yaw), 0, cos(yaw))
-  const camDist = 6.5, camH = 4.2;
-  const targetCamX = player.position.x - Math.sin(cameraYaw) * camDist;
-  const targetCamZ = player.position.z - Math.cos(cameraYaw) * camDist;
+  const camH = 4.2;
+  const targetCamX = player.position.x - Math.sin(cameraYaw) * cameraDist;
+  const targetCamZ = player.position.z - Math.cos(cameraYaw) * cameraDist;
   const camLerp = 1 - Math.exp(-dt * 6);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
@@ -2618,6 +2633,7 @@ export function stop() {
   if (resizeListener) window.removeEventListener('resize', resizeListener);
   if (keyDownListener) window.removeEventListener('keydown', keyDownListener);
   if (keyUpListener) window.removeEventListener('keyup', keyUpListener);
+  if (wheelListener) window.removeEventListener('wheel', wheelListener);
   if (renderer) {
     if (renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     renderer.dispose();
