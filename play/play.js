@@ -20,7 +20,7 @@ import { getLookForNpc } from './characters/npcLooks.js';
 import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
-import { getAssetLoader, gltfOptInEnabled } from './characters/assetLoader.js';
+import { getAssetLoader } from './characters/assetLoader.js';
 import { makeGltfCharacter } from './characters/gltfCharacter.js';
 import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
@@ -505,14 +505,11 @@ let gltfAssetLoader = null;
 
 function makeCharacter(look) {
   // Try GLTF first when:
-  //   1. localStorage.ccq_use_gltf_characters is '1' (gltfOptInEnabled),
-  //   2. the asset loader is ready and has resolved assets,
-  //   3. either look._gltfAsset is explicitly set or look._id maps to
+  //   1. the asset loader is ready and has resolved assets, AND
+  //   2. either look._gltfAsset is explicitly set or look._id maps to
   //      an available asset via npcCasting.resolveAssetForCharacter.
-  // If any of those fail, fall through to the procedural path
-  // unchanged. This preserves backwards compat for everyone who
-  // hasn't dropped GLBs into play/assets/characters/.
-  if (gltfAssetLoader && gltfOptInEnabled()) {
+  // If neither, fall through to the procedural builder.
+  if (gltfAssetLoader) {
     let assetId = look._gltfAsset;
     if (!assetId && look._id) {
       assetId = resolveAssetForCharacter(look._id, gltfAssetLoader);
@@ -2829,11 +2826,10 @@ function loop() {
 //     boots with procedural characters.
 //   • Per-asset 404s are logged and that character falls back.
 async function _preloadGltfAssets() {
-  if (!gltfOptInEnabled()) return;
   const loader = getAssetLoader();
   await loader.loadManifest();
   if (!loader.hasAnyAssets) {
-    console.info('[play] GLTF flag on but no assets available in manifest; running procedural.');
+    console.info('[play] no GLTF assets available in manifest; running procedural.');
     return;
   }
   // Show progress overlay while loading.

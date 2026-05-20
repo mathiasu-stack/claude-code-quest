@@ -213,10 +213,3 @@ export function getAssetLoader() {
   return _instance;
 }
 
-// Read the localStorage opt-in flag. Set via:
-//   localStorage.setItem('ccq_use_gltf_characters', '1')
-export function gltfOptInEnabled() {
-  try {
-    return localStorage.getItem('ccq_use_gltf_characters') === '1';
-  } catch { return false; }
-}
