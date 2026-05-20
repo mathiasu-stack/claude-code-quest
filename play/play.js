@@ -2108,6 +2108,10 @@ function spawnNPC(npcDef) {
   mesh.rotation.y = npcDef.face;
   mesh.userData.npc = npcDef;
   mesh.userData.floor = npcFloor;
+  // Hide NPCs that don't belong to the player's current floor — they
+  // were previously visible on top of the (correctly hidden) upper-floor
+  // floor plates, looking like floating people on no floor.
+  mesh.visible = (npcFloor === currentFloor);
   scene.add(mesh);
 
   // Consistent base scale for every NPC tag (was inconsistent before —
@@ -2882,6 +2886,10 @@ export async function start(host) {
   liveAgents = new LiveAgents({
     scene, npcMeshes, makeCharacter, isMobile: isMobile(),
   });
+  // Re-apply floor visibility now that NPCs (incl. liveAgents extras)
+  // have been added to the scene — buildWorld's initial pass ran before
+  // these meshes existed.
+  applyFloorVisibility();
   // Name-tag fade system. We pass `walls=[]` so occlusion is disabled
   // (wall meshes aren't tagged for raycast — see notes file). Distance
   // fade + closest-NPC emphasis still apply.

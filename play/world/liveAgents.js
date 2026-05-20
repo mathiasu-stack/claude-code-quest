@@ -107,6 +107,9 @@ export class LiveAgents {
     // Spawn in Library so they don't crowd Reception.
     mesh.position.set(-7 + (seed % 3) * 2, 0, 18 + (seed % 2) * 6);
     mesh.rotation.y = Math.random() * Math.PI * 2;
+    // Ambient library agents belong to floor 1 — hide them when the
+    // player rides up to upper floors.
+    mesh.userData.floor = 1;
     this.scene.add(mesh);
     return {
       mesh,
