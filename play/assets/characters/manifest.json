@@ -63,8 +63,8 @@
     },
     {
       "id": "business_female_01",
-      "file": "Character_Business_Female_01.glb",
-      "available": false,
+      "file": "linda.glb",
+      "available": true,
       "tags": ["female", "business", "professional"],
       "scale": 1.0,
       "yOffset": 0.0
@@ -120,8 +120,8 @@
   ],
   "animations": {
     "_doc": "Optional separate animation pack. If provided as a single GLB containing only animation clips, the loader retargets them to each character's skeleton.",
-    "file": "Animations.glb",
-    "available": false,
+    "file": "Idle.glb",
+    "available": true,
     "clips": {
       "idle":    "Idle",
       "walk":    "Walk",
