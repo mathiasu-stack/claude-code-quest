@@ -178,7 +178,13 @@ export class AssetLoader {
       });
       const clipMap = animMeta.clips || {};
       for (const [semantic, clipName] of Object.entries(clipMap)) {
-        const found = gltf.animations.find(a => a.name === clipName);
+        // Manifest may name the clip exactly, but Mixamo's default export
+        // names every clip "Armature|mixamo.com|Layer0" with no semantic
+        // substring. Fall back to a semantic-substring search, then to the
+        // file's only clip when there's just one.
+        const found = gltf.animations.find(a => a.name === clipName)
+                   || gltf.animations.find(a => (a.name || '').toLowerCase().includes(semantic.toLowerCase()))
+                   || (gltf.animations.length === 1 ? gltf.animations[0] : null);
         if (found) this._animClips.set(semantic, found);
       }
       return this._animClips.size > 0;

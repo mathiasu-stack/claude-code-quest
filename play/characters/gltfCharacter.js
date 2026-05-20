@@ -26,6 +26,23 @@
 import * as THREE from 'three';
 import { clone as cloneSkeletal } from 'three/addons/utils/SkeletonUtils.js';
 
+// Mixamo's FBX→GLB conversion stamps a per-export instance number onto the
+// `mixamorig` bone prefix (e.g. `mixamorig4:Hips` in one file vs
+// `mixamorig12:Hips` in another), so a clip loaded from a separate
+// animation GLB won't bind to a character's own skeleton without renaming
+// its track-name prefixes to match.
+function retargetMixamoPrefix(clip, skeleton) {
+  if (!skeleton?.bones?.length) return clip;
+  const m = (skeleton.bones[0].name || '').match(/^(mixamorig\d*):/);
+  if (!m) return clip;
+  const tgtPrefix = m[1] + ':';
+  const out = clip.clone();
+  for (const t of out.tracks) {
+    t.name = t.name.replace(/^mixamorig\d*:/, tgtPrefix);
+  }
+  return out;
+}
+
 // Character variant id → asset id. The mapping lives in npcCasting.js;
 // this module just consumes look._gltfAsset (already resolved) or the
 // look._id (we resolve via npcCasting if needed).
@@ -103,7 +120,8 @@ export function makeGltfCharacter(look, assetLoader) {
     if (!actions[sem]) {
       const shared = assetLoader.getAnimationClip(sem);
       if (shared) {
-        const a = mixer.clipAction(shared);
+        const retargeted = retargetMixamoPrefix(shared, inst.skeleton);
+        const a = mixer.clipAction(retargeted);
         a.setLoop(THREE.LoopRepeat);
         actions[sem] = a;
       }
