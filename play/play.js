@@ -385,20 +385,38 @@ function addColliderAABB(minX, maxX, minZ, maxZ, floor = 1) {
 const PLAYER_RADIUS = 0.30;
 
 // Stair-climb constants — see atrium.js section 9. Steps span world
-// x∈[-10.5,-8.85], z∈[-2.7,-0.54], rising linearly from y=0 to y=4.21.
-// The top platform is a flat extension at constant y=4.21 reaching
-// further north to z≈+0.85.
+// x∈[-10.5,-8.85], z∈[-2.7,-0.54], rising linearly from y=0 to y=4.5
+// (the mezzanine floor height). The top platform is a flat extension
+// at constant y=4.5 reaching further north to z≈+0.85.
 const STAIR_X_MIN = -10.5,  STAIR_X_MAX = -8.85;
 const STAIR_Z_BOTTOM = -2.7, STAIR_Z_TOP = -0.54, STAIR_PLATFORM_Z = 0.85;
-const STAIR_TOP_Y = 4.21;
+// Walkable mezzanine — L-shape hugging the west + north walls of the
+// atrium at y = MEZZ_FLOOR_Y, matching atrium.js's mezzPlate geometry.
+// The stair top dumps the player onto the west strip.
+const MEZZ_FLOOR_Y = 4.5;
+const MEZZ_OPEN_X = -8;  // inner east edge of the west strip
+const MEZZ_OPEN_Z = -8;  // inner south edge of the north strip
+function isOnMezzanine(x, z) {
+  if (zoneIndexAt(z) !== 0) return false;       // atrium only
+  if (x < -10.5 || x > 10.5) return false;       // inside walls
+  if (z < -10.5 || z > 10.5) return false;
+  // West strip: x ≤ MEZZ_OPEN_X
+  if (x <= MEZZ_OPEN_X) return true;
+  // North strip: z ≤ MEZZ_OPEN_Z (and east of the west strip handled above)
+  if (z <= MEZZ_OPEN_Z) return true;
+  return false;
+}
 function stairGroundY(x, z) {
-  if (x < STAIR_X_MIN || x > STAIR_X_MAX) return 0;
-  if (zoneIndexAt(z) !== 0) return 0;
-  if (z >= STAIR_Z_BOTTOM && z <= STAIR_Z_TOP) {
-    const t = (z - STAIR_Z_BOTTOM) / (STAIR_Z_TOP - STAIR_Z_BOTTOM);
-    return t * STAIR_TOP_Y;
+  // Stair ramp + top platform
+  if (x >= STAIR_X_MIN && x <= STAIR_X_MAX && zoneIndexAt(z) === 0) {
+    if (z >= STAIR_Z_BOTTOM && z <= STAIR_Z_TOP) {
+      const t = (z - STAIR_Z_BOTTOM) / (STAIR_Z_TOP - STAIR_Z_BOTTOM);
+      return t * MEZZ_FLOOR_Y;
+    }
+    if (z > STAIR_Z_TOP && z <= STAIR_PLATFORM_Z) return MEZZ_FLOOR_Y;
   }
-  if (z > STAIR_Z_TOP && z <= STAIR_PLATFORM_Z) return STAIR_TOP_Y;
+  // Mezzanine walkway — continues from the stair top around the L.
+  if (isOnMezzanine(x, z)) return MEZZ_FLOOR_Y;
   return 0;
 }
 

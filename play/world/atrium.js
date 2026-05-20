@@ -203,6 +203,38 @@ export function buildAtrium(scene, opts = {}) {
   railing(8, -7, 10.6, 0);
   railing(8,  7, 10.6, 0);
 
+  // ── 5b. Walkable mezzanine — L-shape hugging west + north walls ────
+  // The top of the staircase deposits the player at (x≈-9, z=0.5, y≈4.5).
+  // Without a floor up here the player just stands on the tiny top step
+  // and can fall off in every direction. Two plates form an L from the
+  // top of the stairs around the west wall and across the north wall.
+  // The east + south sides stay open so the atrium reads as a real
+  // three-storey lobby instead of an enclosed second floor.
+  const MEZZ_INSET = 3;                // walkway depth from the outer wall
+  const MEZZ_OPEN_X = -11 + MEZZ_INSET;   // -8: inner edge of west strip
+  const MEZZ_OPEN_Z = -11 + MEZZ_INSET;   // -8: inner edge of north strip
+  const MEZZ_PLATE_Y = MEZZ_HEIGHT;       // matches railing base
+  const mezzFloorMat = brushedSilver();
+  function mezzPlate(w, d, x, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), mezzFloorMat);
+    m.position.set(x, MEZZ_PLATE_Y - 0.04, z);
+    m.receiveShadow = true;
+    scene.add(m);
+    out.objects.push(m);
+  }
+  // West strip: x ∈ [-11, -8], z ∈ [-11, +11]
+  mezzPlate(MEZZ_INSET, ROOM_D, (-11 + MEZZ_OPEN_X) / 2, 0);
+  // North strip: x ∈ [-8, +11], z ∈ [-11, -8] (does not overlap W strip).
+  mezzPlate(11 - MEZZ_OPEN_X, MEZZ_INSET, (MEZZ_OPEN_X + 11) / 2, (-11 + MEZZ_OPEN_Z) / 2);
+
+  // Inner railings — protect the two open edges of the L from the atrium
+  // opening below. The corner at (MEZZ_OPEN_X, MEZZ_OPEN_Z) is where the
+  // two segments meet.
+  // West-strip inner edge: along x=MEZZ_OPEN_X, from z=MEZZ_OPEN_Z to z=+11.
+  railing(11 - MEZZ_OPEN_Z, MEZZ_OPEN_X, (MEZZ_OPEN_Z + 11) / 2, Math.PI / 2);
+  // North-strip inner edge: along z=MEZZ_OPEN_Z, from x=MEZZ_OPEN_X to x=+11.
+  railing(11 - MEZZ_OPEN_X, (MEZZ_OPEN_X + 11) / 2, MEZZ_OPEN_Z, 0);
+
   // ── 6. Brushed silver KEDASH logo wall behind reception desk ───────
   // Bug C (latest pass): previous tuning had logoBacking = 0x1a1a1a
   // (near-black) BoxGeometry(8, 1.6, 0.06) AND a wordmark canvas filled
