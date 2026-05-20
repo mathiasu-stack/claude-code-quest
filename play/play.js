@@ -352,18 +352,36 @@ function isZone2Open() {
   return isTestDone('ch01-test');
 }
 
+// ─── Static AABB colliders (chest-height+ furniture) ────────────────────────
+// Populated once after world build via addColliderAABB. clampMove pushes the
+// player out if a move would land them inside any of these boxes.
+const colliders = [];
+function addColliderAABB(minX, maxX, minZ, maxZ) {
+  colliders.push({ minX, maxX, minZ, maxZ });
+}
+const PLAYER_RADIUS = 0.30;
+
+// Stair-climb constants — see atrium.js section 9. Steps span world
+// x∈[-10.5,-8.85], z∈[-2.7,-0.54], rising linearly from y=0 to y=4.21.
+// The top platform is a flat extension at constant y=4.21 reaching
+// further north to z≈+0.85.
+const STAIR_X_MIN = -10.5,  STAIR_X_MAX = -8.85;
+const STAIR_Z_BOTTOM = -2.7, STAIR_Z_TOP = -0.54, STAIR_PLATFORM_Z = 0.85;
+const STAIR_TOP_Y = 4.21;
+function stairGroundY(x, z) {
+  if (x < STAIR_X_MIN || x > STAIR_X_MAX) return 0;
+  if (zoneIndexAt(z) !== 0) return 0;
+  if (z >= STAIR_Z_BOTTOM && z <= STAIR_Z_TOP) {
+    const t = (z - STAIR_Z_BOTTOM) / (STAIR_Z_TOP - STAIR_Z_BOTTOM);
+    return t * STAIR_TOP_Y;
+  }
+  if (z > STAIR_Z_TOP && z <= STAIR_PLATFORM_Z) return STAIR_TOP_Y;
+  return 0;
+}
+
 function clampMove(oldX, oldZ, newX, newZ) {
   // X always within zone width
   newX = Math.max(-10.5, Math.min(10.5, newX));
-
-  // Bug B (atrium staircase): steps span world x≈-10.53→-9.13,
-  // z≈-2.7→-0.54 (built in play/world/atrium.js section 9). Player
-  // body half-width is ~0.28 (torso BoxGeometry 0.55 wide), so to keep
-  // the body fully clear of the step's east edge (-9.13) the center
-  // must be at x ≥ -8.85. Atrium-only (zone 0).
-  if (newZ >= -3.4 && newZ <= 0.7 && newX < -8.85 && zoneIndexAt(newZ) === 0) {
-    newX = -8.85;
-  }
 
   // First, find what zone we're trying to be in
   // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
@@ -408,6 +426,39 @@ function clampMove(oldX, oldZ, newX, newZ) {
     while (lastOpen >= 0 && !isZoneIdxOpen(lastOpen)) lastOpen--;
     if (lastOpen >= 0) newZ = ZONE_BOUNDS[lastOpen].endZ - 0.61;
   }
+
+  // Static furniture AABBs — push out along the shortest axis.
+  const R = PLAYER_RADIUS;
+  for (const c of colliders) {
+    if (newX > c.minX - R && newX < c.maxX + R &&
+        newZ > c.minZ - R && newZ < c.maxZ + R) {
+      const dxLeft  = (newX) - (c.minX - R);
+      const dxRight = (c.maxX + R) - (newX);
+      const dzNear  = (newZ) - (c.minZ - R);
+      const dzFar   = (c.maxZ + R) - (newZ);
+      const minPen = Math.min(dxLeft, dxRight, dzNear, dzFar);
+      if      (minPen === dxLeft)  newX = c.minX - R - 0.001;
+      else if (minPen === dxRight) newX = c.maxX + R + 0.001;
+      else if (minPen === dzNear)  newZ = c.minZ - R - 0.001;
+      else                          newZ = c.maxZ + R + 0.001;
+    }
+  }
+
+  // NPC repulsion — treat each as a small cylinder so the player can't
+  // walk through them. Skip the player's own mesh.
+  const NPC_R = 0.55;
+  for (const npc of npcMeshes) {
+    if (!npc || npc === player) continue;
+    const dx = newX - npc.position.x;
+    const dz = newZ - npc.position.z;
+    const distSq = dx * dx + dz * dz;
+    if (distSq < NPC_R * NPC_R && distSq > 1e-6) {
+      const d = Math.sqrt(distSq);
+      newX = npc.position.x + (dx / d) * NPC_R;
+      newZ = npc.position.z + (dz / d) * NPC_R;
+    }
+  }
+
   return { x: newX, z: newZ };
 }
 
@@ -1345,6 +1396,52 @@ function buildWorld() {
     const elev = buildElevator(scene, { mobile: isMobile() });
     if (elev?.tick) decoTickers.push((dt, now) => elev.tick(dt, now));
   } catch (e) { console.warn('elevator failed', e); }
+
+  registerStaticColliders();
+}
+
+// Register AABBs for the chest-height+ static furniture so the player
+// can't walk through it. Positions mirror the placements just above
+// (reception desks, IT/staff desks, couches, filing cabinets,
+// bookshelves) plus the atrium's replacement reception desk added by
+// buildAtrium. Padding of ~0.05m on each side keeps the player visually
+// off the surface; the global PLAYER_RADIUS handles the player's
+// half-width.
+function registerStaticColliders() {
+  colliders.length = 0;
+
+  // Zone 1 — reception/onboarding.
+  // Original brown reception desk (play.js:1173): 3.0 × 1.2 centered at (0,-8).
+  addColliderAABB(-1.55, 1.55, -8.65, -7.35);
+  // Atrium replacement reception desk (atrium.js:265): 3.5 × 1.05 at (0,-7.6).
+  addColliderAABB(-1.80, 1.80, -8.18, -7.02);
+  // Marcus IT bench at (-7.5,-3), rotated π/2 — buildDesk 1.6×0.8 → footprint 0.8×1.6 after rotation.
+  addColliderAABB(-7.95, -7.05, -3.85, -2.15);
+  // Aisha desk at (7.5,-3), rotated -π/2 — same shape mirrored.
+  addColliderAABB(7.05, 7.95, -3.85, -2.15);
+  // Kenji desk at (-7.5,3), rotated π/2 — 2.2×0.8 → 0.8×2.2 after rotation.
+  addColliderAABB(-7.95, -7.05, 1.85, 4.15);
+  // Diana filing cabinets at x=7.6, z={2,3,4} — small chest-high boxes.
+  addColliderAABB(7.25, 7.95, 1.65, 4.35);
+  // Couches at (-8.5,5) and (8.5,5), rotated to face inward.
+  // buildCouch default footprint ≈ 1.8×0.8; rotation puts long axis along Z.
+  addColliderAABB(-9.10, -7.90, 4.30, 5.70);
+  addColliderAABB(7.90, 9.10, 4.30, 5.70);
+
+  // Zone 2 — library bookshelves and reading tables.
+  // Bookshelves at (-10.5, {14,18,26}) rotated π/2 — back is 2.2 wide × 0.4 deep,
+  // rotated so 2.2 axis aligns with Z. Sit flush against the wall.
+  for (const z of [14, 18, 26]) {
+    addColliderAABB(-10.50, -10.10, z - 1.15, z + 1.15);
+    addColliderAABB( 10.10,  10.50, z - 1.15, z + 1.15);
+  }
+  // Reading tables at z=16, z=22 — modest height boxes.
+  for (const z of [16, 22]) {
+    addColliderAABB(-1.15, 1.15, z - 0.55, z + 0.55);
+  }
+  // Grandfather clock at (-9.5,31), library cart at (8,14).
+  addColliderAABB(-9.85, -9.15, 30.70, 31.30);
+  addColliderAABB( 7.55,  8.45, 13.65, 14.35);
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
@@ -2082,17 +2179,22 @@ function update(dt) {
   }
   jumpRequested = false;
 
-  // Gravity + Y position
+  // Gravity + Y position. `groundY` is the floor height for the current
+  // XZ — normally 0, but rises to follow the atrium staircase.
   const wasAirborne = !player.userData.grounded;
-  if (!player.userData.grounded || player.position.y > 0) {
+  const groundY = stairGroundY(player.position.x, player.position.z);
+  if (!player.userData.grounded || player.position.y > groundY) {
     player.userData.velocityY -= 18 * dt;
     player.position.y += player.userData.velocityY * dt;
-    if (player.position.y <= 0) {
-      player.position.y = 0;
+    if (player.position.y <= groundY) {
+      player.position.y = groundY;
       player.userData.velocityY = 0;
       player.userData.grounded = true;
       if (wasAirborne) playLandThud();
     }
+  } else {
+    // Grounded — track stair height as the player walks across the ramp.
+    player.position.y = groundY;
   }
 
   // Camera yaw — Q / E rotate freely without cap. The auto-follow drift
