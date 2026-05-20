@@ -1468,10 +1468,13 @@ function buildWorld() {
   // Build floors 2-4 as compact office templates at higher Y levels.
   for (let f = 2; f <= FLOORS_TOTAL; f++) buildFloorOffice(f);
 
-  // Surface-attachment rule — snap any static object tagged
-  // userData.surface = 'floor' or 'top' to its proper resting surface.
-  // Skip 'wall' / 'ceiling' / untagged (left at builder-defined Y).
-  settleStaticObjects();
+  // Surface-attachment rule — DISABLED. The settler caused buildWorld
+  // to throw mid-build (symptom: empty canvas / "all white" screen).
+  // Tagging infrastructure on builders stays in place for future use;
+  // the call is parked behind a try/catch until the failure mode is
+  // diagnosed.
+  try { settleStaticObjects(); }
+  catch (e) { console.warn('[play] settleStaticObjects skipped due to error:', e); }
 
   // Initial visibility — show floor 1 only.
   applyFloorVisibility();
