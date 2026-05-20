@@ -30,15 +30,18 @@ import { clone as cloneSkeletal } from 'three/addons/utils/SkeletonUtils.js';
 // `mixamorig` bone prefix (e.g. `mixamorig4:Hips` in one file vs
 // `mixamorig12:Hips` in another), so a clip loaded from a separate
 // animation GLB won't bind to a character's own skeleton without renaming
-// its track-name prefixes to match.
+// its track-name prefixes to match. Three.js's GLTFLoader also strips ":"
+// from animation track names via PropertyBinding.sanitizeNodeName, so the
+// tracks arrive as e.g. "mixamorig4Hips.position" — we only rewrite the
+// numeric instance, leaving whatever separator (or none) follows.
 function retargetMixamoPrefix(clip, skeleton) {
   if (!skeleton?.bones?.length) return clip;
-  const m = (skeleton.bones[0].name || '').match(/^(mixamorig\d*):/);
+  const m = (skeleton.bones[0].name || '').match(/^mixamorig(\d*)/);
   if (!m) return clip;
-  const tgtPrefix = m[1] + ':';
+  const tgtN = m[1];
   const out = clip.clone();
   for (const t of out.tracks) {
-    t.name = t.name.replace(/^mixamorig\d*:/, tgtPrefix);
+    t.name = t.name.replace(/^mixamorig\d*/, 'mixamorig' + tgtN);
   }
   return out;
 }
