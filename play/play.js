@@ -161,12 +161,20 @@ const FLOOR_HEIGHT_Y = 4.5;          // matches elevator.js FLOOR_HEIGHT
 function floorBaseY(n) {
   return (Math.max(1, Math.min(FLOORS_TOTAL, n)) - 1) * FLOOR_HEIGHT_Y;
 }
-function floorForChapterNum(chapterNum) {
-  return Math.min(FLOORS_TOTAL, Math.ceil(chapterNum / CHAPTERS_PER_FLOOR));
+// Floor is determined by the chapter's POSITION in window.CURRICULUM,
+// not by parsing the numeric suffix from its id. After the curriculum
+// reshuffle (ids stay stable but display order changes) this is the
+// only way to keep floor assignments in sync with the dashboard.
+function indexForChapterId(chId) {
+  return (window.CURRICULUM || []).findIndex(c => c.id === chId);
+}
+function floorForChapterIdx(idx) {
+  if (idx < 0) return 1;
+  return Math.min(FLOORS_TOTAL, Math.ceil((idx + 1) / CHAPTERS_PER_FLOOR));
 }
 function floorForChapterId(chId) {
-  const m = (chId || '').match(/^ch(\d+)$/);
-  return m ? floorForChapterNum(parseInt(m[1], 10)) : 1;
+  const idx = indexForChapterId(chId);
+  return idx < 0 ? 1 : floorForChapterIdx(idx);
 }
 let currentFloor = 1;
 
@@ -179,7 +187,7 @@ const ZONE_BOUNDS = Array.from({ length: ZONE_COUNT }, (_, i) => ({
   startZ: i * 22 - 11,
   endZ: (i + 1) * 22 - 11,
   centerZ: i * 22,
-  chapterId: `ch${String(i + 1).padStart(2, '0')}`,
+  chapterId: (window.CURRICULUM || [])[i]?.id || `ch${String(i + 1).padStart(2, '0')}`,
 }));
 
 function zoneIndexAt(z) {
@@ -188,29 +196,39 @@ function zoneIndexAt(z) {
   }
   return -1;
 }
+// Zone N is "open" when the test of the chapter at CURRICULUM[N-1]
+// is passed. Uses the CURRICULUM array position so the unlock chain
+// matches the dashboard order after reshuffles.
 function isZoneIdxOpen(idx) {
   if (idx <= 0) return true;
-  return isTestDone(`ch${String(idx).padStart(2, '0')}-test`);
+  const ch = (window.CURRICULUM || [])[idx - 1];
+  if (!ch) return false;
+  const testId = ch.practicalTest?.id || `${ch.id}-test`;
+  return isTestDone(testId);
 }
 
-// Themes for zones 3-16 (zones 1-2 are hand-built). Colors escalate.
-const ZONE_THEMES = [
-  null, null,
-  { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', title: 'CLAUDE.md Atrium', metal: 0.05 },
-  { floor: 0x90caf9, wall: 0xe3f2fd, accent: '#1565c0', title: 'Memory Vault', metal: 0.1 },
-  { floor: 0xa5d6a7, wall: 0xe8f5e9, accent: '#2e7d32', title: 'Communications Hub', metal: 0.1 },
-  { floor: 0xffcc80, wall: 0xfff3e0, accent: '#ef6c00', title: 'File Workshop', metal: 0.15 },
-  { floor: 0xce93d8, wall: 0xf3e5f5, accent: '#6a1b9a', title: 'Token Lounge', metal: 0.2 },
-  { floor: 0xff8a65, wall: 0xffccbc, accent: '#bf360c', title: 'Skill Forge', metal: 0.25 },
-  { floor: 0x80cbc4, wall: 0xe0f2f1, accent: '#00695c', title: 'Methodology Lab', metal: 0.3 },
-  { floor: 0xffd54f, wall: 0xfff9c4, accent: '#f57c00', title: 'Refinement Loop', metal: 0.35 },
-  { floor: 0x9fa8da, wall: 0xeceff1, accent: '#283593', title: 'Slash Command Center', metal: 0.4 },
-  { floor: 0xb39ddb, wall: 0xede7f6, accent: '#311b92', title: 'Plan War Room', metal: 0.45 },
-  { floor: 0x4dd0e1, wall: 0xe0f7fa, accent: '#006064', title: 'Integration Bay', metal: 0.5 },
-  { floor: 0xff7043, wall: 0xfbe9e7, accent: '#d84315', title: 'Mission Control', metal: 0.55 },
-  { floor: 0xb2dfdb, wall: 0xfff8e1, accent: '#00897b', title: 'Architect Studio', metal: 0.6 },
-  { floor: 0xffd700, wall: 0xfffde7, accent: '#ff6f00', title: 'NAS Server Room — Capstone', metal: 0.75 },
-];
+// Themes indexed by CURRICULUM array position (new chapter order).
+// Position 0 (Onboarding) is hand-built so its theme is null. Each
+// chapter's themed name stays attached to its CONTENT, not to a fixed
+// zone — e.g. the "Memory Vault" theme follows ch04 wherever ch04
+// lands in the order.
+const ZONE_THEMES_BY_ID = {
+  ch03: { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', title: 'CLAUDE.md Atrium',           metal: 0.05 },
+  ch04: { floor: 0x90caf9, wall: 0xe3f2fd, accent: '#1565c0', title: 'Memory Vault',                metal: 0.10 },
+  ch05: { floor: 0xa5d6a7, wall: 0xe8f5e9, accent: '#2e7d32', title: 'Communications Hub',          metal: 0.10 },
+  ch06: { floor: 0xffcc80, wall: 0xfff3e0, accent: '#ef6c00', title: 'File Workshop',               metal: 0.15 },
+  ch07: { floor: 0xce93d8, wall: 0xf3e5f5, accent: '#6a1b9a', title: 'Token Lounge',                metal: 0.20 },
+  ch08: { floor: 0xff8a65, wall: 0xffccbc, accent: '#bf360c', title: 'Skill Forge',                 metal: 0.25 },
+  ch09: { floor: 0x80cbc4, wall: 0xe0f2f1, accent: '#00695c', title: 'Methodology Lab',             metal: 0.30 },
+  ch10: { floor: 0xffd54f, wall: 0xfff9c4, accent: '#f57c00', title: 'Refinement Loop',             metal: 0.35 },
+  ch11: { floor: 0x9fa8da, wall: 0xeceff1, accent: '#283593', title: 'Slash Command Center',       metal: 0.40 },
+  ch12: { floor: 0xb39ddb, wall: 0xede7f6, accent: '#311b92', title: 'Plan War Room',               metal: 0.45 },
+  ch13: { floor: 0x4dd0e1, wall: 0xe0f7fa, accent: '#006064', title: 'Integration Bay',             metal: 0.50 },
+  ch14: { floor: 0xff7043, wall: 0xfbe9e7, accent: '#d84315', title: 'Mission Control',             metal: 0.55 },
+  ch15: { floor: 0xb2dfdb, wall: 0xfff8e1, accent: '#00897b', title: 'Architect Studio',            metal: 0.60 },
+  ch16: { floor: 0xffd700, wall: 0xfffde7, accent: '#ff6f00', title: 'NAS Server Room — Capstone',  metal: 0.75 },
+};
+const ZONE_THEMES = (window.CURRICULUM || []).map(c => ZONE_THEMES_BY_ID[c.id] || null);
 
 // ─── NPC generator (chapters 3-16) ───────────────────────────────────────────
 const NAME_FIRST = ['Aiko','Ben','Carmen','Dario','Elena','Felix','Greta','Hassan','Imani','Joel','Kira','Lars','Maya','Nikhil','Omar','Priya','Quinn','Rita','Sven','Tara','Uma','Vince','Wren','Xander','Yara','Zane','Anna','Bilal','Camille','Diego','Esme','Farid','Gabi','Hugo','Iris','Jin','Karim'];
@@ -1378,7 +1396,16 @@ function buildWorld() {
   scene.add(buildPlant(9.8, 30));
 
   // Door from zone 2 → zone 3
-  registerDoor(scene, 33, 'ch02', 'CLAUDE.md Atrium');
+  // Library→next door: gates on the test of the chapter at CURRICULUM[1]
+  // (new ch02) and is labelled by the next zone's theme title — both
+  // follow whatever ordering the curriculum currently has.
+  {
+    const gateChapter = (window.CURRICULUM || [])[1];
+    const nextChapter = (window.CURRICULUM || [])[2];
+    const gateId    = gateChapter?.id || 'ch02';
+    const nextTitle = ZONE_THEMES[2]?.title || nextChapter?.title || 'Next Zone';
+    registerDoor(scene, 33, gateId, nextTitle);
+  }
 
   // ─── Floor 1 zones 3 - 4 (ch03 + ch04, generated from ZONE_THEMES) ───────
   // Chapters 5+ live on floors 2-4 in compact office rooms (built below).
@@ -1672,12 +1699,11 @@ function buildFloorOffice(floorIdx) {
 // Lesson NPCs cluster around the desk; the test NPC stands behind it.
 function floorOfficePositionForNPC(npcDef) {
   const chId = npcDef.chapterId;
-  const f = floorForChapterId(chId);
+  const idx = indexForChapterId(chId);
+  if (idx < 0) return null;
+  const f = floorForChapterIdx(idx);
   if (f <= 1) return null; // floor 1 keeps original positions
-  const m = (chId || '').match(/^ch(\d+)$/);
-  if (!m) return null;
-  const chapterNum = parseInt(m[1], 10);
-  const slotIdx = (chapterNum - 1) % CHAPTERS_PER_FLOOR; // 0..3 within floor
+  const slotIdx = idx % CHAPTERS_PER_FLOOR; // 0..3 within floor
   const slots = [
     { cx: -5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
     { cx:  5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
@@ -2222,12 +2248,22 @@ function spawnNPC(npcDef) {
   npcMeshes.push(mesh);
 }
 
+// Chapters whose NPCs are hand-coded above in the NPCS roster.
+// Procedural generation skips these (by chapter ID, not position) so
+// they don't get duplicate NPCs after a curriculum reshuffle.
+const HAND_BUILT_CHAPTER_IDS = new Set(['ch01', 'ch02']);
+
 function buildNPCs() {
   npcMeshes = [];
-  // Hand-written NPCs for chapters 1 + 2
+  // Hand-written NPCs for ch01 (Linda's crew) + ch02 (Elena's crew).
   NPCS.forEach(spawnNPC);
-  // Auto-generated NPCs for chapters 3-16
-  for (let i = 2; i < ZONE_COUNT; i++) {
+  // Procedural NPCs for every other chapter, placed at its CURRICULUM
+  // array position. floorForChapterId routes each NPC to its correct
+  // floor (1 if it's a floor-1 chapter after reshuffle, 2-4 otherwise).
+  const curriculum = window.CURRICULUM || [];
+  for (let i = 0; i < curriculum.length; i++) {
+    const ch = curriculum[i];
+    if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
     generateChapterNPCs(i).forEach(spawnNPC);
   }
 }
