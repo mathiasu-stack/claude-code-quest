@@ -2565,8 +2565,8 @@ function update(dt) {
   // (see the moving block below); when idle, cameraYaw stays where the
   // user left it.
   const yawRate = 1.6; // rad/sec for manual Q/E rotation
-  if (keys['q']) cameraYaw -= yawRate * dt;
-  if (keys['e']) cameraYaw += yawRate * dt;
+  if (keys['q']) cameraYaw += yawRate * dt;
+  if (keys['e']) cameraYaw -= yawRate * dt;
 
   // WASD input → camera-relative direction (using cameraYaw, not the
   // camera's matrix — independent of camera lerp state).
