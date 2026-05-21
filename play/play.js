@@ -2977,6 +2977,42 @@ function loop() {
   else renderer.render(scene, camera);
 }
 
+// ─── Cross-view hints ────────────────────────────────────────────────────────
+// Each NPC owns a `nextHint` line telling the player where to go next.
+// The lesson + test UIs (loaded as classic scripts, not this module) read
+// hints from here so the completion screen can point at the next NPC.
+// Lazy lookup: NPCS roster first, then procedurally-generated chapter NPCs.
+window.PlayHints = {
+  getNextHintForLesson(lessonId) {
+    for (const n of NPCS) {
+      if (n.lessonId === lessonId) return n.nextHint;
+    }
+    const curriculum = window.CURRICULUM || [];
+    for (let i = 0; i < curriculum.length; i++) {
+      const ch = curriculum[i];
+      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+      if (!ch.lessons?.some(l => l.id === lessonId)) continue;
+      const npc = generateChapterNPCs(i).find(n => n.lessonId === lessonId);
+      if (npc) return npc.nextHint;
+    }
+    return null;
+  },
+  getNextHintForTest(testId) {
+    for (const n of NPCS) {
+      if (n.testId === testId) return n.nextHint;
+    }
+    const curriculum = window.CURRICULUM || [];
+    for (let i = 0; i < curriculum.length; i++) {
+      const ch = curriculum[i];
+      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+      if (ch.practicalTest?.id !== testId) continue;
+      const npc = generateChapterNPCs(i).find(n => n.testId === testId);
+      if (npc) return npc.nextHint;
+    }
+    return null;
+  },
+};
+
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 // Preload GLTF assets if the opt-in flag is set. Resolves once the
 // resolved-cache is warm (or immediately, if the flag is off).

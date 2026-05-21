@@ -147,12 +147,15 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   const passText = result.passed ? '✓ Assessment Passed!' : '✗ Not Yet Passing';
   const xpText = result.passed && !wasAlreadyPassed ? `+${test.xpReward} PP awarded!` : (wasAlreadyPassed ? 'Already passed — no additional PP' : 'No PP awarded this attempt');
 
+  const nextHint = result.passed ? window.PlayHints?.getNextHintForTest?.(test.id) : null;
+
   feedbackEl.innerHTML = `
     <div class="feedback-banner ${passClass}">
       <div class="feedback-title">${passText}</div>
       <div class="feedback-score">Score: ${result.score}% (pass threshold: ${test.passThreshold}%)</div>
       <div class="feedback-xp">${xpText}</div>
     </div>
+    ${nextHint ? `<div class="next-hint-banner">📍 <strong>Next stop:</strong> ${nextHint}</div>` : ''}
 
     <div class="score-bar-container">
       <div class="score-bar">

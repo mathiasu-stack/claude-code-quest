@@ -42,14 +42,23 @@ window.CURRICULUM = [
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Getting Claude Code Running</h2>
 <p>The recommended way to install Claude Code is via the native installer — no Node.js required. The installer bundles its own binary.</p>
+<h3>First: open a terminal</h3>
+<p>The install commands below are typed into a <strong>terminal</strong> (also called "command line" or "shell"). If you've never used one, here's how to find it:</p>
+<ul>
+  <li><strong>Windows</strong> — Press <code>Win</code>, type <code>powershell</code>, and open <strong>Windows PowerShell</strong>. <code>Command Prompt</code> (search <code>cmd</code>) also works for most commands. PowerShell is recommended — it handles modern syntax better. A black or dark blue window opens with a blinking cursor; that's where you type.</li>
+  <li><strong>macOS</strong> — Press <code>⌘</code>+<code>Space</code>, type <code>Terminal</code>, press Enter. Or open <em>Applications → Utilities → Terminal</em>.</li>
+  <li><strong>Linux</strong> — Press <code>Ctrl</code>+<code>Alt</code>+<code>T</code>, or open the <em>Terminal</em> app from your launcher.</li>
+</ul>
+<p><strong>How to use it:</strong> click into the window so the cursor is active, paste or type a command, then press <code>Enter</code> to run it. To paste in Windows PowerShell, right-click (or <code>Ctrl</code>+<code>V</code> on newer versions). On macOS/Linux, <code>⌘</code>+<code>V</code> / <code>Ctrl</code>+<code>Shift</code>+<code>V</code>.</p>
 <h3>Native install (recommended)</h3>
-<pre><code># macOS / Linux / WSL
+<p>Pick the line for your OS, paste it into the terminal, press Enter:</p>
+<pre><code># macOS / Linux / WSL — paste into Terminal
 curl -fsSL https://claude.ai/install.sh | bash
 
-# macOS via Homebrew
+# macOS via Homebrew — paste into Terminal
 brew install --cask claude-code
 
-# Windows via WinGet
+# Windows via WinGet — paste into PowerShell or Command Prompt
 winget install Anthropic.ClaudeCode</code></pre>
 <h3>Alternative: npm (advanced)</h3>
 <p>If you prefer the npm path, Node.js 18+ is required:</p>

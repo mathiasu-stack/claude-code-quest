@@ -121,12 +121,14 @@ function completeLesson(ch, lesson) {
   const btn = document.getElementById('mark-complete');
   if (btn) {
     const fromPlay = !!window.App._currentParams?.fromPlay;
+    const nextHint = window.PlayHints?.getNextHintForLesson?.(lesson.id);
     const wrapper = document.createElement('div');
     // Always include a "Return to 3D World" button. When the lesson was
     // entered via play mode, also auto-redirect after 1.4s. When entered
     // from the dashboard, the button stays so the user can choose.
     wrapper.innerHTML = `
       <div class="already-done">✓ Lesson complete!${fromPlay ? ' Heading back to the office…' : ''}</div>
+      ${nextHint ? `<div class="next-hint-banner">📍 <strong>Next stop:</strong> ${nextHint}</div>` : ''}
       <button class="btn-primary continue-cta" id="back-to-play">🎮 ${fromPlay ? 'Return to the office now' : 'Back to the 3D world'}</button>
       ${fromPlay ? '' : buildContinueCta(ch, lesson.id)}
     `;
