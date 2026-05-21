@@ -29,6 +29,9 @@ function renderTest(chapterId) {
 
       <div class="test-input-area">
         <label class="input-label" for="test-submission">Your Response</label>
+        <div class="test-paste-tip">
+          📋 <strong>Pasting from your terminal?</strong> Highlight the text, copy with <kbd>Ctrl</kbd>+<kbd>C</kbd> (<kbd>⌘</kbd>+<kbd>C</kbd> on Mac), then paste below. When the task asks for multiple parts (e.g. a prompt AND Claude's reply), use markdown section markers like <code>## Setup</code> and <code>## First session</code> so it's clear which block is which.
+        </div>
         <textarea
           id="test-submission"
           class="test-textarea"

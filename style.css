@@ -645,6 +645,26 @@ body {
 
 .test-input-area { margin-bottom: 16px; }
 .input-label { display: block; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+.test-paste-tip {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gray-700);
+  background: #f1f5f9;
+  border-left: 3px solid var(--navy);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.test-paste-tip kbd {
+  font-family: var(--font-body);
+  font-size: 12px;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  padding: 1px 6px;
+  box-shadow: 0 1px 0 var(--gray-300);
+}
+.test-paste-tip code { background: var(--white); padding: 1px 5px; border-radius: 3px; }
 .test-textarea {
   width: 100%;
   font-family: var(--font-body);
