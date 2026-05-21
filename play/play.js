@@ -1799,9 +1799,21 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
     color: passed ? 0x4caf50 : 0x5d4037,
     metalness: 0.3, roughness: 0.6,
   });
-  const door = new THREE.Mesh(new THREE.BoxGeometry(3.5, 2.6, 0.2), doorMat);
-  door.position.set(0, 1.3, atZ - 0.01);
-  targetScene.add(door);
+  // Hinge group at the door's LEFT edge so a Y-axis rotation swings the
+  // door open like a real door. The door mesh is offset +1.75 in pivot-local
+  // X so its left edge lines up with the hinge.
+  const DOOR_W = 3.5;
+  const pivot = new THREE.Group();
+  pivot.position.set(-DOOR_W / 2, 1.3, atZ - 0.01);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W, 2.6, 0.2), doorMat);
+  door.position.set(DOOR_W / 2, 0, 0);
+  pivot.add(door);
+  // -π/2 swings the door INTO the destination zone (away from the player
+  // who approaches from the south). 0 = closed.
+  const OPEN_ROT = -Math.PI / 2;
+  pivot.rotation.y = passed ? OPEN_ROT : 0;
+  targetScene.add(pivot);
+
   const label = makeLabelSprite(
     passed ? `${nextTitle} — Open` : `${nextTitle} — Locked`,
     '#fff', passed ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
@@ -1809,7 +1821,13 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
   label.scale.set(3.0, 0.7, 1);
   label.position.set(0, 3.4, atZ + 0.05);
   targetScene.add(label);
-  zoneDoors.push({ mesh: door, label, gateChapter: gateChId, nextTitle, lastOpen: passed });
+
+  zoneDoors.push({
+    mesh: door, pivot, label,
+    gateChapter: gateChId, nextTitle,
+    lastOpen: passed,
+    openRot: OPEN_ROT,
+  });
 }
 
 function buildGenericZone(idx) {
@@ -2735,10 +2753,14 @@ function update(dt) {
   camera.position.y = floorY + camH + Math.max(0, player.position.y - floorY) * 0.3;
   camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
-  // Update door colors live in case a chapter unlocks during play
+  // Animate doors live: color tint, label, AND the hinge swing toward
+  // its target rotation (0 = closed, openRot = swung open).
   for (const d of zoneDoors) {
     const open = isTestDone(`${d.gateChapter}-test`);
     d.mesh.material.color.set(open ? 0x4caf50 : 0x5d4037);
+    const targetRot = open ? d.openRot : 0;
+    // Lerp toward target — ~0.5-1s swing depending on framerate.
+    d.pivot.rotation.y += (targetRot - d.pivot.rotation.y) * 0.08;
     if (open !== d.lastOpen) {
       // Refresh the label texture
       const newSprite = makeLabelSprite(
