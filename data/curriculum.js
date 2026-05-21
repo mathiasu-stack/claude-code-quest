@@ -90,7 +90,12 @@ winget install Anthropic.ClaudeCode</code></pre>
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Starting Your First Session</h2>
-<p>Navigate to any project directory in your terminal, then run:</p>
+<p>You need to be <em>inside</em> the folder of the project you want Claude to work on. In your terminal (PowerShell / Command Prompt on Windows, Terminal on macOS/Linux), use the <code>cd</code> ("change directory") command followed by the folder path.</p>
+<pre><code># Examples — pick whichever matches where your project lives
+cd C:\\Users\\YourName\\Documents\\my-project   # Windows PowerShell
+cd ~/Documents/my-project                       # macOS / Linux
+cd /volume1/projects/my-project                 # NAS</code></pre>
+<p>Verify you're in the right place with <code>pwd</code> (macOS/Linux/PowerShell) — it prints the current directory. Then start the session:</p>
 <pre><code>claude</code></pre>
 <p>This opens an interactive session. Claude Code immediately reads your project context — files, folder structure, and any <code>CLAUDE.md</code> you've set up.</p>
 <h3>The session loop</h3>

@@ -28,12 +28,14 @@ const ROUTINES = {
     speed: 1.6,
   },
   aisha: {
+    // Aisha is the ch01-l03 instructor — she must stay in the atrium
+    // so the player can always find her at her desk. Previous routine
+    // walked her into the library (z=18) and players lost track of her.
+    // Both waypoints below sit safely inside zone 0 (z ∈ [-11, 11]).
     waypoints: [
-      { pos: [6, -3], face: -Math.PI / 2, dwell: 25 },     // her desk
-      { pos: [3, 8], face: 0, dwell: 4 },                  // doorway to library
-      { pos: [0, 18], face: Math.PI, dwell: 12 },          // inside library
-      { pos: [3, 8], face: Math.PI, dwell: 3 },            // back through door
-      { pos: [6, -3], face: -Math.PI / 2, dwell: 40 },     // back to desk
+      { pos: [6, -3], face: -Math.PI / 2, dwell: 30 },   // her desk (main spot)
+      { pos: [5, -2], face: 0,            dwell: 3 },    // tiny stretch nearby
+      { pos: [6, -3], face: -Math.PI / 2, dwell: 40 },   // back to desk
     ],
     speed: 1.4,
   },
