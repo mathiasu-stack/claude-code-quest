@@ -271,13 +271,12 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       scenario: `From: jordan.kim@kedashcorp.com\nSubject: Setting up our AI context library\n\nHi,\n\nWe keep re-explaining the same context to Claude Code in every session — who our customers are, what our brand voice is, how we make decisions. It's inefficient and inconsistent.\n\nI'd like you to set up a "Business Brain" folder structure for Kedash Corp. We're a B2B SaaS company building developer tooling. Our tone is technical but approachable. Our key clients are mid-market engineering teams. Please write out the folder structure and what each key file should contain.`,
       task: 'Design the Business Brain folder structure for Kedash Corp and describe what each key file should contain.',
       hint: 'Include at minimum: a brand/voice file, a client overview, and a team conventions file. Show the folder structure clearly.',
-      minLength: 150, passThreshold: 70, xpReward: 350,
+      minLength: 0, passThreshold: 70, xpReward: 350,
       criteria: [
         { type: 'keyword', value: ['brand', 'voice', 'tone'], description: 'Includes a brand/voice file', improvement: 'Add something like `brand/voice.md` so Claude knows your tone without re-explaining.', weight: 2 },
-        { type: 'keyword', value: ['client', 'customers', 'audience'], description: 'Includes client/audience context', improvement: 'Add a `clients/` section — Jordan flagged repeating audience context as the pain point.', weight: 2 },
+        { type: 'keyword', value: ['client', 'customer', 'audience'], description: 'Includes client/audience context', improvement: 'Add a `clients/` section — Jordan flagged repeating audience context as the pain point.', weight: 2 },
         { type: 'keyword', value: ['convention', 'team', 'decision', 'glossary'], description: 'Includes team conventions or decisions', improvement: 'Capture how the team works (`team/conventions.md`) or key decisions (`product/decisions.md`).', weight: 2 },
         { type: 'regex', value: '\\.(md|txt|json)', description: 'References actual file types', improvement: 'Use concrete file names like `voice.md` — folder names alone don\'t show structure.', weight: 1 },
-        { type: 'length', value: 150, description: 'Response is at least 150 characters', improvement: 'A real folder spec needs a sentence per file explaining what goes in it.', weight: 1 },
       ],
       exemplar: `<p>A strong answer shows the tree, then says what goes in each file:</p>
 <pre><code>.business-brain/
