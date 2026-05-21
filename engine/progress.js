@@ -168,17 +168,27 @@ function addBonusXP(progress, amount) {
 
 // Recompute the player's badgeFloor from the testResults map. Idempotent
 // — call after recording any test result. Floor N is "complete" when
-// all 4 chapters on it have their `chNN-test` passed. Each complete
-// floor grants access to the next, capped at floor 4.
+// all 4 chapters on it (the 4 chapters at the corresponding positions
+// in window.CURRICULUM) have their tests passed. Each complete floor
+// grants access to the next, capped at floor 4.
+//
+// Note: lookups are by CURRICULUM array POSITION (display order), not
+// by the chapter-ID numeric suffix. Curriculum reshuffles keep stable
+// IDs in save data but rearrange display order, and this function
+// must follow the display order so the player's "floor 2" matches the
+// dashboard's positions 5–8.
 const CHAPTERS_PER_FLOOR = 4;
 const FLOORS_TOTAL = 4;
 function applyBadgeBumpsIfDue(progress) {
+  const curriculum = (typeof window !== 'undefined' && window.CURRICULUM) || [];
+  if (!curriculum.length) return progress;
   let badge = progress.badgeFloor || 1;
   for (let floor = 1; floor <= FLOORS_TOTAL; floor++) {
     let allPassed = true;
-    for (let c = (floor - 1) * CHAPTERS_PER_FLOOR + 1; c <= floor * CHAPTERS_PER_FLOOR; c++) {
-      const testId = `ch${String(c).padStart(2, '0')}-test`;
-      if (!isTestPassed(progress, testId)) { allPassed = false; break; }
+    for (let i = (floor - 1) * CHAPTERS_PER_FLOOR; i < floor * CHAPTERS_PER_FLOOR; i++) {
+      const ch = curriculum[i];
+      const testId = ch?.practicalTest?.id || (ch ? `${ch.id}-test` : null);
+      if (!testId || !isTestPassed(progress, testId)) { allPassed = false; break; }
     }
     if (allPassed) badge = Math.max(badge, Math.min(FLOORS_TOTAL, floor + 1));
   }
@@ -186,9 +196,10 @@ function applyBadgeBumpsIfDue(progress) {
 }
 
 function floorForChapter(chapterId) {
-  const m = (chapterId || '').match(/^ch(\d+)$/);
-  if (!m) return 1;
-  return Math.min(FLOORS_TOTAL, Math.ceil(parseInt(m[1], 10) / CHAPTERS_PER_FLOOR));
+  const curriculum = (typeof window !== 'undefined' && window.CURRICULUM) || [];
+  const idx = curriculum.findIndex(c => c.id === chapterId);
+  if (idx < 0) return 1;
+  return Math.min(FLOORS_TOTAL, Math.ceil((idx + 1) / CHAPTERS_PER_FLOOR));
 }
 
 window.Progress = {

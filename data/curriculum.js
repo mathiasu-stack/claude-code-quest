@@ -113,7 +113,7 @@ winget install Anthropic.ClaudeCode</code></pre>
 <h3>Tool use indicators</h3>
 <p>When Claude Code acts on your project, it shows what it's doing: <strong>Read</strong> (viewing a file), <strong>Edit</strong> (modifying — shows a diff), <strong>Bash</strong> (running a shell command), <strong>Write</strong> (creating a new file). Some actions are auto-approved; others require you to press <kbd>Y</kbd>.</p>
 <h3>Slash commands</h3>
-<p>Commands beginning with <code>/</code> are instructions to Claude Code itself, not to the AI. <code>/clear</code> resets context, <code>/help</code> shows available commands. You'll learn these in Chapter 11.</p>
+<p>Commands beginning with <code>/</code> are instructions to Claude Code itself, not to the AI. <code>/clear</code> resets context, <code>/help</code> shows available commands. You'll learn these in Chapter 5.</p>
 <h3>Keyboard shortcuts</h3>
 <ul>
   <li><kbd>↑</kbd> / <kbd>↓</kbd> — navigate prompt history</li>
@@ -192,119 +192,304 @@ winget install Anthropic.ClaudeCode</code></pre>
 
   // ── Chapter 2 ─────────────────────────────────────────────────────────────
   {
-    id: 'ch02',
-    title: 'Business Brain',
-    subtitle: 'Week 2 — The Foundation Layer',
-    icon: '🧠',
-    xpReward: 250,
+    id: 'ch05',
+    title: 'Effective Prompting',
+    subtitle: 'Week 2 — Speaking the Right Language',
+    icon: '✍️',
+    xpReward: 220,
     lessons: [
       {
-        id: 'ch02-l01', title: 'What is a Business Brain?', xpReward: 60, videos: [],
+        id: 'ch05-l01', title: 'Why Specificity Matters', xpReward: 55, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Centralised Context Beats Smart Orchestration</h2>
-<p>One of the most common mistakes teams make with AI coding assistants is trying to make the AI smarter through complex prompt engineering or multi-agent orchestration. The simpler — and more effective — approach is to give the AI a rich, centralised store of business context it can draw from on every task.</p>
-<p>A <strong>Business Brain</strong> is a dedicated folder in your project (or organisation) that holds everything an AI assistant needs to understand your business: your brand voice, your clients, your product strategy, your team's conventions, and your domain vocabulary. Instead of explaining your context in every session, you build it once and reference it everywhere.</p>
-<h3>What goes in the Business Brain?</h3>
+        content: `<h2>Garbage In, Garbage Out</h2>
+<p>The single biggest factor in Claude Code's output quality is how specific your prompt is. Vague instructions produce vague results. Claude Code will make reasonable guesses when information is missing, and those guesses will often be wrong for your context.</p>
+<h3>The specificity spectrum</h3>
+<table>
+  <thead><tr><th>Vague</th><th>Specific</th></tr></thead>
+  <tbody>
+    <tr><td>"Fix the bug"</td><td>"Fix the off-by-one error in <code>paginate()</code> in <code>src/utils.js</code> — it skips the last item when total is divisible by page size"</td></tr>
+    <tr><td>"Make it faster"</td><td>"The <code>loadUsers()</code> function in <code>api/users.js</code> is making N+1 database queries. Refactor it to use a single JOIN."</td></tr>
+  </tbody>
+</table>
+<h3>What to include</h3>
 <ul>
-  <li><strong>Brand context</strong> — voice, tone, values, messaging guidelines</li>
-  <li><strong>Client profiles</strong> — who your users are, their pain points, their vocabulary</li>
-  <li><strong>Product strategy</strong> — current priorities, roadmap decisions, what's been ruled out</li>
-  <li><strong>Domain glossary</strong> — terms that have specific meanings in your business</li>
-  <li><strong>Team conventions</strong> — how your team works, decisions that have been made</li>
-</ul>
-<h3>Why it matters more than orchestration</h3>
-<p>A 5-agent system with shallow context will produce generic output. A single agent with deep business context will produce work that sounds like it came from inside the company. Business context is the multiplier — invest there first.</p>`,
+  <li><strong>File path</strong> — where is the code?</li>
+  <li><strong>Function/class name</strong> — what specifically needs to change?</li>
+  <li><strong>Expected behaviour</strong> — what should it do when done?</li>
+  <li><strong>Constraints</strong> — what must not change?</li>
+</ul>`,
       },
       {
-        id: 'ch02-l02', title: 'Structuring the Business Brain Folder', xpReward: 60, videos: [],
+        id: 'ch05-l02', title: 'Providing Context', xpReward: 55, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Folder Layout and File Conventions</h2>
-<p>The Business Brain folder is typically stored at the root of your project or in a shared repository accessible to all your projects. A consistent structure makes it easy for Claude Code to find and use the right context.</p>
-<h3>Recommended structure</h3>
-<pre><code>.business-brain/
-├── brand/
-│   ├── voice.md          # Tone, style, messaging principles
-│   ├── values.md         # Company values and how they show up in work
-│   └── visual-identity.md
-├── clients/
-│   ├── overview.md       # Client segments and profiles
-│   └── acme-internal.md  # Notes on this specific project's audience
-├── product/
-│   ├── strategy.md       # Current priorities, roadmap
-│   └── decisions.md      # Key decisions and their rationale
-└── team/
-    ├── conventions.md    # How we work, PR standards, etc.
-    └── glossary.md       # Domain-specific vocabulary</code></pre>
-<h3>Referencing Business Brain in CLAUDE.md</h3>
-<p>Your project's CLAUDE.md should point Claude Code to the Business Brain folder:</p>
-<pre><code>## Business Context
-All brand, client, and product context lives in \`.business-brain/\`.
-When writing user-facing content, always consult \`.business-brain/brand/voice.md\`.
-When discussing product decisions, check \`.business-brain/product/decisions.md\` first.</code></pre>
-<p>This single pointer means every skill and every session automatically knows where to find business context — without you having to re-explain it each time.</p>`,
+        content: `<h2>Context is Competitive Advantage</h2>
+<p>When you open a Claude Code session, it can read your files — but it doesn't automatically understand <em>why</em> things are structured the way they are. Context bridges that gap.</p>
+<h3>Types of context to provide</h3>
+<p><strong>Background:</strong> What is this project? What tech stack? Without this, Claude Code might suggest solutions that don't fit your environment.</p>
+<p><strong>Constraint context:</strong> What must not change? Prevents Claude Code from refactoring things that are intentionally designed a certain way.</p>
+<p><strong>Objective context:</strong> Why are you doing this? Helps Claude Code make better judgment calls when it encounters ambiguity.</p>
+<pre><code>We're preparing this for a security audit next week, so prioritise safety over brevity.</code></pre>
+<h3>Persistent context</h3>
+<p>If you find yourself repeating the same context in every session, it belongs in your CLAUDE.md or Business Brain — not in every prompt.</p>`,
       },
       {
-        id: 'ch02-l03', title: 'Business Brain in Practice', xpReward: 60, videos: [],
+        id: 'ch05-l03', title: 'Iterative Prompting', xpReward: 55, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Using Context, Not Repeating It</h2>
-<p>The power of a Business Brain is that you write context once and reference it forever. Every skill, every session, every team member draws from the same source of truth.</p>
-<h3>Before Business Brain (what most teams do)</h3>
-<p>Developer opens Claude Code. Writes: <em>"Write a user-facing error message for when login fails. We use a friendly, professional tone and we're building a B2B SaaS tool for enterprise HR teams."</em> Next session: same explanation again. Six months later: a new team member gives a slightly different description, and the AI produces inconsistent output.</p>
-<h3>After Business Brain</h3>
-<p>Developer opens Claude Code. Writes: <em>"Write a user-facing error message for when login fails. Follow our tone guidelines."</em> Claude Code reads <code>.business-brain/brand/voice.md</code> and produces output that's perfectly on-brand — without the developer needing to explain it.</p>
-<h3>Keeping it current</h3>
+        content: `<h2>Prompting is a Conversation, Not a Command</h2>
+<p>The best results often come from multiple turns. Think of it like pair programming — you don't give your pair programmer a 500-word spec and wait an hour. You collaborate in real time.</p>
+<h3>The iterative loop</h3>
+<ol>
+  <li><strong>Start rough</strong> — Give the high-level intent and let Claude Code propose an approach</li>
+  <li><strong>Review the plan</strong> — Correct it before it writes a line of code</li>
+  <li><strong>Refine</strong> — Accept, reject, or redirect specific parts</li>
+  <li><strong>Test</strong> — Ask Claude Code to write or run tests to verify the result</li>
+</ol>
+<h3>When to start fresh</h3>
+<p>If a session has gone badly wrong — Claude Code is confused, making circular edits, or the context has bloated — use <code>/clear</code> to reset and start a new, focused conversation with a better-crafted first prompt. Don't double down on a bad session. For large operations spanning many files, switch to Plan Mode first (Chapter 4).</p>`,
+      },
+      {
+        id: 'ch05-l04', title: 'Anatomy of a Good Prompt', xpReward: 55, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>The Prompt Formula</h2>
+<pre><code>[ACTION] [WHAT] in [WHERE]
+so that [WHY / OUTCOME]
+[CONSTRAINTS]</code></pre>
+<h3>Example</h3>
+<pre><code>Refactor the \`calculateTax()\` function in \`src/billing/tax.js\`
+so that it handles null and undefined inputs without throwing,
+returning 0 in those cases.
+Do not change the function signature or any callers.</code></pre>
+<p>This prompt hits every mark: clear action, specific target (function + file), success criteria (null handling), and a constraint (don't change callers).</p>
+<h3>Avoid these antipatterns</h3>
 <ul>
-  <li>Treat Business Brain files like code — they get PR reviews and versioning</li>
-  <li>When a major product decision is made, update <code>decisions.md</code> immediately</li>
-  <li>When brand guidelines change, update <code>voice.md</code> before the next sprint</li>
-  <li>Add a note to your team's definition of done: "Did this change the Business Brain?"</li>
-</ul>
-<p>A stale Business Brain is worse than no Business Brain — it produces confidently wrong output. Maintenance is not optional.</p>`,
+  <li>Combining multiple unrelated tasks in one prompt</li>
+  <li>Asking for both implementation and documentation in the same turn</li>
+  <li>Underspecifying which file or function when there are several candidates</li>
+</ul>`,
       },
     ],
     practicalTest: {
-      id: 'ch02-test',
-      scenarioType: 'email', scenarioFrom: 'Jordan Kim', scenarioRole: 'Head of Product', scenarioAvatar: '👩‍💼',
-      scenario: `From: jordan.kim@kedashcorp.com\nSubject: Setting up our AI context library\n\nHi,\n\nWe keep re-explaining the same context to Claude Code in every session — who our customers are, what our brand voice is, how we make decisions. It's inefficient and inconsistent.\n\nI'd like you to set up a "Business Brain" folder structure for Kedash Corp. We're a B2B SaaS company building developer tooling. Our tone is technical but approachable. Our key clients are mid-market engineering teams. Please write out the folder structure and what each key file should contain.`,
-      task: 'Design the Business Brain folder structure for Kedash Corp and describe what each key file should contain.',
-      hint: 'Include at minimum: a brand/voice file, a client overview, and a team conventions file. Show the folder structure clearly.',
-      minLength: 0, passThreshold: 70, xpReward: 350,
+      id: 'ch05-test',
+      scenarioType: 'jira', scenarioFrom: 'Marcus Webb', scenarioRole: 'Senior Engineer', scenarioAvatar: '👨‍💻',
+      scenario: `KEDASH-42 · In Review\n\nThe \`calculateDiscount()\` function in \`src/pricing.js\` is crashing when called with null or undefined product objects. We need it to return 0 in those cases instead of throwing. Assigned to you. Please write the prompt you'll give Claude Code to fix this.`,
+      task: 'Write the prompt you would give Claude Code to fix the null-handling bug in calculateDiscount().',
+      hint: 'A great prompt includes the file path, function name, the current problem, and what the correct behaviour should be.',
+      minLength: 80, passThreshold: 70, xpReward: 325,
       criteria: [
-        { type: 'keyword', value: ['brand', 'voice', 'tone'], description: 'Includes a brand/voice file', improvement: 'Add something like `brand/voice.md` so Claude knows your tone without re-explaining.', weight: 2 },
-        { type: 'keyword', value: ['client', 'customer', 'audience'], description: 'Includes client/audience context', improvement: 'Add a `clients/` section — Jordan flagged repeating audience context as the pain point.', weight: 2 },
-        { type: 'keyword', value: ['convention', 'team', 'decision', 'glossary'], description: 'Includes team conventions or decisions', improvement: 'Capture how the team works (`team/conventions.md`) or key decisions (`product/decisions.md`).', weight: 2 },
-        { type: 'regex', value: '\\.(md|txt|json)', description: 'References actual file types', improvement: 'Use concrete file names like `voice.md` — folder names alone don\'t show structure.', weight: 1 },
+        { type: 'keyword', value: ['calculateDiscount', 'calculate_discount', 'calculate discount'], description: 'Names the specific function', weight: 2 },
+        { type: 'keyword', value: ['src/pricing.js', 'pricing.js'], description: 'Includes the file path', weight: 2 },
+        { type: 'keyword', value: ['null', 'undefined'], description: 'Mentions the null/undefined edge case', weight: 2 },
+        { type: 'keyword', value: ['return 0', 'returns 0', '0', 'zero', 'without throwing', 'crash'], description: 'Describes expected behaviour', weight: 1 },
+        { type: 'length', value: 80, description: 'Response is at least 80 characters', weight: 1 },
       ],
-      exemplar: `<p>A strong answer shows the tree, then says what goes in each file:</p>
-<pre><code>.business-brain/
-├── brand/
-│   ├── voice.md          # Tone, style, words we use / avoid
-│   └── values.md         # What we stand for
-├── clients/
-│   └── overview.md       # Mid-market eng leaders, their pain points
-├── product/
-│   └── decisions.md      # Key product calls + rationale
-└── team/
-    ├── conventions.md    # PR standards, review etiquette
-    └── glossary.md       # Domain terms with our specific meaning</code></pre>
-<p>Then point Claude at it from <code>CLAUDE.md</code>:</p>
-<p><em>"All brand and client context lives in <code>.business-brain/</code>. Consult <code>brand/voice.md</code> before writing user-facing copy and <code>product/decisions.md</code> before proposing roadmap changes."</em></p>`,
     },
   },
 
   // ── Chapter 3 ─────────────────────────────────────────────────────────────
   {
+    id: 'ch06',
+    title: 'Working with Files',
+    subtitle: 'Week 3 — Hands on the Codebase',
+    icon: '📁',
+    xpReward: 240,
+    lessons: [
+      {
+        id: 'ch06-l01', title: 'Reading Files with Claude Code', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Claude Code as a Code Reader</h2>
+<p>Before Claude Code changes anything, it reads. You can ask it to read and explain any file in your project, and it will do so in context — tracing function calls, explaining relationships, answering questions about behaviour.</p>
+<pre><code>Read \`src/auth/middleware.js\` and explain what it does, focusing on the token validation logic.</code></pre>
+<h3>Cross-file understanding</h3>
+<pre><code>Find everywhere that \`UserService\` is called across the codebase and list the call sites.</code></pre>
+<p>Claude Code can grep, read, and synthesise information across many files in a single turn — something tedious to do manually.</p>
+<h3>Useful questions to ask</h3>
+<ul>
+  <li>"What would break if I removed this class?"</li>
+  <li>"Is there any input validation on this route handler?"</li>
+  <li>"What does this function return when the input is empty?"</li>
+</ul>`,
+      },
+      {
+        id: 'ch06-l02', title: 'Making Targeted Edits', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Surgical vs Broad Edits</h2>
+<p>When you know exactly what needs to change, be specific:</p>
+<pre><code>In \`components/Button.tsx\`, change the default \`variant\` prop from "primary" to "secondary".</code></pre>
+<p>Targeted prompts produce clean, reviewable diffs. They're less likely to introduce unintended side effects.</p>
+<h3>Reviewing diffs</h3>
+<p>Claude Code shows diffs for every file it edits. Read them. A 10-second diff review catches most mistakes before they compound. When Claude Code proposes something unexpected, that's a signal your prompt was ambiguous — clarify and try again.</p>
+<h3>Undoing changes</h3>
+<ul>
+  <li>"Revert that last change" — Claude Code can undo its most recent edit</li>
+  <li><code>git diff</code> and <code>git checkout</code> — for manual recovery</li>
+  <li>Keeping regular commits gives you clean rollback points</li>
+</ul>`,
+      },
+      {
+        id: 'ch06-l03', title: 'Multi-file Operations', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Working Across Files</h2>
+<p>Claude Code can reason across multiple files simultaneously. It's not just a search-and-replace tool — it understands relationships between files.</p>
+<pre><code>Rename the \`processPayment()\` function to \`chargeCard()\` across all files in \`src/\`. Update all call sites and any JSDoc references.</code></pre>
+<h3>Tips for multi-file work</h3>
+<ul>
+  <li>Commit your current state before starting a large multi-file operation</li>
+  <li>Ask Claude Code to confirm the scope before it begins: "How many files will this affect?"</li>
+  <li>After the operation, ask it to verify: "Check that no call sites were missed"</li>
+</ul>
+<p>For large operations, switch to Plan Mode first (Chapter 4) so you can review the full scope before any edits are made.</p>`,
+      },
+      {
+        id: 'ch06-l04', title: 'Reviewing Changes Before Accepting', xpReward: 60, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>You're Still in Charge</h2>
+<p>Reviewing every change Claude Code proposes — especially in critical paths — is not optional. It's part of the workflow.</p>
+<h3>The review habit</h3>
+<ol>
+  <li>Read the diff completely, not just the first few lines</li>
+  <li>Ask: "Does this match my intent?"</li>
+  <li>Ask: "Could this break anything I didn't think about?"</li>
+  <li>Check that no unrelated files were modified</li>
+</ol>
+<h3>Asking Claude Code to explain its changes</h3>
+<pre><code>Before you make any changes, explain your plan and list every file you'll modify.</code></pre>
+<p>A good workflow: commit before every significant Claude Code operation. Then the worst case is always a simple <code>git reset</code>.</p>`,
+      },
+    ],
+    practicalTest: {
+      id: 'ch06-test',
+      scenarioType: 'email', scenarioFrom: 'David Osei', scenarioRole: 'Tech Lead', scenarioAvatar: '👨‍🔧',
+      scenario: `From: david.osei@kedashcorp.com\nSubject: Quick task — JSDoc for utils\n\nHi,\n\nWe have a new dev starting Monday and the \`utils/helpers.js\` file is completely undocumented. Can you add JSDoc comments to every function in that file before EOD Friday? Use Claude Code for this — should be a quick job. Thanks.`,
+      task: 'Write the Claude Code prompt you would use to add JSDoc comments to all functions in utils/helpers.js.',
+      hint: 'Make sure to specify the exact file, what should be added, and that you want it on every function.',
+      minLength: 60, passThreshold: 65, xpReward: 350,
+      criteria: [
+        { type: 'keyword', value: ['utils/helpers.js', 'helpers.js'], description: 'Specifies the correct file path', weight: 2 },
+        { type: 'keyword', value: ['jsdoc', 'JSDoc', '@param', '@returns', 'doc comment'], description: 'Mentions JSDoc format', weight: 2 },
+        { type: 'keyword', value: ['every function', 'all functions', 'each function'], description: 'Specifies all functions', weight: 2 },
+        { type: 'keyword', value: ['comment', 'comments', 'document', 'documentation'], description: 'Includes the word comment or documentation', weight: 1 },
+        { type: 'length', value: 60, description: 'Response is at least 60 characters', weight: 1 },
+      ],
+    },
+  },
+
+  // ── Chapter 4 ────────────────────────────────────────────────────────────
+  {
+    id: 'ch12',
+    title: 'Plan Mode',
+    subtitle: 'Week 4 — Control the Execution',
+    icon: '🗂️',
+    xpReward: 260,
+    lessons: [
+      {
+        id: 'ch12-l01', title: 'What is Plan Mode?', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/QlWyrYuEC84" title="Claude Code\'s Hidden Superpower: Plan Mode for Smart Developers" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Think Before You Act</h2><p><strong>Plan Mode</strong> separates thinking from acting. Claude Code reasons about the task and produces a detailed plan — but makes no file changes, runs no commands, takes no actions until you explicitly switch back to Default mode.</p><h3>The four permission modes</h3><ul><li><strong>Default</strong> — Asks before file edits and shell commands. Recommended for most work.</li><li><strong>Auto-accept edits</strong> — Applies file edits and common filesystem commands without asking; still prompts for other actions.</li><li><strong>Plan</strong> — Read-only tools only. Claude Code thinks and plans, zero execution. Enter with <code>/plan</code> or Shift+Tab.</li><li><strong>Auto</strong> — Evaluates all actions with background safety checks (currently a research preview). Use with care.</li></ul><p>Plan Mode is the answer to "how do I review what Claude Code intends to do before it does it?" — the question every developer asks after their first multi-file surprise.</p>',
+      },
+      {
+        id: 'ch12-l02', title: 'Shift+Tab: Switching Modes', xpReward: 65, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Switching Modes</h2><p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: Default → Auto-accept edits → Plan → Auto → Default. You can also enter Plan Mode directly with the <code>/plan [description]</code> command.</p><h3>Workflow</h3><ol><li>Type <code>/plan</code> or press Shift+Tab until you reach Plan Mode</li><li>Submit your prompt — Claude Code thinks, does not act</li><li>Read the plan, ask questions, request changes</li><li>Press Shift+Tab to return to Default mode</li><li>Claude Code executes the refined plan</li></ol><p>You can iterate on the plan multiple times. The plan is part of the conversation — Claude Code remembers decisions made during planning when it executes.</p>',
+      },
+      {
+        id: 'ch12-l03', title: 'When to Use Plan Mode', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/7LWl3EbcFTc" title="Claude Code Plan Mode: The Senior Engineer\'s Workflow" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Choosing the Right Mode</h2><h3>Use Plan Mode for</h3><ul><li>Operations affecting more than 3–5 files</li><li>Renames or restructures of shared interfaces</li><li>Database migrations, security-sensitive changes</li><li>Anything you\'d want code-reviewed before it exists</li></ul><h3>Auto mode is fine for</h3><ul><li>Single-file edits with a clear, bounded scope</li><li>Adding a function or fixing a small bug</li><li>Generating tests for an existing function</li></ul><h3>Heuristic</h3><p>Ask: "If this goes wrong, how long does it take to recover?" More than 5 minutes → use Plan Mode.</p>',
+      },
+      {
+        id: 'ch12-l04', title: 'Reviewing Plans Before Execution', xpReward: 65, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Reading a Plan Critically</h2><ol><li>Scope check — files affected as expected?</li><li>Approach check — is this the right solution?</li><li>Constraint check — respects your constraints?</li><li>Side-effect check — could this break something else?</li><li>Completeness check — anything missed?</li></ol><p>Correct conversationally before executing: "Remove step 3", "Add a step for TypeScript types", "Step 2 should use a transaction". The execution won\'t start until you switch back to Auto — take your time.</p>',
+      },
+    ],
+    practicalTest: {
+      id: 'ch12-test',
+      scenarioType: 'slack', scenarioFrom: 'Rachel Okonkwo', scenarioRole: 'QA Lead', scenarioAvatar: '🧪',
+      scenario: 'Hey — last week Claude Code made 14 file changes at once as part of a "refactor" and introduced a regression in the payment flow. Developer only noticed after deploying to staging. What workflow change would prevent this?',
+      task: 'Explain the workflow change you would recommend to prevent unreviewed multi-file changes causing regressions.',
+      hint: 'Specifically mention Plan Mode, how to activate it with Shift+Tab, and when to use it.',
+      minLength: 80, passThreshold: 70, xpReward: 375,
+      criteria: [
+        { type: 'keyword', value: ['plan mode', 'planning mode', 'plan'], description: 'Mentions Plan Mode', weight: 3 },
+        { type: 'keyword', value: ['shift+tab', 'shift tab', 'Shift+Tab'], description: 'Mentions the Shift+Tab shortcut', weight: 2 },
+        { type: 'keyword', value: ['review', 'verify', 'check', 'approve'], description: 'Emphasises reviewing before execution', weight: 1 },
+        { type: 'length', value: 80, description: 'Response is at least 80 characters', weight: 1 },
+      ],
+    },
+  },
+
+  // ── Chapter 5 ────────────────────────────────────────────────────────────
+  {
+    id: 'ch11',
+    title: 'Slash Commands & Workflow',
+    subtitle: 'Week 5 — Power User Controls',
+    icon: '🎮',
+    xpReward: 280,
+    lessons: [
+      {
+        id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>The Command Vocabulary</h2><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/help</code></td><td>Show built-in commands and their descriptions</td></tr><tr><td><code>/skills</code></td><td>List available skills (with token count sort via "t")</td></tr><tr><td><code>/clear</code></td><td>Reset conversation context</td></tr><tr><td><code>/compact</code></td><td>Summarise and compress the session (optional focus hint)</td></tr><tr><td><code>/init</code></td><td>Generate a CLAUDE.md for the project</td></tr><tr><td><code>/plan [description]</code></td><td>Enter Plan Mode (read-only, no execution)</td></tr><tr><td><code>/memory</code></td><td>View and edit Claude Code memory files</td></tr><tr><td><code>/mcp</code></td><td>List connected MCP servers and their tools</td></tr><tr><td><code>/permissions</code></td><td>View and manage tool permissions</td></tr><tr><td><code>/rewind</code></td><td>Step back to a previous turn in the session</td></tr><tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr><tr><td><code>/cost</code></td><td>Show token usage and cost for the current session</td></tr><tr><td><code>/exit</code></td><td>End the session</td></tr></tbody></table><p>Arguments follow the command name. <code>/compact Focus on auth decisions</code> passes a focus hint. <code>/plan Refactor the auth module</code> enters Plan Mode with context.</p>',
+      },
+      {
+        id: 'ch11-l02', title: '/init and Project Setup', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/i_OHQH4-M2Y" title="Claude Code Tutorial #2 - CLAUDE.md Files &amp; /init" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Bootstrapping a New Project</h2><p><code>/init</code> inspects your project and generates a starter CLAUDE.md — identifying tech stack, test commands, and build tooling automatically.</p><p>Treat it as generating a first draft. After running it: correct inaccuracies, add the Business Brain pointer, apply lean CLAUDE.md principles (Chapter 6), and commit. The generated file is a starting point, not a finished product.</p>',
+      },
+      {
+        id: 'ch11-l03', title: '/help and Skill Discovery', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Always Know What\'s Available</h2><p><code>/help</code> shows built-in commands. For skills specifically, use <code>/skills</code> — it lists all available skills with their names and one-line descriptions (progressive disclosure in action). Run it on any new project to discover what skills the team has set up. You might find a <code>/deploy-staging</code> or <code>/security-review</code> skill that saves significant time. Press <kbd>t</kbd> in the /skills output to sort by token cost.</p>',
+      },
+      {
+        id: 'ch11-l04', title: 'Session Hygiene', xpReward: 70, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: '<h2>Keeping Sessions Healthy</h2><ul><li>One task per session</li><li>Start with a clear, specific first message</li><li>/clear when switching tasks</li><li>/compact on long sessions before context degrades</li><li>Read every diff before accepting</li></ul><h3>Opening message pattern</h3><pre><code>I\'m adding rate limiting to `/api/auth/login` in `src/routes/auth.js`.\nProject uses express-rate-limit. Don\'t modify any other routes.</code></pre><p>This front-loaded context saves multiple clarification turns and reduces wasted tokens.</p>',
+      },
+    ],
+    practicalTest: {
+      id: 'ch11-test',
+      scenarioType: 'jira', scenarioFrom: 'Onboarding System', scenarioRole: 'IT Helpdesk', scenarioAvatar: '🖥️',
+      scenario: 'KEDASH-ONBOARDING-11\n\nYou\'ve just been added to the Kedash Payments repo. You\'ve cloned it and opened a terminal. List the first 3 Claude Code slash commands you would run and explain why.',
+      task: 'List the first 3 Claude Code slash commands you would run in a new repo and explain the purpose of each.',
+      hint: 'Think about setup, discovery, and understanding the project. Use numbered steps.',
+      minLength: 100, passThreshold: 70, xpReward: 400,
+      criteria: [
+        { type: 'keyword', value: ['/init'], description: 'Mentions /init', weight: 2 },
+        { type: 'keyword', value: ['/help'], description: 'Mentions /help', weight: 2 },
+        { type: 'structure', value: 'numbered-steps', description: 'Uses numbered list format', weight: 1 },
+        { type: 'keyword', value: ['CLAUDE.md', 'skill', 'context', 'setup', 'project'], description: 'Explains the purpose of at least one command', weight: 1 },
+        { type: 'length', value: 100, description: 'Response is at least 100 characters', weight: 1 },
+      ],
+    },
+  },
+
+  // ── Chapter 6 ─────────────────────────────────────────────────────────────
+  {
     id: 'ch03',
     title: 'CLAUDE.md & Context Management',
-    subtitle: 'Week 3 — Teaching Claude Your Ways',
+    subtitle: 'Week 6 — Teaching Claude Your Ways',
     icon: '📋',
     xpReward: 300,
     lessons: [
       {
-        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 75, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Persistent Memory for Your Project</h2>
@@ -327,7 +512,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
 <p>The CLAUDE.md is loaded into context on every session — so everything in it costs tokens. This makes <em>what you put in it</em> a critical design decision, not just a convenience.</p>`,
       },
       {
-        id: 'ch03-l02', title: 'The Context Window and Context Rot', xpReward: 60, videos: [],
+        id: 'ch03-l02', title: 'The Context Window and Context Rot', xpReward: 75, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Your Context Window is Finite</h2>
@@ -340,7 +525,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
 <p><strong>Load only what's needed for the current session.</strong> This is the single most important rule for maintaining output quality over time. A 300-token CLAUDE.md that's always relevant beats a 3,000-token CLAUDE.md that's usually irrelevant.</p>`,
       },
       {
-        id: 'ch03-l03', title: 'Writing a Lean CLAUDE.md', xpReward: 60, videos: [],
+        id: 'ch03-l03', title: 'Writing a Lean CLAUDE.md', xpReward: 75, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Less is More</h2>
@@ -366,7 +551,7 @@ Load the relevant file when the task requires it.</code></pre>
 <p>This is far better than pasting the full brand voice guide into CLAUDE.md. The guide gets loaded only when relevant, not on every session.</p>`,
       },
       {
-        id: 'ch03-l04', title: 'CLAUDE.md as a Team Document', xpReward: 60, videos: [],
+        id: 'ch03-l04', title: 'CLAUDE.md as a Team Document', xpReward: 75, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>A Shared Contract with the AI</h2>
@@ -402,7 +587,7 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       scenario: `From: priya.nair@kedashcorp.com\nSubject: Our CLAUDE.md is a mess\n\nHi,\n\nI just looked at our CLAUDE.md and it's 2,400 words. It has our entire brand history, a full explanation of the product, onboarding docs for new engineers, and the kitchen sink. Sessions are sluggish and Claude keeps ignoring instructions from the start of conversations.\n\nCan you rewrite it? Keep only what's essential. The project is: TypeScript, Node.js 20, PostgreSQL. Test command: npm test. Deploy: npm run deploy. Never commit to main. Error handling on all async functions. Business context is in .business-brain/.`,
       task: 'Write a lean, well-structured CLAUDE.md for the Kedash project using only the essential information provided.',
       hint: 'A lean CLAUDE.md is under 200 words. Use pointers for business context rather than pasting it in. Include commands, constraints, and a structure note.',
-      minLength: 100, passThreshold: 70, xpReward: 400,
+      minLength: 100, passThreshold: 70, xpReward: 425,
       criteria: [
         { type: 'keyword', value: ['npm test', 'npm run test'], description: 'Includes test command', weight: 2 },
         { type: 'keyword', value: ['npm run deploy', 'deploy'], description: 'Includes deploy command', weight: 2 },
@@ -414,20 +599,125 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
     },
   },
 
-  // ── Chapter 4 ─────────────────────────────────────────────────────────────
+  // ── Chapter 7 ─────────────────────────────────────────────────────────────
+  {
+    id: 'ch02',
+    title: 'Business Brain',
+    subtitle: 'Week 7 — The Foundation Layer',
+    icon: '🧠',
+    xpReward: 320,
+    lessons: [
+      {
+        id: 'ch02-l01', title: 'What is a Business Brain?', xpReward: 80, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Centralised Context Beats Smart Orchestration</h2>
+<p>One of the most common mistakes teams make with AI coding assistants is trying to make the AI smarter through complex prompt engineering or multi-agent orchestration. The simpler — and more effective — approach is to give the AI a rich, centralised store of business context it can draw from on every task.</p>
+<p>A <strong>Business Brain</strong> is a dedicated folder in your project (or organisation) that holds everything an AI assistant needs to understand your business: your brand voice, your clients, your product strategy, your team's conventions, and your domain vocabulary. Instead of explaining your context in every session, you build it once and reference it everywhere.</p>
+<h3>What goes in the Business Brain?</h3>
+<ul>
+  <li><strong>Brand context</strong> — voice, tone, values, messaging guidelines</li>
+  <li><strong>Client profiles</strong> — who your users are, their pain points, their vocabulary</li>
+  <li><strong>Product strategy</strong> — current priorities, roadmap decisions, what's been ruled out</li>
+  <li><strong>Domain glossary</strong> — terms that have specific meanings in your business</li>
+  <li><strong>Team conventions</strong> — how your team works, decisions that have been made</li>
+</ul>
+<h3>Why it matters more than orchestration</h3>
+<p>A 5-agent system with shallow context will produce generic output. A single agent with deep business context will produce work that sounds like it came from inside the company. Business context is the multiplier — invest there first.</p>`,
+      },
+      {
+        id: 'ch02-l02', title: 'Structuring the Business Brain Folder', xpReward: 80, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Folder Layout and File Conventions</h2>
+<p>The Business Brain folder is typically stored at the root of your project or in a shared repository accessible to all your projects. A consistent structure makes it easy for Claude Code to find and use the right context.</p>
+<h3>Recommended structure</h3>
+<pre><code>.business-brain/
+├── brand/
+│   ├── voice.md          # Tone, style, messaging principles
+│   ├── values.md         # Company values and how they show up in work
+│   └── visual-identity.md
+├── clients/
+│   ├── overview.md       # Client segments and profiles
+│   └── acme-internal.md  # Notes on this specific project's audience
+├── product/
+│   ├── strategy.md       # Current priorities, roadmap
+│   └── decisions.md      # Key decisions and their rationale
+└── team/
+    ├── conventions.md    # How we work, PR standards, etc.
+    └── glossary.md       # Domain-specific vocabulary</code></pre>
+<h3>Referencing Business Brain in CLAUDE.md</h3>
+<p>Your project's CLAUDE.md should point Claude Code to the Business Brain folder:</p>
+<pre><code>## Business Context
+All brand, client, and product context lives in \`.business-brain/\`.
+When writing user-facing content, always consult \`.business-brain/brand/voice.md\`.
+When discussing product decisions, check \`.business-brain/product/decisions.md\` first.</code></pre>
+<p>This single pointer means every skill and every session automatically knows where to find business context — without you having to re-explain it each time.</p>`,
+      },
+      {
+        id: 'ch02-l03', title: 'Business Brain in Practice', xpReward: 80, videos: [],
+        lastVerified: '2026-04-22',
+        verifiedAgainstVersion: 'v2.1.114',
+        content: `<h2>Using Context, Not Repeating It</h2>
+<p>The power of a Business Brain is that you write context once and reference it forever. Every skill, every session, every team member draws from the same source of truth.</p>
+<h3>Before Business Brain (what most teams do)</h3>
+<p>Developer opens Claude Code. Writes: <em>"Write a user-facing error message for when login fails. We use a friendly, professional tone and we're building a B2B SaaS tool for enterprise HR teams."</em> Next session: same explanation again. Six months later: a new team member gives a slightly different description, and the AI produces inconsistent output.</p>
+<h3>After Business Brain</h3>
+<p>Developer opens Claude Code. Writes: <em>"Write a user-facing error message for when login fails. Follow our tone guidelines."</em> Claude Code reads <code>.business-brain/brand/voice.md</code> and produces output that's perfectly on-brand — without the developer needing to explain it.</p>
+<h3>Keeping it current</h3>
+<ul>
+  <li>Treat Business Brain files like code — they get PR reviews and versioning</li>
+  <li>When a major product decision is made, update <code>decisions.md</code> immediately</li>
+  <li>When brand guidelines change, update <code>voice.md</code> before the next sprint</li>
+  <li>Add a note to your team's definition of done: "Did this change the Business Brain?"</li>
+</ul>
+<p>A stale Business Brain is worse than no Business Brain — it produces confidently wrong output. Maintenance is not optional.</p>`,
+      },
+    ],
+    practicalTest: {
+      id: 'ch02-test',
+      scenarioType: 'email', scenarioFrom: 'Jordan Kim', scenarioRole: 'Head of Product', scenarioAvatar: '👩‍💼',
+      scenario: `From: jordan.kim@kedashcorp.com\nSubject: Setting up our AI context library\n\nHi,\n\nWe keep re-explaining the same context to Claude Code in every session — who our customers are, what our brand voice is, how we make decisions. It's inefficient and inconsistent.\n\nI'd like you to set up a "Business Brain" folder structure for Kedash Corp. We're a B2B SaaS company building developer tooling. Our tone is technical but approachable. Our key clients are mid-market engineering teams. Please write out the folder structure and what each key file should contain.`,
+      task: 'Design the Business Brain folder structure for Kedash Corp and describe what each key file should contain.',
+      hint: 'Include at minimum: a brand/voice file, a client overview, and a team conventions file. Show the folder structure clearly.',
+      minLength: 0, passThreshold: 70, xpReward: 450,
+      criteria: [
+        { type: 'keyword', value: ['brand', 'voice', 'tone'], description: 'Includes a brand/voice file', improvement: 'Add something like `brand/voice.md` so Claude knows your tone without re-explaining.', weight: 2 },
+        { type: 'keyword', value: ['client', 'customer', 'audience'], description: 'Includes client/audience context', improvement: 'Add a `clients/` section — Jordan flagged repeating audience context as the pain point.', weight: 2 },
+        { type: 'keyword', value: ['convention', 'team', 'decision', 'glossary'], description: 'Includes team conventions or decisions', improvement: 'Capture how the team works (`team/conventions.md`) or key decisions (`product/decisions.md`).', weight: 2 },
+        { type: 'regex', value: '\\.(md|txt|json)', description: 'References actual file types', improvement: 'Use concrete file names like `voice.md` — folder names alone don\'t show structure.', weight: 1 },
+      ],
+      exemplar: `<p>A strong answer shows the tree, then says what goes in each file:</p>
+<pre><code>.business-brain/
+├── brand/
+│   ├── voice.md          # Tone, style, words we use / avoid
+│   └── values.md         # What we stand for
+├── clients/
+│   └── overview.md       # Mid-market eng leaders, their pain points
+├── product/
+│   └── decisions.md      # Key product calls + rationale
+└── team/
+    ├── conventions.md    # PR standards, review etiquette
+    └── glossary.md       # Domain terms with our specific meaning</code></pre>
+<p>Then point Claude at it from <code>CLAUDE.md</code>:</p>
+<p><em>"All brand and client context lives in <code>.business-brain/</code>. Consult <code>brand/voice.md</code> before writing user-facing copy and <code>product/decisions.md</code> before proposing roadmap changes."</em></p>`,
+    },
+  },
+
+  // ── Chapter 8 ─────────────────────────────────────────────────────────────
   {
     id: 'ch04',
     title: 'The Memory Framework',
-    subtitle: 'Week 4 — Where Context Lives',
+    subtitle: 'Week 8 — Where Context Lives',
     icon: '🗄️',
-    xpReward: 275,
+    xpReward: 340,
     lessons: [
       {
-        id: 'ch04-l01', title: 'The Four Memory Layers', xpReward: 65, videos: [],
+        id: 'ch04-l01', title: 'The Four Memory Layers', xpReward: 85, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Claude Code Has Four Memory Layers</h2>
-<p>By this point you've met three memory tools individually: the <strong>Business Brain</strong> (Chapter 2), <strong>CLAUDE.md</strong> (Chapter 3), and a preview of <strong>skills</strong> (coming in Chapters 8–9). Before you go further, it helps to see how they fit together as a system — because they are a system, not a collection of independent tricks.</p>
+<p>By this point you've met three memory tools individually: the <strong>Business Brain</strong> (Chapter 7), <strong>CLAUDE.md</strong> (Chapter 6), and a preview of <strong>skills</strong> (coming in Chapters 10–11). Before you go further, it helps to see how they fit together as a system — because they are a system, not a collection of independent tricks.</p>
 <h3>The four layers, from always-loaded to on-demand</h3>
 <table>
   <thead><tr><th>Layer</th><th>Location</th><th>Loaded when?</th><th>What it holds</th></tr></thead>
@@ -443,14 +733,14 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
 <p>This progressive loading is the architecture's key insight: you get the right information at the right time, without paying the token cost of everything all the time.</p>
 <h3>Going deeper</h3>
 <ul>
-  <li>Business Brain (Layer 3) — Chapter 2 covers building and maintaining it</li>
-  <li>CLAUDE.md layers 1 &amp; 2 — Chapter 3 covers writing them lean</li>
-  <li>Token cost of each layer — Chapter 7 covers context management in depth</li>
-  <li>Skills (Layer 4) — Chapters 8–9 cover building and writing them; Chapter 10 covers refining them over time with learnings.md</li>
+  <li>Business Brain (Layer 3) — Chapter 7 covers building and maintaining it</li>
+  <li>CLAUDE.md layers 1 &amp; 2 — Chapter 6 covers writing them lean</li>
+  <li>Token cost of each layer — Chapter 9 covers context management in depth</li>
+  <li>Skills (Layer 4) — Chapters 10–11 cover building and writing them; Chapter 12 covers refining them over time with learnings.md</li>
 </ul>`,
       },
       {
-        id: 'ch04-l02', title: 'What Belongs Where', xpReward: 65, videos: [],
+        id: 'ch04-l02', title: 'What Belongs Where', xpReward: 85, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Decision Rule</h2>
@@ -487,7 +777,7 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       scenario: `Welcome to the Kedash platform team! Before you start contributing, I want you to design the memory layer setup for the new payments microservice. Here are the things we need Claude Code to know about:\n\n1. Test command: npm test\n2. Our brand voice guide (3,000-word document)\n3. Our PR description workflow (run it every time a PR is ready)\n4. The rule: never commit directly to main\n5. Lessons we've learned about when our PR skill produces weak output\n6. Your personal preference: always respond in British English\n7. Client profiles for our top 5 enterprise accounts\n\nFor each item, tell me which memory layer it belongs in and why. This tells me whether you understand how to keep our AI setup lean and efficient.`,
       task: 'Assign each of the 7 items to the correct Claude Code memory layer and explain your reasoning for each.',
       hint: 'The four layers: Global CLAUDE.md (~/.claude/CLAUDE.md), Project CLAUDE.md (./CLAUDE.md), Business Brain (.business-brain/), Skills + learnings.md (.claude/skills/). Use the always-active vs on-demand rule.',
-      minLength: 150, passThreshold: 70, xpReward: 375,
+      minLength: 150, passThreshold: 70, xpReward: 475,
       criteria: [
         { type: 'keyword', value: ['CLAUDE.md', 'claude.md'], description: 'References CLAUDE.md as a layer', weight: 2 },
         { type: 'keyword', value: ['business brain', 'Business Brain', '.business-brain', 'business-brain'], description: 'References Business Brain layer', weight: 2 },
@@ -499,207 +789,16 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
     },
   },
 
-  // ── Chapter 5 ─────────────────────────────────────────────────────────────
-  {
-    id: 'ch05',
-    title: 'Effective Prompting',
-    subtitle: 'Week 5 — Speaking the Right Language',
-    icon: '✍️',
-    xpReward: 250,
-    lessons: [
-      {
-        id: 'ch05-l01', title: 'Why Specificity Matters', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Garbage In, Garbage Out</h2>
-<p>The single biggest factor in Claude Code's output quality is how specific your prompt is. Vague instructions produce vague results. Claude Code will make reasonable guesses when information is missing, and those guesses will often be wrong for your context.</p>
-<h3>The specificity spectrum</h3>
-<table>
-  <thead><tr><th>Vague</th><th>Specific</th></tr></thead>
-  <tbody>
-    <tr><td>"Fix the bug"</td><td>"Fix the off-by-one error in <code>paginate()</code> in <code>src/utils.js</code> — it skips the last item when total is divisible by page size"</td></tr>
-    <tr><td>"Make it faster"</td><td>"The <code>loadUsers()</code> function in <code>api/users.js</code> is making N+1 database queries. Refactor it to use a single JOIN."</td></tr>
-  </tbody>
-</table>
-<h3>What to include</h3>
-<ul>
-  <li><strong>File path</strong> — where is the code?</li>
-  <li><strong>Function/class name</strong> — what specifically needs to change?</li>
-  <li><strong>Expected behaviour</strong> — what should it do when done?</li>
-  <li><strong>Constraints</strong> — what must not change?</li>
-</ul>`,
-      },
-      {
-        id: 'ch05-l02', title: 'Providing Context', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Context is Competitive Advantage</h2>
-<p>When you open a Claude Code session, it can read your files — but it doesn't automatically understand <em>why</em> things are structured the way they are. Context bridges that gap.</p>
-<h3>Types of context to provide</h3>
-<p><strong>Background:</strong> What is this project? What tech stack? Without this, Claude Code might suggest solutions that don't fit your environment.</p>
-<p><strong>Constraint context:</strong> What must not change? Prevents Claude Code from refactoring things that are intentionally designed a certain way.</p>
-<p><strong>Objective context:</strong> Why are you doing this? Helps Claude Code make better judgment calls when it encounters ambiguity.</p>
-<pre><code>We're preparing this for a security audit next week, so prioritise safety over brevity.</code></pre>
-<h3>Persistent context</h3>
-<p>If you find yourself repeating the same context in every session, it belongs in your CLAUDE.md or Business Brain — not in every prompt.</p>`,
-      },
-      {
-        id: 'ch05-l03', title: 'Iterative Prompting', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Prompting is a Conversation, Not a Command</h2>
-<p>The best results often come from multiple turns. Think of it like pair programming — you don't give your pair programmer a 500-word spec and wait an hour. You collaborate in real time.</p>
-<h3>The iterative loop</h3>
-<ol>
-  <li><strong>Start rough</strong> — Give the high-level intent and let Claude Code propose an approach</li>
-  <li><strong>Review the plan</strong> — Correct it before it writes a line of code</li>
-  <li><strong>Refine</strong> — Accept, reject, or redirect specific parts</li>
-  <li><strong>Test</strong> — Ask Claude Code to write or run tests to verify the result</li>
-</ol>
-<h3>When to start fresh</h3>
-<p>If a session has gone badly wrong — Claude Code is confused, making circular edits, or the context has bloated — use <code>/clear</code> to reset and start a new, focused conversation with a better-crafted first prompt. Don't double down on a bad session. For large operations spanning many files, switch to Plan Mode first (Chapter 12).</p>`,
-      },
-      {
-        id: 'ch05-l04', title: 'Anatomy of a Good Prompt', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>The Prompt Formula</h2>
-<pre><code>[ACTION] [WHAT] in [WHERE]
-so that [WHY / OUTCOME]
-[CONSTRAINTS]</code></pre>
-<h3>Example</h3>
-<pre><code>Refactor the \`calculateTax()\` function in \`src/billing/tax.js\`
-so that it handles null and undefined inputs without throwing,
-returning 0 in those cases.
-Do not change the function signature or any callers.</code></pre>
-<p>This prompt hits every mark: clear action, specific target (function + file), success criteria (null handling), and a constraint (don't change callers).</p>
-<h3>Avoid these antipatterns</h3>
-<ul>
-  <li>Combining multiple unrelated tasks in one prompt</li>
-  <li>Asking for both implementation and documentation in the same turn</li>
-  <li>Underspecifying which file or function when there are several candidates</li>
-</ul>`,
-      },
-    ],
-    practicalTest: {
-      id: 'ch05-test',
-      scenarioType: 'jira', scenarioFrom: 'Marcus Webb', scenarioRole: 'Senior Engineer', scenarioAvatar: '👨‍💻',
-      scenario: `KEDASH-42 · In Review\n\nThe \`calculateDiscount()\` function in \`src/pricing.js\` is crashing when called with null or undefined product objects. We need it to return 0 in those cases instead of throwing. Assigned to you. Please write the prompt you'll give Claude Code to fix this.`,
-      task: 'Write the prompt you would give Claude Code to fix the null-handling bug in calculateDiscount().',
-      hint: 'A great prompt includes the file path, function name, the current problem, and what the correct behaviour should be.',
-      minLength: 80, passThreshold: 70, xpReward: 350,
-      criteria: [
-        { type: 'keyword', value: ['calculateDiscount', 'calculate_discount', 'calculate discount'], description: 'Names the specific function', weight: 2 },
-        { type: 'keyword', value: ['src/pricing.js', 'pricing.js'], description: 'Includes the file path', weight: 2 },
-        { type: 'keyword', value: ['null', 'undefined'], description: 'Mentions the null/undefined edge case', weight: 2 },
-        { type: 'keyword', value: ['return 0', 'returns 0', '0', 'zero', 'without throwing', 'crash'], description: 'Describes expected behaviour', weight: 1 },
-        { type: 'length', value: 80, description: 'Response is at least 80 characters', weight: 1 },
-      ],
-    },
-  },
-
-  // ── Chapter 6 ─────────────────────────────────────────────────────────────
-  {
-    id: 'ch06',
-    title: 'Working with Files',
-    subtitle: 'Week 6 — Hands on the Codebase',
-    icon: '📁',
-    xpReward: 250,
-    lessons: [
-      {
-        id: 'ch06-l01', title: 'Reading Files with Claude Code', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Claude Code as a Code Reader</h2>
-<p>Before Claude Code changes anything, it reads. You can ask it to read and explain any file in your project, and it will do so in context — tracing function calls, explaining relationships, answering questions about behaviour.</p>
-<pre><code>Read \`src/auth/middleware.js\` and explain what it does, focusing on the token validation logic.</code></pre>
-<h3>Cross-file understanding</h3>
-<pre><code>Find everywhere that \`UserService\` is called across the codebase and list the call sites.</code></pre>
-<p>Claude Code can grep, read, and synthesise information across many files in a single turn — something tedious to do manually.</p>
-<h3>Useful questions to ask</h3>
-<ul>
-  <li>"What would break if I removed this class?"</li>
-  <li>"Is there any input validation on this route handler?"</li>
-  <li>"What does this function return when the input is empty?"</li>
-</ul>`,
-      },
-      {
-        id: 'ch06-l02', title: 'Making Targeted Edits', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Surgical vs Broad Edits</h2>
-<p>When you know exactly what needs to change, be specific:</p>
-<pre><code>In \`components/Button.tsx\`, change the default \`variant\` prop from "primary" to "secondary".</code></pre>
-<p>Targeted prompts produce clean, reviewable diffs. They're less likely to introduce unintended side effects.</p>
-<h3>Reviewing diffs</h3>
-<p>Claude Code shows diffs for every file it edits. Read them. A 10-second diff review catches most mistakes before they compound. When Claude Code proposes something unexpected, that's a signal your prompt was ambiguous — clarify and try again.</p>
-<h3>Undoing changes</h3>
-<ul>
-  <li>"Revert that last change" — Claude Code can undo its most recent edit</li>
-  <li><code>git diff</code> and <code>git checkout</code> — for manual recovery</li>
-  <li>Keeping regular commits gives you clean rollback points</li>
-</ul>`,
-      },
-      {
-        id: 'ch06-l03', title: 'Multi-file Operations', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Working Across Files</h2>
-<p>Claude Code can reason across multiple files simultaneously. It's not just a search-and-replace tool — it understands relationships between files.</p>
-<pre><code>Rename the \`processPayment()\` function to \`chargeCard()\` across all files in \`src/\`. Update all call sites and any JSDoc references.</code></pre>
-<h3>Tips for multi-file work</h3>
-<ul>
-  <li>Commit your current state before starting a large multi-file operation</li>
-  <li>Ask Claude Code to confirm the scope before it begins: "How many files will this affect?"</li>
-  <li>After the operation, ask it to verify: "Check that no call sites were missed"</li>
-</ul>
-<p>For large operations, switch to Plan Mode first (Chapter 12) so you can review the full scope before any edits are made.</p>`,
-      },
-      {
-        id: 'ch06-l04', title: 'Reviewing Changes Before Accepting', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>You're Still in Charge</h2>
-<p>Reviewing every change Claude Code proposes — especially in critical paths — is not optional. It's part of the workflow.</p>
-<h3>The review habit</h3>
-<ol>
-  <li>Read the diff completely, not just the first few lines</li>
-  <li>Ask: "Does this match my intent?"</li>
-  <li>Ask: "Could this break anything I didn't think about?"</li>
-  <li>Check that no unrelated files were modified</li>
-</ol>
-<h3>Asking Claude Code to explain its changes</h3>
-<pre><code>Before you make any changes, explain your plan and list every file you'll modify.</code></pre>
-<p>A good workflow: commit before every significant Claude Code operation. Then the worst case is always a simple <code>git reset</code>.</p>`,
-      },
-    ],
-    practicalTest: {
-      id: 'ch06-test',
-      scenarioType: 'email', scenarioFrom: 'David Osei', scenarioRole: 'Tech Lead', scenarioAvatar: '👨‍🔧',
-      scenario: `From: david.osei@kedashcorp.com\nSubject: Quick task — JSDoc for utils\n\nHi,\n\nWe have a new dev starting Monday and the \`utils/helpers.js\` file is completely undocumented. Can you add JSDoc comments to every function in that file before EOD Friday? Use Claude Code for this — should be a quick job. Thanks.`,
-      task: 'Write the Claude Code prompt you would use to add JSDoc comments to all functions in utils/helpers.js.',
-      hint: 'Make sure to specify the exact file, what should be added, and that you want it on every function.',
-      minLength: 60, passThreshold: 65, xpReward: 350,
-      criteria: [
-        { type: 'keyword', value: ['utils/helpers.js', 'helpers.js'], description: 'Specifies the correct file path', weight: 2 },
-        { type: 'keyword', value: ['jsdoc', 'JSDoc', '@param', '@returns', 'doc comment'], description: 'Mentions JSDoc format', weight: 2 },
-        { type: 'keyword', value: ['every function', 'all functions', 'each function'], description: 'Specifies all functions', weight: 2 },
-        { type: 'keyword', value: ['comment', 'comments', 'document', 'documentation'], description: 'Includes the word comment or documentation', weight: 1 },
-        { type: 'length', value: 60, description: 'Response is at least 60 characters', weight: 1 },
-      ],
-    },
-  },
-
-  // ── Chapter 7 ─────────────────────────────────────────────────────────────
+  // ── Chapter 9 ─────────────────────────────────────────────────────────────
   {
     id: 'ch07',
     title: 'Token Efficiency & Sessions',
-    subtitle: 'Week 7 — Working Lean',
+    subtitle: 'Week 9 — Working Lean',
     icon: '🪙',
-    xpReward: 300,
+    xpReward: 360,
     lessons: [
       {
-        id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Every Word Costs</h2>
@@ -718,7 +817,7 @@ Do not change the function signature or any callers.</code></pre>
 <p>Leaner context = better results. Not because Claude Code gets smarter, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
       {
-        id: 'ch07-l02', title: 'When to Use /clear', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch07-l02', title: 'When to Use /clear', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Fresh Start</h2>
@@ -738,7 +837,7 @@ Do not change the function signature or any callers.</code></pre>
 <p>If there's important context you want to carry forward, summarise it yourself and paste it as your first message after <code>/clear</code>. Or use <code>/compact</code> to let Claude Code create the summary automatically.</p>`,
       },
       {
-        id: 'ch07-l03', title: '/compact and Summaries', xpReward: 60, videos: [],
+        id: 'ch07-l03', title: '/compact and Summaries', xpReward: 90, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Compression Without Loss</h2>
@@ -757,7 +856,7 @@ Do not change the function signature or any callers.</code></pre>
 <p>Even /compact summaries can lose fidelity. For critical decisions made earlier in the session, consider writing them down externally (a note, a comment in the code) rather than relying purely on the compacted context to remember them.</p>`,
       },
       {
-        id: 'ch07-l04', title: 'Structuring Long Sessions', xpReward: 60, videos: [],
+        id: 'ch07-l04', title: 'Structuring Long Sessions', xpReward: 90, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Staying Lean Over Time</h2>
@@ -782,7 +881,7 @@ Do not change the function signature or any callers.</code></pre>
       scenario: `Hey — our team's Claude Code costs are out of hand. Sessions are running for hours, context keeps ballooning, and I'm seeing 2-3x slower responses by end of day. We're doing a big refactor spanning multiple days. What's your strategy for keeping sessions lean without losing important context?`,
       task: 'Describe your strategy for maintaining token efficiency during a multi-day refactor with Claude Code.',
       hint: 'Your answer should cover /clear, /compact, how to structure sessions, and why lean context produces better results.',
-      minLength: 100, passThreshold: 70, xpReward: 400,
+      minLength: 100, passThreshold: 70, xpReward: 500,
       criteria: [
         { type: 'keyword', value: ['/clear', 'clear command', 'clear the context'], description: 'Mentions /clear', weight: 2 },
         { type: 'keyword', value: ['/compact', 'compact command'], description: 'Mentions /compact', weight: 2 },
@@ -793,212 +892,4 @@ Do not change the function signature or any callers.</code></pre>
     },
   },
 
-  // ── Chapter 8 ─────────────────────────────────────────────────────────────
-  {
-    id: 'ch08',
-    title: 'Skills: Foundations',
-    subtitle: 'Week 8 — Reusable Workflows',
-    icon: '⚡',
-    xpReward: 350,
-    lessons: [
-      {
-        id: 'ch08-l01', title: 'What Are Skills?', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Reusable Prompt Templates</h2>
-<p>Skills (custom slash commands) are reusable, parameterised prompt templates stored in <code>.claude/skills/</code>. They let you package complex workflows into a single command invocable from any session.</p>
-<h3>Without skills</h3>
-<p>Every time you want a PR description, a security review, or a changelog entry, you write the same multi-paragraph prompt from memory. Results vary based on how well you remember the prompt. Context is wasted typing it out.</p>
-<h3>With skills</h3>
-<p>You run <code>/pr-description</code> or <code>/security-review</code> and get consistent, high-quality output every time — without burning context on the prompt instructions themselves.</p>
-<h3>Built-in commands vs bundled skills</h3>
-<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/review</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>`,
-      },
-      {
-        id: 'ch08-l02', title: 'Progressive Disclosure: Why Skills Beat Static Config', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Only Pay for What You Use</h2>
-<p>This is the most important and least-understood aspect of how skills work: <strong>only the skill's name and description live in context at all times</strong>. The full skill instructions are only loaded when the skill is actually invoked.</p>
-<h3>The progressive disclosure principle</h3>
-<p>When Claude Code starts a session, it loads a short index of available skills — just their names and one-line descriptions. This might cost 50 tokens for a library of 10 skills. When you invoke a specific skill with <code>/security-review</code>, only then is the full skill template (potentially 500 tokens) loaded into context.</p>
-<h3>Why this beats a large CLAUDE.md</h3>
-<p>Compare two approaches:</p>
-<ul>
-  <li><strong>CLAUDE.md approach</strong>: All workflow instructions in one file, loaded every session. A 10-skill CLAUDE.md might cost 3,000 tokens on every session regardless of which skills you need.</li>
-  <li><strong>Skills approach</strong>: ~50-token index always loaded; full skill costs only when invoked. A 10-task session that uses 2 skills costs ~1,100 tokens total for the skill layer.</li>
-</ul>
-<h3>The practical rule</h3>
-<p>If an instruction is "always active", it belongs in CLAUDE.md. If it's "sometimes needed", it belongs in a skill. This distinction alone can halve your average session context cost.</p>`,
-      },
-      {
-        id: 'ch08-l03', title: 'Writing Your First Skill', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>A Skill is Just a Markdown File</h2>
-<p>Creating a skill: make a directory inside <code>.claude/skills/</code> named after the command, and put a <code>SKILL.md</code> file inside it with the prompt template.</p>
-<h3>Example: changelog skill</h3>
-<p>File: <code>.claude/skills/changelog/SKILL.md</code></p>
-<pre><code>Generate a changelog entry for version $ARGUMENTS.
-
-Review the git log since the last tag and summarise:
-1. New features (## Added)
-2. Bug fixes (## Fixed)
-3. Breaking changes (## Breaking) — flag prominently
-4. Internal changes (## Changed)
-
-Format as Keep a Changelog. Be concise — one line per item.</code></pre>
-<p>Usage: <code>/changelog v2.5.0</code></p>
-<h3>Best practices</h3>
-<ul>
-  <li>Use <code>$ARGUMENTS</code> for dynamic input</li>
-  <li>Be explicit about output format</li>
-  <li>Include quality criteria ("flag breaking changes", "be concise")</li>
-  <li>Skills in <code>.claude/skills/</code> are shared with the team via git</li>
-  <li>Personal skills go in <code>~/.claude/skills/</code></li>
-  <li>The legacy <code>.claude/commands/</code> path still works but is no longer canonical</li>
-</ul>`,
-      },
-      {
-        id: 'ch08-l04', title: 'Hook-based Skills', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Skills That Trigger Automatically</h2>
-<p>Some skills don't need manual invocation — they run automatically at specific lifecycle events. These are configured in <code>~/.claude/settings.json</code> (user-level) or <code>.claude/settings.json</code> (project-level) using hooks.</p>
-<h3>Hook events (selected)</h3>
-<ul>
-  <li><strong>PreToolUse</strong> — runs before Claude Code uses any tool (can block)</li>
-  <li><strong>PostToolUse</strong> — runs after a tool completes</li>
-  <li><strong>Stop</strong> — runs when Claude Code finishes responding</li>
-  <li><strong>SessionStart / SessionEnd</strong> — session lifecycle</li>
-  <li><strong>UserPromptSubmit</strong> — before each user message is processed</li>
-  <li><strong>PreCompact / PostCompact</strong> — around /compact operations</li>
-  <li><strong>SubagentStart / SubagentStop</strong> — for multi-agent workflows</li>
-</ul>
-<p>There are 27 hook events in total — see the official docs for the complete list.</p>
-<h3>Example: auto-lint on stop</h3>
-<pre><code>{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [{ "type": "command", "command": "npm run lint" }]
-      }
-    ]
-  }
-}</code></pre>
-<p>Every time Claude Code finishes a response, the linter runs automatically. The <code>matcher</code> field filters by tool name (empty string = match all).</p>
-<h3>When hooks shine</h3>
-<p>Hooks are best for guardrails — things that should always happen regardless of which skill or task is running. Linting, type checking, running the test suite on a changed file. They're your automated quality gate.</p>`,
-      },
-    ],
-    practicalTest: {
-      id: 'ch08-test',
-      scenarioType: 'slack', scenarioFrom: 'James Kato', scenarioRole: 'DevOps Lead', scenarioAvatar: '🧑‍💻',
-      scenario: `Hey — a few things. First, we keep forgetting to run the linter before commits, causing CI failures. Second, our CLAUDE.md has grown to 3,000 words because we stuffed all our workflow instructions in it. Can you (1) write a settings.json hook to run the linter automatically, and (2) explain why the workflow instructions should be moved to skills instead?`,
-      task: 'Write the settings.json hook for auto-linting AND explain why skills beat a large CLAUDE.md for workflow instructions.',
-      hint: 'Cover both: the hook config AND the progressive disclosure argument (only name+description in context until invoked).',
-      minLength: 120, passThreshold: 70, xpReward: 450,
-      criteria: [
-        { type: 'keyword', value: ['hook', 'hooks', 'Stop', 'PreToolUse'], description: 'References hook configuration', weight: 2 },
-        { type: 'keyword', value: ['npm run lint', 'lint'], description: 'Includes the lint command in the hook', weight: 2 },
-        { type: 'keyword', value: ['progressive', 'disclosure', 'name', 'description', 'loaded on demand', 'only when'], description: 'Explains progressive disclosure', weight: 2 },
-        { type: 'keyword', value: ['token', 'context', 'cost', 'efficient'], description: 'Makes the token efficiency argument', weight: 1 },
-        { type: 'length', value: 120, description: 'Response is at least 120 characters', weight: 1 },
-      ],
-    },
-  },
-
-  // ── Chapter 9 ─────────────────────────────────────────────────────────────
-  {
-    id: 'ch09',
-    title: 'Skills: Methodology',
-    subtitle: 'Week 9 — Build Skills That Actually Work',
-    icon: '🔬',
-    xpReward: 350,
-    lessons: [
-      {
-        id: 'ch09-l01', title: 'Walk Before You Codify', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>The Biggest Skill-Building Mistake</h2>
-<p>Most people build skills the wrong way: they <em>imagine</em> what a good workflow looks like, write a skill file for it, then discover the skill produces inconsistent output and spend weeks debugging prompt templates instead of doing actual work.</p>
-<p>The correct approach: <strong>walk through the workflow manually first</strong>. Run it in a live Claude Code session, step by step. Correct it in real time. Only after you've run it successfully multiple times — and you understand exactly what inputs, outputs, and corrections it needs — do you write the skill file.</p>
-<h3>The methodology in three phases</h3>
-<ol>
-  <li><strong>Manual runs</strong> — execute the workflow as a conversation, making corrections as you go. Do this at least 3 times on real tasks.</li>
-  <li><strong>Pattern extraction</strong> — what prompts worked? what corrections were needed? what inputs were required? write these down.</li>
-  <li><strong>Codification</strong> — convert your proven prompt sequence into a skill file, including the corrections as guardrails.</li>
-</ol>
-<h3>Why this works</h3>
-<p>A skill built from observed behaviour is empirically grounded. A skill built from imagination is a hypothesis. Given how much output quality depends on subtle prompt phrasing, the empirical approach produces significantly more reliable skills — and you discover edge cases before they become production failures.</p>`,
-      },
-      {
-        id: 'ch09-l02', title: 'Documenting a Workflow Run', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Taking Notes During Manual Runs</h2>
-<p>The goal of the manual phase is not just to complete the task — it's to learn enough about the workflow to encode it reliably. That requires deliberate note-taking during the run.</p>
-<h3>What to capture</h3>
-<ul>
-  <li><strong>The exact opening prompt</strong> — what framing made Claude Code understand the task correctly?</li>
-  <li><strong>Corrections you made</strong> — what did Claude Code get wrong on the first try, and how did you fix it?</li>
-  <li><strong>Required inputs</strong> — what information does this workflow always need? (file path? version number? audience?)</li>
-  <li><strong>Output criteria</strong> — what does "good output" look like? Can you articulate it concisely?</li>
-  <li><strong>Failure modes</strong> — what went wrong and what prompt fixed it?</li>
-</ul>
-<h3>The documentation habit</h3>
-<p>After each successful manual run, spend 5 minutes writing up what worked. Keep these notes in a simple file — <code>.business-brain/workflow-notes.md</code> or similar. After 3 successful runs, you'll have everything you need to write a reliable skill.</p>
-<pre><code>## PR Description Workflow — Notes
-Opening: "Write a PR description for the changes in this branch..."
-Correction needed: always add "focus on the why, not the what"
-Required input: target branch name, JIRA ticket number
-Output must: include summary, test plan, and breaking changes section</code></pre>`,
-      },
-      {
-        id: 'ch09-l03', title: 'Writing the Skill from Observation', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>From Notes to skill.md</h2>
-<p>With 3+ successful manual runs documented, writing the skill file is straightforward. You're not guessing — you're encoding what you've already observed to work.</p>
-<h3>Skill structure template</h3>
-<pre><code># [Skill Name]
-
-## Context
-[One sentence: what this skill does and when to use it]
-
-## Inputs
-$ARGUMENTS: [what the user passes — e.g., "target branch name"]
-
-## Task
-[The opening prompt that worked in your manual runs]
-
-## Quality Criteria
-- [Correction 1 you always had to make → encode as a rule]
-- [Correction 2 → encode as a rule]
-
-## Output Format
-[Exactly what the output should look like — structure, length, format]</code></pre>
-<h3>Encoding corrections as guardrails</h3>
-<p>If you always had to say "focus on the why, not the what" during manual runs, that correction becomes a line in the Quality Criteria section. You're essentially automating the corrections you've already made manually. The skill learns from your experience.</p>
-<h3>Test the skill before committing</h3>
-<p>Run the skill 2–3 times on real tasks before committing it to the repo. If it needs corrections again, update the skill file. Repeat until it runs cleanly without manual intervention.</p>`,
-      },
-    ],
-    practicalTest: {
-      id: 'ch09-test',
-      scenarioType: 'jira', scenarioFrom: 'Engineering Enablement Team', scenarioRole: 'Developer Experience', scenarioAvatar: '🛠️',
-      scenario: `KEDASH-DX-14 · Assigned to You\n\nWe want to build a skill for generating weekly status reports from git commits. Before writing the skill file, you've run the workflow manually three times. Here's what you observed:\n\n- Opening that worked: "Summarise this week's commits into a status report for non-technical stakeholders"\n- Always needed to add: "avoid jargon, focus on business impact"\n- Always needed to add: "group by feature area, not by commit"\n- Required input: the date range\n- Output should be: 3-5 bullet points per feature area, plain English\n\nWrite the skill.md file based on these observations.`,
-      task: 'Write the skill.md file for the weekly status report workflow based on the observed manual run notes.',
-      hint: 'Encode the corrections (avoid jargon, group by feature area) as guardrails in the skill. Include $ARGUMENTS for the date range.',
-      minLength: 120, passThreshold: 70, xpReward: 450,
-      criteria: [
-        { type: 'keyword', value: ['$ARGUMENTS', '$arguments', 'date range', 'week', 'date'], description: 'Includes $ARGUMENTS for date range input', weight: 2 },
-        { type: 'keyword', value: ['jargon', 'technical', 'non-technical', 'business impact', 'plain'], description: 'Encodes the jargon correction', weight: 2 },
-        { type: 'keyword', value: ['feature area', 'feature', 'group', 'grouped'], description: 'Encodes the grouping correction', weight: 2 },
-        { type: 'keyword', value: ['bullet', 'bullets', 'format', 'output', 'structure'], description: 'Specifies the output format', weight: 1 },
-        { type: 'length', value: 120, description: 'Response is at least 120 characters', weight: 1 },
-      ],
-    },
-  },
 ];
