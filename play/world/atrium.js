@@ -86,11 +86,18 @@ export function buildAtrium(scene, opts = {}) {
   // West wall (left) extends up
   tallWall(ROOM_D, -10.95 - 0.001, 0, Math.PI / 2, 3.8, MEZZ_HEIGHT, upperWallMat);
   tallWall(ROOM_D, -10.95 - 0.001, 0, Math.PI / 2, MEZZ_HEIGHT, ATRIUM_HEIGHT, topWallMat);
-  // South wall split (around the doorway to library)
-  tallWall(8.5, -6.75, 10.95, 0, 3.8, MEZZ_HEIGHT, upperWallMat);
-  tallWall(8.5,  6.75, 10.95, 0, 3.8, MEZZ_HEIGHT, upperWallMat);
-  tallWall(8.5, -6.75, 10.95, 0, MEZZ_HEIGHT, ATRIUM_HEIGHT, topWallMat);
-  tallWall(8.5,  6.75, 10.95, 0, MEZZ_HEIGHT, ATRIUM_HEIGHT, topWallMat);
+  // South wall split (around the doorway to library). 9.25m wide
+  // segments centered at ±6.375 leave a 3.5m doorway gap matching the
+  // door panel (previously 8.5m wide → 5m gap → visible holes
+  // between the door and the side wall, plus open void above the door).
+  tallWall(9.25, -6.375, 10.95, 0, 3.8, MEZZ_HEIGHT, upperWallMat);
+  tallWall(9.25,  6.375, 10.95, 0, 3.8, MEZZ_HEIGHT, upperWallMat);
+  tallWall(9.25, -6.375, 10.95, 0, MEZZ_HEIGHT, ATRIUM_HEIGHT, topWallMat);
+  tallWall(9.25,  6.375, 10.95, 0, MEZZ_HEIGHT, ATRIUM_HEIGHT, topWallMat);
+  // Close the gap directly above the door (x ∈ [-1.75, +1.75], from the
+  // top of the doorway up to the atrium ceiling) so players in the library
+  // don't see straight through into the atrium upper volume.
+  tallWall(3.5, 0, 10.95, 0, 3.8, ATRIUM_HEIGHT, topWallMat);
 
   // ── 3. East wall replaced with a glass curtain wall ─────────────────
   // (The existing east wall stays at 3.8m — we add transparent glass

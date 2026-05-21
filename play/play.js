@@ -1276,10 +1276,13 @@ function buildWorld() {
   wall(22, wallH, 0.3, 0, wallH/2, -11);
   wall(0.3, wallH, 22, -11, wallH/2, 0);
   wall(0.3, wallH, 22, 11, wallH/2, 0);
-  // front split with doorway at center (z = 11)
-  wall(8.5, wallH, 0.3, -6.75, wallH/2, 11);
-  wall(8.5, wallH, 0.3, 6.75, wallH/2, 11);
-  wall(4, 1.2, 0.3, 0, wallH - 0.6, 11);
+  // front split with doorway at center (z = 11). The doorway opening
+  // (x ∈ [-1.75, +1.75]) matches the door panel built in registerDoor —
+  // previously the opening was 5m wide while the door was only 3.5m,
+  // leaving visible gaps on either side of the closed door.
+  wall(9.25, wallH, 0.3, -6.375, wallH/2, 11);
+  wall(9.25, wallH, 0.3,  6.375, wallH/2, 11);
+  wall(3.5,  1.2,   0.3,  0,     wallH - 0.6, 11);
 
   // CEO portrait on back wall (replaces wall logo) — real image, not shapes
   buildCeoPortrait(scene);

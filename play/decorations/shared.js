@@ -158,6 +158,17 @@ export function buildPlantSucculent() {
 
 export function buildPlantHanging() {
   const g = new THREE.Group();
+  // Cord from the pot up to the ceiling — without this the plant
+  // appeared to float ("flying stool" feedback from playtest). Both
+  // placements (reception y=3.6, library y=3.4) leave ~0.2-0.4m to the
+  // ceiling above; 0.5m of cord covers either and disappears slightly
+  // into the ceiling, reading as anchored.
+  const cord = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6),
+    new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 }),
+  );
+  cord.position.y = 0.25; // group-local — runs from pot top (~0) up to 0.5
+  g.add(cord);
   const pot = new THREE.Mesh(
     new THREE.CylinderGeometry(0.16, 0.13, 0.2, 14),
     new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.7 }),

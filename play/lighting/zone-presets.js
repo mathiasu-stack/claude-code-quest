@@ -105,13 +105,13 @@ const RECEPTION_PRESET = {
 //   • fog pushed back so the far wall doesn't disappear into black
 const LIBRARY_PRESET = {
   ambient: {
-    skyColor: 0xa9b4d0,    // brighter cool sky
-    groundColor: 0x4a3a25, // warmer wood bounce (was 0x2a1f17)
-    intensity: 0.95,        // was 0.5 — critical brightness lift
+    skyColor: 0xc8d4f0,    // brighter, slightly warmer cool sky
+    groundColor: 0x6b5436, // brighter warm wood bounce
+    intensity: 1.35,        // lifted again from 0.95 — playtest still felt dim
   },
   directional: {
-    color: 0xc8d4f0,        // slightly cleaner cool key
-    intensity: 0.95,        // was 0.55
+    color: 0xdde6f4,
+    intensity: 1.20,        // lifted from 0.95
     position: [-6, 14, 18],
     castShadow: true,
     shadowMapSize: 1024,
@@ -121,20 +121,19 @@ const LIBRARY_PRESET = {
   accents: [
     // Two tungsten table-area point lights at z=16 and z=22 — paired
     // with the pendant cone shades built in world/ceilings.js:209-225.
-    // These are real PointLights (consumed by LightingManager), not
-    // just emissive meshes — verified Bug A pass.
-    { type: 'point', color: 0xffb95c, intensity: 2.1, distance: 9,  decay: 1.4, position: [0, 2.1, 16] },
-    { type: 'point', color: 0xffb95c, intensity: 2.1, distance: 9,  decay: 1.4, position: [0, 2.1, 22] },
-    // NEW: soft fill at average character head height — lifts faces out
-    // of the "silhouette only" look from the previous tuning.
-    { type: 'point', color: 0xfff1c5, intensity: 0.85, distance: 14, decay: 1.4, position: [0, 1.7, 20] },
+    { type: 'point', color: 0xffc77a, intensity: 2.6, distance: 11, decay: 1.4, position: [0, 2.1, 16] },
+    { type: 'point', color: 0xffc77a, intensity: 2.6, distance: 11, decay: 1.4, position: [0, 2.1, 22] },
+    // Soft fill at character head height — lifts faces out of silhouette.
+    { type: 'point', color: 0xfff1c5, intensity: 1.20, distance: 16, decay: 1.4, position: [0, 1.7, 20] },
     // Warm light "streaming" from the arched window onto the floor.
-    { type: 'point', color: 0xfff1c5, intensity: 1.10, distance: 12, decay: 1.5, position: [8, 2.5, 24] },
+    { type: 'point', color: 0xfff1c5, intensity: 1.40, distance: 14, decay: 1.5, position: [8, 2.5, 24] },
     // Cool rim from the back wall — slightly stronger to read depth.
-    { type: 'point', color: 0x7db0ff, intensity: 0.65, distance: 18, decay: 2.0, position: [0, 3.0, 30] },
+    { type: 'point', color: 0x9ec6ff, intensity: 0.85, distance: 18, decay: 2.0, position: [0, 3.0, 30] },
+    // Extra fill near the doorway so the entrance area isn't a dark hole.
+    { type: 'point', color: 0xfff1c5, intensity: 1.00, distance: 10, decay: 1.4, position: [0, 2.2, 13] },
   ],
-  background: 0x232838,                       // was 0x1a1d2a — lifted
-  fog: { color: 0x232838, near: 22, far: 65 },// pushed back; far wall now visible
+  background: 0x2c344a,                       // lifted again
+  fog: { color: 0x2c344a, near: 28, far: 75 },// pushed further back
   postfx: {
     bloomStrength: 0.65,    // was 0.85 — the brighter base no longer needs heavy bloom
     bloomRadius: 0.80,
