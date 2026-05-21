@@ -122,6 +122,10 @@ function completeLesson(ch, lesson) {
   if (btn) {
     const fromPlay = !!window.App._currentParams?.fromPlay;
     const nextHint = window.PlayHints?.getNextHintForLesson?.(lesson.id);
+    // Stash for the play view to pop a Day-1-style modal when we return.
+    if (nextHint) {
+      try { sessionStorage.setItem('ccq_next_stop', JSON.stringify({ hint: nextHint, type: 'lesson' })); } catch {}
+    }
     const wrapper = document.createElement('div');
     // Always include a "Return to 3D World" button. When the lesson was
     // entered via play mode, also auto-redirect after 1.4s. When entered

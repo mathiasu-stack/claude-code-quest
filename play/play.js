@@ -2412,6 +2412,34 @@ function showIntro() {
   };
 }
 
+// Pop the "next stop" overlay when the player returns to the play view
+// after completing a lesson/test. Trigger is a sessionStorage entry
+// written by ui/lesson.js or ui/test.js. The overlay is the same visual
+// style as the Day 1 intro so the player notices it.
+function showPendingNextStop() {
+  let pending;
+  try { pending = JSON.parse(sessionStorage.getItem('ccq_next_stop') || 'null'); }
+  catch { pending = null; }
+  if (!pending || !pending.hint) return;
+  sessionStorage.removeItem('ccq_next_stop');
+
+  const overlay = document.getElementById('play-next-overlay');
+  if (!overlay) return;
+  const eyebrow = document.getElementById('play-next-eyebrow');
+  const title   = document.getElementById('play-next-title');
+  const body    = document.getElementById('play-next-body');
+  const btn     = document.getElementById('play-next-btn');
+  if (eyebrow) eyebrow.textContent = pending.type === 'test' ? '✓ ASSESSMENT PASSED' : '✓ LESSON COMPLETE';
+  if (title)   title.textContent   = pending.type === 'test' ? 'Onward.' : 'Where to next?';
+  if (body)    body.textContent    = pending.hint;
+  overlay.classList.add('visible');
+  inputLocked = true;
+  if (btn) btn.onclick = () => {
+    overlay.classList.remove('visible');
+    inputLocked = false;
+  };
+}
+
 const ELEVATOR_TARGET = { __elevator: true };
 
 function tryInteract() {
@@ -3146,6 +3174,10 @@ export async function start(host) {
     }
   }, 1500);
   showIntro();
+  // Show the "next stop" overlay if the player just finished a lesson
+  // or test in another view. Small delay so the play scene settles in
+  // before the modal appears.
+  setTimeout(showPendingNextStop, 400);
   // ── Ceremony manager — replaces the simple dance trigger ───────────
   ceremony = new CeremonyManager({
     getPlayer: () => player,

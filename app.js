@@ -129,6 +129,15 @@ const App = {
           </div>
         </div>
 
+        <div class="play-intro-overlay" id="play-next-overlay">
+          <div class="intro-card">
+            <div class="intro-eyebrow" id="play-next-eyebrow">✓ LESSON COMPLETE</div>
+            <h2 id="play-next-title">Where to next?</h2>
+            <p id="play-next-body">—</p>
+            <button class="btn-primary intro-btn" id="play-next-btn">Got it — let's go →</button>
+          </div>
+        </div>
+
         <div class="play-dialogue" id="play-dialogue"></div>
       </div>
     `;

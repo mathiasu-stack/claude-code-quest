@@ -148,6 +148,10 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   const xpText = result.passed && !wasAlreadyPassed ? `+${test.xpReward} PP awarded!` : (wasAlreadyPassed ? 'Already passed — no additional PP' : 'No PP awarded this attempt');
 
   const nextHint = result.passed ? window.PlayHints?.getNextHintForTest?.(test.id) : null;
+  // Stash for the play view to pop a Day-1-style modal when we return.
+  if (nextHint) {
+    try { sessionStorage.setItem('ccq_next_stop', JSON.stringify({ hint: nextHint, type: 'test' })); } catch {}
+  }
 
   feedbackEl.innerHTML = `
     <div class="feedback-banner ${passClass}">
