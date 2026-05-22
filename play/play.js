@@ -2386,7 +2386,32 @@ function buildPlayer() {
 // sitDown/walk. sitDown is the entry to a 3-step compound: sitDown →
 // sitIdle → standUp → pick again. Durations are clip-length for one-shots,
 // random ranges for loops.
-const INES_STANCE_FACTOR = 1.0; // Meshy's auto-rig stance kept as-is — fused-feet appearance is a shoe-mesh / camera-angle artifact, not a bone-width issue
+const INES_STANCE_FACTOR = 1.0; // bind pose width left as-is
+// Toe-out angle for idle + walk: rotates each foot around the world Y
+// axis so the toes splay outward. Visually separates the two shoes
+// without changing leg spacing.
+const INES_TOE_OUT_RAD = 22 * Math.PI / 180;
+const _INES_Y_AXIS = new THREE.Vector3(0, 1, 0);
+const _INES_TMP_Q_A = new THREE.Quaternion();
+const _INES_TMP_Q_B = new THREE.Quaternion();
+const _INES_TMP_Q_C = new THREE.Quaternion();
+function applyInesToeOut(skeleton, angleRad) {
+  if (!skeleton) return;
+  for (const side of ['Left', 'Right']) {
+    const foot = skeleton.getBoneByName(side + 'Foot');
+    if (!foot || !foot.parent) continue;
+    const signedAngle = side === 'Left' ? angleRad : -angleRad;
+    _INES_TMP_Q_A.setFromAxisAngle(_INES_Y_AXIS, signedAngle);
+    foot.parent.updateMatrixWorld(true);
+    foot.parent.getWorldQuaternion(_INES_TMP_Q_B);
+    // adjust (local) = parentW^-1 * worldYRot * parentW
+    _INES_TMP_Q_C.copy(_INES_TMP_Q_B).invert()
+      .multiply(_INES_TMP_Q_A)
+      .multiply(_INES_TMP_Q_B);
+    // new_local = adjust * current_local
+    foot.quaternion.premultiply(_INES_TMP_Q_C);
+  }
+}
 const INES_ACTIVITIES = {
   idle:    { motion: 'idle',     minMs: 3500, maxMs: 6000, oneShot: false, next: 'pick' },
   dance:   { motion: 'dance',    minMs: 6000, maxMs: 9000, oneShot: false, next: 'pick' },
@@ -2483,12 +2508,20 @@ function applyInesBehavior(mesh, nowMs, dt) {
   }
 
   // Hip widening — runs every frame after mixer wrote walk/idle bone
-  // values. Fixes Meshy's overly narrow auto-rigged hip stance.
+  // values. (Currently 1.0 = passthrough.)
   if (skeleton && mesh.userData._bindLegX) {
     const lu = skeleton.getBoneByName('LeftUpLeg');
     const ru = skeleton.getBoneByName('RightUpLeg');
     if (lu) lu.position.x = mesh.userData._bindLegX.left  * INES_STANCE_FACTOR;
     if (ru) ru.position.x = mesh.userData._bindLegX.right * INES_STANCE_FACTOR;
+  }
+  // Toe-out: only during idle and walk. Sit/dance/jump have their own
+  // intentional foot positioning that we shouldn't fight.
+  if (skeleton) {
+    const act = mesh.userData._activity;
+    if (act === 'idle' || act === 'walk') {
+      applyInesToeOut(skeleton, INES_TOE_OUT_RAD);
+    }
   }
 }
 
