@@ -150,11 +150,38 @@ export class AssetLoader {
     let loaded = 0;
     await Promise.all(ids.map(async (id) => {
       const gltf = await this.get(id);
-      if (gltf) this._resolved.set(id, gltf);
+      if (gltf) {
+        this._resolved.set(id, gltf);
+        await this._mergeExtraAnimations(id, gltf);
+      }
       loaded += 1;
       onProgress?.(loaded, total);
     }));
     return this._resolved.size;
+  }
+
+  // For characters whose manifest entry has `extraAnimations: [...]`,
+  // load each listed GLB and append its clips to the character's own
+  // animations array. Used for Meshy-rigged characters whose walk/run
+  // clips ship as separate files (same bind pose, so they bind directly
+  // without Mixamo-style retargeting).
+  async _mergeExtraAnimations(id, gltf) {
+    const entry = this.entryFor(id);
+    const files = entry?.extraAnimations;
+    if (!files || !files.length) return;
+    await Promise.all(files.map(async (file) => {
+      const url = ASSET_DIR + file;
+      try {
+        const sub = await new Promise((resolve, reject) => {
+          this._gltfLoader.load(url, resolve, undefined, reject);
+        });
+        for (const clip of sub.animations || []) {
+          gltf.animations.push(clip);
+        }
+      } catch (err) {
+        console.warn(`[assetLoader] extra animation ${file} failed:`, err.message);
+      }
+    }));
   }
 
   // Sync accessor — returns the parsed GLTF (or null) for an id that

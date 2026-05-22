@@ -19,7 +19,8 @@
       "available": true,
       "tags": ["male", "asian", "hoodie", "glasses", "stylized", "player"],
       "scale": 1.0,
-      "yOffset": 0.0
+      "yOffset": 0.0,
+      "extraAnimations": ["hero_walk.glb", "hero_run.glb"]
     },
     {
       "id": "casual_male_01",

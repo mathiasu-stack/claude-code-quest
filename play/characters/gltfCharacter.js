@@ -152,14 +152,24 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
   for (const sem of sharedClipNames) bindFromClips(sem, inst.animations);
-  for (const sem of sharedClipNames) {
-    if (!actions[sem]) {
-      const shared = assetLoader.getAnimationClip(sem);
-      if (shared) {
-        const retargeted = retargetMixamoPrefix(shared, inst.skeleton);
-        const a = mixer.clipAction(retargeted);
-        a.setLoop(THREE.LoopRepeat);
-        actions[sem] = a;
+  // If the character has its own bundled animations (e.g. Meshy auto-rig
+  // ships walk/run via `extraAnimations`), DON'T fall back to the
+  // Mixamo-style shared pack — the bind poses don't match and applying
+  // absolute Mixamo quaternions on top of a Meshy bind pose distorts
+  // every bone. Better to play only the native clips and leave missing
+  // motions (e.g. idle) at bind pose.
+  const ownEntry = assetLoader.entryFor(assetId);
+  const useSharedPack = !(ownEntry?.extraAnimations?.length);
+  if (useSharedPack) {
+    for (const sem of sharedClipNames) {
+      if (!actions[sem]) {
+        const shared = assetLoader.getAnimationClip(sem);
+        if (shared) {
+          const retargeted = retargetMixamoPrefix(shared, inst.skeleton);
+          const a = mixer.clipAction(retargeted);
+          a.setLoop(THREE.LoopRepeat);
+          actions[sem] = a;
+        }
       }
     }
   }
