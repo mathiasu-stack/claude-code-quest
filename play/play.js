@@ -1591,15 +1591,15 @@ function tagSceneFloor1() {
   if (skyDome?.sunPivot) skyDome.sunPivot.userData.crossFloor = true;
 }
 
-// Build a compact 22×22 office room at floorBaseY(floorIdx) holding the
-// 4 chapters' NPC clusters. Floors 2-4 only — floor 1 keeps the rich
-// existing atrium build. Walls + ceiling + floor plate; the elevator
-// shaft passes through one corner of the south wall.
+// Build a 22×22 floor for floors 2-4 partitioned into a 2×2 grid of
+// quadrants — one per chapter. The elevator door (now on the east wall
+// at z=-7.6, matching world/elevator.js after the move outside the
+// atrium) opens into the NE quadrant. Internal cross-walls at x=0 and
+// z=0 divide the room into 4; each cross-wall has a 2m doorway at the
+// origin so the player can walk between quadrants.
 function buildFloorOffice(floorIdx) {
   const y0 = floorBaseY(floorIdx);
   const wallH = 3.8;
-  // Theme: take the first chapter on this floor's theme as the floor's
-  // overall look. ZONE_THEMES is 0-indexed by chapterNum-1.
   const themeIdx = (floorIdx - 1) * CHAPTERS_PER_FLOOR;
   const theme = ZONE_THEMES[themeIdx] || { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', metal: 0.1, title: floorThemeName(floorIdx) };
 
@@ -1626,31 +1626,47 @@ function buildFloorOffice(floorIdx) {
   ceilingMesh.userData.floor = floorIdx;
   scene.add(ceilingMesh);
 
-  // Perimeter walls — leave a gap on the south wall around the elevator
-  // shaft (shaft center at x=8.5, half-width 1.2).
   const wallMat = new THREE.MeshStandardMaterial({
     color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
   });
-  function addWall(w, h, d, x, z) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+  // Slightly different tint for internal partitions so they read as a
+  // step away from the outer envelope.
+  const innerWallMat = new THREE.MeshStandardMaterial({
+    color: 0xf4ecd8, metalness: 0.03, roughness: 0.7,
+  });
+  function addWall(w, h, d, x, z, mat = wallMat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y0 + h / 2, z);
     m.castShadow = true; m.receiveShadow = true;
     m.userData.floor = floorIdx;
     scene.add(m);
   }
-  // North + east + west walls — solid 22m.
-  addWall(22, wallH, 0.3, 0, 11);
+
+  // ── Outer perimeter ────────────────────────────────────────────────
+  // North, south, west walls — solid 22m.
+  addWall(22, wallH, 0.3, 0, -11);
+  addWall(22, wallH, 0.3, 0,  11);
   addWall(0.3, wallH, 22, -11, 0);
-  addWall(0.3, wallH, 22,  11, 0);
-  // South wall — split around the elevator opening at x∈[6.9, 10.1].
-  addWall(17.0, wallH, 0.3, -2.5, -11);  // west chunk: x in [-11, 6]
-  addWall(0.9,  wallH, 0.3, 10.55, -11); // east stub: x in [10.1, 11]
-  // Lintel above the elevator opening (top edge of the wall, 1.2m tall).
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 0.3), wallMat);
-  lintel.position.set(8.5, y0 + wallH - 0.6, -11);
-  lintel.castShadow = true; lintel.receiveShadow = true;
-  lintel.userData.floor = floorIdx;
-  scene.add(lintel);
+  // East wall — split around the elevator door at z=-7.6 (matches
+  // elevator.js's shaft door which faces west into this floor). Door
+  // opening is 2.4m wide and 2.6m tall.
+  addWall(0.3, wallH, 2.2, 11, -9.9);    // north stub (z=-11..-8.8)
+  addWall(0.3, wallH, 17.4, 11, 2.3);    // south of elevator (z=-6.4..+11)
+  // Lintel above the elevator door — 1.2m tall closing y∈[2.6, 3.8].
+  const elevLintel = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 2.4), wallMat);
+  elevLintel.position.set(11, y0 + wallH - 0.6, -7.6);
+  elevLintel.castShadow = true; elevLintel.receiveShadow = true;
+  elevLintel.userData.floor = floorIdx;
+  scene.add(elevLintel);
+
+  // ── Internal cross-walls — 2×2 quadrant layout ──────────────────────
+  // Horizontal divider at z=0: two 5m segments leaving a 2m doorway at
+  // x=0 (player can walk between north and south quadrants).
+  addWall(10, wallH, 0.3, -6, 0, innerWallMat);   // west half (x=-11..-1)
+  addWall(10, wallH, 0.3,  6, 0, innerWallMat);   // east half (x=+1..+11)
+  // Vertical divider at x=0: two 5m segments leaving a 2m doorway at z=0.
+  addWall(0.3, wallH, 10, 0, -6, innerWallMat);   // north half (z=-11..-1)
+  addWall(0.3, wallH, 10, 0,  6, innerWallMat);   // south half (z=+1..+11)
 
   // Floor title sign on north wall
   const sign = makeWallSign(`FLOOR ${floorIdx} — ${(theme.title || '').toUpperCase()}`, 9, 1.4, '#1a2744', theme.accent || '#ffd54f');
@@ -1771,8 +1787,9 @@ function registerStaticColliders() {
   addColliderAABB(-9.85, -9.15, 30.70, 31.30);
   addColliderAABB( 7.55,  8.45, 13.65, 14.35);
 
-  // Floors 2-4: four chapter-desks per floor at the cluster centers.
-  // buildDesk default is 1.6×0.8 with face=0 → footprint 1.6×0.8 in XZ.
+  // Floors 2-4: four chapter-desks per floor at the cluster centers,
+  // plus the internal 2×2-divider walls so the player can only pass
+  // through the central doorways.
   for (let f = 2; f <= FLOORS_TOTAL; f++) {
     const slots = [
       [-5.5, -5.5], [5.5, -5.5], [-5.5, 5.5], [5.5, 5.5],
@@ -1780,6 +1797,12 @@ function registerStaticColliders() {
     for (const [cx, cz] of slots) {
       addColliderAABB(cx - 0.85, cx + 0.85, cz - 0.45, cz + 0.45, f);
     }
+    // Horizontal divider at z=0 — two 10m segments leaving a 2m gap at x=0.
+    addColliderAABB(-11, -1, -0.15, 0.15, f);
+    addColliderAABB(  1, 11, -0.15, 0.15, f);
+    // Vertical divider at x=0 — two 10m segments leaving a 2m gap at z=0.
+    addColliderAABB(-0.15, 0.15, -11, -1, f);
+    addColliderAABB(-0.15, 0.15,   1, 11, f);
   }
 }
 
@@ -3296,21 +3319,17 @@ function requestFloorChange(targetFloor) {
   }, 450);
 }
 
-// Move the player to a sensible spawn point on a given floor. Just
-// outside the elevator opening, facing into the room. Also snaps the
-// camera so the fade-in lands without a jarring lerp.
+// Move the player to a sensible spawn point on a given floor. The
+// elevator door is at x=11, z=-7.6 on every floor; the player exits
+// stepping west into the office. Also snaps the camera.
 function spawnPlayerOnFloor(f) {
   if (!player) return;
-  const cp = elevatorRef?.callButtonPos || { x: 8.5, z: -8.5 };
-  // Spawn 2m in front of the call button, on the room side.
-  player.position.set(cp.x - 1.5, floorBaseY(f), cp.z + 2.0);
+  player.position.set(10.0, floorBaseY(f), -7.6);
   player.userData.velocityY = 0;
   player.userData.grounded = true;
-  player.rotation.y = 0; // face north (away from the elevator)
-  cameraYaw = 0;
+  player.rotation.y = -Math.PI / 2; // face west (into the floor)
+  cameraYaw = -Math.PI / 2;
   if (camera) {
-    // Snap camera behind the player along cameraYaw so the lerp doesn't
-    // visibly travel across the room when the fade lifts.
     const camDist = cameraDist;
     camera.position.x = player.position.x - Math.sin(cameraYaw) * camDist;
     camera.position.z = player.position.z - Math.cos(cameraYaw) * camDist;
