@@ -39,7 +39,10 @@ export class AssetLoader {
   async loadManifest() {
     if (this._manifest) return this._manifest;
     try {
-      const res = await fetch(MANIFEST_URL);
+      // Cache-bust per page load — Web Station / mobile Chrome will
+      // otherwise serve a stale manifest after deploys, masking new
+      // `extraAnimations` / `available` flags.
+      const res = await fetch(MANIFEST_URL + '?v=' + Date.now());
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this._manifest = await res.json();
     } catch (err) {

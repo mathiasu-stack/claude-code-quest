@@ -195,7 +195,9 @@ export function makeGltfCharacter(look, assetLoader) {
     if (!hudEl) return;
     const boundList = Object.keys(actions).join(',') || '(none)';
     const embedClips = (inst.animations || []).map(a => a.name).join(' | ') || '(none)';
-    hudEl.textContent = `asset=${assetId} clips=[${embedClips}] bound=[${boundList}] motion=${currentMotion || 'none'}`;
+    const entry = assetLoader.entryFor(assetId) || {};
+    const extras = (entry.extraAnimations || []).join(',') || '(none)';
+    hudEl.textContent = `asset=${assetId} extras=[${extras}] clips=[${embedClips}] bound=[${boundList}] motion=${currentMotion || 'none'}`;
   }
   function setMotion(name) {
     if (currentMotion === name) { renderHud(); return; }
