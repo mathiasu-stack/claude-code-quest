@@ -407,15 +407,24 @@ const PLAYER_RADIUS = 0.30;
 // without any per-XZ ramp offset.)
 
 function clampMove(oldX, oldZ, newX, newZ) {
-  // X always within room/zone width
-  newX = Math.max(-10.5, Math.min(10.5, newX));
-
-  // Floors 2-4: simple 22x22 room — clamp Z to room and skip the
-  // floor-1 zone-boundary corridor logic. Static-collider + NPC checks
-  // (below) still apply.
-  if (currentFloor !== 1) {
-    newZ = Math.max(-10.5, Math.min(10.5, newZ));
+  // Floor 1 has a 2×2 layout: the atrium + library occupy x∈[-10.5, 10.5]
+  // while the new west-wing rooms (Files, Plan Mode) occupy x∈[-32.5, -10.5].
+  // Floors 2-4 are a single 22×22 office (z∈[-10.5, 10.5]).
+  if (currentFloor === 1) {
+    newX = Math.max(-32.5, Math.min(10.5, newX));
+    newZ = Math.max(-10.5, Math.min(32.5, newZ));
   } else {
+    newX = Math.max(-10.5, Math.min(10.5, newX));
+    newZ = Math.max(-10.5, Math.min(10.5, newZ));
+  }
+
+  if (currentFloor !== 1) {
+    // skip the floor-1 zone-corridor logic
+  } else if (newX > -10.5) {
+    // Only run the atrium-library Z-corridor check when the player is
+    // in the east half of floor 1 (atrium / library / their shared door
+    // at x∈[-1.7, +1.7]). In the west wing (x<-10.5) the wall colliders
+    // handle boundaries.
 
   // First, find what zone we're trying to be in
   // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
@@ -1240,9 +1249,13 @@ function buildWorld() {
     scene.add(m);
     return m;
   }
-  // back, left
+  // back wall (north)
   wall(22, wallH, 0.3, 0, wallH/2, -11);
-  wall(0.3, wallH, 22, -11, wallH/2, 0);
+  // West wall — split with a 3.5m-wide doorway centered at z=0 leading
+  // into the floor-1 west-wing Files room.
+  wall(0.3, wallH, 9.25, -11, wallH/2, -6.375);   // south of doorway
+  wall(0.3, wallH, 9.25, -11, wallH/2,  6.375);   // north of doorway
+  wall(0.3, 1.2, 3.5, -11, wallH - 0.6, 0);       // lintel above doorway
   // East wall — segmented to leave (a) 3 window openings at z=-3, 0, 3
   // (each 2.4×1.8, centered at y=1.9) and (b) an elevator door opening
   // at z = -7.6, 2.4m wide × 2.6m tall, matching the shaft built by
@@ -1349,11 +1362,15 @@ function buildWorld() {
   libFloor.receiveShadow = true;
   scene.add(libFloor);
 
-  // Library walls — back wall split with doorway to zone 3
-  wall(8.5, wallH, 0.3, -6.75, wallH/2, 33);
-  wall(8.5, wallH, 0.3,  6.75, wallH/2, 33);
-  wall(4, 1.2, 0.3, 0, wallH-0.6, 33);
-  wall(0.3, wallH, 22, -11, wallH/2, 22);
+  // Library walls — back wall (north, z=33) is now SOLID since floor 1
+  // ends here in the 2×2 layout (no z=55+ corridor anymore).
+  wall(22, wallH, 0.3, 0, wallH/2, 33);
+  // West wall — split with 3.5m doorway centered at z=22 (the library's
+  // mid-line) leading into the Plan Mode west-wing room.
+  wall(0.3, wallH, 9.25, -11, wallH/2, 17.375);   // south of doorway
+  wall(0.3, wallH, 9.25, -11, wallH/2, 26.625);   // north of doorway
+  wall(0.3, 1.2, 3.5, -11, wallH - 0.6, 22);       // lintel above doorway
+  // East wall — still solid
   wall(0.3, wallH, 22, 11, wallH/2, 22);
 
   // Library sign on side wall
@@ -1400,9 +1417,11 @@ function buildWorld() {
 
   // ─── Floor 1 zones 3 - 4 (ch03 + ch04, generated from ZONE_THEMES) ───────
   // Chapters 5+ live on floors 2-4 in compact office rooms (built below).
-  for (let zoneIdx = 2; zoneIdx < CHAPTERS_PER_FLOOR; zoneIdx++) {
-    buildGenericZone(zoneIdx);
-  }
+  // Floor-1 ch03 and ch04 rooms now live to the WEST of the atrium /
+  // library (2×2 layout) rather than as a long northward corridor. Build
+  // them in their new positions instead of buildGenericZone(2/3).
+  buildFloor1WestRoom(2, -22, 0);    // Files (CURRICULUM[2]) — west of atrium
+  buildFloor1WestRoom(3, -22, 22);   // Plan Mode (CURRICULUM[3]) — west of library
 
   // ─── Library ceiling (Reception is now an atrium, built later) ────────────
   try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
@@ -1704,6 +1723,34 @@ function buildFloorOffice(floorIdx) {
 // Compute the override XZ position for a chapter-5+ NPC, placing it in
 // the appropriate floor's office layout near its chapter's desk slot.
 // Lesson NPCs cluster around the desk; the test NPC stands behind it.
+// Compute the override XZ position for a procedural floor-1 west-wing
+// NPC (ch03 Files or ch04 Plan Mode in the new 2×2 layout). Their
+// original generated positions assumed the legacy 1×4 corridor at z=44
+// and z=66; this snaps them to the new room centers.
+function floor1WestWingPositionForNPC(npcDef) {
+  const idx = indexForChapterId(npcDef.chapterId);
+  if (idx !== 2 && idx !== 3) return null; // only ch03/ch04 (new positions 3/4)
+  const centerX = -22;
+  const centerZ = idx === 2 ? 0 : 22; // Files at z=0, Plan Mode at z=22
+  // Use the same slot offsets the original generateChapterNPCs uses,
+  // but recentered on the new room.
+  const ch = window.CURRICULUM?.[idx];
+  if (!ch) return null;
+  if (npcDef.kind === 'test') {
+    return { pos: [centerX, centerZ + 8.5], face: Math.PI };
+  }
+  // Lesson NPCs — generateChapterNPCs slot pattern: x = ±6 alternating,
+  // z = centerZ - 4, 0, +4 cycling. We replicate by lesson index.
+  const m = (npcDef.lessonId || '').match(/-l(\d+)$/);
+  const li = m ? Math.max(0, parseInt(m[1], 10) - 1) : 0;
+  const xSign = (li % 2 === 0) ? -1 : 1;
+  const zOff = [-4, 0, 4][(li >> 1) % 3];
+  return {
+    pos: [centerX + xSign * 6, centerZ + zOff],
+    face: xSign < 0 ? Math.PI / 2 : -Math.PI / 2,
+  };
+}
+
 function floorOfficePositionForNPC(npcDef) {
   const chId = npcDef.chapterId;
   const idx = indexForChapterId(chId);
@@ -1753,6 +1800,21 @@ function applyFloorVisibility() {
 // half-width.
 function registerStaticColliders() {
   colliders.length = 0;
+
+  // Floor-1 internal walls — the 2×2 layout adds shared walls between
+  // atrium ↔ Files (at x=-11) and library ↔ Plan Mode (at x=-11), plus
+  // a Files ↔ Plan Mode wall at z=11 in the west wing. Each has a
+  // 3.5m doorway centered at the shared mid-line; the segments below
+  // are the SOLID parts the player can't pass through.
+  // Atrium / Files boundary (x=-11), doorway at z=0:
+  addColliderAABB(-11.15, -10.85, -11, -1.75, 1);   // south of doorway
+  addColliderAABB(-11.15, -10.85,  1.75, 11, 1);    // north of doorway
+  // Library / Plan Mode boundary (x=-11), doorway at z=22:
+  addColliderAABB(-11.15, -10.85, 11, 20.25, 1);    // south of doorway
+  addColliderAABB(-11.15, -10.85, 23.75, 33, 1);    // north of doorway
+  // Files / Plan Mode boundary (z=11 in west wing), doorway at x=-22:
+  addColliderAABB(-33, -23.75, 10.85, 11.15, 1);   // west of doorway
+  addColliderAABB(-20.25, -11, 10.85, 11.15, 1);   // east of doorway
 
   // Zone 1 — reception/onboarding.
   // Original brown reception desk (play.js:1173): 3.0 × 1.2 centered at (0,-8).
@@ -1842,6 +1904,87 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
     lastOpen: passed,
     openRot: OPEN_ROT,
   });
+}
+
+// Build a single floor-1 room at the given center position. Used for
+// the WEST WING rooms (Files at (-22, 0), Plan Mode at (-22, 22)).
+// Same shape as buildGenericZone but positioned arbitrarily; doorway
+// openings in the east + (for Files) north walls connect to the
+// atrium / library / sibling west-wing room.
+function buildFloor1WestRoom(idx, centerX, centerZ) {
+  const theme = ZONE_THEMES[idx];
+  if (!theme) return;
+  const wallH = 3.8;
+
+  // Floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({
+      color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
+    }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(centerX, 0, centerZ);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Walls — west / north / south are SOLID. East wall has the doorway
+  // that connects to atrium (idx=2) or library (idx=3). For idx=2 the
+  // north wall also has a doorway to the Plan Mode room above it.
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
+  });
+  function w(width, height, depth, x, y, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
+    m.position.set(x, y, z);
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  }
+  // West wall — always outer
+  w(0.3, wallH, 22, centerX - 11, wallH / 2, centerZ);
+  // East wall is SHARED with the atrium (idx=2) or library (idx=3) —
+  // they built the wall (with its doorway) on their side; skip it here.
+  // For Files (idx=2): north is outer, south is the shared boundary
+  // with Plan Mode and carries the inter-room doorway.
+  if (idx === 2) {
+    w(22, wallH, 0.3, centerX, wallH / 2, centerZ - 11);   // north outer
+    // South wall split (boundary with Plan Mode), 3.5m doorway at room center
+    w(9.25, wallH, 0.3, centerX - 6.375, wallH / 2, centerZ + 11);
+    w(9.25, wallH, 0.3, centerX + 6.375, wallH / 2, centerZ + 11);
+    w(3.5, 1.2, 0.3, centerX, wallH - 0.6, centerZ + 11);
+  } else {
+    // Plan Mode (idx=3): north wall is shared with Files (already built);
+    // south wall is outer.
+    w(22, wallH, 0.3, centerX, wallH / 2, centerZ + 11);
+  }
+
+  // Title sign on the inside of the west wall, facing east.
+  const sign = makeWallSign(theme.title.toUpperCase(), 7, 1.4, '#1a2744', theme.accent);
+  sign.position.set(centerX - 10.83, 2.6, centerZ);
+  sign.rotation.y = Math.PI / 2;
+  scene.add(sign);
+
+  // Generic decor — central table + lamp + 4 corner plants
+  scene.add(buildTable(centerX, centerZ));
+  scene.add(buildPlant(centerX - 9.5, centerZ - 9.5));
+  scene.add(buildPlant(centerX + 9.5, centerZ - 9.5));
+  scene.add(buildPlant(centerX - 9.5, centerZ + 9.5));
+  scene.add(buildPlant(centerX + 9.5, centerZ + 9.5));
+  scene.add(buildLamp(centerX, centerZ));
+
+  // Themed accent strip
+  const accentColor = parseInt(theme.accent.replace('#',''), 16);
+  const strip = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.0, 18),
+    new THREE.MeshStandardMaterial({
+      color: accentColor, metalness: 0.6, roughness: 0.2,
+      emissive: accentColor, emissiveIntensity: theme.metal * 0.6,
+    }),
+  );
+  strip.rotation.x = -Math.PI / 2;
+  strip.position.set(centerX, 0.002, centerZ);
+  scene.add(strip);
 }
 
 function buildGenericZone(idx) {
@@ -2248,12 +2391,19 @@ function spawnNPC(npcDef) {
     if (npcDef.look.gesture) mergedLook.gesture = npcDef.look.gesture;
   }
   const mesh = makeCharacter(mergedLook);
-  // Relocate ch05+ NPCs to their floor's office layout — their original
-  // positions assumed a single Z-corridor that no longer extends past
-  // ch04. Lesson NPCs cluster around the desk; the test NPC stands rear.
+  // Relocate ch05+ NPCs to their floor's office layout (floor 2-4).
+  // Also relocate floor-1 ch03 (Files) and ch04 (Plan Mode) NPCs to
+  // the new west wing (their generated positions assumed a 1×4 corridor
+  // northward; the 2×2 layout puts those rooms WEST of the atrium /
+  // library instead).
   const npcFloor = floorForChapterId(npcDef.chapterId) || 1;
   if (npcFloor > 1) {
     const override = floorOfficePositionForNPC(npcDef);
+    if (override) {
+      npcDef = { ...npcDef, pos: override.pos, face: override.face };
+    }
+  } else if (npcFloor === 1) {
+    const override = floor1WestWingPositionForNPC(npcDef);
     if (override) {
       npcDef = { ...npcDef, pos: override.pos, face: override.face };
     }
