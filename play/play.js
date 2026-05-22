@@ -2927,7 +2927,10 @@ function update(dt) {
       const stepDx = nx - player.position.x;
       const stepDz = nz - player.position.z;
       footstepAccum += Math.hypot(stepDx, stepDz);
-      if (footstepAccum > 0.65) {
+      // Step cadence: at base speed 4.4 m/s a 1.8 m threshold gives
+      // ~2.4 steps/sec (natural walking pace); sprint scales it up
+      // automatically since the threshold is distance-based.
+      if (footstepAccum > 1.8) {
         footstepAccum = 0;
         const idx = zoneIndexAt(nz);
         playFootstep(surfaceForZone(idx));

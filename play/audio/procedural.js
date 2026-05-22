@@ -62,33 +62,53 @@ function scheduleStop(ctx, nodes, atSec, onStop) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Footsteps. Surface: 'carpet' | 'wood' | 'metal' | 'tile'
-// Each call picks one of 4 procedurally varied "samples" so consecutive
-// footsteps don't sound identical.
+// Each step layers two ingredients so it sounds like an actual footfall
+// rather than a single noise click:
+//   • thump  — low-freq sine (60–130Hz) sweeping down, soft attack;
+//              this is the body-weight impact you feel more than hear.
+//   • swish  — bandpass-filtered noise at mid frequency for the
+//              shoe-sole rustle; low peak so it doesn't dominate.
+// Per-call jitter on pitch/duration keeps consecutive steps distinct.
 // ─────────────────────────────────────────────────────────────────────────────
 const SURFACE_PROFILES = {
-  carpet: { bpFreq: 320,  bpQ: 0.6, dur: 0.18, peak: 0.32, jitter: 0.4 },
-  wood:   { bpFreq: 900,  bpQ: 1.4, dur: 0.13, peak: 0.45, jitter: 0.35 },
-  tile:   { bpFreq: 1600, bpQ: 2.4, dur: 0.10, peak: 0.55, jitter: 0.3 },
-  metal:  { bpFreq: 2200, bpQ: 3.0, dur: 0.10, peak: 0.55, jitter: 0.3 },
+  carpet: { thumpHz:  75, thumpPeak: 0.34, swishFreq:  700, swishQ: 0.7, swishPeak: 0.05, dur: 0.18, jitter: 0.4  },
+  wood:   { thumpHz:  95, thumpPeak: 0.30, swishFreq: 1100, swishQ: 1.0, swishPeak: 0.10, dur: 0.16, jitter: 0.35 },
+  tile:   { thumpHz: 110, thumpPeak: 0.26, swishFreq: 1800, swishQ: 1.8, swishPeak: 0.14, dur: 0.14, jitter: 0.3  },
+  metal:  { thumpHz: 130, thumpPeak: 0.26, swishFreq: 2400, swishQ: 2.2, swishPeak: 0.18, dur: 0.13, jitter: 0.3  },
 };
 
 export function playFootstep(surface = 'carpet') {
   const prof = SURFACE_PROFILES[surface] || SURFACE_PROFILES.carpet;
   audio.play('sfx', (ctx, output) => {
     const dur = prof.dur * (1 - prof.jitter * 0.5 + Math.random() * prof.jitter);
+    const t0 = ctx.currentTime;
+
+    // Thump — low-freq sine, slight pitch-down, soft attack.
+    const thumpDur = Math.min(dur, 0.10);
+    const thumpHz = prof.thumpHz * (0.9 + Math.random() * 0.2);
+    const o = makeOsc(ctx, 'sine', thumpHz);
+    o.frequency.exponentialRampToValueAtTime(thumpHz * 0.55, t0 + thumpDur);
+    const og = envGain(ctx, output, 0.006, thumpDur - 0.006, prof.thumpPeak);
+    o.connect(og);
+    o.start();
+    safeStop(o, t0 + thumpDur);
+    scheduleStop(ctx, [o, og], thumpDur);
+
+    // Swish — bandpass noise, softer envelope, longer than thump.
     const buf = noiseBuffer(ctx, dur);
     const src = ctx.createBufferSource();
     src.buffer = buf;
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = prof.bpFreq * (1 - prof.jitter * 0.3 + Math.random() * prof.jitter * 0.6);
-    bp.Q.value = prof.bpQ;
-    const g = envGain(ctx, output, 0.003, dur - 0.005, prof.peak);
+    bp.frequency.value = prof.swishFreq * (1 - prof.jitter * 0.3 + Math.random() * prof.jitter * 0.6);
+    bp.Q.value = prof.swishQ;
+    const g = envGain(ctx, output, 0.014, dur - 0.016, prof.swishPeak);
     src.connect(bp).connect(g);
     src.start();
-    safeStop(src, ctx.currentTime + dur);
+    safeStop(src, t0 + dur);
     scheduleStop(ctx, [src, bp, g], dur);
-    return { stop: () => safeStop(src, ctx.currentTime) };
+
+    return { stop: () => { safeStop(o, ctx.currentTime); safeStop(src, ctx.currentTime); } };
   }, { expectedDuration: prof.dur + 0.05 });
 }
 
