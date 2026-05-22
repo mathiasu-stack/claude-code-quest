@@ -2380,36 +2380,47 @@ function buildPlayer() {
 }
 
 // Ines: kid wandering around her spawn point while waiting for her dad.
-// A simple two-state machine (pause / walk) drives natural-looking
-// behavior: stand idle 2.5–5s (subtle breathing + slow look-around
-// rotation), then walk in a straight line to a new spot within ~1m of
-// spawn, then pause again. The auto motion-detector in the npc update
-// loop sees position deltas and switches between skeletal walk and idle
-// clips automatically — so on pause she falls back to bind pose (which
-// is acceptable since we don't have a true Meshy idle clip).
+// Two-state machine (pause / walk). She has no Meshy idle clip, so we
+// freeze the walk action at its "arms passing through" frame (~25% of
+// the cycle) during idle to give a natural arms-at-sides pose instead
+// of the T-pose bind. The npc loop's auto motion-detector is skipped
+// for her — we control the walk action's timeScale directly.
+const INES_IDLE_FRAME_RATIO = 0.25; // moment in walk cycle when arms pass at sides
 function applyInesBehavior(mesh, nowMs, dt) {
   const npcDef = mesh.userData.npc;
+  const gc = mesh.userData.gltfChar;
+  const walk = gc?.actions?.walk;
+
   if (!mesh.userData._spawnPos) {
     mesh.userData._spawnPos = { x: npcDef.pos[0], z: npcDef.pos[1] };
     mesh.userData._wanderState = 'pause';
     mesh.userData._wanderEnd = nowMs + 1500;
     mesh.userData._wanderYaw = npcDef.face || 0;
+    if (walk) {
+      walk.reset();
+      walk.setLoop(THREE.LoopRepeat);
+      walk.play();
+      mesh.userData._walkDur = walk.getClip().duration || 1.0;
+      walk.time = mesh.userData._walkDur * INES_IDLE_FRAME_RATIO;
+      walk.timeScale = 0; // frozen during initial pause
+    }
   }
   const spawn = mesh.userData._spawnPos;
   const baseY = floorBaseY(mesh.userData.floor || 1);
   const phase = nowMs * 0.001;
 
   if (mesh.userData._wanderState === 'pause') {
-    // Idle stand: subtle breathing bob + slow body sway to look around.
     mesh.position.y = baseY + Math.sin(phase * 2.0) * 0.012;
     const lookOsc = Math.sin(phase * 0.6) * 0.35;
     const tgtYaw = mesh.userData._wanderYaw + lookOsc;
     let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 1.5));
+    if (walk) {
+      walk.timeScale = 0;
+      walk.time = (mesh.userData._walkDur || 1.0) * INES_IDLE_FRAME_RATIO;
+    }
     if (nowMs >= mesh.userData._wanderEnd) {
-      // Pick a new wander target within 0.5–1.4m of spawn, away from
-      // current position so the walk segment is visible.
       let tx, tz, attempt = 0;
       do {
         const ang = Math.random() * Math.PI * 2;
@@ -2423,6 +2434,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
       );
       mesh.userData._wanderTarget = { x: tx, z: tz };
       mesh.userData._wanderState = 'walk';
+      if (walk) walk.timeScale = 1.0;
     }
   } else {
     const tgt = mesh.userData._wanderTarget;
@@ -2431,7 +2443,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
     const dist = Math.hypot(dx, dz);
     mesh.position.y = baseY;
     if (dist > 0.08) {
-      const speed = 0.9; // m/s — kid leisurely pace
+      const speed = 1.3; // m/s — closer to the walk anim's authored stride
       const move = Math.min(dist, speed * dt);
       mesh.position.x += (dx / dist) * move;
       mesh.position.z += (dz / dist) * move;
@@ -2439,6 +2451,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
       let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
       if (dYaw < -Math.PI) dYaw += Math.PI * 2;
       mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 5));
+      if (walk) walk.timeScale = 1.0;
     } else {
       mesh.userData._wanderState = 'pause';
       mesh.userData._wanderEnd = nowMs + 2500 + Math.random() * 2500;
@@ -3176,11 +3189,16 @@ function update(dt) {
     }
     // GLTF mixer tick (no-op for procedural NPCs).
     if (m.userData.gltfChar) {
-      // Detect movement from frame to frame to drive walk vs idle.
-      const lp = m.userData._lastPos || { x: m.position.x, z: m.position.z };
-      const moved = Math.hypot(m.position.x - lp.x, m.position.z - lp.z);
-      m.userData._lastPos = { x: m.position.x, z: m.position.z };
-      m.userData.gltfChar.setMotion(moved > 0.005 ? 'walk' : 'idle');
+      // Ines manages her walk action directly via applyInesBehavior
+      // (freezes walk clip at arms-passing frame during idle pause).
+      // For other GLTF NPCs, drive walk vs idle from frame-to-frame
+      // position deltas.
+      if (m.userData.npc?.id !== 'ines') {
+        const lp = m.userData._lastPos || { x: m.position.x, z: m.position.z };
+        const moved = Math.hypot(m.position.x - lp.x, m.position.z - lp.z);
+        m.userData._lastPos = { x: m.position.x, z: m.position.z };
+        m.userData.gltfChar.setMotion(moved > 0.005 ? 'walk' : 'idle');
+      }
       m.userData.gltfChar.update(dt, nowMs);
     }
     // Wander behavior for the child visitor (skeletal walk anim is
