@@ -2386,6 +2386,7 @@ function buildPlayer() {
 // of the T-pose bind. The npc loop's auto motion-detector is skipped
 // for her — we control the walk action's timeScale directly.
 const INES_IDLE_FRAME_RATIO = 0.25; // moment in walk cycle when arms pass at sides
+const INES_STANCE_FACTOR = 1.6;      // widen hip-stance to fix narrow Meshy rig
 const _INES_TMP_QUAT_TARGET = new THREE.Quaternion();
 const _INES_TMP_QUAT_PARENT = new THREE.Quaternion();
 const _INES_DOWN_AXIS = new THREE.Vector3(1, 0, 0);
@@ -2416,19 +2417,32 @@ function applyInesBehavior(mesh, nowMs, dt) {
   const npcDef = mesh.userData.npc;
   const gc = mesh.userData.gltfChar;
   const walk = gc?.actions?.walk;
+  const skeleton = gc?.skeleton;
 
   if (!mesh.userData._spawnPos) {
     mesh.userData._spawnPos = { x: npcDef.pos[0], z: npcDef.pos[1] };
     mesh.userData._wanderState = 'pause';
     mesh.userData._wanderEnd = nowMs + 1500;
     mesh.userData._wanderYaw = npcDef.face || 0;
+    // Snapshot bind pose BEFORE the walk action starts so we capture
+    // GLB bind values, not animated ones. Restored each frame during
+    // idle so her legs don't sit in a frozen mid-stride pose.
+    if (skeleton) {
+      mesh.userData._bindPose = new Map();
+      for (const b of skeleton.bones) {
+        mesh.userData._bindPose.set(b.name, {
+          pos: b.position.clone(),
+          quat: b.quaternion.clone(),
+        });
+      }
+    }
     if (walk) {
       walk.reset();
       walk.setLoop(THREE.LoopRepeat);
       walk.play();
       mesh.userData._walkDur = walk.getClip().duration || 1.0;
-      walk.time = mesh.userData._walkDur * INES_IDLE_FRAME_RATIO;
-      walk.timeScale = 0; // frozen during initial pause
+      walk.time = 0;
+      walk.timeScale = 0;
     }
   }
   const spawn = mesh.userData._spawnPos;
@@ -2442,13 +2456,8 @@ function applyInesBehavior(mesh, nowMs, dt) {
     let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
     if (dYaw < -Math.PI) dYaw += Math.PI * 2;
     mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 1.5));
-    if (walk) {
-      walk.timeScale = 0;
-      walk.time = (mesh.userData._walkDur || 1.0) * INES_IDLE_FRAME_RATIO;
-    }
-    // Override arm bones AFTER mixer wrote walk values, so arms hang
-    // down at her sides instead of being angled out laterally.
-    setInesArmsDown(gc?.skeleton);
+    if (walk) walk.timeScale = 0;
+    // Arms-down + bind-pose restore happen in the post-mixer block below.
     if (nowMs >= mesh.userData._wanderEnd) {
       let tx, tz, attempt = 0;
       do {
