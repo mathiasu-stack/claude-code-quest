@@ -2386,6 +2386,32 @@ function buildPlayer() {
 // of the T-pose bind. The npc loop's auto motion-detector is skipped
 // for her — we control the walk action's timeScale directly.
 const INES_IDLE_FRAME_RATIO = 0.25; // moment in walk cycle when arms pass at sides
+const _INES_TMP_QUAT_TARGET = new THREE.Quaternion();
+const _INES_TMP_QUAT_PARENT = new THREE.Quaternion();
+const _INES_DOWN_AXIS = new THREE.Vector3(1, 0, 0);
+// Force arm bones to hang straight down. Meshy's auto-rig has the
+// shoulders rotated outward to make T-pose, so even the walk clip's
+// "arms passing" frame leaves the arms angled laterally. We override
+// LeftArm + RightArm to point world -Y and reset the rest of the chain.
+function setInesArmsDown(skeleton) {
+  if (!skeleton) return;
+  _INES_TMP_QUAT_TARGET.setFromAxisAngle(_INES_DOWN_AXIS, Math.PI);
+  for (const side of ['Left', 'Right']) {
+    const arm = skeleton.getBoneByName(side + 'Arm');
+    const fore = skeleton.getBoneByName(side + 'ForeArm');
+    const hand = skeleton.getBoneByName(side + 'Hand');
+    if (arm && arm.parent) {
+      arm.parent.updateMatrixWorld(true);
+      arm.parent.getWorldQuaternion(_INES_TMP_QUAT_PARENT);
+      arm.quaternion
+        .copy(_INES_TMP_QUAT_PARENT)
+        .invert()
+        .multiply(_INES_TMP_QUAT_TARGET);
+    }
+    if (fore) fore.quaternion.set(0, 0, 0, 1);
+    if (hand) hand.quaternion.set(0, 0, 0, 1);
+  }
+}
 function applyInesBehavior(mesh, nowMs, dt) {
   const npcDef = mesh.userData.npc;
   const gc = mesh.userData.gltfChar;
@@ -2420,6 +2446,9 @@ function applyInesBehavior(mesh, nowMs, dt) {
       walk.timeScale = 0;
       walk.time = (mesh.userData._walkDur || 1.0) * INES_IDLE_FRAME_RATIO;
     }
+    // Override arm bones AFTER mixer wrote walk values, so arms hang
+    // down at her sides instead of being angled out laterally.
+    setInesArmsDown(gc?.skeleton);
     if (nowMs >= mesh.userData._wanderEnd) {
       let tx, tz, attempt = 0;
       do {
@@ -2434,7 +2463,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
       );
       mesh.userData._wanderTarget = { x: tx, z: tz };
       mesh.userData._wanderState = 'walk';
-      if (walk) walk.timeScale = 1.0;
+      if (walk) walk.timeScale = 1.5;
     }
   } else {
     const tgt = mesh.userData._wanderTarget;
@@ -2443,7 +2472,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
     const dist = Math.hypot(dx, dz);
     mesh.position.y = baseY;
     if (dist > 0.08) {
-      const speed = 1.3; // m/s — closer to the walk anim's authored stride
+      const speed = 1.4; // m/s — matches the faster cycle
       const move = Math.min(dist, speed * dt);
       mesh.position.x += (dx / dist) * move;
       mesh.position.z += (dz / dist) * move;
@@ -2451,7 +2480,7 @@ function applyInesBehavior(mesh, nowMs, dt) {
       let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
       if (dYaw < -Math.PI) dYaw += Math.PI * 2;
       mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 5));
-      if (walk) walk.timeScale = 1.0;
+      if (walk) walk.timeScale = 1.5;
     } else {
       mesh.userData._wanderState = 'pause';
       mesh.userData._wanderEnd = nowMs + 2500 + Math.random() * 2500;
