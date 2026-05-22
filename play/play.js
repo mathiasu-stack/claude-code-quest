@@ -106,6 +106,13 @@ const NPCS = [
     nextHint: "Now go see Sarah Chen by the back door — she runs the practical assessment.",
   },
   {
+    id: 'ivory',  zone: 1, pos: [2, -4], face: 0, kind: 'flavor',
+    name: 'Ivory', role: 'Visitor, age 9', portrait: '👧',
+    look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'braid', shirt: 0xf5f5f0, pants: 0x111111, glasses: false, prop: null, face: 'round', expression: 'happy' },
+    intro: "Hi! I'm Ivory. I'm 9. My dad works here on the third floor — he said I have to wait until his big meeting is done. The chairs spin really fast if you push hard! Are you a real engineer?",
+    nextHint: "",
+  },
+  {
     id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
     name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
     chapterId: 'ch01', testId: 'ch01-test', kind: 'test',
@@ -2626,7 +2633,8 @@ function tryInteract() {
 function openDialogue(npc) {
   inputLocked = true;
   const d = dialogueEl;
-  const done = npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId);
+  const isFlavor = npc.kind === 'flavor';
+  const done = isFlavor ? false : (npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId));
 
   // Determine status & next-step pointer
   let statusLine = '';
@@ -2634,6 +2642,17 @@ function openDialogue(npc) {
     statusLine = `<div class="dlg-status dlg-done">✓ You've already completed this with ${npc.name.split(' ')[0]}.</div>`;
   }
   let nextHint = done ? `<div class="dlg-next">${npc.nextHint}</div>` : '';
+
+  const actionsHtml = isFlavor
+    ? `<div class="dlg-actions"><button class="btn-primary dlg-cancel">Bye!</button></div>`
+    : `<div class="dlg-actions">
+        <button class="btn-primary dlg-go">${
+          npc.kind === 'test'
+            ? (done ? 'Retake practical →' : 'Take the practical →')
+            : (done ? 'Revisit lesson →' : `Start lesson — ${getLessonTitle(npc) || 'Begin'} →`)
+        }</button>
+        <button class="btn-secondary dlg-cancel">Maybe later</button>
+      </div>`;
 
   d.innerHTML = `
     <div class="dlg-card">
@@ -2648,14 +2667,7 @@ function openDialogue(npc) {
       ${statusLine}
       <div class="dlg-body" data-typewriter></div>
       ${nextHint}
-      <div class="dlg-actions">
-        <button class="btn-primary dlg-go">${
-          npc.kind === 'test'
-            ? (done ? 'Retake practical →' : 'Take the practical →')
-            : (done ? 'Revisit lesson →' : `Start lesson — ${getLessonTitle(npc) || 'Begin'} →`)
-        }</button>
-        <button class="btn-secondary dlg-cancel">Maybe later</button>
-      </div>
+      ${actionsHtml}
     </div>
   `;
   d.classList.add('visible');
@@ -2673,19 +2685,22 @@ function openDialogue(npc) {
 
   d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
   d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
-  d.querySelector('.dlg-go').onclick = () => {
-    playUi('confirm');
-    if (player) {
-      sessionStorage.setItem('ccq_play_pos', JSON.stringify({
-        x: player.position.x, z: player.position.z,
-      }));
-    }
-    if (npc.kind === 'test') {
-      window.App.navigate('test', { chapterId: npc.chapterId, fromPlay: true });
-    } else {
-      window.App.navigate('lesson', { chapterId: npc.chapterId, lessonId: npc.lessonId, fromPlay: true });
-    }
-  };
+  const goBtn = d.querySelector('.dlg-go');
+  if (goBtn) {
+    goBtn.onclick = () => {
+      playUi('confirm');
+      if (player) {
+        sessionStorage.setItem('ccq_play_pos', JSON.stringify({
+          x: player.position.x, z: player.position.z,
+        }));
+      }
+      if (npc.kind === 'test') {
+        window.App.navigate('test', { chapterId: npc.chapterId, fromPlay: true });
+      } else {
+        window.App.navigate('lesson', { chapterId: npc.chapterId, lessonId: npc.lessonId, fromPlay: true });
+      }
+    };
+  }
 }
 
 function getLessonTitle(npc) {
@@ -3221,7 +3236,7 @@ async function _preloadGltfAssets() {
   // Warm just the named NPCs + player up front. Auto chapter NPCs and
   // ambient agents pick up the cache as they're constructed.
   const ids = [
-    'hero',
+    'hero', 'ivory',
     'casual_male_01', 'casual_male_02', 'casual_male_03',
     'casual_female_01', 'casual_female_02', 'casual_female_03',
     'business_female_01', 'business_female_02', 'business_female_03',

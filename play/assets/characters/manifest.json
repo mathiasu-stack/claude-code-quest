@@ -23,6 +23,14 @@
       "extraAnimations": ["hero_walk.glb", "hero_run.glb"]
     },
     {
+      "id": "ivory",
+      "file": "ivory.glb",
+      "available": true,
+      "tags": ["female", "child", "visitor", "static"],
+      "scale": 0.71,
+      "yOffset": 0.675
+    },
+    {
       "id": "casual_male_01",
       "file": "Character_Casual_01.glb",
       "available": false,
