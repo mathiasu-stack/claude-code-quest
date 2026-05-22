@@ -26,9 +26,10 @@
       "id": "ines",
       "file": "ines.glb",
       "available": true,
-      "tags": ["female", "child", "visitor", "static"],
-      "scale": 0.71,
-      "yOffset": 0.675
+      "tags": ["female", "child", "visitor", "rigged"],
+      "scale": 1.0,
+      "yOffset": 0.0,
+      "extraAnimations": ["ines_walk.glb", "ines_run.glb"]
     },
     {
       "id": "casual_male_01",

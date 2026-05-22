@@ -2379,60 +2379,25 @@ function buildPlayer() {
   player.add(tierTag);
 }
 
-// Procedural behavior cycle for static-mesh NPCs (no skeleton → can't
-// play skinned animations). Cycles through idle → dance → laugh → spin →
-// sit-and-stand by translating/rotating the whole mesh group. The base
-// rotation (npcDef.face) and base floor Y are preserved each frame.
-const INES_BEHAVIORS = [
-  { name: 'idle',  dur: 4000 },
-  { name: 'dance', dur: 5000 },
-  { name: 'laugh', dur: 3000 },
-  { name: 'spin',  dur: 3000 },
-  { name: 'sit',   dur: 5000 },
-];
-const INES_TOTAL_MS = INES_BEHAVIORS.reduce((s, b) => s + b.dur, 0);
+// Ines: kid pacing in slow circles around her spawn point while she
+// waits for her dad. The skeletal walk animation comes from the auto
+// motion-detector in the npc update loop (it sees the mesh moving and
+// calls setMotion('walk')); this function just drives position +
+// facing along the path.
 function applyInesBehavior(mesh, nowMs) {
-  const baseFace = mesh.userData.npc.face || 0;
-  const baseY = floorBaseY(mesh.userData.floor || 1);
-  const t = nowMs % INES_TOTAL_MS;
-  let acc = 0, cur = INES_BEHAVIORS[0], localT = 0;
-  for (const b of INES_BEHAVIORS) {
-    if (t < acc + b.dur) { cur = b; localT = (t - acc) / b.dur; break; }
-    acc += b.dur;
+  const npcDef = mesh.userData.npc;
+  if (!mesh.userData._spawnPos) {
+    mesh.userData._spawnPos = { x: npcDef.pos[0], z: npcDef.pos[1] };
   }
-  mesh.position.y = baseY;
-  mesh.rotation.x = 0;
-  mesh.rotation.z = 0;
-  mesh.rotation.y = baseFace;
-  const phase = nowMs * 0.001;
-  switch (cur.name) {
-    case 'idle':
-      mesh.position.y = baseY + Math.sin(phase * 2.0) * 0.01;
-      break;
-    case 'dance':
-      mesh.position.y = baseY + Math.abs(Math.sin(phase * 5)) * 0.10;
-      mesh.rotation.z = Math.sin(phase * 4) * 0.10;
-      mesh.rotation.y = baseFace + Math.sin(phase * 2) * 0.25;
-      break;
-    case 'laugh':
-      mesh.position.y = baseY + Math.abs(Math.sin(phase * 12)) * 0.06;
-      mesh.rotation.x = 0.08;
-      mesh.rotation.z = Math.sin(phase * 14) * 0.04;
-      break;
-    case 'spin':
-      mesh.rotation.y = baseFace + localT * Math.PI * 2;
-      break;
-    case 'sit': {
-      const depth = 0.5;
-      let drop = 0;
-      if (localT < 0.2)      drop = (localT / 0.2) * depth;
-      else if (localT < 0.8) drop = depth;
-      else                   drop = depth * (1 - (localT - 0.8) / 0.2);
-      mesh.position.y = baseY - drop;
-      mesh.rotation.x = (drop / depth) * 0.18;
-      break;
-    }
-  }
+  const spawn = mesh.userData._spawnPos;
+  const radius = 0.6;
+  const period = 9000; // 9s per loop
+  const t = (nowMs % period) / period * Math.PI * 2;
+  mesh.position.x = spawn.x + Math.cos(t) * radius;
+  mesh.position.z = spawn.z + Math.sin(t) * radius;
+  mesh.position.y = floorBaseY(mesh.userData.floor || 1);
+  // Face the direction of motion (tangent to the circle).
+  mesh.rotation.y = Math.atan2(-Math.sin(t), Math.cos(t));
 }
 
 function spawnNPC(npcDef) {
