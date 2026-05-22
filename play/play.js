@@ -2379,113 +2379,92 @@ function buildPlayer() {
   player.add(tierTag);
 }
 
-// Ines: kid wandering around her spawn point while waiting for her dad.
-// Two-state machine (pause / walk). She has no Meshy idle clip, so we
-// freeze the walk action at its "arms passing through" frame (~25% of
-// the cycle) during idle to give a natural arms-at-sides pose instead
-// of the T-pose bind. The npc loop's auto motion-detector is skipped
-// for her — we control the walk action's timeScale directly.
-const INES_IDLE_FRAME_RATIO = 0.25; // moment in walk cycle when arms pass at sides
-const INES_STANCE_FACTOR = 1.6;      // widen hip-stance to fix narrow Meshy rig
-const _INES_TMP_QUAT_TARGET = new THREE.Quaternion();
-const _INES_TMP_QUAT_PARENT = new THREE.Quaternion();
-const _INES_LEFT_TILT_AXIS = new THREE.Vector3(0, 0, -1);  // tilts arm outward to +X
-const _INES_RIGHT_TILT_AXIS = new THREE.Vector3(0, 0, 1); // tilts arm outward to -X
-const _INES_ARM_ANGLE = 165 * Math.PI / 180; // 15° outward tilt from straight-down
-const _INES_FOREARM_BEND = new THREE.Vector3(1, 0, 0);
-// Idle pose for the arms: hang at her sides but tilted slightly outward
-// (~15°) so they clear her flared dress instead of clipping into it.
-// Forearms get a small forward bend so the hands fall in front of her
-// thighs — a natural "relaxed kid standing" pose.
-function setInesArmsDown(skeleton) {
-  if (!skeleton) return;
-  for (const side of ['Left', 'Right']) {
-    const arm = skeleton.getBoneByName(side + 'Arm');
-    const fore = skeleton.getBoneByName(side + 'ForeArm');
-    const hand = skeleton.getBoneByName(side + 'Hand');
-    if (arm && arm.parent) {
-      arm.parent.updateMatrixWorld(true);
-      arm.parent.getWorldQuaternion(_INES_TMP_QUAT_PARENT);
-      const axis = side === 'Left' ? _INES_LEFT_TILT_AXIS : _INES_RIGHT_TILT_AXIS;
-      _INES_TMP_QUAT_TARGET.setFromAxisAngle(axis, _INES_ARM_ANGLE);
-      arm.quaternion
-        .copy(_INES_TMP_QUAT_PARENT)
-        .invert()
-        .multiply(_INES_TMP_QUAT_TARGET);
-    }
-    if (fore) fore.quaternion.setFromAxisAngle(_INES_FOREARM_BEND, 0.25);
-    if (hand) hand.quaternion.set(0, 0, 0, 1);
+// Ines: kid waiting in the office, cycles through child-like activities.
+// All animations come from her Meshy clip pack — no procedural hacks.
+//
+// Activity state machine. Random pickable activities are idle/dance/jump/
+// sitDown/walk. sitDown is the entry to a 3-step compound: sitDown →
+// sitIdle → standUp → pick again. Durations are clip-length for one-shots,
+// random ranges for loops.
+const INES_STANCE_FACTOR = 1.6;
+const INES_ACTIVITIES = {
+  idle:    { motion: 'idle',     minMs: 3500, maxMs: 6000, oneShot: false, next: 'pick' },
+  dance:   { motion: 'dance',    minMs: 6000, maxMs: 9000, oneShot: false, next: 'pick' },
+  jump:    { motion: 'jump',     minMs: 9800, maxMs: 9800, oneShot: true,  next: 'pick' },
+  sitDown: { motion: 'sit_down', minMs: 4700, maxMs: 4700, oneShot: true,  next: 'sitIdle' },
+  sitIdle: { motion: 'sit_idle', minMs: 6000, maxMs: 12000, oneShot: false, next: 'standUp' },
+  standUp: { motion: 'stand_up', minMs: 4700, maxMs: 4700, oneShot: true,  next: 'pick' },
+  walk:    { motion: 'walk',     minMs: 0,    maxMs: 0,    oneShot: false, next: 'pick' }, // ends on target reached
+};
+const INES_PICKABLE = [
+  { name: 'idle',    weight: 4 },
+  { name: 'dance',   weight: 2 },
+  { name: 'jump',    weight: 1 },
+  { name: 'sitDown', weight: 2 },
+  { name: 'walk',    weight: 2 },
+];
+function pickInesActivity() {
+  const total = INES_PICKABLE.reduce((s, x) => s + x.weight, 0);
+  let r = Math.random() * total;
+  for (const a of INES_PICKABLE) {
+    r -= a.weight;
+    if (r <= 0) return a.name;
   }
+  return 'idle';
+}
+function pickInesWalkTarget(spawn, current) {
+  for (let i = 0; i < 5; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const r = 0.5 + Math.random() * 0.9;
+    const tx = spawn.x + Math.cos(ang) * r;
+    const tz = spawn.z + Math.sin(ang) * r;
+    if (Math.hypot(tx - current.x, tz - current.z) >= 0.5) return { x: tx, z: tz };
+  }
+  return { x: spawn.x, z: spawn.z };
+}
+function enterInesActivity(mesh, gc, nowMs, name) {
+  const def = INES_ACTIVITIES[name];
+  mesh.userData._activity = name;
+  mesh.userData._activityStart = nowMs;
+  mesh.userData._activityEnd = nowMs + def.minMs + Math.random() * (def.maxMs - def.minMs);
+  if (name === 'walk') {
+    mesh.userData._walkTarget = pickInesWalkTarget(
+      mesh.userData._spawnPos,
+      { x: mesh.position.x, z: mesh.position.z },
+    );
+  }
+  if (def.oneShot && gc?.actions?.[def.motion]) gc.actions[def.motion].reset();
+  if (gc?.setMotion) gc.setMotion(def.motion);
 }
 function applyInesBehavior(mesh, nowMs, dt) {
   const npcDef = mesh.userData.npc;
   const gc = mesh.userData.gltfChar;
-  const walk = gc?.actions?.walk;
   const skeleton = gc?.skeleton;
 
+  // Lazy init: snapshot bind-pose UpLeg X (for hip widening) and start
+  // in idle.
   if (!mesh.userData._spawnPos) {
     mesh.userData._spawnPos = { x: npcDef.pos[0], z: npcDef.pos[1] };
-    mesh.userData._wanderState = 'pause';
-    mesh.userData._wanderEnd = nowMs + 1500;
-    mesh.userData._wanderYaw = npcDef.face || 0;
-    // Snapshot bind pose BEFORE the walk action starts so we capture
-    // GLB bind values, not animated ones. Restored each frame during
-    // idle so her legs don't sit in a frozen mid-stride pose.
     if (skeleton) {
-      mesh.userData._bindPose = new Map();
-      for (const b of skeleton.bones) {
-        mesh.userData._bindPose.set(b.name, {
-          pos: b.position.clone(),
-          quat: b.quaternion.clone(),
-        });
-      }
+      mesh.userData._bindLegX = {
+        left:  skeleton.getBoneByName('LeftUpLeg')?.position.x  ?? 0,
+        right: skeleton.getBoneByName('RightUpLeg')?.position.x ?? 0,
+      };
     }
-    if (walk) {
-      walk.reset();
-      walk.setLoop(THREE.LoopRepeat);
-      walk.play();
-      mesh.userData._walkDur = walk.getClip().duration || 1.0;
-      walk.time = 0;
-      walk.timeScale = 0;
-    }
+    enterInesActivity(mesh, gc, nowMs, 'idle');
   }
-  const spawn = mesh.userData._spawnPos;
-  const baseY = floorBaseY(mesh.userData.floor || 1);
-  const phase = nowMs * 0.001;
 
-  if (mesh.userData._wanderState === 'pause') {
-    mesh.position.y = baseY + Math.sin(phase * 2.0) * 0.012;
-    const lookOsc = Math.sin(phase * 0.6) * 0.35;
-    const tgtYaw = mesh.userData._wanderYaw + lookOsc;
-    let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
-    mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 1.5));
-    if (walk) walk.timeScale = 0;
-    // Arms-down + bind-pose restore happen in the post-mixer block below.
-    if (nowMs >= mesh.userData._wanderEnd) {
-      let tx, tz, attempt = 0;
-      do {
-        const ang = Math.random() * Math.PI * 2;
-        const r = 0.5 + Math.random() * 0.9;
-        tx = spawn.x + Math.cos(ang) * r;
-        tz = spawn.z + Math.sin(ang) * r;
-        attempt++;
-      } while (
-        Math.hypot(tx - mesh.position.x, tz - mesh.position.z) < 0.5
-        && attempt < 4
-      );
-      mesh.userData._wanderTarget = { x: tx, z: tz };
-      mesh.userData._wanderState = 'walk';
-      if (walk) walk.timeScale = 1.5;
-    }
-  } else {
-    const tgt = mesh.userData._wanderTarget;
+  const baseY = floorBaseY(mesh.userData.floor || 1);
+  mesh.position.y = baseY;
+
+  // Walk: drive position toward target, end when reached.
+  if (mesh.userData._activity === 'walk') {
+    const tgt = mesh.userData._walkTarget;
     const dx = tgt.x - mesh.position.x;
     const dz = tgt.z - mesh.position.z;
     const dist = Math.hypot(dx, dz);
-    mesh.position.y = baseY;
     if (dist > 0.08) {
-      const speed = 1.4; // m/s — matches the faster cycle
+      const speed = 1.4;
       const move = Math.min(dist, speed * dt);
       mesh.position.x += (dx / dist) * move;
       mesh.position.z += (dz / dist) * move;
@@ -2493,38 +2472,23 @@ function applyInesBehavior(mesh, nowMs, dt) {
       let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
       if (dYaw < -Math.PI) dYaw += Math.PI * 2;
       mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 5));
-      if (walk) walk.timeScale = 1.5;
     } else {
-      mesh.userData._wanderState = 'pause';
-      mesh.userData._wanderEnd = nowMs + 2500 + Math.random() * 2500;
-      mesh.userData._wanderYaw = mesh.rotation.y;
+      enterInesActivity(mesh, gc, nowMs, 'idle');
     }
+  } else if (nowMs >= mesh.userData._activityEnd) {
+    // Other activities end on timeout — pick next state.
+    const cur = INES_ACTIVITIES[mesh.userData._activity];
+    const nextName = cur.next === 'pick' ? pickInesActivity() : cur.next;
+    enterInesActivity(mesh, gc, nowMs, nextName);
   }
 
-  // ── Post-mixer bone overrides ───────────────────────────────────────
-  // Runs after gltfChar.update() in the npc loop — mixer has already
-  // written walking values to bones. During idle we restore them all to
-  // bind pose so the legs are straight (not frozen mid-stride). The
-  // shoulders' bind pose is T-pose-style outward, so we then override
-  // arms specifically to hang down. UpLeg X is widened in both states
-  // because Meshy's auto-rig gave her an unnaturally narrow hip stance
-  // (~7.8 cm at hip joints; widened ~12 cm so feet visibly separate).
-  if (skeleton && mesh.userData._bindPose) {
-    if (mesh.userData._wanderState === 'pause') {
-      for (const b of skeleton.bones) {
-        const bp = mesh.userData._bindPose.get(b.name);
-        if (bp) {
-          b.position.copy(bp.pos);
-          b.quaternion.copy(bp.quat);
-        }
-      }
-      setInesArmsDown(skeleton);
-    }
-    for (const name of ['LeftUpLeg', 'RightUpLeg']) {
-      const b = skeleton.getBoneByName(name);
-      const bp = mesh.userData._bindPose.get(name);
-      if (b && bp) b.position.x = bp.pos.x * INES_STANCE_FACTOR;
-    }
+  // Hip widening — runs every frame after mixer wrote walk/idle bone
+  // values. Fixes Meshy's overly narrow auto-rigged hip stance.
+  if (skeleton && mesh.userData._bindLegX) {
+    const lu = skeleton.getBoneByName('LeftUpLeg');
+    const ru = skeleton.getBoneByName('RightUpLeg');
+    if (lu) lu.position.x = mesh.userData._bindLegX.left  * INES_STANCE_FACTOR;
+    if (ru) ru.position.x = mesh.userData._bindLegX.right * INES_STANCE_FACTOR;
   }
 }
 

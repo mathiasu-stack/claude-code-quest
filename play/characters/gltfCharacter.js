@@ -136,18 +136,38 @@ export function makeGltfCharacter(look, assetLoader) {
 
   // Set up AnimationMixer. We bind clips from the GLTF first, then
   // augment with shared-pack clips (loadAnimations in assetLoader).
+  //
+  // CLIP_MATCH maps semantic name → substring of clip name. Multiple
+  // semantics can match the same character if their clips have those
+  // substrings; ambiguous ones (e.g. 'sit' matching both stand-to-sit
+  // and sit-cross-legged) use longer, more specific patterns.
+  const CLIP_MATCH = {
+    idle:     'idle',
+    walk:     'walk',
+    run:      'run',
+    dance:    'dancing',
+    jump:     'jump',
+    sit_down: 'stand_to_sit',
+    sit_idle: 'cross_legged',
+    stand_up: 'sit_to_stand',
+  };
+  const ONE_SHOT = new Set(['jump', 'sit_down', 'stand_up']);
   const mixer = new THREE.AnimationMixer(inst.root);
   const actions = {};
-  const sharedClipNames = ['idle', 'walk', 'run'];
+  const sharedClipNames = Object.keys(CLIP_MATCH);
 
-  // Take the first clip whose lowercase name matches the semantic.
   function bindFromClips(semantic, clips) {
     if (actions[semantic]) return;
-    const want = semantic.toLowerCase();
+    const want = (CLIP_MATCH[semantic] || semantic).toLowerCase();
     const match = clips.find(c => (c.name || '').toLowerCase().includes(want));
     if (match) {
       const a = mixer.clipAction(match);
-      a.setLoop(THREE.LoopRepeat);
+      if (ONE_SHOT.has(semantic)) {
+        a.setLoop(THREE.LoopOnce);
+        a.clampWhenFinished = true;
+      } else {
+        a.setLoop(THREE.LoopRepeat);
+      }
       actions[semantic] = a;
     }
   }
@@ -224,6 +244,7 @@ export function makeGltfCharacter(look, assetLoader) {
     assetId,
     mixer,
     actions,
+    clips: inst.animations,
     setMotion,
     attachAt,
     update,

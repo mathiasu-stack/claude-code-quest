@@ -29,7 +29,11 @@
       "tags": ["female", "child", "visitor", "rigged"],
       "scale": 1.0,
       "yOffset": 0.0,
-      "extraAnimations": ["ines_walk.glb", "ines_run.glb"]
+      "extraAnimations": [
+        "ines_walk.glb", "ines_run.glb",
+        "ines_idle.glb", "ines_dance.glb", "ines_jump.glb",
+        "ines_sit_down.glb", "ines_sit_idle.glb", "ines_stand_up.glb"
+      ]
     },
     {
       "id": "casual_male_01",
