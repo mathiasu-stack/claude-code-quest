@@ -2379,25 +2379,72 @@ function buildPlayer() {
   player.add(tierTag);
 }
 
-// Ines: kid pacing in slow circles around her spawn point while she
-// waits for her dad. The skeletal walk animation comes from the auto
-// motion-detector in the npc update loop (it sees the mesh moving and
-// calls setMotion('walk')); this function just drives position +
-// facing along the path.
-function applyInesBehavior(mesh, nowMs) {
+// Ines: kid wandering around her spawn point while waiting for her dad.
+// A simple two-state machine (pause / walk) drives natural-looking
+// behavior: stand idle 2.5–5s (subtle breathing + slow look-around
+// rotation), then walk in a straight line to a new spot within ~1m of
+// spawn, then pause again. The auto motion-detector in the npc update
+// loop sees position deltas and switches between skeletal walk and idle
+// clips automatically — so on pause she falls back to bind pose (which
+// is acceptable since we don't have a true Meshy idle clip).
+function applyInesBehavior(mesh, nowMs, dt) {
   const npcDef = mesh.userData.npc;
   if (!mesh.userData._spawnPos) {
     mesh.userData._spawnPos = { x: npcDef.pos[0], z: npcDef.pos[1] };
+    mesh.userData._wanderState = 'pause';
+    mesh.userData._wanderEnd = nowMs + 1500;
+    mesh.userData._wanderYaw = npcDef.face || 0;
   }
   const spawn = mesh.userData._spawnPos;
-  const radius = 0.6;
-  const period = 9000; // 9s per loop
-  const t = (nowMs % period) / period * Math.PI * 2;
-  mesh.position.x = spawn.x + Math.cos(t) * radius;
-  mesh.position.z = spawn.z + Math.sin(t) * radius;
-  mesh.position.y = floorBaseY(mesh.userData.floor || 1);
-  // Face the direction of motion (tangent to the circle).
-  mesh.rotation.y = Math.atan2(-Math.sin(t), Math.cos(t));
+  const baseY = floorBaseY(mesh.userData.floor || 1);
+  const phase = nowMs * 0.001;
+
+  if (mesh.userData._wanderState === 'pause') {
+    // Idle stand: subtle breathing bob + slow body sway to look around.
+    mesh.position.y = baseY + Math.sin(phase * 2.0) * 0.012;
+    const lookOsc = Math.sin(phase * 0.6) * 0.35;
+    const tgtYaw = mesh.userData._wanderYaw + lookOsc;
+    let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 1.5));
+    if (nowMs >= mesh.userData._wanderEnd) {
+      // Pick a new wander target within 0.5–1.4m of spawn, away from
+      // current position so the walk segment is visible.
+      let tx, tz, attempt = 0;
+      do {
+        const ang = Math.random() * Math.PI * 2;
+        const r = 0.5 + Math.random() * 0.9;
+        tx = spawn.x + Math.cos(ang) * r;
+        tz = spawn.z + Math.sin(ang) * r;
+        attempt++;
+      } while (
+        Math.hypot(tx - mesh.position.x, tz - mesh.position.z) < 0.5
+        && attempt < 4
+      );
+      mesh.userData._wanderTarget = { x: tx, z: tz };
+      mesh.userData._wanderState = 'walk';
+    }
+  } else {
+    const tgt = mesh.userData._wanderTarget;
+    const dx = tgt.x - mesh.position.x;
+    const dz = tgt.z - mesh.position.z;
+    const dist = Math.hypot(dx, dz);
+    mesh.position.y = baseY;
+    if (dist > 0.08) {
+      const speed = 0.9; // m/s — kid leisurely pace
+      const move = Math.min(dist, speed * dt);
+      mesh.position.x += (dx / dist) * move;
+      mesh.position.z += (dz / dist) * move;
+      const tgtYaw = Math.atan2(dx, dz);
+      let dYaw = ((tgtYaw - mesh.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+      mesh.rotation.y += dYaw * (1 - Math.exp(-dt * 5));
+    } else {
+      mesh.userData._wanderState = 'pause';
+      mesh.userData._wanderEnd = nowMs + 2500 + Math.random() * 2500;
+      mesh.userData._wanderYaw = mesh.rotation.y;
+    }
+  }
 }
 
 function spawnNPC(npcDef) {
@@ -3136,9 +3183,10 @@ function update(dt) {
       m.userData.gltfChar.setMotion(moved > 0.005 ? 'walk' : 'idle');
       m.userData.gltfChar.update(dt, nowMs);
     }
-    // Procedural rigid-body behavior cycle for the static-mesh visitor.
+    // Wander behavior for the child visitor (skeletal walk anim is
+    // driven by the auto motion-detector above based on position deltas).
     if (m.userData.npc?.id === 'ines') {
-      applyInesBehavior(m, nowMs);
+      applyInesBehavior(m, nowMs, dt);
     }
     // Idle breathing + signature gesture only for non-GLTF NPCs.
     if (m.userData.faceKind !== 'gltf') applyIdle(m, dt, nowMs);
