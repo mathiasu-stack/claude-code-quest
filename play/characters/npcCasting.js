@@ -20,7 +20,7 @@ export const NPC_CASTING = {
   raj:     { gltfAssetId: 'beard_male_01',      fallbackAssetId: 'casual_male_02' },
   mei:     { gltfAssetId: 'casual_female_03',   fallbackAssetId: 'casual_female_01' },
   noor:    { gltfAssetId: 'hijab_female_01',    fallbackAssetId: null }, // procedural-only fallback
-  ivory:   { gltfAssetId: 'ivory',              fallbackAssetId: null }, // child visitor — static Meshy mesh
+  ines:    { gltfAssetId: 'ines',               fallbackAssetId: null }, // child visitor — static Meshy mesh
 };
 
 // Auto-generated chapter NPCs (ch03..ch16) — round-robin through the

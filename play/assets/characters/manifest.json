@@ -23,8 +23,8 @@
       "extraAnimations": ["hero_walk.glb", "hero_run.glb"]
     },
     {
-      "id": "ivory",
-      "file": "ivory.glb",
+      "id": "ines",
+      "file": "ines.glb",
       "available": true,
       "tags": ["female", "child", "visitor", "static"],
       "scale": 0.71,

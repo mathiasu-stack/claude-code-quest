@@ -106,10 +106,10 @@ const NPCS = [
     nextHint: "Now go see Sarah Chen by the back door — she runs the practical assessment.",
   },
   {
-    id: 'ivory',  zone: 1, pos: [2, -4], face: 0, kind: 'flavor',
-    name: 'Ivory', role: 'Visitor, age 9', portrait: '👧',
+    id: 'ines',   zone: 1, pos: [2, -4], face: 0, kind: 'flavor',
+    name: 'Ines', role: 'Visitor, age 9', portrait: '👧',
     look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'braid', shirt: 0xf5f5f0, pants: 0x111111, glasses: false, prop: null, face: 'round', expression: 'happy' },
-    intro: "Hi! I'm Ivory. I'm 9. My dad works here on the third floor — he said I have to wait until his big meeting is done. The chairs spin really fast if you push hard! Are you a real engineer?",
+    intro: "Hi! I'm Ines. I'm 9. My dad works here on the third floor — he said I have to wait until his big meeting is done. The chairs spin really fast if you push hard! Are you a real engineer?",
     nextHint: "",
   },
   {
@@ -2379,6 +2379,62 @@ function buildPlayer() {
   player.add(tierTag);
 }
 
+// Procedural behavior cycle for static-mesh NPCs (no skeleton → can't
+// play skinned animations). Cycles through idle → dance → laugh → spin →
+// sit-and-stand by translating/rotating the whole mesh group. The base
+// rotation (npcDef.face) and base floor Y are preserved each frame.
+const INES_BEHAVIORS = [
+  { name: 'idle',  dur: 4000 },
+  { name: 'dance', dur: 5000 },
+  { name: 'laugh', dur: 3000 },
+  { name: 'spin',  dur: 3000 },
+  { name: 'sit',   dur: 5000 },
+];
+const INES_TOTAL_MS = INES_BEHAVIORS.reduce((s, b) => s + b.dur, 0);
+function applyInesBehavior(mesh, nowMs) {
+  const baseFace = mesh.userData.npc.face || 0;
+  const baseY = floorBaseY(mesh.userData.floor || 1);
+  const t = nowMs % INES_TOTAL_MS;
+  let acc = 0, cur = INES_BEHAVIORS[0], localT = 0;
+  for (const b of INES_BEHAVIORS) {
+    if (t < acc + b.dur) { cur = b; localT = (t - acc) / b.dur; break; }
+    acc += b.dur;
+  }
+  mesh.position.y = baseY;
+  mesh.rotation.x = 0;
+  mesh.rotation.z = 0;
+  mesh.rotation.y = baseFace;
+  const phase = nowMs * 0.001;
+  switch (cur.name) {
+    case 'idle':
+      mesh.position.y = baseY + Math.sin(phase * 2.0) * 0.01;
+      break;
+    case 'dance':
+      mesh.position.y = baseY + Math.abs(Math.sin(phase * 5)) * 0.10;
+      mesh.rotation.z = Math.sin(phase * 4) * 0.10;
+      mesh.rotation.y = baseFace + Math.sin(phase * 2) * 0.25;
+      break;
+    case 'laugh':
+      mesh.position.y = baseY + Math.abs(Math.sin(phase * 12)) * 0.06;
+      mesh.rotation.x = 0.08;
+      mesh.rotation.z = Math.sin(phase * 14) * 0.04;
+      break;
+    case 'spin':
+      mesh.rotation.y = baseFace + localT * Math.PI * 2;
+      break;
+    case 'sit': {
+      const depth = 0.5;
+      let drop = 0;
+      if (localT < 0.2)      drop = (localT / 0.2) * depth;
+      else if (localT < 0.8) drop = depth;
+      else                   drop = depth * (1 - (localT - 0.8) / 0.2);
+      mesh.position.y = baseY - drop;
+      mesh.rotation.x = (drop / depth) * 0.18;
+      break;
+    }
+  }
+}
+
 function spawnNPC(npcDef) {
   // Merge per-NPC face config (npcLooks.js) into the roster's look.
   // The roster's `look` defines the body/outfit; npcLooks adds face
@@ -3078,6 +3134,10 @@ function update(dt) {
       m.userData.gltfChar.setMotion(moved > 0.005 ? 'walk' : 'idle');
       m.userData.gltfChar.update(dt, nowMs);
     }
+    // Procedural rigid-body behavior cycle for the static-mesh visitor.
+    if (m.userData.npc?.id === 'ines') {
+      applyInesBehavior(m, nowMs);
+    }
     // Idle breathing + signature gesture only for non-GLTF NPCs.
     if (m.userData.faceKind !== 'gltf') applyIdle(m, dt, nowMs);
     // Look-at-player: when player within 4m of NPC, gently rotate the head
@@ -3236,7 +3296,7 @@ async function _preloadGltfAssets() {
   // Warm just the named NPCs + player up front. Auto chapter NPCs and
   // ambient agents pick up the cache as they're constructed.
   const ids = [
-    'hero', 'ivory',
+    'hero', 'ines',
     'casual_male_01', 'casual_male_02', 'casual_male_03',
     'casual_female_01', 'casual_female_02', 'casual_female_03',
     'business_female_01', 'business_female_02', 'business_female_03',
