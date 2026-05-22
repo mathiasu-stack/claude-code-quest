@@ -32,16 +32,41 @@ import { clone as cloneSkeletal } from 'three/addons/utils/SkeletonUtils.js';
 // animation GLB won't bind to a character's own skeleton without renaming
 // its track-name prefixes to match. Three.js's GLTFLoader also strips ":"
 // from animation track names via PropertyBinding.sanitizeNodeName, so the
-// tracks arrive as e.g. "mixamorig4Hips.position" — we only rewrite the
-// numeric instance, leaving whatever separator (or none) follows.
+// tracks arrive as e.g. "mixamorig4Hips.position".
+//
+// Two target-rig conventions are handled:
+//   • Mixamo-style: bones also start with `mixamorig<N>` — we just rewrite
+//     the numeric instance so the clip's `<N>` matches the rig's `<N>`.
+//   • Plain-name (e.g. Meshy auto-rig: Hips, Spine, Spine01, Head, ...):
+//     strip the `mixamorig<N>` prefix entirely AND apply a small name-map
+//     for the Mixamo↔Meshy bone-name mismatches.
+const MESHY_NAME_REMAP = {
+  Spine1: 'Spine01',
+  Spine2: 'Spine02',
+  Neck: 'neck',
+  HeadTop_End: 'head_end',
+};
 function retargetMixamoPrefix(clip, skeleton) {
   if (!skeleton?.bones?.length) return clip;
-  const m = (skeleton.bones[0].name || '').match(/^mixamorig(\d*)/);
-  if (!m) return clip;
-  const tgtN = m[1];
+  const rootName = skeleton.bones[0].name || '';
+  const mixamoMatch = rootName.match(/^mixamorig(\d*)/);
   const out = clip.clone();
+  if (mixamoMatch) {
+    const tgtN = mixamoMatch[1];
+    for (const t of out.tracks) {
+      t.name = t.name.replace(/^mixamorig\d*/, 'mixamorig' + tgtN);
+    }
+    return out;
+  }
+  // Plain-name target: strip mixamorig prefix and remap mismatched names.
+  // Track names look like `mixamorig4Hips.position` after sanitizeNodeName.
   for (const t of out.tracks) {
-    t.name = t.name.replace(/^mixamorig\d*/, 'mixamorig' + tgtN);
+    const m = t.name.match(/^mixamorig\d*([^.]+)(\..+)$/);
+    if (!m) continue;
+    const bone = m[1];
+    const tail = m[2];
+    const mapped = MESHY_NAME_REMAP[bone] || bone;
+    t.name = mapped + tail;
   }
   return out;
 }
