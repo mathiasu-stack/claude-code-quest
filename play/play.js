@@ -2386,7 +2386,7 @@ function buildPlayer() {
 // sitDown/walk. sitDown is the entry to a 3-step compound: sitDown →
 // sitIdle → standUp → pick again. Durations are clip-length for one-shots,
 // random ranges for loops.
-const INES_STANCE_FACTOR = 1.6;
+const INES_STANCE_FACTOR = 2.5;
 const INES_ACTIVITIES = {
   idle:    { motion: 'idle',     minMs: 3500, maxMs: 6000, oneShot: false, next: 'pick' },
   dance:   { motion: 'dance',    minMs: 6000, maxMs: 9000, oneShot: false, next: 'pick' },
