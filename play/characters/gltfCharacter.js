@@ -60,14 +60,22 @@ function retargetMixamoPrefix(clip, skeleton) {
   }
   // Plain-name target: strip mixamorig prefix and remap mismatched names.
   // Track names look like `mixamorig4Hips.position` after sanitizeNodeName.
+  // Also drop Hips position/rotation tracks — Meshy's auto-rig bakes a
+  // corrective rotation into the Hips bind pose to compensate for an
+  // internal axis convention. Letting the clip overwrite that with its
+  // own absolute quaternion collapses the character sideways.
+  const kept = [];
   for (const t of out.tracks) {
     const m = t.name.match(/^mixamorig\d*([^.]+)(\..+)$/);
-    if (!m) continue;
+    if (!m) { kept.push(t); continue; }
     const bone = m[1];
     const tail = m[2];
+    if (bone === 'Hips') continue;
     const mapped = MESHY_NAME_REMAP[bone] || bone;
     t.name = mapped + tail;
+    kept.push(t);
   }
+  out.tracks = kept;
   return out;
 }
 
