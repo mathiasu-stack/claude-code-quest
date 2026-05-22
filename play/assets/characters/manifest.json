@@ -14,6 +14,14 @@
   },
   "characters": [
     {
+      "id": "hero",
+      "file": "hero.glb",
+      "available": true,
+      "tags": ["male", "asian", "hoodie", "glasses", "stylized", "player"],
+      "scale": 1.0,
+      "yOffset": 0.0
+    },
+    {
       "id": "casual_male_01",
       "file": "Character_Casual_01.glb",
       "available": false,

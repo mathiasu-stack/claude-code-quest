@@ -9,7 +9,7 @@
 // faceConfigs.js / npcLooks.js uses).
 
 export const NPC_CASTING = {
-  player:  { gltfAssetId: 'casual_male_01',     fallbackAssetId: 'hoodie_male_01' },
+  player:  { gltfAssetId: 'hero',               fallbackAssetId: 'hoodie_male_01' },
   linda:   { gltfAssetId: 'business_female_01', fallbackAssetId: 'casual_female_01' },
   marcus:  { gltfAssetId: 'casual_male_02',     fallbackAssetId: 'hoodie_male_01' },
   aisha:   { gltfAssetId: 'glasses_female_01',  fallbackAssetId: 'casual_female_01' },
