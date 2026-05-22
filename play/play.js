@@ -3221,6 +3221,7 @@ async function _preloadGltfAssets() {
   // Warm just the named NPCs + player up front. Auto chapter NPCs and
   // ambient agents pick up the cache as they're constructed.
   const ids = [
+    'hero',
     'casual_male_01', 'casual_male_02', 'casual_male_03',
     'casual_female_01', 'casual_female_02', 'casual_female_03',
     'business_female_01', 'business_female_02', 'business_female_03',
