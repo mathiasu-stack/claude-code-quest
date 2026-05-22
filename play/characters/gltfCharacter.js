@@ -176,8 +176,29 @@ export function makeGltfCharacter(look, assetLoader) {
 
   // Default to idle if available; otherwise leave the model in T-pose.
   let currentMotion = null;
+  // ── Temporary diagnostic HUD ──────────────────────────────────────────
+  // Top-right overlay showing which actions are bound + current motion.
+  // Helps diagnose "frozen on phone" without needing console access.
+  // Remove once animation is verified working.
+  const isPlayerLike = look._id === 'player';
+  let hudEl = null;
+  if (isPlayerLike && typeof document !== 'undefined') {
+    hudEl = document.getElementById('gltf-debug-hud');
+    if (!hudEl) {
+      hudEl = document.createElement('div');
+      hudEl.id = 'gltf-debug-hud';
+      hudEl.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;background:rgba(0,0,0,0.75);color:#0f0;font:12px/1.3 monospace;padding:8px 10px;border-radius:6px;pointer-events:none;max-width:60vw;';
+      document.body?.appendChild(hudEl);
+    }
+  }
+  function renderHud() {
+    if (!hudEl) return;
+    const boundList = Object.keys(actions).join(',') || '(none)';
+    const embedClips = (inst.animations || []).map(a => a.name).join(' | ') || '(none)';
+    hudEl.textContent = `asset=${assetId} clips=[${embedClips}] bound=[${boundList}] motion=${currentMotion || 'none'}`;
+  }
   function setMotion(name) {
-    if (currentMotion === name) return;
+    if (currentMotion === name) { renderHud(); return; }
     const next = actions[name];
     const prev = actions[currentMotion];
     currentMotion = name;
@@ -189,8 +210,10 @@ export function makeGltfCharacter(look, assetLoader) {
     } else if (prev) {
       prev.fadeOut(0.18);
     }
+    renderHud();
   }
   setMotion('idle');
+  renderHud();
 
   // Attach an accessory primitive (or any Object3D) to a named bone.
   // Used by the outfit / accessory tier system to put a tie on the
