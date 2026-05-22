@@ -7,13 +7,14 @@
 //   • 12-unit walls extending up from y=3.8 to y=12 (above the existing
 //     short walls), creating the tall vertical feel
 //   • Marble overlay floor (atrium floor on top of the existing tile)
-//   • Mezzanine railing visible at y=4.5 around the atrium edge
 //   • Glass curtain wall on the east side instead of (in addition to)
 //     the existing windows
 //   • Brushed silver Kedash logo on the back wall, backlit
 //   • Kinetic chandelier hanging from the new high ceiling
-//   • Sculptural glass-and-steel staircase visible (purely decorative)
 //   • Skylight at the top
+//
+// (Mezzanine + staircase were removed by request — atrium is now a
+// single-storey grand lobby with the high ceiling preserved.)
 //
 // All geometry is opt-in via a flag; the original reception keeps
 // working if buildAtrium fails.
@@ -25,7 +26,11 @@ import {
 } from '../materials/modernLibrary.js';
 
 const ATRIUM_HEIGHT = 12;     // total atrium height
-const MEZZ_HEIGHT = 4.5;      // floor of the visible mezzanine above
+// Y at which the wall material transitions (lower upperWallMat band →
+// upper topWallMat band) and where the perimeter cove lighting sits.
+// Originally the mezzanine floor height; mezzanine has been removed but
+// the wall banding + cove are kept for the architectural look.
+const MEZZ_HEIGHT = 4.5;
 const ROOM_W = 22;
 const ROOM_D = 22;            // matches the existing Reception bounds
 
@@ -165,82 +170,9 @@ export function buildAtrium(scene, opts = {}) {
   scene.add(skylight);
   out.objects.push(skylight);
 
-  // ── 5. Mezzanine railing visible above the atrium ──────────────────
-  // The railing wraps around 3 sides (skip the east glass curtain wall).
-  // Approximated as a continuous box at MEZZ_HEIGHT level.
-  const railingMat = new THREE.MeshStandardMaterial({
-    color: 0xb8c0c8, metalness: 0.85, roughness: 0.32,
-  });
-  const railingThickness = 0.06;
-  const railingHeight = 0.85;
-  function railing(width, x, z, ry) {
-    // Horizontal top bar
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(width, railingThickness, 0.18),
-      railingMat,
-    );
-    top.position.set(x, MEZZ_HEIGHT + railingHeight, z);
-    top.rotation.y = ry;
-    scene.add(top);
-    out.objects.push(top);
-    // Glass infill below
-    const glass = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, railingHeight),
-      glassClear({ mobile, tint: 0xeef6ff }),
-    );
-    glass.position.set(x, MEZZ_HEIGHT + railingHeight / 2, z);
-    glass.rotation.y = ry;
-    scene.add(glass);
-    out.objects.push(glass);
-    // Bottom rail
-    const bot = new THREE.Mesh(
-      new THREE.BoxGeometry(width, 0.04, 0.04),
-      railingMat,
-    );
-    bot.position.set(x, MEZZ_HEIGHT, z);
-    bot.rotation.y = ry;
-    scene.add(bot);
-    out.objects.push(bot);
-  }
-  // North/back side
-  railing(ROOM_W - 0.3, 0, -10.6, 0);
-  // West side
-  railing(ROOM_D - 0.3, -10.6, 0, Math.PI / 2);
-  // South side (split around doorway opening)
-  railing(8, -7, 10.6, 0);
-  railing(8,  7, 10.6, 0);
-
-  // ── 5b. Walkable mezzanine — L-shape hugging west + north walls ────
-  // The top of the staircase deposits the player at (x≈-9, z=0.5, y≈4.5).
-  // Without a floor up here the player just stands on the tiny top step
-  // and can fall off in every direction. Two plates form an L from the
-  // top of the stairs around the west wall and across the north wall.
-  // The east + south sides stay open so the atrium reads as a real
-  // three-storey lobby instead of an enclosed second floor.
-  const MEZZ_INSET = 3;                // walkway depth from the outer wall
-  const MEZZ_OPEN_X = -11 + MEZZ_INSET;   // -8: inner edge of west strip
-  const MEZZ_OPEN_Z = -11 + MEZZ_INSET;   // -8: inner edge of north strip
-  const MEZZ_PLATE_Y = MEZZ_HEIGHT;       // matches railing base
-  const mezzFloorMat = brushedSilver();
-  function mezzPlate(w, d, x, z) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), mezzFloorMat);
-    m.position.set(x, MEZZ_PLATE_Y - 0.04, z);
-    m.receiveShadow = true;
-    scene.add(m);
-    out.objects.push(m);
-  }
-  // West strip: x ∈ [-11, -8], z ∈ [-11, +11]
-  mezzPlate(MEZZ_INSET, ROOM_D, (-11 + MEZZ_OPEN_X) / 2, 0);
-  // North strip: x ∈ [-8, +11], z ∈ [-11, -8] (does not overlap W strip).
-  mezzPlate(11 - MEZZ_OPEN_X, MEZZ_INSET, (MEZZ_OPEN_X + 11) / 2, (-11 + MEZZ_OPEN_Z) / 2);
-
-  // Inner railings — protect the two open edges of the L from the atrium
-  // opening below. The corner at (MEZZ_OPEN_X, MEZZ_OPEN_Z) is where the
-  // two segments meet.
-  // West-strip inner edge: along x=MEZZ_OPEN_X, from z=MEZZ_OPEN_Z to z=+11.
-  railing(11 - MEZZ_OPEN_Z, MEZZ_OPEN_X, (MEZZ_OPEN_Z + 11) / 2, Math.PI / 2);
-  // North-strip inner edge: along z=MEZZ_OPEN_Z, from x=MEZZ_OPEN_X to x=+11.
-  railing(11 - MEZZ_OPEN_X, (MEZZ_OPEN_X + 11) / 2, MEZZ_OPEN_Z, 0);
+  // (Mezzanine railing + walkable mezzanine L removed by request — the
+  // atrium is now a single-storey grand lobby with the tall ceiling
+  // preserved but no second-level structure.)
 
   // ── 6. Brushed silver KEDASH logo wall behind reception desk ───────
   // Bug C (latest pass): previous tuning had logoBacking = 0x1a1a1a
@@ -367,86 +299,9 @@ export function buildAtrium(scene, opts = {}) {
     });
   });
 
-  // ── 9. Sculptural staircase against the west wall ─────────────────
-  // Bug B (latest pass): previous tuning had steps spanning world x =
-  // -10.53 to -9.13 — the +0.7 half-width meant they reached well
-  // inside the player's movement clamp at x = -10.5 → player walked
-  // through them. Also "looked floating" because the only visible
-  // support was a single pillar to the side of the stair, not under
-  // each step. Two fixes in tandem:
-  //   1. Slanted CHROME STRINGER running directly under all 14 steps —
-  //      reads as the structural backbone, kills the "floating" look.
-  //   2. Collision rectangle added in play.js clampMove — pushes the
-  //      player east of x = -9.0 inside the stair Z range.
-  const stairGroup = new THREE.Group();
-  stairGroup.position.set(-10.2, 0, -3);
-  scene.add(stairGroup);
-  out.objects.push(stairGroup);
-
-  // Vertical chrome support pillar at the FAR (top) end of the stair.
-  const supportPillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.10, 0.10, MEZZ_HEIGHT + 0.3, 12),
-    polishedChrome(),
-  );
-  supportPillar.position.set(0.4, (MEZZ_HEIGHT + 0.3) / 2, 1.5);
-  stairGroup.add(supportPillar);
-
-  // NEW: Slanted stringer running under all 14 steps (Bug B fix).
-  // Steps span y=0.05 → y=4.21 along z = -2.7 → -0.54. Build a tilted
-  // box that follows that diagonal so each step has visible support
-  // directly beneath it.
-  const stringerLen = Math.hypot(4.16, 2.16);  // y-rise × z-run
-  const stringerAngle = Math.atan2(4.16, 2.16);
-  const stringer = new THREE.Mesh(
-    new THREE.BoxGeometry(0.18, 0.16, stringerLen),
-    polishedChrome(),
-  );
-  stringer.position.set(0.20, (0.05 + 4.21) / 2 - 0.10, (0.30 + 2.16) / 2);
-  stringer.rotation.x = -(Math.PI / 2 - stringerAngle);
-  stairGroup.add(stringer);
-
-  // Steps — sit against the west wall, curve gently inward.
-  for (let i = 0; i < 14; i++) {
-    const step = new THREE.Mesh(
-      new THREE.BoxGeometry(1.4, 0.06, 0.42),
-      brushedSilver(),
-    );
-    const a = (i / 14) * 0.45;  // gentler curve so it stays close to the wall
-    step.position.set(
-      Math.cos(a) * 0.30 + 0.10,
-      i * 0.32 + 0.05,
-      Math.sin(a) * 0.30 + i * 0.18,
-    );
-    step.castShadow = true;
-    stairGroup.add(step);
-
-    // Small under-side bracket for each step (visible structural detail)
-    const bracket = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.40, 0.05),
-      polishedChrome(),
-    );
-    bracket.position.set(step.position.x + 0.50, step.position.y - 0.20, step.position.z);
-    stairGroup.add(bracket);
-  }
-
-  // Top platform meets the mezzanine railing visually.
-  const topPlat = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.06, 0.7),
-    brushedSilver(),
-  );
-  topPlat.position.set(0.30, MEZZ_HEIGHT - 0.04, 3.5);
-  topPlat.castShadow = true;
-  stairGroup.add(topPlat);
-
-  // Glass railing along the stair (full height now).
-  for (let i = 0; i < 4; i++) {
-    const post = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.85, 0.05),
-      polishedChrome(),
-    );
-    post.position.set(0.85, 0.5 + i * 0.95, i * 0.95 + 0.4);
-    stairGroup.add(post);
-  }
+  // (Sculptural staircase removed by request — atrium has no stair or
+  // mezzanine. The west wall is now clear all the way up to the
+  // atrium ceiling.)
 
   // ── 10. Cove lighting strip around the perimeter at MEZZ_HEIGHT ────
   const coveMat = coveLight(0xfff5d4);

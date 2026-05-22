@@ -402,41 +402,9 @@ function addColliderAABB(minX, maxX, minZ, maxZ, floor = 1) {
 }
 const PLAYER_RADIUS = 0.30;
 
-// Stair-climb constants — see atrium.js section 9. Steps span world
-// x∈[-10.5,-8.85], z∈[-2.7,-0.54], rising linearly from y=0 to y=4.5
-// (the mezzanine floor height). The top platform is a flat extension
-// at constant y=4.5 reaching further north to z≈+0.85.
-const STAIR_X_MIN = -10.5,  STAIR_X_MAX = -8.85;
-const STAIR_Z_BOTTOM = -2.7, STAIR_Z_TOP = -0.54, STAIR_PLATFORM_Z = 0.85;
-// Walkable mezzanine — L-shape hugging the west + north walls of the
-// atrium at y = MEZZ_FLOOR_Y, matching atrium.js's mezzPlate geometry.
-// The stair top dumps the player onto the west strip.
-const MEZZ_FLOOR_Y = 4.5;
-const MEZZ_OPEN_X = -8;  // inner east edge of the west strip
-const MEZZ_OPEN_Z = -8;  // inner south edge of the north strip
-function isOnMezzanine(x, z) {
-  if (zoneIndexAt(z) !== 0) return false;       // atrium only
-  if (x < -10.5 || x > 10.5) return false;       // inside walls
-  if (z < -10.5 || z > 10.5) return false;
-  // West strip: x ≤ MEZZ_OPEN_X
-  if (x <= MEZZ_OPEN_X) return true;
-  // North strip: z ≤ MEZZ_OPEN_Z (and east of the west strip handled above)
-  if (z <= MEZZ_OPEN_Z) return true;
-  return false;
-}
-function stairGroundY(x, z) {
-  // Stair ramp + top platform
-  if (x >= STAIR_X_MIN && x <= STAIR_X_MAX && zoneIndexAt(z) === 0) {
-    if (z >= STAIR_Z_BOTTOM && z <= STAIR_Z_TOP) {
-      const t = (z - STAIR_Z_BOTTOM) / (STAIR_Z_TOP - STAIR_Z_BOTTOM);
-      return t * MEZZ_FLOOR_Y;
-    }
-    if (z > STAIR_Z_TOP && z <= STAIR_PLATFORM_Z) return MEZZ_FLOOR_Y;
-  }
-  // Mezzanine walkway — continues from the stair top around the L.
-  if (isOnMezzanine(x, z)) return MEZZ_FLOOR_Y;
-  return 0;
-}
+// (Staircase + mezzanine removed from the atrium — floor 1 is flat now.
+// The gravity / clampMove paths below treat the ground as floorBaseY
+// without any per-XZ ramp offset.)
 
 function clampMove(oldX, oldZ, newX, newZ) {
   // X always within room/zone width
@@ -2624,13 +2592,11 @@ function update(dt) {
   }
   jumpRequested = false;
 
-  // Gravity + Y position. `groundY` is the floor height for the current
-  // XZ — floorBaseY for the player's current floor, plus the stair
-  // ramp (floor 1 only).
+  // Gravity + Y position. The atrium is flat (no staircase/mezzanine
+  // since they were removed), so the ground is simply the player's
+  // current floor's baseline Y.
   const wasAirborne = !player.userData.grounded;
-  const baseY = floorBaseY(currentFloor);
-  const stairExtra = (currentFloor === 1) ? stairGroundY(player.position.x, player.position.z) : 0;
-  const groundY = baseY + stairExtra;
+  const groundY = floorBaseY(currentFloor);
   if (!player.userData.grounded || player.position.y > groundY) {
     player.userData.velocityY -= 18 * dt;
     player.position.y += player.userData.velocityY * dt;
@@ -2641,7 +2607,6 @@ function update(dt) {
       if (wasAirborne) playLandThud();
     }
   } else {
-    // Grounded — track stair height as the player walks across the ramp.
     player.position.y = groundY;
   }
 
