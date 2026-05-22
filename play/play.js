@@ -1240,10 +1240,22 @@ function buildWorld() {
     scene.add(m);
     return m;
   }
-  // back, left, right
+  // back, left
   wall(22, wallH, 0.3, 0, wallH/2, -11);
   wall(0.3, wallH, 22, -11, wallH/2, 0);
-  wall(0.3, wallH, 22, 11, wallH/2, 0);
+  // East wall — segmented to leave 3 actual window openings (matches
+  // buildReceptionWindows in world/depth.js). Three windows at z=-3, 0,
+  // 3, each 2.4m wide × 1.8m tall, centered at y=1.9. The wall is
+  // 0.3m thick at x=11.
+  // Top + bottom strips (full length, above + below the windows):
+  wall(0.3, 1.0, 22, 11, 0.5, 0);     // y ∈ [0, 1.0]
+  wall(0.3, 1.0, 22, 11, 3.3, 0);     // y ∈ [2.8, 3.8]
+  // Middle band (y ∈ [1.0, 2.8]) — 4 pillar segments, leaving 3 gaps
+  // at z = -3, 0, 3 for the windows.
+  wall(0.3, 1.8, 6.8, 11, 1.9, -7.6); // south cap z=-11..-4.2
+  wall(0.3, 1.8, 0.6, 11, 1.9, -1.5); // between windows -3 and 0
+  wall(0.3, 1.8, 0.6, 11, 1.9,  1.5); // between windows 0 and 3
+  wall(0.3, 1.8, 6.8, 11, 1.9,  7.6); // north cap z=4.2..11
   // front split with doorway at center (z = 11). The doorway opening
   // (x ∈ [-1.75, +1.75]) matches the door panel built in registerDoor —
   // previously the opening was 5m wide while the door was only 3.5m,

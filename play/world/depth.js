@@ -105,11 +105,125 @@ function buildSkylineGroup(opts = {}) {
   return g;
 }
 
+// Exterior scene visible through the east windows: grass ground plate,
+// a sidewalk strip flush against the building, a road further out, a
+// few procedural trees, and procedurally-drifting cloud sprites in the
+// sky. Sits to the east of the atrium (x > 11) — the skyline already
+// renders further back at x ≈ 20.
+function buildExterior(scene) {
+  const out = { clouds: [] };
+
+  // Grass ground plate covering the area between the building and the road.
+  const grassMat = new THREE.MeshStandardMaterial({ color: 0x6aa05a, roughness: 0.95 });
+  const grass = new THREE.Mesh(new THREE.PlaneGeometry(60, 80), grassMat);
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.set(35, -0.005, 0);          // east of the building
+  grass.receiveShadow = true;
+  scene.add(grass);
+
+  // Sidewalk strip immediately outside the east wall (x = 11.15 to 14).
+  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xb5b1a8, roughness: 0.9 });
+  const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(3, 80), sidewalkMat);
+  sidewalk.rotation.x = -Math.PI / 2;
+  sidewalk.position.set(12.65, 0.001, 0);
+  scene.add(sidewalk);
+
+  // Asphalt road further out, parallel to the building.
+  const roadMat = new THREE.MeshStandardMaterial({ color: 0x2c2e35, roughness: 0.85 });
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(7, 80), roadMat);
+  road.rotation.x = -Math.PI / 2;
+  road.position.set(18, 0.002, 0);
+  scene.add(road);
+
+  // Yellow centerline on the road — dashed via two thin emissive boxes.
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xf2c84b });
+  for (let i = -36; i <= 36; i += 6) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 2.5), lineMat);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.set(18, 0.003, i);
+    scene.add(dash);
+  }
+
+  // Procedural trees along the sidewalk strip. Each tree is a brown
+  // trunk cylinder + green sphere foliage.
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+  const leafMats = [
+    new THREE.MeshStandardMaterial({ color: 0x4f8a3a, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0x65a644, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0x387a2e, roughness: 0.85 }),
+  ];
+  // Trees on both sides of the road for depth, spaced so they don't sit
+  // directly in front of a window opening (windows at z = -3, 0, +3).
+  const treeZ = [-32, -23, -14, -7.5, 6, 15.5, 24, 33];
+  const treeX = [13.5, 22];
+  for (const z of treeZ) {
+    for (const x of treeX) {
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.22, 1.6, 8),
+        trunkMat,
+      );
+      trunk.position.set(x, 0.8, z);
+      scene.add(trunk);
+      const leaves = new THREE.Mesh(
+        new THREE.SphereGeometry(1.1, 12, 10),
+        leafMats[(Math.abs(z) + x) % leafMats.length | 0],
+      );
+      leaves.position.set(x, 2.2, z);
+      leaves.scale.set(1.05, 1.25, 1.05);
+      scene.add(leaves);
+    }
+  }
+
+  // Cloud sprites — soft white discs floating high in the sky.
+  const cloudC = document.createElement('canvas');
+  cloudC.width = 128; cloudC.height = 64;
+  {
+    const ctx = cloudC.getContext('2d');
+    const grad = ctx.createRadialGradient(64, 32, 8, 64, 32, 60);
+    grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 64);
+  }
+  const cloudTex = new THREE.CanvasTexture(cloudC);
+  cloudTex.colorSpace = THREE.SRGBColorSpace;
+  const cloudMat = new THREE.SpriteMaterial({
+    map: cloudTex, transparent: true, opacity: 0.9, depthWrite: false,
+  });
+  const cloudPositions = [
+    [ 28, 14, -22],  [ 38, 18,   2],
+    [ 26, 16,  24],  [ 42, 12, -10],
+    [ 32, 20,  16],  [ 24, 13,  -2],
+  ];
+  for (const [x, y, z] of cloudPositions) {
+    const s = new THREE.Sprite(cloudMat.clone());
+    s.position.set(x, y, z);
+    s.scale.set(10 + Math.random() * 4, 4 + Math.random() * 1.5, 1);
+    scene.add(s);
+    out.clouds.push(s);
+  }
+
+  // Slow drift for the clouds.
+  out.update = (dt, now) => {
+    for (let i = 0; i < out.clouds.length; i++) {
+      const c = out.clouds[i];
+      c.position.z = ((c.position.z + dt * 0.15 + 40) % 80) - 40;
+    }
+  };
+
+  return out;
+}
+
 export function buildReceptionWindows(scene) {
-  // Cut conceptual openings into the right wall (x = 10.83) at z = 1, 5.
-  // We don't actually carve geometry; instead we lay the frame + glass
-  // flush with the wall and slide the wall back behind it slightly.
+  // East wall is now segmented (in play.js buildWorld) to leave actual
+  // openings where the windows go. Frame + glass are flush with the
+  // wall plane and the skyline renders behind them through those gaps.
   const out = { windows: [], skyline: null, _facingPlanes: [] };
+
+  // Real exterior — grass, sidewalk, road, trees, drifting clouds —
+  // visible through the new window openings.
+  out.exterior = buildExterior(scene);
 
   // Three windows along the east wall.
   const positions = [
@@ -146,6 +260,8 @@ export function buildReceptionWindows(scene) {
   });
 
   out.update = (dt, now, playerPos) => {
+    // Drift the clouds even when the player is still.
+    if (out.exterior?.update) out.exterior.update(dt, now);
     if (!playerPos) return;
     // Parallax: shift skyline opposite to player x by ~5% so it reads "far".
     skyline.position.x = 20 - playerPos.x * 0.05;

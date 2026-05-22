@@ -59,15 +59,35 @@ export function buildElevator(scene, opts = {}) {
     shaftGroup.add(m);
   }
 
-  // Vertical chrome corner posts
+  // Vertical chrome corner posts — thickened from 0.08m so the shaft
+  // reads as architecture, not "thin floating bars".
   for (const [x, z] of [[-SHAFT_W/2, -SHAFT_D/2], [SHAFT_W/2, -SHAFT_D/2],
                          [-SHAFT_W/2,  SHAFT_D/2], [SHAFT_W/2,  SHAFT_D/2]]) {
     const post = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, TOTAL_HEIGHT, 0.08),
+      new THREE.BoxGeometry(0.20, TOTAL_HEIGHT, 0.20),
       frame,
     );
     post.position.set(x, TOTAL_HEIGHT / 2, z);
     shaftGroup.add(post);
+  }
+
+  // South-facing entrance frame — a thick door header above the lobby
+  // opening so the entry reads as a proper elevator portal rather than
+  // an open gap between bars.
+  const entryHeader = new THREE.Mesh(
+    new THREE.BoxGeometry(SHAFT_W + 0.3, 0.3, 0.18),
+    frame,
+  );
+  entryHeader.position.set(0, 2.55, SHAFT_D / 2 + 0.02);
+  shaftGroup.add(entryHeader);
+  // Pair of side jambs flanking the entry
+  for (const sx of [-SHAFT_W / 2 - 0.08, SHAFT_W / 2 + 0.08]) {
+    const jamb = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 2.6, 0.18),
+      frame,
+    );
+    jamb.position.set(sx, 1.3, SHAFT_D / 2 + 0.02);
+    shaftGroup.add(jamb);
   }
 
   // Floor markers — thin chrome bands at each floor level
