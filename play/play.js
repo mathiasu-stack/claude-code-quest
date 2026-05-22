@@ -2389,14 +2389,16 @@ const INES_IDLE_FRAME_RATIO = 0.25; // moment in walk cycle when arms pass at si
 const INES_STANCE_FACTOR = 1.6;      // widen hip-stance to fix narrow Meshy rig
 const _INES_TMP_QUAT_TARGET = new THREE.Quaternion();
 const _INES_TMP_QUAT_PARENT = new THREE.Quaternion();
-const _INES_DOWN_AXIS = new THREE.Vector3(1, 0, 0);
-// Force arm bones to hang straight down. Meshy's auto-rig has the
-// shoulders rotated outward to make T-pose, so even the walk clip's
-// "arms passing" frame leaves the arms angled laterally. We override
-// LeftArm + RightArm to point world -Y and reset the rest of the chain.
+const _INES_LEFT_TILT_AXIS = new THREE.Vector3(0, 0, -1);  // tilts arm outward to +X
+const _INES_RIGHT_TILT_AXIS = new THREE.Vector3(0, 0, 1); // tilts arm outward to -X
+const _INES_ARM_ANGLE = 165 * Math.PI / 180; // 15° outward tilt from straight-down
+const _INES_FOREARM_BEND = new THREE.Vector3(1, 0, 0);
+// Idle pose for the arms: hang at her sides but tilted slightly outward
+// (~15°) so they clear her flared dress instead of clipping into it.
+// Forearms get a small forward bend so the hands fall in front of her
+// thighs — a natural "relaxed kid standing" pose.
 function setInesArmsDown(skeleton) {
   if (!skeleton) return;
-  _INES_TMP_QUAT_TARGET.setFromAxisAngle(_INES_DOWN_AXIS, Math.PI);
   for (const side of ['Left', 'Right']) {
     const arm = skeleton.getBoneByName(side + 'Arm');
     const fore = skeleton.getBoneByName(side + 'ForeArm');
@@ -2404,12 +2406,14 @@ function setInesArmsDown(skeleton) {
     if (arm && arm.parent) {
       arm.parent.updateMatrixWorld(true);
       arm.parent.getWorldQuaternion(_INES_TMP_QUAT_PARENT);
+      const axis = side === 'Left' ? _INES_LEFT_TILT_AXIS : _INES_RIGHT_TILT_AXIS;
+      _INES_TMP_QUAT_TARGET.setFromAxisAngle(axis, _INES_ARM_ANGLE);
       arm.quaternion
         .copy(_INES_TMP_QUAT_PARENT)
         .invert()
         .multiply(_INES_TMP_QUAT_TARGET);
     }
-    if (fore) fore.quaternion.set(0, 0, 0, 1);
+    if (fore) fore.quaternion.setFromAxisAngle(_INES_FOREARM_BEND, 0.25);
     if (hand) hand.quaternion.set(0, 0, 0, 1);
   }
 }
