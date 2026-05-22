@@ -132,6 +132,9 @@ body {
 .sidebar-reset {
   padding: 12px 16px;
   border-top: 1px solid var(--navy-light);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .reset-btn {
   background: none;
@@ -145,6 +148,7 @@ body {
   transition: border-color 0.15s, color 0.15s;
 }
 .reset-btn:hover { border-color: var(--red); color: var(--red); }
+.reset-btn.admin-btn:hover { border-color: var(--gold); color: var(--gold); }
 
 /* ==================== MAIN CONTENT ==================== */
 

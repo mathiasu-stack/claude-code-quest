@@ -208,6 +208,7 @@ const App = {
 
       <div class="sidebar-reset">
         <button class="reset-btn" id="reset-progress-btn">Reset Progress</button>
+        <button class="reset-btn admin-btn" id="admin-unlock-btn" title="Enter admin passcode">🔓 Admin</button>
       </div>
     `;
 
@@ -233,6 +234,51 @@ const App = {
         window.location.reload();
       }
     });
+
+    document.getElementById('admin-unlock-btn').addEventListener('click', () => {
+      const entered = window.prompt('Enter admin passcode:');
+      if (entered === null) return; // user cancelled
+      if (entered === 'Kapprim') {
+        App.unlockEverything();
+      } else {
+        window.alert('Incorrect passcode.');
+      }
+    });
+  },
+
+  // Admin-only "unlock everything" — gated by the Kapprim passcode in the
+  // sidebar. Marks every chapter unlocked, every lesson complete, every
+  // practical test passed, and lets applyBadgeBumpsIfDue push the badge
+  // up to floor 4. Progress.* functions are idempotent and won't
+  // double-award XP, so XP earned legitimately is preserved.
+  unlockEverything() {
+    if (!window.CURRICULUM) return;
+    let progress = this.progress;
+    for (const ch of window.CURRICULUM) {
+      progress = Progress.unlockChapter(progress, ch.id);
+      for (const l of ch.lessons || []) {
+        progress = Progress.markLessonComplete(progress, l.id, l.xpReward || 0);
+      }
+      if (ch.practicalTest) {
+        progress = Progress.recordTestResult(
+          progress,
+          ch.practicalTest.id,
+          { passed: true, score: 100 },
+          ch.practicalTest.xpReward || 0,
+        );
+        progress = Progress.recordTestResult(
+          progress,
+          ch.id + '_chapter_bonus',
+          { passed: true, score: 100 },
+          ch.xpReward || 0,
+        );
+      }
+    }
+    progress = Progress.applyBadgeBumpsIfDue(progress);
+    Progress.save(progress);
+    this.progress = progress;
+    window.alert('Admin mode: all chapters, lessons, and tests unlocked. Reloading…');
+    window.location.reload();
   },
 
   refreshSidebar() {
