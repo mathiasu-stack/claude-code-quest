@@ -2386,7 +2386,7 @@ function buildPlayer() {
 // sitDown/walk. sitDown is the entry to a 3-step compound: sitDown →
 // sitIdle → standUp → pick again. Durations are clip-length for one-shots,
 // random ranges for loops.
-const INES_STANCE_FACTOR = 2.5;
+const INES_STANCE_FACTOR = 1.0; // Meshy's auto-rig stance kept as-is — fused-feet appearance is a shoe-mesh / camera-angle artifact, not a bone-width issue
 const INES_ACTIVITIES = {
   idle:    { motion: 'idle',     minMs: 3500, maxMs: 6000, oneShot: false, next: 'pick' },
   dance:   { motion: 'dance',    minMs: 6000, maxMs: 9000, oneShot: false, next: 'pick' },
