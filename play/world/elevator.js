@@ -17,10 +17,14 @@ import {
   marbleDarkGreen, brass,
 } from '../materials/modernLibrary.js';
 
-const SHAFT_X = 8.5;     // east side of atrium, near the curtain wall
-const SHAFT_Z = -8.5;    // back of atrium near reception
-const SHAFT_W = 2.4;
-const SHAFT_D = 2.4;
+// Shaft now sits OUTSIDE the atrium's east wall (which is at x=11), so
+// the elevator takes no floor space inside the reception room. The
+// shaftGroup is rotated -π/2 around Y so the opening (originally on
+// local +Z, "south") faces world -X — i.e. west, into the atrium.
+const SHAFT_X = 12.3;    // just east of the atrium east wall
+const SHAFT_Z = -7.6;    // centered in the south cap of the east wall
+const SHAFT_W = 2.4;     // dimension along local X (becomes world Z after rotation)
+const SHAFT_D = 2.4;     // dimension along local Z (becomes world X after rotation)
 const FLOOR_HEIGHT = 4.5;
 const FLOOR_COUNT = 6;
 const TOTAL_HEIGHT = FLOOR_HEIGHT * FLOOR_COUNT;
@@ -31,6 +35,7 @@ export function buildElevator(scene, opts = {}) {
 
   const shaftGroup = new THREE.Group();
   shaftGroup.position.set(SHAFT_X, 0, SHAFT_Z);
+  shaftGroup.rotation.y = -Math.PI / 2; // opening now faces west (into atrium)
   shaftGroup.userData.crossFloor = true;
   scene.add(shaftGroup);
 
@@ -169,20 +174,21 @@ export function buildElevator(scene, opts = {}) {
   indPlane.position.set(0, 2.0, -(SHAFT_D / 2) + 0.13);
   cab.add(indPlane);
 
-  // Initial cab position — random floor for ambience.
-  let currentY = (1 + Math.floor(Math.random() * FLOOR_COUNT)) * FLOOR_HEIGHT - FLOOR_HEIGHT;
-  let targetY = currentY;
-  let speed = 1.6;
+  // Cab starts at ground floor and stays there (was randomly cycling
+  // floors before — now static; only snapCabToFloor moves it when the
+  // player explicitly takes the elevator via the modal).
+  cab.position.y = 0;
+  paintIndicator(1);
 
-  cab.position.y = currentY;
-  paintIndicator(Math.round(currentY / FLOOR_HEIGHT) + 1);
-
-  // ── 3. Call button at lobby level (south side of shaft) ────────────
+  // ── 3. Call button — placed inside the atrium just west of the
+  // doorway so the player can press E from the reception side.
+  const CALL_BTN_X = 10.85;  // ~10cm inside the atrium from the east wall
+  const CALL_BTN_Z = SHAFT_Z;
   const btnHousing = new THREE.Mesh(
-    new THREE.BoxGeometry(0.2, 0.4, 0.05),
+    new THREE.BoxGeometry(0.05, 0.4, 0.2),
     brushedSilver(),
   );
-  btnHousing.position.set(SHAFT_X + (SHAFT_W / 2) + 0.4, 1.2, SHAFT_Z + 0.5);
+  btnHousing.position.set(CALL_BTN_X, 1.2, CALL_BTN_Z + 1.5);
   btnHousing.userData.crossFloor = true;
   scene.add(btnHousing);
   const btnUp = new THREE.Mesh(
@@ -191,15 +197,15 @@ export function buildElevator(scene, opts = {}) {
       color: 0xffd54f, emissive: 0xffaa00, emissiveIntensity: 0.5,
     }),
   );
-  btnUp.position.set(SHAFT_X + (SHAFT_W / 2) + 0.4, 1.32, SHAFT_Z + 0.53);
+  btnUp.position.set(CALL_BTN_X - 0.03, 1.32, CALL_BTN_Z + 1.5);
   btnUp.userData.crossFloor = true;
   scene.add(btnUp);
-  out.callButton = btnHousing; // expose for proximity detection
+  out.callButton = btnHousing;
 
-  // ── 4. Floor signage on the south wall of each floor ──────────────
-  // (For floors above the atrium that aren't built yet, this is a
-  // visible cue that the floor exists.)
-  for (let f = 2; f <= FLOOR_COUNT; f++) {
+  // ── 4. Floor signage above the elevator door, atrium-side.
+  // Floors 2 & 3 only — those Y heights still fit under the atrium
+  // ceiling at y=12. Higher floors would clip through the ceiling.
+  for (let f = 2; f <= 3; f++) {
     const c = document.createElement('canvas');
     c.width = 256; c.height = 64;
     const ctx = c.getContext('2d');
@@ -216,43 +222,19 @@ export function buildElevator(scene, opts = {}) {
       new THREE.PlaneGeometry(1.0, 0.25),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true }),
     );
-    sign.position.set(SHAFT_X + (SHAFT_W / 2) + 0.06, f * FLOOR_HEIGHT + 0.4, SHAFT_Z);
+    // On the east wall, above the door, facing west (into the atrium).
+    sign.position.set(10.94, 3.0 + (f - 2) * 0.45, SHAFT_Z);
     sign.rotation.y = -Math.PI / 2;
     sign.userData.crossFloor = true;
     scene.add(sign);
   }
 
-  // Expose constants the host needs (call-button XZ for proximity, floor
-  // height for floor-Y math, cab snap for teleport).
-  out.callButtonPos = { x: SHAFT_X + (SHAFT_W / 2) + 0.4, z: SHAFT_Z + 0.5 };
+  // Expose constants the host needs (call-button XZ for proximity, cab
+  // snap for teleport). No tick() — the cab is static.
+  out.callButtonPos = { x: CALL_BTN_X, z: CALL_BTN_Z + 1.5 };
   out.snapCabToFloor = (floorIdx) => {
-    currentY = (floorIdx - 1) * FLOOR_HEIGHT;
-    targetY = currentY;
-    nextDecide = performance.now() + 6000;
-    cab.position.y = currentY;
+    cab.position.y = (floorIdx - 1) * FLOOR_HEIGHT;
     paintIndicator(floorIdx);
-  };
-
-  // ── 5. tick() — animate cab between floors slowly ──────────────────
-  let nextDecide = 0;
-  out.tick = (dt, now) => {
-    if (now > nextDecide) {
-      // Pick a new random target floor every 6-12 s.
-      const targetFloor = 1 + Math.floor(Math.random() * FLOOR_COUNT);
-      targetY = (targetFloor - 1) * FLOOR_HEIGHT;
-      nextDecide = now + 6000 + Math.random() * 6000;
-    }
-    if (Math.abs(targetY - currentY) > 0.02) {
-      const dir = Math.sign(targetY - currentY);
-      currentY += dir * speed * dt;
-      // clamp so we don't overshoot
-      if ((dir > 0 && currentY > targetY) || (dir < 0 && currentY < targetY)) {
-        currentY = targetY;
-      }
-      cab.position.y = currentY;
-    } else {
-      paintIndicator(Math.round(currentY / FLOOR_HEIGHT) + 1);
-    }
   };
 
   // Manual override (used by ceremonyManager later).
