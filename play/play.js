@@ -2886,19 +2886,53 @@ function update(dt) {
     const clamped = clampMove(player.position.x, player.position.z, nx, nz);
     nx = clamped.x; nz = clamped.z;
 
-    // Footstep accumulator: trigger a step every ~0.65m of horizontal movement
-    // while grounded. Surface comes from the current zone's audio config.
+    // Footstep SFX. For a rigged GLTF player we sync each step to the
+    // walk/run clip's footfall keyframes (t crossing 0 and dur/2) so the
+    // sound matches the visible foot strike. For procedural bodies we
+    // fall back to a distance-accumulator with a ~1.8m threshold.
     if (player.userData.grounded) {
       const stepDx = nx - player.position.x;
       const stepDz = nz - player.position.z;
-      footstepAccum += Math.hypot(stepDx, stepDz);
-      // Step cadence: at base speed 4.4 m/s a 1.8 m threshold gives
-      // ~2.4 steps/sec (natural walking pace); sprint scales it up
-      // automatically since the threshold is distance-based.
-      if (footstepAccum > 1.8) {
+      const moving = Math.hypot(stepDx, stepDz) > 0.001;
+      const gc = player.userData.gltfChar;
+      let animDriven = false;
+      if (gc && moving) {
+        const w = gc.actions?.walk;
+        const r = gc.actions?.run;
+        const active = (r && r.isRunning() && r.getEffectiveWeight() > 0.5) ? r
+                    : (w && w.isRunning() && w.getEffectiveWeight() > 0.5) ? w
+                    : null;
+        if (active) {
+          animDriven = true;
+          const dur = active.getClip().duration;
+          const t = active.time % dur;
+          const lastT = player.userData._lastStepT;
+          const half = dur / 2;
+          let stepped = false;
+          if (lastT != null) {
+            // Crossing the half-cycle mark forward → second footfall.
+            if (lastT < half && t >= half) stepped = true;
+            // t wrapped back to 0 → first footfall of next cycle.
+            if (t < lastT && lastT > half) stepped = true;
+          }
+          if (stepped) {
+            const idx = zoneIndexAt(nz);
+            playFootstep(surfaceForZone(idx));
+          }
+          player.userData._lastStepT = t;
+        }
+      } else {
+        player.userData._lastStepT = null;
+      }
+      if (!animDriven) {
+        footstepAccum += Math.hypot(stepDx, stepDz);
+        if (footstepAccum > 1.8) {
+          footstepAccum = 0;
+          const idx = zoneIndexAt(nz);
+          playFootstep(surfaceForZone(idx));
+        }
+      } else {
         footstepAccum = 0;
-        const idx = zoneIndexAt(nz);
-        playFootstep(surfaceForZone(idx));
       }
     }
 
