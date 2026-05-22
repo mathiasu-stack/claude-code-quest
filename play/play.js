@@ -2487,6 +2487,32 @@ function applyInesBehavior(mesh, nowMs, dt) {
       mesh.userData._wanderYaw = mesh.rotation.y;
     }
   }
+
+  // ── Post-mixer bone overrides ───────────────────────────────────────
+  // Runs after gltfChar.update() in the npc loop — mixer has already
+  // written walking values to bones. During idle we restore them all to
+  // bind pose so the legs are straight (not frozen mid-stride). The
+  // shoulders' bind pose is T-pose-style outward, so we then override
+  // arms specifically to hang down. UpLeg X is widened in both states
+  // because Meshy's auto-rig gave her an unnaturally narrow hip stance
+  // (~7.8 cm at hip joints; widened ~12 cm so feet visibly separate).
+  if (skeleton && mesh.userData._bindPose) {
+    if (mesh.userData._wanderState === 'pause') {
+      for (const b of skeleton.bones) {
+        const bp = mesh.userData._bindPose.get(b.name);
+        if (bp) {
+          b.position.copy(bp.pos);
+          b.quaternion.copy(bp.quat);
+        }
+      }
+      setInesArmsDown(skeleton);
+    }
+    for (const name of ['LeftUpLeg', 'RightUpLeg']) {
+      const b = skeleton.getBoneByName(name);
+      const bp = mesh.userData._bindPose.get(name);
+      if (b && bp) b.position.x = bp.pos.x * INES_STANCE_FACTOR;
+    }
+  }
 }
 
 function spawnNPC(npcDef) {
