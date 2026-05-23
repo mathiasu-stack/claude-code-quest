@@ -370,6 +370,12 @@ let timeOfDay = null;
 let liveAgents = null;
 let nameTags = null;
 let occluderWalls = [];
+// Wall meshes collected after build, used by the camera to clamp distance
+// so the orbit doesn't punch through an exterior wall.
+let cameraWalls = [];
+const _camRay = new THREE.Raycaster();
+const _camRayDir = new THREE.Vector3();
+const _camRayOrigin = new THREE.Vector3();
 let ceremony = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
@@ -1522,6 +1528,28 @@ function buildWorld() {
 
   // Initial visibility — show floor 1 only.
   applyFloorVisibility();
+
+  // Collect wall meshes for camera occlusion. Heuristic: a wall is a
+  // mesh whose BoxGeometry has one horizontal dimension ≤ 0.5m (thin
+  // panel) and a vertical extent ≥ 2.5m (full-room height). This catches
+  // every outer-perimeter wall, internal divider, and tall-wall extension
+  // added by buildWorld / buildFloorOffice / buildAtrium / buildFloor1WestRoom
+  // without each one having to opt-in. Skinned characters and small
+  // furniture are filtered out.
+  cameraWalls.length = 0;
+  scene.traverse(obj => {
+    if (!obj.isMesh || obj.isSkinnedMesh) return;
+    const g = obj.geometry;
+    if (!g || !g.isBufferGeometry) return;
+    if (!g.boundingBox) g.computeBoundingBox();
+    const bb = g.boundingBox; if (!bb) return;
+    const sx = bb.max.x - bb.min.x;
+    const sy = bb.max.y - bb.min.y;
+    const sz = bb.max.z - bb.min.z;
+    const thinHoriz = (sx <= 0.5 || sz <= 0.5);
+    const tall = sy >= 2.5;
+    if (thinHoriz && tall) cameraWalls.push(obj);
+  });
 }
 
 // ─── Surface-attachment rule ────────────────────────────────────────────────
@@ -3127,8 +3155,30 @@ function update(dt) {
   // Camera position = player.pos − camFwd * camDist
   //   camFwd = (sin(yaw), 0, cos(yaw))
   const camH = 4.2;
-  const targetCamX = player.position.x - Math.sin(cameraYaw) * cameraDist;
-  const targetCamZ = player.position.z - Math.cos(cameraYaw) * cameraDist;
+  // Wall-occlusion clamp: cast a ray from the player toward where the
+  // camera wants to sit. If a wall is closer than cameraDist, pull the
+  // camera in to keep it inside the room (otherwise it punches through
+  // and exposes the exterior).
+  let effDist = cameraDist;
+  if (cameraWalls.length) {
+    const floorYRay = floorBaseY(currentFloor);
+    _camRayOrigin.set(player.position.x, floorYRay + camH, player.position.z);
+    _camRayDir.set(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+    _camRay.set(_camRayOrigin, _camRayDir);
+    _camRay.near = 0;
+    _camRay.far = cameraDist;
+    // Filter by current floor visibility so other-floor walls (which are
+    // hidden but still in the scene graph) don't block the camera.
+    const candidates = cameraWalls.filter(w =>
+      w.visible && (!w.userData?.floor || w.userData.floor === currentFloor || w.userData.crossFloor)
+    );
+    const hits = _camRay.intersectObjects(candidates, false);
+    if (hits.length) {
+      effDist = Math.max(CAM_DIST_MIN, hits[0].distance - 0.35);
+    }
+  }
+  const targetCamX = player.position.x - Math.sin(cameraYaw) * effDist;
+  const targetCamZ = player.position.z - Math.cos(cameraYaw) * effDist;
   const camLerp = 1 - Math.exp(-dt * 6);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
