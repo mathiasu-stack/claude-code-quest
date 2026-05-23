@@ -20,7 +20,7 @@
       "tags": ["male", "asian", "hoodie", "glasses", "stylized", "player"],
       "scale": 1.0,
       "yOffset": 0.0,
-      "extraAnimations": ["hero_walk.glb", "hero_run.glb"]
+      "extraAnimations": ["hero_walk.glb", "hero_run.glb", "hero_idle.glb", "hero_jump.glb"]
     },
     {
       "id": "ines",
