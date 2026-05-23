@@ -289,16 +289,9 @@ export function makeGltfCharacter(look, assetLoader) {
         const arm = inst.skeleton.getBoneByName(side + 'Arm');
         if (!arm || !arm.parent) continue;
         const signed = side === 'Left' ? armTuckRad : -armTuckRad;
-        // worldRot = rotation around world Z by signed angle
-        // delta_local = parentW^-1 * worldRot * parentW
-        // new_arm_local = delta_local * old_arm_local
-        const worldRot = _INES_TMP_QUAT_TARGET.setFromAxisAngle(_TUCK_AXIS, signed);
+        // delta_local = parentW^-1 * worldRot(Z, signed) * parentW
+        // new arm.local = delta_local * old arm.local
         arm.parent.updateMatrixWorld(true);
-        arm.parent.getWorldQuaternion(_INES_TMP_QUAT_PARENT);
-        const delta = _INES_TMP_QUAT_PARENT.clone().invert()
-          .multiply(worldRot)
-          .multiply(_INES_TMP_QUAT_PARENT.clone().copy(_INES_TMP_QUAT_PARENT));
-        // Simpler: rebuild fresh
         const parentW = new THREE.Quaternion();
         arm.parent.getWorldQuaternion(parentW);
         const wRot = new THREE.Quaternion().setFromAxisAngle(_TUCK_AXIS, signed);
