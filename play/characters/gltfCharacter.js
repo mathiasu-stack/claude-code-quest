@@ -236,9 +236,30 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
+  // Optional per-character stance narrowing — pulls shoulders + hip
+  // joints toward the centerline by `stanceFactor`. Meshy's auto-rigs
+  // tend to place these bones at the widest silhouette, so applying
+  // e.g. 0.75 brings arms + knees in to a more natural human proportion
+  // (especially noticeable in idle and walk poses).
+  const stanceFactor = ownEntry?.stanceFactor;
+  let stanceBindX = null;
+  if (stanceFactor && stanceFactor !== 1.0 && inst.skeleton) {
+    stanceBindX = {};
+    for (const name of ['LeftUpLeg','RightUpLeg','LeftShoulder','RightShoulder']) {
+      const b = inst.skeleton.getBoneByName(name);
+      if (b) stanceBindX[name] = b.position.x;
+    }
+  }
+
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
+    if (stanceBindX && inst.skeleton) {
+      for (const name in stanceBindX) {
+        const b = inst.skeleton.getBoneByName(name);
+        if (b) b.position.x = stanceBindX[name] * stanceFactor;
+      }
+    }
   }
 
   // Stash the look so existing systems (idleAnimations, dialogue,

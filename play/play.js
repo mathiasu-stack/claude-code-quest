@@ -2510,22 +2510,9 @@ function applyInesBehavior(mesh, nowMs, dt) {
     enterInesActivity(mesh, gc, nowMs, nextName);
   }
 
-  // Hip widening — runs every frame after mixer wrote walk/idle bone
-  // values. (Currently 1.0 = passthrough.)
-  if (skeleton && mesh.userData._bindLegX) {
-    const lu = skeleton.getBoneByName('LeftUpLeg');
-    const ru = skeleton.getBoneByName('RightUpLeg');
-    if (lu) lu.position.x = mesh.userData._bindLegX.left  * INES_STANCE_FACTOR;
-    if (ru) ru.position.x = mesh.userData._bindLegX.right * INES_STANCE_FACTOR;
-  }
-  // Toe-out: only during idle and walk. Sit/dance/jump have their own
-  // intentional foot positioning that we shouldn't fight.
-  if (skeleton) {
-    const act = mesh.userData._activity;
-    if (act === 'idle' || act === 'walk') {
-      applyInesToeOut(skeleton, INES_TOE_OUT_RAD);
-    }
-  }
+  // Stance narrowing + toe-out are now handled by gltfCharacter.js via
+  // manifest's stanceFactor field. Per-character bone overrides happen
+  // automatically inside gc.update() after mixer.update.
 }
 
 function spawnNPC(npcDef) {
