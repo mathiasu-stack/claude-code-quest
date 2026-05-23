@@ -266,6 +266,13 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
+  // Optional per-character arm-tuck rotation — rotates LeftArm + RightArm
+  // around the world Z axis so the arms swing toward the body's torso
+  // instead of hanging at the outward angle baked into Meshy's bind pose
+  // and idle anim. armTuckRad is in radians; ~0.2 = ~11° per arm.
+  const armTuckRad = ownEntry?.armTuckRad || 0;
+  const _TUCK_AXIS = new THREE.Vector3(0, 0, 1);
+
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
@@ -275,6 +282,28 @@ export function makeGltfCharacter(look, assetLoader) {
         if (!b) continue;
         const { axis, value } = stanceBindData[name];
         b.position[axis] = value * stanceFactor;
+      }
+    }
+    if (armTuckRad && inst.skeleton) {
+      for (const side of ['Left', 'Right']) {
+        const arm = inst.skeleton.getBoneByName(side + 'Arm');
+        if (!arm || !arm.parent) continue;
+        const signed = side === 'Left' ? armTuckRad : -armTuckRad;
+        // worldRot = rotation around world Z by signed angle
+        // delta_local = parentW^-1 * worldRot * parentW
+        // new_arm_local = delta_local * old_arm_local
+        const worldRot = _INES_TMP_QUAT_TARGET.setFromAxisAngle(_TUCK_AXIS, signed);
+        arm.parent.updateMatrixWorld(true);
+        arm.parent.getWorldQuaternion(_INES_TMP_QUAT_PARENT);
+        const delta = _INES_TMP_QUAT_PARENT.clone().invert()
+          .multiply(worldRot)
+          .multiply(_INES_TMP_QUAT_PARENT.clone().copy(_INES_TMP_QUAT_PARENT));
+        // Simpler: rebuild fresh
+        const parentW = new THREE.Quaternion();
+        arm.parent.getWorldQuaternion(parentW);
+        const wRot = new THREE.Quaternion().setFromAxisAngle(_TUCK_AXIS, signed);
+        const dlt = parentW.clone().invert().multiply(wRot).multiply(parentW);
+        arm.quaternion.premultiply(dlt);
       }
     }
   }
