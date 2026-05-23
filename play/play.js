@@ -2944,14 +2944,22 @@ function update(dt) {
   }
 
   if (inputLocked) {
+    // Only procedural (non-GLTF) players have limb parts on userData.parts.
+    // GLTF characters carry only `head` here; their pose is driven by the
+    // AnimationMixer (gltfChar.update), which we still need to tick so the
+    // idle clip plays during input-lock cinematics.
     const p = player.userData.parts;
-    if (p) {
+    const isGltf = player.userData.faceKind === 'gltf';
+    if (!isGltf && p && p.leftLeg) {
       p.leftLeg.rotation.x *= 0.85;
       p.rightLeg.rotation.x *= 0.85;
       p.leftArm.rotation.x *= 0.85;
       p.rightArm.rotation.x *= 0.85;
       p.leftArm.rotation.z = 0;
       p.rightArm.rotation.z = 0;
+    }
+    if (isGltf && player.userData.gltfChar) {
+      player.userData.gltfChar.update(Math.min(0.05, 1 / 60));
     }
     return;
   }
