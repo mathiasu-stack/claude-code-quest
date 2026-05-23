@@ -37,6 +37,7 @@ const animName = params.get('anim') || 'idle';
 const animT = parseFloat(params.get('t') || '0.0'); // 0..1 fraction of clip duration
 const yaw = parseFloat(params.get('yaw') || '0');   // body rotation around Y
 const view = params.get('view') || 'front';        // front | side | back | three-quarter
+window.__armTuckAxis = params.get('tuck_axis') || 'wz'; // wx | wy | wz
 
 const labelEl = document.getElementById('label');
 const statusEl = document.getElementById('status');

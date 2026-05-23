@@ -285,18 +285,23 @@ export function makeGltfCharacter(look, assetLoader) {
       }
     }
     if (armTuckRad && inst.skeleton) {
-      // Rotate the SHOULDER bone around its own local +Y axis. In Meshy's
-      // bind pose, the shoulder's local Y points down the arm chain (so
-      // rotating around it twists the arm laterally in/out from the body
-      // without changing arm orientation forward/back).
-      const localYAxis = new THREE.Vector3(0, 1, 0);
+      // Pull the arm chain inward by rotating the SHOULDER bone in the
+      // world's lateral plane (around the world X axis). The L/R sign
+      // flip mirrors the rotation. The world-X axis was determined by
+      // sweeping all three world axes in the audit pipeline — wx tucks
+      // arms toward thighs naturally; wy gives "monkey arms forward",
+      // wz hides arms behind the body.
+      const worldX = new THREE.Vector3(1, 0, 0);
       for (const side of ['Left', 'Right']) {
         const shoulder = inst.skeleton.getBoneByName(side + 'Shoulder');
-        if (!shoulder) continue;
+        if (!shoulder || !shoulder.parent) continue;
         const signed = side === 'Left' ? -armTuckRad : armTuckRad;
-        // Local-axis rotation: shoulder.quaternion = shoulder.quaternion * twist
-        const twist = new THREE.Quaternion().setFromAxisAngle(localYAxis, signed);
-        shoulder.quaternion.multiply(twist);
+        shoulder.parent.updateMatrixWorld(true);
+        const parentW = new THREE.Quaternion();
+        shoulder.parent.getWorldQuaternion(parentW);
+        const wRot = new THREE.Quaternion().setFromAxisAngle(worldX, signed);
+        const delta = parentW.clone().invert().multiply(wRot).multiply(parentW);
+        shoulder.quaternion.premultiply(delta);
       }
     }
   }
