@@ -88,6 +88,13 @@ function retargetMixamoPrefix(clip, skeleton) {
 // reach into the resolved map and clone synchronously. Returning null
 // signals "asset not loaded; fall back to procedural makeCharacter".
 
+// Version banner: when the user reports caching issues, this lets us
+// confirm in DevTools console that the latest code is running.
+if (!window.__gltfCharVersionLogged) {
+  console.log('[gltfCharacter] v20260523d — arm-chain override during idle/walk/run');
+  window.__gltfCharVersionLogged = true;
+}
+
 export function makeGltfCharacter(look, assetLoader) {
   const assetId = look._gltfAsset;
   if (!assetId) return null;
@@ -306,11 +313,14 @@ export function makeGltfCharacter(look, assetLoader) {
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
-    // During walk/run, override the arm-chain bones with idle's arm pose.
-    // The Meshy walk/run clips swing the arms horizontally at certain phases
-    // which reads as a T-pose; copying idle's quaternions onto the arm bones
-    // keeps the upper body calm while the legs still animate normally.
-    if ((currentMotion === 'walk' || currentMotion === 'run') && inst.skeleton) {
+    // Force arm-chain bones to idle's first-frame pose during locomotion
+    // AND idle. Catches: (a) walk/run clips with exaggerated lateral arm-
+    // swing (the original symptom), (b) crossfade blend leakage where
+    // walk's wide arm pose contaminates idle during the fade, and (c) any
+    // mixer-driven drift on subsequent frames. Dance/jump/sit_* keep their
+    // authored arm motion since this only runs for idle/walk/run.
+    if ((currentMotion === 'idle' || currentMotion === 'walk' || currentMotion === 'run')
+        && inst.skeleton) {
       for (const boneName in idleArmQuat) {
         const b = inst.skeleton.getBoneByName(boneName);
         if (b) b.quaternion.copy(idleArmQuat[boneName]);
