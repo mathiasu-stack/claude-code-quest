@@ -161,7 +161,14 @@ export function makeGltfCharacter(look, assetLoader) {
     const want = (CLIP_MATCH[semantic] || semantic).toLowerCase();
     const match = clips.find(c => (c.name || '').toLowerCase().includes(want));
     if (match) {
-      const a = mixer.clipAction(match);
+      // Strip scale tracks before binding. Meshy occasionally bakes
+      // non-identity bone scales into catalog animation clips (e.g. the
+      // Idle clip's Hips.scale is 1.176, making the character ~18%
+      // bigger during idle). Bind-pose scales are 1.0 across the board,
+      // so dropping these tracks lets the bone stay at its bind size.
+      const filtered = match.clone();
+      filtered.tracks = filtered.tracks.filter(t => !t.name.endsWith('.scale'));
+      const a = mixer.clipAction(filtered);
       if (ONE_SHOT.has(semantic)) {
         a.setLoop(THREE.LoopOnce);
         a.clampWhenFinished = true;
