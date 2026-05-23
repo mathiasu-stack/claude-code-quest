@@ -2390,7 +2390,7 @@ const INES_STANCE_FACTOR = 1.0; // bind pose width left as-is
 // Toe-out angle for idle + walk: rotates each foot around the world Y
 // axis so the toes splay outward. Visually separates the two shoes
 // without changing leg spacing.
-const INES_TOE_OUT_RAD = 22 * Math.PI / 180;
+const INES_TOE_OUT_RAD = 0; // v5 mesh has properly separated feet — toe-out no longer needed
 const _INES_Y_AXIS = new THREE.Vector3(0, 1, 0);
 const _INES_TMP_Q_A = new THREE.Quaternion();
 const _INES_TMP_Q_B = new THREE.Quaternion();
