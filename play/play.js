@@ -105,13 +105,8 @@ const NPCS = [
     intro: "I'm Diana, Compliance. One quick thing before you graduate this floor: this training has a shelf life. Let me explain why.",
     nextHint: "Now go see Sarah Chen by the back door — she runs the practical assessment.",
   },
-  {
-    id: 'ines',   zone: 1, pos: [2, -4], face: 0, kind: 'flavor',
-    name: 'Ines', role: 'Visitor, age 9', portrait: '👧',
-    look: { skin: 0xfdd9b5, hair: 0x4a2c0f, hairStyle: 'braid', shirt: 0xf5f5f0, pants: 0x111111, glasses: false, prop: null, face: 'round', expression: 'happy' },
-    intro: "Hi! I'm Ines. I'm 9. My dad works here on the third floor — he said I have to wait until his big meeting is done. The chairs spin really fast if you push hard! Are you a real engineer?",
-    nextHint: "",
-  },
+  // Ines is now the player character (see npcCasting.js). Her NPC entry
+  // was removed so she doesn't appear twice.
   {
     id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
     name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
@@ -3098,10 +3093,14 @@ function update(dt) {
       p.leftArm.rotation.x = -0.6;
       p.rightArm.rotation.x = -0.6;
     }
-    // GLTF: switch to walk clip (sprint → run if available).
+    // GLTF: switch to walk/run/jump clip.
     if (isGltf && player.userData.gltfChar) {
-      const sprintNow = (keys['shift']) ? 'run' : 'walk';
-      player.userData.gltfChar.setMotion(sprintNow);
+      if (!player.userData.grounded) {
+        player.userData.gltfChar.setMotion('jump');
+      } else {
+        const sprintNow = (keys['shift']) ? 'run' : 'walk';
+        player.userData.gltfChar.setMotion(sprintNow);
+      }
     }
 
     // Auto-follow: while walking, drift cameraYaw toward the player's
@@ -3122,7 +3121,11 @@ function update(dt) {
       p.rightArm.rotation.x *= 0.85;
     }
     if (isGltf && player.userData.gltfChar) {
-      player.userData.gltfChar.setMotion('idle');
+      if (!player.userData.grounded) {
+        player.userData.gltfChar.setMotion('jump');
+      } else {
+        player.userData.gltfChar.setMotion('idle');
+      }
     }
   }
 
