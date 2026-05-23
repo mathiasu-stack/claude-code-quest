@@ -2421,12 +2421,15 @@ const INES_ACTIVITIES = {
   standUp: { motion: 'stand_up', minMs: 4700, maxMs: 4700, oneShot: true,  next: 'pick' },
   walk:    { motion: 'walk',     minMs: 0,    maxMs: 0,    oneShot: false, next: 'pick' }, // ends on target reached
 };
+// sitDown removed from random picker because the Meshy sit-down anim
+// lowers her onto an invisible chair (no seat geometry in the office —
+// looks like she's sitting mid-air). The clip files are still on disk
+// in case we add a chair NPC anchor later.
 const INES_PICKABLE = [
-  { name: 'idle',    weight: 4 },
-  { name: 'dance',   weight: 2 },
-  { name: 'jump',    weight: 1 },
-  { name: 'sitDown', weight: 2 },
-  { name: 'walk',    weight: 2 },
+  { name: 'idle',  weight: 4 },
+  { name: 'dance', weight: 2 },
+  { name: 'jump',  weight: 1 },
+  { name: 'walk',  weight: 2 },
 ];
 function pickInesActivity() {
   const total = INES_PICKABLE.reduce((s, x) => s + x.weight, 0);
