@@ -315,18 +315,38 @@ export function makeGltfCharacter(look, assetLoader) {
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
-    // Force arm-chain bones to idle's first-frame pose during locomotion
-    // AND idle. Catches: (a) walk/run clips with exaggerated lateral arm-
-    // swing (the original symptom), (b) crossfade blend leakage where
-    // walk's wide arm pose contaminates idle during the fade, and (c) any
-    // mixer-driven drift on subsequent frames. Dance/jump/sit_* keep their
-    // authored arm motion since this only runs for idle/walk/run.
+    // Force arm-chain bones to idle's first-frame pose during idle AND
+    // walk/run. The captured quaternions are in each bone's parent-local
+    // frame, so they're body-relative and stay correct at any yaw.
     if ((currentMotion === 'idle' || currentMotion === 'walk' || currentMotion === 'run')
         && inst.skeleton) {
-      for (const boneName in idleArmQuat) {
+      // Idle: copy idle's first-frame pose verbatim. Walk/run: blend the
+      // arm chain toward idle's pose by SLERP — keeps the rest pose but
+      // lets the walk clip's natural arm swing show through at reduced
+      // amplitude (the Meshy walk clip is too exaggerated raw).
+      const isLocomotion = (currentMotion === 'walk' || currentMotion === 'run');
+      const BLEND = isLocomotion ? 0.7 : 1.0; // 0=clip, 1=idle pose
+      for (const boneName of ARM_CHAIN) {
         const b = inst.skeleton.getBoneByName(boneName);
-        if (b) b.quaternion.copy(idleArmQuat[boneName]);
+        if (!b || !idleArmQuat[boneName]) continue;
+        if (BLEND >= 1.0) b.quaternion.copy(idleArmQuat[boneName]);
+        else b.quaternion.slerp(idleArmQuat[boneName], BLEND);
       }
+      // Extra shoulder tuck — pulls the arms tighter against the body so
+      // the hands hang near the hips instead of the slight A-shape that
+      // Meshy's idle clip authors. Empirically swept (see
+      // /tmp/tuckmatrix): bone-LOCAL X axis, +ve on both sides, mag=0.20
+      // gives a natural relaxed pose at every yaw. The shoulder bind
+      // frames are aligned such that +X tucks both sides inward (NOT
+      // mirrored — the previous "flip sign per side" attempt pushed the
+      // right arm outward).
+      const TUCK_MAG = 0.20;
+      const localX = new THREE.Vector3(1, 0, 0);
+      const tuck = new THREE.Quaternion().setFromAxisAngle(localX, TUCK_MAG);
+      const lSh = inst.skeleton.getBoneByName('LeftShoulder');
+      const rSh = inst.skeleton.getBoneByName('RightShoulder');
+      if (lSh) lSh.quaternion.multiply(tuck);
+      if (rSh) rSh.quaternion.multiply(tuck);
     }
     if (stanceBindData && inst.skeleton) {
       for (const name in stanceBindData) {

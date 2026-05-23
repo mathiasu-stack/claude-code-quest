@@ -38,6 +38,13 @@ const animT = parseFloat(params.get('t') || '0.0'); // 0..1 fraction of clip dur
 const yaw = parseFloat(params.get('yaw') || '0');   // body rotation around Y
 const view = params.get('view') || 'front';        // front | side | back | three-quarter
 window.__armTuckAxis = params.get('tuck_axis') || 'wz'; // wx | wy | wz
+// Per-bone shoulder tuck config: pass `cfg=axis,signL,signR,mag` e.g.
+// `cfg=x,-1,1,0.4`. Empty/missing → use idle pose verbatim (no extra tuck).
+const cfgRaw = params.get('cfg');
+if (cfgRaw) {
+  const [axis, signL, signR, mag] = cfgRaw.split(',');
+  window.__tuckCfg = { axis: axis || 'x', signL: parseFloat(signL || '-1'), signR: parseFloat(signR || '1'), mag: parseFloat(mag || '0.3') };
+}
 
 const labelEl = document.getElementById('label');
 const statusEl = document.getElementById('status');
