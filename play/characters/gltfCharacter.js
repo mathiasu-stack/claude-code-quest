@@ -290,13 +290,15 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
-  // Capture idle's first-frame arm-chain quaternions. Meshy's walk/run
-  // clips author an exaggerated lateral arm-swing (arms approach horizontal
-  // at swing extremes); during locomotion we copy these idle values onto
-  // the arm bones so the upper body stays in the idle pose while legs swing
-  // normally. armTuck (applied to the shoulder) layers on top.
-  const ARM_CHAIN = ['LeftArm', 'LeftForeArm', 'LeftHand',
-                     'RightArm', 'RightForeArm', 'RightHand'];
+  // Capture idle's first-frame upper-body quaternions (shoulder + arm
+  // chain). Meshy's idle clip puts the arms in a relaxed-at-sides pose;
+  // we force these values onto the bones during idle/walk/run. This is
+  // body-relative (the values are in each bone's parent-local frame, so
+  // they rotate naturally with the character) and replaces the previous
+  // armTuck rotation math which was world-space and broke at non-zero
+  // yaws (arms swung into A-pose or cross-body when the player turned).
+  const ARM_CHAIN = ['LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+                     'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand'];
   const idleArmQuat = {};
   if (inst.skeleton && actions.idle) {
     const idleClip = actions.idle.getClip();
@@ -334,29 +336,10 @@ export function makeGltfCharacter(look, assetLoader) {
         b.position[axis] = value * stanceFactor;
       }
     }
-    if (armTuckRad && inst.skeleton) {
-      // Pull the arm chain inward by rotating the SHOULDER bone in the
-      // world's lateral plane (around the world X axis). The L/R sign
-      // flip mirrors the rotation. The world-X axis was determined by
-      // sweeping all three world axes in the audit pipeline — wx tucks
-      // arms toward thighs naturally; wy gives "monkey arms forward",
-      // wz hides arms behind the body.
-      const worldX = new THREE.Vector3(1, 0, 0);
-      for (const side of ['Left', 'Right']) {
-        const shoulder = inst.skeleton.getBoneByName(side + 'Shoulder');
-        if (!shoulder || !shoulder.parent) continue;
-        // Reset to bind-pose first, so the tuck is idempotent regardless
-        // of whether the current animation clip writes to the shoulder.
-        if (shoulderBind[side]) shoulder.quaternion.copy(shoulderBind[side]);
-        const signed = side === 'Left' ? -armTuckRad : armTuckRad;
-        shoulder.parent.updateMatrixWorld(true);
-        const parentW = new THREE.Quaternion();
-        shoulder.parent.getWorldQuaternion(parentW);
-        const wRot = new THREE.Quaternion().setFromAxisAngle(worldX, signed);
-        const delta = parentW.clone().invert().multiply(wRot).multiply(parentW);
-        shoulder.quaternion.premultiply(delta);
-      }
-    }
+    // armTuck rotation removed — the idle-arm-chain override above already
+    // forces shoulders to idle's relaxed pose (in each bone's parent-local
+    // frame), which is body-relative by construction. The old armTuck did
+    // a world-axis rotation that broke when the player turned.
   }
 
   // Stash the look so existing systems (idleAnimations, dialogue,

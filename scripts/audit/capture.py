@@ -13,22 +13,29 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # (char, anim, t, view)
 def shots_for(char):
     out = []
-    # idle at multiple time points + 3 views
+    # idle at multiple time points + 3 views (yaw=0)
     for t in [0.0, 0.25, 0.5, 0.75]:
-        out.append((char, 'idle', t, 'front'))
-    out.append((char, 'idle', 0.0, 'three-quarter'))
-    out.append((char, 'idle', 0.0, 'side'))
-    # walk cycle
+        out.append((char, 'idle', t, 'front', 0))
+    out.append((char, 'idle', 0.0, 'three-quarter', 0))
+    out.append((char, 'idle', 0.0, 'side', 0))
+    # YAW SWEEP — rotating the character should NOT change the arm pose.
+    # If a tuck/override is in world space instead of body space, the arms
+    # swing into A-pose / cross-body as yaw changes. The front-view stays
+    # fixed; yaw rotates the body in front of the camera.
+    for yaw in [45, 90, 135, 180, 270]:
+        out.append((char, 'idle', 0.0, 'front', yaw))
+    # walk cycle (yaw=0)
     for t in [0.0, 0.25, 0.5, 0.75]:
-        out.append((char, 'walk', t, 'side'))
-    out.append((char, 'walk', 0.5, 'front'))
+        out.append((char, 'walk', t, 'side', 0))
+    out.append((char, 'walk', 0.5, 'front', 0))
+    out.append((char, 'walk', 0.5, 'front', 90))
     # jump
-    out.append((char, 'jump', 0.3, 'side'))
-    out.append((char, 'jump', 0.5, 'front'))
+    out.append((char, 'jump', 0.3, 'side', 0))
+    out.append((char, 'jump', 0.5, 'front', 0))
     if char == 'ines':
-        out.append((char, 'dance', 0.3, 'front'))
-        out.append((char, 'dance', 0.6, 'three-quarter'))
-        out.append((char, 'sit_idle', 0.5, 'three-quarter'))
+        out.append((char, 'dance', 0.3, 'front', 0))
+        out.append((char, 'dance', 0.6, 'three-quarter', 0))
+        out.append((char, 'sit_idle', 0.5, 'three-quarter', 0))
     return out
 
 async def main():
@@ -43,9 +50,10 @@ async def main():
         page.on("pageerror", lambda e: print(f"  PAGE ERROR: {e}", flush=True))
         page.on("console", lambda m: print(f"  console[{m.type}]: {m.text}", flush=True)
                 if m.type in ("error","warning") else None)
-        for char, anim, t, view in shots:
-            url = f"{BASE_URL}?char={char}&anim={anim}&t={t}&view={view}"
-            name = f"{char}__{anim}__t{int(t*100):02d}__{view}.png"
+        for char, anim, t, view, yaw in shots:
+            url = f"{BASE_URL}?char={char}&anim={anim}&t={t}&view={view}&yaw={yaw}"
+            suffix = f"__yaw{yaw:03d}" if yaw else ""
+            name = f"{char}__{anim}__t{int(t*100):02d}__{view}{suffix}.png"
             outpath = OUT_DIR / name
             print(f"-> {name}", flush=True)
             try:
