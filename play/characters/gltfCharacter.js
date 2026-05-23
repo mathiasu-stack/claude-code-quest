@@ -266,12 +266,22 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
-  // Optional per-character arm-tuck rotation — rotates LeftArm + RightArm
-  // around the world Z axis so the arms swing toward the body's torso
-  // instead of hanging at the outward angle baked into Meshy's bind pose
-  // and idle anim. armTuckRad is in radians; ~0.2 = ~11° per arm.
+  // Optional per-character arm-tuck rotation — rotates the SHOULDER bones
+  // around the world X axis so the arms swing in laterally toward the
+  // body. armTuckRad is in radians; ~0.5 = ~28° per arm. We snapshot the
+  // bind-pose shoulder quaternion at init and reset to it each frame
+  // before applying the tuck — otherwise the rotation would accumulate
+  // for any animation that doesn't animate the shoulder bone (e.g.
+  // walk/run clips that only animate arm/forearm/leg), causing the arms
+  // to drift further outward every frame.
   const armTuckRad = ownEntry?.armTuckRad || 0;
-  const _TUCK_AXIS = new THREE.Vector3(0, 0, 1);
+  const shoulderBind = {};
+  if (armTuckRad && inst.skeleton) {
+    for (const side of ['Left', 'Right']) {
+      const sh = inst.skeleton.getBoneByName(side + 'Shoulder');
+      if (sh) shoulderBind[side] = sh.quaternion.clone();
+    }
+  }
 
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
@@ -295,6 +305,9 @@ export function makeGltfCharacter(look, assetLoader) {
       for (const side of ['Left', 'Right']) {
         const shoulder = inst.skeleton.getBoneByName(side + 'Shoulder');
         if (!shoulder || !shoulder.parent) continue;
+        // Reset to bind-pose first, so the tuck is idempotent regardless
+        // of whether the current animation clip writes to the shoulder.
+        if (shoulderBind[side]) shoulder.quaternion.copy(shoulderBind[side]);
         const signed = side === 'Left' ? -armTuckRad : armTuckRad;
         shoulder.parent.updateMatrixWorld(true);
         const parentW = new THREE.Quaternion();

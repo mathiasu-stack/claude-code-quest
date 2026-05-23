@@ -95,9 +95,15 @@ document.body.appendChild(renderer.domElement);
     action.enabled = true;
     action.play();
     const dur = action.getClip().duration || 1.0;
+    // Simulate N frames of running the animation, then pause. This
+    // catches per-frame accumulation bugs (e.g. premultiply that's not
+    // reset to bind pose). After advancing, we set the final time to
+    // the requested t.
+    const simFrames = parseInt(params.get('frames') || '60', 10);
+    const dt = 1 / 60;
+    for (let i = 0; i < simFrames; i++) gc.update(dt, performance.now());
     action.time = animT * dur;
-    action.paused = true; // hold at this time
-    // Tick mixer once to commit bone transforms
+    action.paused = true;
     gc.update(0.0001, performance.now());
   }
 
