@@ -85,14 +85,23 @@ export class AssetLoader {
       return this._cache.get(id);
     }
     const url = ASSET_DIR + entry.file;
+    // 60s safety timeout — without this a stalled mobile request would
+    // freeze warmCache() forever (the loading bar gets stuck at N-1/N).
     const p = new Promise((resolve) => {
+      let done = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      const timer = setTimeout(() => {
+        console.warn(`[assetLoader] ${id} (${url}) timeout after 60s — skipping`);
+        finish(null);
+      }, 60000);
       this._gltfLoader.load(
         url,
-        (gltf) => resolve(gltf),
+        (gltf) => { clearTimeout(timer); finish(gltf); },
         undefined,
         (err) => {
+          clearTimeout(timer);
           console.warn(`[assetLoader] failed to load ${id} (${url}):`, err);
-          resolve(null);
+          finish(null);
         },
       );
     });
@@ -176,7 +185,16 @@ export class AssetLoader {
       const url = ASSET_DIR + file;
       try {
         const sub = await new Promise((resolve, reject) => {
-          this._gltfLoader.load(url, resolve, undefined, reject);
+          let done = false;
+          const timer = setTimeout(() => {
+            if (!done) { done = true; reject(new Error('timeout 60s')); }
+          }, 60000);
+          this._gltfLoader.load(
+            url,
+            (g) => { if (!done) { done = true; clearTimeout(timer); resolve(g); } },
+            undefined,
+            (e) => { if (!done) { done = true; clearTimeout(timer); reject(e); } },
+          );
         });
         for (const clip of sub.animations || []) {
           gltf.animations.push(clip);
