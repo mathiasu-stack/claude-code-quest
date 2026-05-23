@@ -238,26 +238,43 @@ export function makeGltfCharacter(look, assetLoader) {
 
   // Optional per-character stance narrowing — pulls shoulders + hip
   // joints toward the centerline by `stanceFactor`. Meshy's auto-rigs
-  // tend to place these bones at the widest silhouette, so applying
-  // e.g. 0.75 brings arms + knees in to a more natural human proportion
-  // (especially noticeable in idle and walk poses).
+  // place these bones at the widest silhouette.
+  //
+  // Tricky bit: the "lateral" axis differs per bone family — shoulders
+  // typically use X but Meshy's hips often use Y for left/right (because
+  // Hips has a 90° bind-pose rotation). We auto-detect the lateral axis
+  // by comparing the Left/Right bone positions and pick whichever axis
+  // has the largest magnitude difference with opposite signs.
   const stanceFactor = ownEntry?.stanceFactor;
-  let stanceBindX = null;
+  let stanceBindData = null; // { boneName: { axis: 'x'|'y'|'z', value } }
   if (stanceFactor && stanceFactor !== 1.0 && inst.skeleton) {
-    stanceBindX = {};
-    for (const name of ['LeftUpLeg','RightUpLeg','LeftShoulder','RightShoulder']) {
-      const b = inst.skeleton.getBoneByName(name);
-      if (b) stanceBindX[name] = b.position.x;
+    stanceBindData = {};
+    const pairs = [
+      ['LeftUpLeg', 'RightUpLeg'],
+      ['LeftShoulder', 'RightShoulder'],
+    ];
+    for (const [lName, rName] of pairs) {
+      const bl = inst.skeleton.getBoneByName(lName);
+      const br = inst.skeleton.getBoneByName(rName);
+      if (!bl || !br) continue;
+      const dx = Math.abs(bl.position.x - br.position.x);
+      const dy = Math.abs(bl.position.y - br.position.y);
+      const dz = Math.abs(bl.position.z - br.position.z);
+      const axis = (dx >= dy && dx >= dz) ? 'x' : (dy >= dz) ? 'y' : 'z';
+      stanceBindData[lName] = { axis, value: bl.position[axis] };
+      stanceBindData[rName] = { axis, value: br.position[axis] };
     }
   }
 
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
-    if (stanceBindX && inst.skeleton) {
-      for (const name in stanceBindX) {
+    if (stanceBindData && inst.skeleton) {
+      for (const name in stanceBindData) {
         const b = inst.skeleton.getBoneByName(name);
-        if (b) b.position.x = stanceBindX[name] * stanceFactor;
+        if (!b) continue;
+        const { axis, value } = stanceBindData[name];
+        b.position[axis] = value * stanceFactor;
       }
     }
   }

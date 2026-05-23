@@ -20,7 +20,7 @@
       "tags": ["male", "asian", "hoodie", "glasses", "stylized", "player"],
       "scale": 1.0,
       "yOffset": 0.0,
-      "stanceFactor": 0.75,
+      "stanceFactor": 0.65,
       "extraAnimations": ["hero_walk.glb", "hero_run.glb", "hero_idle.glb", "hero_jump.glb"]
     },
     {
@@ -30,7 +30,7 @@
       "tags": ["female", "child", "visitor", "rigged"],
       "scale": 1.0,
       "yOffset": 0.0,
-      "stanceFactor": 0.75,
+      "stanceFactor": 0.65,
       "extraAnimations": [
         "ines_walk.glb", "ines_run.glb",
         "ines_idle.glb", "ines_dance.glb", "ines_jump.glb",
