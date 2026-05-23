@@ -283,9 +283,39 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
+  // Capture idle's first-frame arm-chain quaternions. Meshy's walk/run
+  // clips author an exaggerated lateral arm-swing (arms approach horizontal
+  // at swing extremes); during locomotion we copy these idle values onto
+  // the arm bones so the upper body stays in the idle pose while legs swing
+  // normally. armTuck (applied to the shoulder) layers on top.
+  const ARM_CHAIN = ['LeftArm', 'LeftForeArm', 'LeftHand',
+                     'RightArm', 'RightForeArm', 'RightHand'];
+  const idleArmQuat = {};
+  if (inst.skeleton && actions.idle) {
+    const idleClip = actions.idle.getClip();
+    for (const boneName of ARM_CHAIN) {
+      const trk = idleClip.tracks.find(t => t.name === boneName + '.quaternion');
+      if (trk && trk.values.length >= 4) {
+        idleArmQuat[boneName] = new THREE.Quaternion(
+          trk.values[0], trk.values[1], trk.values[2], trk.values[3]
+        );
+      }
+    }
+  }
+
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
+    // During walk/run, override the arm-chain bones with idle's arm pose.
+    // The Meshy walk/run clips swing the arms horizontally at certain phases
+    // which reads as a T-pose; copying idle's quaternions onto the arm bones
+    // keeps the upper body calm while the legs still animate normally.
+    if ((currentMotion === 'walk' || currentMotion === 'run') && inst.skeleton) {
+      for (const boneName in idleArmQuat) {
+        const b = inst.skeleton.getBoneByName(boneName);
+        if (b) b.quaternion.copy(idleArmQuat[boneName]);
+      }
+    }
     if (stanceBindData && inst.skeleton) {
       for (const name in stanceBindData) {
         const b = inst.skeleton.getBoneByName(name);

@@ -85,6 +85,10 @@ document.body.appendChild(renderer.domElement);
   const gc = group.userData.gltfChar;
   if (!gc) throw new Error('no gltfChar');
   for (const a of Object.values(gc.actions)) { try { a.stop(); } catch {} }
+  // setMotion drives the same code path the live game uses, so the
+  // gltfCharacter's per-motion overrides (e.g. arm-pose override during
+  // walk/run) actually fire in the audit.
+  gc.setMotion(animName);
   const action = gc.actions[animName];
   if (!action) {
     statusEl.textContent = `no action '${animName}'; available: [${Object.keys(gc.actions).join(',')}]`;
