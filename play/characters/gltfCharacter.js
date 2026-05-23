@@ -91,7 +91,7 @@ function retargetMixamoPrefix(clip, skeleton) {
 // Version banner: when the user reports caching issues, this lets us
 // confirm in DevTools console that the latest code is running.
 if (!window.__gltfCharVersionLogged) {
-  console.log('[gltfCharacter] v20260523d — arm-chain override during idle/walk/run');
+  console.log('[gltfCharacter] v20260523f — arm-chain override during idle/walk/run');
   window.__gltfCharVersionLogged = true;
 }
 
