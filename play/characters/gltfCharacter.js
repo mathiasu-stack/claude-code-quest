@@ -285,18 +285,18 @@ export function makeGltfCharacter(look, assetLoader) {
       }
     }
     if (armTuckRad && inst.skeleton) {
+      // Rotate the SHOULDER bone around its own local +Y axis. In Meshy's
+      // bind pose, the shoulder's local Y points down the arm chain (so
+      // rotating around it twists the arm laterally in/out from the body
+      // without changing arm orientation forward/back).
+      const localYAxis = new THREE.Vector3(0, 1, 0);
       for (const side of ['Left', 'Right']) {
-        const arm = inst.skeleton.getBoneByName(side + 'Arm');
-        if (!arm || !arm.parent) continue;
-        const signed = side === 'Left' ? armTuckRad : -armTuckRad;
-        // delta_local = parentW^-1 * worldRot(Z, signed) * parentW
-        // new arm.local = delta_local * old arm.local
-        arm.parent.updateMatrixWorld(true);
-        const parentW = new THREE.Quaternion();
-        arm.parent.getWorldQuaternion(parentW);
-        const wRot = new THREE.Quaternion().setFromAxisAngle(_TUCK_AXIS, signed);
-        const dlt = parentW.clone().invert().multiply(wRot).multiply(parentW);
-        arm.quaternion.premultiply(dlt);
+        const shoulder = inst.skeleton.getBoneByName(side + 'Shoulder');
+        if (!shoulder) continue;
+        const signed = side === 'Left' ? -armTuckRad : armTuckRad;
+        // Local-axis rotation: shoulder.quaternion = shoulder.quaternion * twist
+        const twist = new THREE.Quaternion().setFromAxisAngle(localYAxis, signed);
+        shoulder.quaternion.multiply(twist);
       }
     }
   }

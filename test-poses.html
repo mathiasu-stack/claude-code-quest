@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pose Audit</title>
+<style>
+  html, body { margin:0; padding:0; background:#444; overflow:hidden; height:100%; width:100%; font-family:sans-serif; }
+  #info { position:absolute; top:8px; left:8px; color:#fff; font:13px monospace; background:rgba(0,0,0,0.6); padding:6px 10px; border-radius:4px; z-index:10; }
+  #status { color:#0f0; }
+  #err { color:#f88; white-space:pre; }
+</style>
+</head>
+<body>
+<div id="info">
+  <div id="label">loading…</div>
+  <div id="status"></div>
+  <div id="err"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { getAssetLoader } from './play/characters/assetLoader.js';
+import { makeGltfCharacter } from './play/characters/gltfCharacter.js';
+
+const params = new URLSearchParams(location.search);
+const charId = params.get('char') || 'hero';
+const animName = params.get('anim') || 'idle';
+const animT = parseFloat(params.get('t') || '0.0'); // 0..1 fraction of clip duration
+const yaw = parseFloat(params.get('yaw') || '0');   // body rotation around Y
+const view = params.get('view') || 'front';        // front | side | back | three-quarter
+
+const labelEl = document.getElementById('label');
+const statusEl = document.getElementById('status');
+const errEl = document.getElementById('err');
+labelEl.textContent = `${charId} · ${animName} · t=${animT.toFixed(2)} · yaw=${yaw} · view=${view}`;
+
+window.addEventListener('error', e => { errEl.textContent = 'ERR: ' + e.message; });
+window.addEventListener('unhandledrejection', e => { errEl.textContent = 'REJ: ' + (e.reason?.message || e.reason); });
+
+const W = window.innerWidth, H = window.innerHeight;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x404448);
+// soft lighting that doesn't add color cast — good for pose audit
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(2, 4, 3); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.3); fill.position.set(-3, 2, -2); scene.add(fill);
+// faint ground reference
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(8, 8),
+  new THREE.MeshBasicMaterial({ color: 0x202428 })
+);
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01; scene.add(ground);
+
+const camera = new THREE.PerspectiveCamera(35, W / H, 0.05, 50);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+document.body.appendChild(renderer.domElement);
+
+(async () => {
+  statusEl.textContent = 'loading manifest…';
+  const loader = getAssetLoader();
+  await loader.loadManifest();
+  if (!loader.entryFor(charId)) throw new Error(`unknown char id: ${charId}`);
+  statusEl.textContent = 'warming cache…';
+  await loader.warmCache([charId]);
+  statusEl.textContent = 'building character…';
+  const look = { _id: charId, _gltfAsset: charId };
+  const group = makeGltfCharacter(look, loader);
+  if (!group) throw new Error(`makeGltfCharacter returned null for ${charId}`);
+  scene.add(group);
+  group.rotation.y = yaw * Math.PI / 180;
+
+  // Drive the chosen animation: stop everything, play target action at fixed time
+  const gc = group.userData.gltfChar;
+  if (!gc) throw new Error('no gltfChar');
+  for (const a of Object.values(gc.actions)) { try { a.stop(); } catch {} }
+  const action = gc.actions[animName];
+  if (!action) {
+    statusEl.textContent = `no action '${animName}'; available: [${Object.keys(gc.actions).join(',')}]`;
+  } else {
+    action.reset();
+    action.paused = false;
+    action.weight = 1;
+    action.enabled = true;
+    action.play();
+    const dur = action.getClip().duration || 1.0;
+    action.time = animT * dur;
+    action.paused = true; // hold at this time
+    // Tick mixer once to commit bone transforms
+    gc.update(0.0001, performance.now());
+  }
+
+  // Fixed camera placement assuming a humanoid ~1.5m tall standing at origin.
+  // Box3.setFromObject doesn't expand through SkinnedMesh skeleton in a useful
+  // way here (Armature scale collapses the bounds calculation).
+  const aim = new THREE.Vector3(0, 0.85, 0); // approx character mid-torso
+  const dist = 3.0;
+  let dir;
+  switch (view) {
+    case 'side':           dir = new THREE.Vector3( 1, 0.05, 0); break;
+    case 'back':           dir = new THREE.Vector3( 0, 0.05, -1); break;
+    case 'three-quarter':  dir = new THREE.Vector3( 1, 0.05, -1).normalize(); break;
+    default: /*front*/     dir = new THREE.Vector3( 0, 0.05, 1); break;
+  }
+  camera.position.copy(aim).addScaledVector(dir, dist);
+  camera.lookAt(aim);
+  const ctr = aim;   // for the status readout below
+  const sz = { x: 0, y: 0, z: 0 };
+
+  renderer.render(scene, camera);
+  // Render a couple more times in case lazy textures arrive
+  requestAnimationFrame(() => {
+    renderer.render(scene, camera);
+    requestAnimationFrame(() => {
+      renderer.render(scene, camera);
+      statusEl.textContent =
+        `ready · canvas=${renderer.domElement.width}x${renderer.domElement.height}`
+        + ` · box=[${ctr.x.toFixed(2)},${ctr.y.toFixed(2)},${ctr.z.toFixed(2)}]`
+        + ` size=[${sz.x.toFixed(2)},${sz.y.toFixed(2)},${sz.z.toFixed(2)}]`
+        + ` · cam=[${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}]`;
+      window.__poseReady = true;
+    });
+  });
+})().catch(e => {
+  errEl.textContent = 'FATAL: ' + e.message + '\n' + (e.stack || '');
+  window.__poseReady = 'error';
+});
+</script>
+</body>
+</html>
