@@ -91,7 +91,7 @@ function retargetMixamoPrefix(clip, skeleton) {
 // Version banner: when the user reports caching issues, this lets us
 // confirm in DevTools console that the latest code is running.
 if (!window.__gltfCharVersionLogged) {
-  console.log('[gltfCharacter] v20260524b — arm forward-tilt fix');
+  console.log('[gltfCharacter] v20260524c — stronger forward tilt (shoulder + arm)');
   window.__gltfCharVersionLogged = true;
 }
 
@@ -348,13 +348,17 @@ export function makeGltfCharacter(look, assetLoader) {
       if (lSh) lSh.quaternion.multiply(tuck);
       if (rSh) rSh.quaternion.multiply(tuck);
       // Arm-bone forward tilt — Meshy's idle clip puts the arms slightly
-      // BEHIND the body's vertical line. A small -Z rotation in the arm
-      // bone's local frame swings them forward so the hands rest just
-      // ahead of the hip line (natural standing posture). Empirically
-      // swept (Z is the sagittal axis); -0.10 rad found in /tmp/tuckmatrix.
-      const ARM_FWD = -0.10;
+      // BEHIND the body's vertical line. A -Z rotation in the arm bone's
+      // local frame swings them forward (Z is the sagittal axis for this
+      // rig — found via /tmp/tuckmatrix arm-axis sweep). Apply BOTH to
+      // shoulder and arm bones so the whole chain tilts forward, not just
+      // the upper arm — that prevents the elbow-back/hand-forward bent look.
+      const ARM_FWD = -0.18;
       const localZ = new THREE.Vector3(0, 0, 1);
       const armTilt = new THREE.Quaternion().setFromAxisAngle(localZ, ARM_FWD);
+      const shTilt = new THREE.Quaternion().setFromAxisAngle(localZ, ARM_FWD * 0.5);
+      if (lSh) lSh.quaternion.multiply(shTilt);
+      if (rSh) rSh.quaternion.multiply(shTilt);
       const lArm = inst.skeleton.getBoneByName('LeftArm');
       const rArm = inst.skeleton.getBoneByName('RightArm');
       if (lArm) lArm.quaternion.multiply(armTilt);
