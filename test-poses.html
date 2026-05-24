@@ -45,6 +45,14 @@ if (cfgRaw) {
   const [axis, signL, signR, mag] = cfgRaw.split(',');
   window.__tuckCfg = { axis: axis || 'x', signL: parseFloat(signL || '-1'), signR: parseFloat(signR || '1'), mag: parseFloat(mag || '0.3') };
 }
+// Arm-forward tilt: pass `armcfg=axis,mag` to apply an extra rotation to
+// LeftArm + RightArm bones (post-multiply, bone-local). Used to compensate
+// for the idle clip's slight backward shoulder posture.
+const armRaw = params.get('armcfg');
+if (armRaw) {
+  const [axis, mag] = armRaw.split(',');
+  window.__armCfg = { axis: axis || 'x', mag: parseFloat(mag || '0') };
+}
 
 const labelEl = document.getElementById('label');
 const statusEl = document.getElementById('status');
