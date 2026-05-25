@@ -39,7 +39,7 @@ def shots_for(char):
     return out
 
 async def main():
-    chars = os.environ.get("AUDIT_CHARS", "hero,ines").split(",")
+    chars = os.environ.get("AUDIT_CHARS", "hero,ines,business_female_01").split(",")
     shots = []
     for c in chars:
         shots.extend(shots_for(c.strip()))

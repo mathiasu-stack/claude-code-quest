@@ -91,9 +91,11 @@
       "id": "business_female_01",
       "file": "linda.glb",
       "available": true,
-      "tags": ["female", "business", "professional"],
+      "tags": ["female", "business", "professional", "rigged"],
       "scale": 1.0,
-      "yOffset": 0.0
+      "yOffset": 0.0,
+      "stanceFactor": 0.65,
+      "extraAnimations": ["linda_walk.glb", "linda_run.glb", "linda_idle.glb"]
     },
     {
       "id": "business_female_02",

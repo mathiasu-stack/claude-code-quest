@@ -20,6 +20,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkeletal } from 'three/addons/utils/SkeletonUtils.js';
 
 const MANIFEST_URL = 'play/assets/characters/manifest.json';
@@ -28,6 +29,7 @@ const ASSET_DIR = 'play/assets/characters/';
 export class AssetLoader {
   constructor() {
     this._gltfLoader = new GLTFLoader();
+    this._gltfLoader.setMeshoptDecoder(MeshoptDecoder);
     this._manifest = null;
     this._cache = new Map();        // id -> Promise<GLTF | null>
     this._resolved = new Map();     // id -> GLTF (sync-accessible after warmCache)

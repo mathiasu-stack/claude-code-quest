@@ -91,7 +91,7 @@ function retargetMixamoPrefix(clip, skeleton) {
 // Version banner: when the user reports caching issues, this lets us
 // confirm in DevTools console that the latest code is running.
 if (!window.__gltfCharVersionLogged) {
-  console.log('[gltfCharacter] v20260524c — stronger forward tilt (shoulder + arm)');
+  console.log('[gltfCharacter] v20260524d — Linda Meshy character');
   window.__gltfCharVersionLogged = true;
 }
 

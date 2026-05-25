@@ -1,1 +1,6 @@
 deploy.sh
+
+# Local-only backup of pre-optimization character GLBs.
+# Source of truth for scripts/optimize-characters.sh — keep on disk,
+# but ~274 MB of binaries that should never be committed.
+play/assets/characters/_originals/
