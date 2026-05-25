@@ -4,3 +4,7 @@ deploy.sh
 # Source of truth for scripts/optimize-characters.sh — keep on disk,
 # but ~274 MB of binaries that should never be committed.
 play/assets/characters/_originals/
+
+# Same pattern for the Meshy decoration GLBs (desk, chair, plant, …).
+# Pre-optimization sources ~44 MB; keep local, ship only optimized files.
+play/assets/decorations/_originals/

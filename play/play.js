@@ -27,6 +27,7 @@ import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js';
 import { decorateLibrary } from './decorations/library.js';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
+import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526a';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js';
@@ -759,6 +760,12 @@ function makePoster(title, subtitle, w = 1.6, h = 2.2, accent = '#c9a44c') {
 
 // ─── Decor builders ──────────────────────────────────────────────────────────
 function buildChair(x, z, ry = 0, color = 0x37474f) {
+  const glb = makeDecoration('chair', { width: 0.6, depth: 0.6, height: 1.1 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
   const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.6), mat);
@@ -777,6 +784,12 @@ function buildChair(x, z, ry = 0, color = 0x37474f) {
 }
 
 function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
+  const glb = makeDecoration('desk', { width: w, depth: d, height: 0.78 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
   const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), mat);
@@ -794,6 +807,25 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
 }
 
 function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
+  const glb = makeDecoration('monitor', { width: 0.6, height: 0.55, depth: 0.2 });
+  if (glb) {
+    glb.position.set(x, 0.78, z);   // sits on top of desk (desks ~0.78 tall)
+    glb.rotation.y = ry;
+    // Apply the per-call screen color tint to any emissive sub-mesh so
+    // the existing colour-coding pattern (Marcus blue, Aisha orange…)
+    // still reads.
+    glb.traverse((obj) => {
+      if (obj.isMesh && obj.material) {
+        const m = obj.material;
+        if (m.emissive && m.emissive.getHex() !== 0) {
+          m.emissive = new THREE.Color(screenColor);
+          m.emissiveIntensity = 0.5;
+        }
+      }
+    });
+    glb.userData.surface = 'top';
+    return glb;
+  }
   const g = new THREE.Group();
   // Glossy plastic stand + bezel
   const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.2, 12),
@@ -816,6 +848,12 @@ function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
 }
 
 function buildPlant(x, z) {
+  const glb = makeDecoration('plant', { width: 0.7, height: 1.4, depth: 0.7 });
+  if (glb) {
+    glb.position.set(x, 0, z);
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 0.25, 14),
     new THREE.MeshStandardMaterial({ color: 0x6d4c41 }));
@@ -864,6 +902,12 @@ function buildCouch(x, z, ry = 0) {
 }
 
 function buildFilingCabinet(x, z, ry = 0) {
+  const glb = makeDecoration('cabinet', { width: 0.6, height: 1.4, depth: 0.5 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   // Painted metal — moderate metalness so it catches the directional.
   const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, metalness: 0.6, roughness: 0.45 });
@@ -913,6 +957,12 @@ function buildBookshelf(x, z, ry = 0, w = 2.2) {
 }
 
 function buildTable(x, z, ry = 0, w = 2.2) {
+  const glb = makeDecoration('table', { width: w, depth: 1.2, height: 0.78 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x6d4c41 });
   const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, 1.2), mat);
@@ -953,52 +1003,50 @@ function buildLamp(x, z) {
 // ─── CEO portrait ────────────────────────────────────────────────────────────
 let ceoHearts = null;
 
-// Friendly cartoon CEO portrait — flat color blocks, large round eyes,
-// soft smile, matches the blocky in-game style. No realism / no manga.
+// Refined executive headshot — soft gradient shading, defined features,
+// reads as a corporate oil-painting portrait at gameplay distance.
 function drawCeoPortrait(canvas) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const X = (n) => n * W;
   const Y = (n) => n * H;
 
-  // Background — warm gold gradient with subtle dots
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#f4d2a3');
-  bg.addColorStop(1, '#c98c52');
+  // Studio background — soft radial dark-navy with corner vignette.
+  const bg = ctx.createRadialGradient(W/2, H*0.45, W*0.1, W/2, H*0.5, W*0.85);
+  bg.addColorStop(0, '#3a4a78');
+  bg.addColorStop(0.5, '#1e2a4c');
+  bg.addColorStop(1, '#0b1224');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-  // Soft halftone dots
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  for (let i = 0; i < 60; i++) {
-    const x = Math.random() * W;
-    const y = Math.random() * H * 0.85;
-    const r = 4 + Math.random() * 6;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
 
-  // Hair back layer (warm brown)
-  ctx.fillStyle = '#3e2723';
+  // Hair back — multi-tone brown with vertical gradient for depth.
+  const hairBack = ctx.createLinearGradient(0, Y(0.18), 0, Y(0.70));
+  hairBack.addColorStop(0, '#3a2418');
+  hairBack.addColorStop(0.5, '#4d2e1e');
+  hairBack.addColorStop(1, '#2e1810');
+  ctx.fillStyle = hairBack;
   ctx.beginPath();
-  ctx.ellipse(X(0.5), Y(0.46), W * 0.30, H * 0.32, 0, 0, Math.PI * 2);
+  ctx.ellipse(X(0.5), Y(0.45), W * 0.28, H * 0.30, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Hair side waves
+  // Side hair waves
   ctx.beginPath();
-  ctx.moveTo(X(0.20), Y(0.4));
-  ctx.bezierCurveTo(X(0.18), Y(0.6), X(0.28), Y(0.7), X(0.32), Y(0.62));
-  ctx.lineTo(X(0.36), Y(0.52));
+  ctx.moveTo(X(0.22), Y(0.40));
+  ctx.bezierCurveTo(X(0.20), Y(0.60), X(0.28), Y(0.72), X(0.34), Y(0.66));
+  ctx.lineTo(X(0.36), Y(0.55));
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(X(0.80), Y(0.4));
-  ctx.bezierCurveTo(X(0.82), Y(0.6), X(0.72), Y(0.7), X(0.68), Y(0.62));
-  ctx.lineTo(X(0.64), Y(0.52));
+  ctx.moveTo(X(0.78), Y(0.40));
+  ctx.bezierCurveTo(X(0.80), Y(0.60), X(0.72), Y(0.72), X(0.66), Y(0.66));
+  ctx.lineTo(X(0.64), Y(0.55));
   ctx.closePath();
   ctx.fill();
 
-  // Body / blazer (deep navy)
-  ctx.fillStyle = '#1a2744';
+  // Navy suit/blazer — vertical shading from mid-navy to near-black.
+  const suit = ctx.createLinearGradient(0, Y(0.65), 0, Y(1.0));
+  suit.addColorStop(0, '#22325e');
+  suit.addColorStop(1, '#0e1830');
+  ctx.fillStyle = suit;
   ctx.beginPath();
   ctx.moveTo(X(0.05), Y(1.0));
   ctx.lineTo(X(0.05), Y(0.85));
@@ -1007,144 +1055,204 @@ function drawCeoPortrait(canvas) {
   ctx.lineTo(X(0.95), Y(1.0));
   ctx.closePath();
   ctx.fill();
-  // White shirt v-neck
-  ctx.fillStyle = '#ffffff';
+  // Soft lapel highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.beginPath();
-  ctx.moveTo(X(0.42), Y(0.72));
-  ctx.lineTo(X(0.50), Y(0.92));
-  ctx.lineTo(X(0.58), Y(0.72));
-  ctx.bezierCurveTo(X(0.55), Y(0.71), X(0.45), Y(0.71), X(0.42), Y(0.72));
+  ctx.moveTo(X(0.34), Y(0.72));
+  ctx.lineTo(X(0.45), Y(0.92));
+  ctx.lineTo(X(0.42), Y(0.74));
   ctx.closePath();
   ctx.fill();
-  // Gold lapel pin
-  ctx.fillStyle = '#ffd54f';
+
+  // White blouse / shirt
+  ctx.fillStyle = '#f5f3ed';
   ctx.beginPath();
-  ctx.arc(X(0.40), Y(0.80), 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#fff8c4';
-  ctx.beginPath();
-  ctx.arc(X(0.398), Y(0.798), 4, 0, Math.PI * 2);
+  ctx.moveTo(X(0.43), Y(0.72));
+  ctx.lineTo(X(0.50), Y(0.95));
+  ctx.lineTo(X(0.57), Y(0.72));
+  ctx.bezierCurveTo(X(0.54), Y(0.71), X(0.46), Y(0.71), X(0.43), Y(0.72));
+  ctx.closePath();
   ctx.fill();
 
-  // Face — big rounded shape, friendly proportions
+  // Gold lapel pin — radial gradient for metallic depth.
+  const pinGrad = ctx.createRadialGradient(X(0.40), Y(0.79), 1, X(0.40), Y(0.79), 14);
+  pinGrad.addColorStop(0, '#fff3b6');
+  pinGrad.addColorStop(0.6, '#e8b73c');
+  pinGrad.addColorStop(1, '#8d6a1e');
+  ctx.fillStyle = pinGrad;
+  ctx.beginPath();
+  ctx.arc(X(0.40), Y(0.79), 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Neck — slightly darker skin gradient.
+  const neckGrad = ctx.createLinearGradient(X(0.5), Y(0.58), X(0.5), Y(0.78));
+  neckGrad.addColorStop(0, '#d9b08b');
+  neckGrad.addColorStop(1, '#a37e57');
+  ctx.fillStyle = neckGrad;
+  ctx.beginPath();
+  ctx.moveTo(X(0.43), Y(0.58));
+  ctx.lineTo(X(0.43), Y(0.72));
+  ctx.lineTo(X(0.57), Y(0.72));
+  ctx.lineTo(X(0.57), Y(0.58));
+  ctx.closePath();
+  ctx.fill();
+  // Soft shadow under jawline.
+  ctx.fillStyle = 'rgba(80,40,20,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(X(0.50), Y(0.62), W * 0.13, H * 0.025, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Face — radial gradient (light upper-left, fades to deeper tone).
   const cx = X(0.5), cy = Y(0.42);
-  ctx.fillStyle = '#fde0c5';
+  const faceGrad = ctx.createRadialGradient(cx - W*0.04, cy - H*0.04, W*0.04, cx, cy, W*0.22);
+  faceGrad.addColorStop(0, '#fce5cc');
+  faceGrad.addColorStop(0.6, '#e8c6a3');
+  faceGrad.addColorStop(1, '#b48863');
+  ctx.fillStyle = faceGrad;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, W * 0.18, H * 0.20, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, W * 0.17, H * 0.20, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Hair front (bangs swept right)
-  ctx.fillStyle = '#3e2723';
+  // Subtle cheek warmth (not the manga blush dots).
+  ctx.fillStyle = 'rgba(180,90,80,0.18)';
   ctx.beginPath();
-  ctx.moveTo(X(0.32), Y(0.32));
-  ctx.bezierCurveTo(X(0.40), Y(0.20), X(0.60), Y(0.20), X(0.68), Y(0.32));
-  ctx.bezierCurveTo(X(0.62), Y(0.36), X(0.50), Y(0.32), X(0.42), Y(0.36));
-  ctx.bezierCurveTo(X(0.36), Y(0.34), X(0.34), Y(0.34), X(0.32), Y(0.32));
+  ctx.ellipse(X(0.38), Y(0.50), 22, 12, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(X(0.62), Y(0.50), 22, 12, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hair front — bangs with diagonal gradient highlight.
+  const hairFront = ctx.createLinearGradient(X(0.30), Y(0.22), X(0.70), Y(0.36));
+  hairFront.addColorStop(0, '#2a1810');
+  hairFront.addColorStop(0.5, '#4a2c1c');
+  hairFront.addColorStop(1, '#2e1810');
+  ctx.fillStyle = hairFront;
+  ctx.beginPath();
+  ctx.moveTo(X(0.30), Y(0.32));
+  ctx.bezierCurveTo(X(0.40), Y(0.18), X(0.62), Y(0.18), X(0.70), Y(0.32));
+  ctx.bezierCurveTo(X(0.62), Y(0.36), X(0.50), Y(0.30), X(0.42), Y(0.36));
+  ctx.bezierCurveTo(X(0.36), Y(0.34), X(0.32), Y(0.34), X(0.30), Y(0.32));
   ctx.closePath();
   ctx.fill();
+  // Highlight strand
+  ctx.strokeStyle = 'rgba(140,90,55,0.6)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(X(0.44), Y(0.27));
+  ctx.quadraticCurveTo(X(0.55), Y(0.22), X(0.62), Y(0.30));
+  ctx.stroke();
 
-  // Eyes — large, round, friendly (matches the in-game face system)
+  // Eyes — refined, less cartoony (drawCeoEye is also slimmed down).
   drawCeoEye(ctx, X(0.42), Y(0.43));
   drawCeoEye(ctx, X(0.58), Y(0.43));
 
-  // Eyebrows — soft arched
+  // Eyebrows — softer, thinner.
   ctx.strokeStyle = '#2e1d0f';
-  ctx.lineWidth = 7;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(X(0.36), Y(0.36));
-  ctx.quadraticCurveTo(X(0.42), Y(0.33), X(0.46), Y(0.36));
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(X(0.54), Y(0.36));
-  ctx.quadraticCurveTo(X(0.58), Y(0.33), X(0.64), Y(0.36));
-  ctx.stroke();
-
-  // Nose — single small line
-  ctx.strokeStyle = '#c79a78';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(X(0.50), Y(0.46));
-  ctx.lineTo(X(0.51), Y(0.50));
-  ctx.stroke();
-
-  // Cheeks (round blush dots)
-  ctx.fillStyle = 'rgba(255,160,180,0.6)';
-  ctx.beginPath();
-  ctx.arc(X(0.39), Y(0.50), 14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(X(0.61), Y(0.50), 14, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mouth — gentle smile
-  ctx.strokeStyle = '#a0263c';
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(X(0.50), Y(0.54), 22, 0.2 * Math.PI, 0.8 * Math.PI);
+  ctx.moveTo(X(0.36), Y(0.37));
+  ctx.quadraticCurveTo(X(0.42), Y(0.34), X(0.47), Y(0.37));
   ctx.stroke();
-  // Subtle lip color
-  ctx.strokeStyle = '#c2456b';
+  ctx.beginPath();
+  ctx.moveTo(X(0.53), Y(0.37));
+  ctx.quadraticCurveTo(X(0.58), Y(0.34), X(0.64), Y(0.37));
+  ctx.stroke();
+
+  // Nose — side shadow + bright tip + nostril hints.
+  ctx.strokeStyle = 'rgba(140,90,60,0.6)';
   ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(X(0.50), Y(0.541), 22, 0.2 * Math.PI, 0.8 * Math.PI);
+  ctx.moveTo(X(0.485), Y(0.45));
+  ctx.lineTo(X(0.485), Y(0.51));
   ctx.stroke();
-
-  // Earrings (small gold dots)
-  ctx.fillStyle = '#ffd54f';
+  ctx.fillStyle = 'rgba(255,240,220,0.4)';
   ctx.beginPath();
-  ctx.arc(X(0.32), Y(0.46), 5, 0, Math.PI * 2);
+  ctx.ellipse(X(0.503), Y(0.51), 3, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(60,30,15,0.55)';
+  ctx.beginPath();
+  ctx.ellipse(X(0.492), Y(0.525), 2.5, 1.6, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(X(0.68), Y(0.46), 5, 0, Math.PI * 2);
+  ctx.ellipse(X(0.515), Y(0.525), 2.5, 1.6, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Border
-  ctx.strokeStyle = '#3e2723';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(0, 0, W, H);
+  // Lips — defined upper/lower with subtle gloss highlight.
+  ctx.fillStyle = '#9c344b';
+  ctx.beginPath();
+  ctx.moveTo(X(0.44), Y(0.56));
+  ctx.quadraticCurveTo(X(0.47), Y(0.545), X(0.50), Y(0.555));
+  ctx.quadraticCurveTo(X(0.53), Y(0.545), X(0.56), Y(0.56));
+  ctx.quadraticCurveTo(X(0.50), Y(0.59), X(0.44), Y(0.56));
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(X(0.50), Y(0.563), 6, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Earrings — small gold studs with metallic radial highlight.
+  for (const [ex, ey] of [[X(0.33), Y(0.46)], [X(0.67), Y(0.46)]]) {
+    const g = ctx.createRadialGradient(ex, ey, 1, ex, ey, 6);
+    g.addColorStop(0, '#fff5b8');
+    g.addColorStop(1, '#b8881c');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Vignette darkening at edges for studio depth.
+  const vig = ctx.createRadialGradient(W/2, H/2, W*0.4, W/2, H/2, W*0.7);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
 }
 
-// Big round friendly eye — white sphere + dark iris + sparkle dot.
+// Refined almond eye — narrower than the old round manga shape, warm
+// brown iris, soft eyelid line instead of harsh anime lashes.
 function drawCeoEye(ctx, cx, cy) {
-  // White
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#1a1010';
-  ctx.lineWidth = 4;
+  // Sclera — almond shape, slightly squashed vertically.
+  ctx.fillStyle = '#fafaf6';
   ctx.beginPath();
-  ctx.ellipse(cx, cy, 22, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, 16, 10, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
-  // Iris — dark teal so it's not too aggressive
-  ctx.fillStyle = '#2c5b6b';
+  // Iris — warm brown radial gradient.
+  const irisGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 9);
+  irisGrad.addColorStop(0, '#6b4a2b');
+  irisGrad.addColorStop(1, '#3a2412');
+  ctx.fillStyle = irisGrad;
   ctx.beginPath();
-  ctx.ellipse(cx + 1, cy + 1, 11, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy + 1, 8, 8, 0, 0, Math.PI * 2);
   ctx.fill();
   // Pupil
-  ctx.fillStyle = '#0d0508';
+  ctx.fillStyle = '#0a0604';
   ctx.beginPath();
-  ctx.ellipse(cx + 1, cy + 2, 5, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy + 1, 3.5, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Sparkle
+  // Single catchlight (no second sparkle — that read as anime).
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.ellipse(cx - 4, cy - 4, 4, 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx - 3, cy - 2, 2, 2.5, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + 6, cy + 6, 1.7, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Lash
-  ctx.strokeStyle = '#0d0508';
-  ctx.lineWidth = 5;
+  // Upper eyelid line — defined but soft.
+  ctx.strokeStyle = '#1a0b06';
+  ctx.lineWidth = 2.5;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(cx - 18, cy - 14);
-  ctx.lineTo(cx - 24, cy - 22);
+  ctx.moveTo(cx - 16, cy - 1);
+  ctx.quadraticCurveTo(cx, cy - 12, cx + 16, cy - 1);
   ctx.stroke();
+  // Lower lash hint.
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(cx + 18, cy - 14);
-  ctx.lineTo(cx + 24, cy - 22);
+  ctx.moveTo(cx - 14, cy + 6);
+  ctx.quadraticCurveTo(cx, cy + 9, cx + 14, cy + 6);
   ctx.stroke();
 }
 
@@ -1311,14 +1419,20 @@ function buildWorld() {
   // by adding both this set AND the decorator's set, both labeled GROW
   // on adjacent left-wall positions.
 
-  // Reception desk
-  const desk = new THREE.Mesh(
-    new THREE.BoxGeometry(3, 1.0, 1.2),
-    new THREE.MeshStandardMaterial({ color: 0x6b4f3a }),
-  );
-  desk.position.set(0, 0.5, -8);
-  desk.castShadow = true; desk.receiveShadow = true;
-  scene.add(desk);
+  // Reception desk — Meshy GLB if loaded, else the original brown box.
+  const recDeskGlb = makeDecoration('reception_desk', { width: 3.0, depth: 1.2, height: 1.05 });
+  if (recDeskGlb) {
+    recDeskGlb.position.set(0, 0, -8);
+    scene.add(recDeskGlb);
+  } else {
+    const desk = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 1.0, 1.2),
+      new THREE.MeshStandardMaterial({ color: 0x6b4f3a }),
+    );
+    desk.position.set(0, 0.5, -8);
+    desk.castShadow = true; desk.receiveShadow = true;
+    scene.add(desk);
+  }
 
   // Decor
   scene.add(buildPlant(-10.2, -10.2));
@@ -3495,6 +3609,15 @@ async function _preloadGltfAssets() {
   await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
   await loader.loadAnimations();   // optional shared anim pack
   gltfAssetLoader = loader;
+  // Preload Meshy decoration GLBs (desks, chairs, plants, etc) in
+  // parallel. Failures are non-fatal — each builder falls back to its
+  // procedural geometry if the GLB isn't cached.
+  overlay.show('Loading decorations...');
+  try {
+    await preloadDecorations((loaded, total) => overlay.setProgress(loaded, total));
+  } catch (err) {
+    console.warn('[play] decoration preload failed:', err?.message || err);
+  }
   overlay.hide();
 }
 

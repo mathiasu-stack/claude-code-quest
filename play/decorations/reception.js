@@ -9,6 +9,7 @@ import {
   buildClock, buildPosterTexture, buildPillow, buildDoormat,
   buildCeilingLight, buildServerTower, buildWhiteboard, buildDemoScreen,
 } from './shared.js';
+import { makeDecoration } from './decorationAssets.js?v=20260526a';
 
 export function decorateReception(scene, decoTickers) {
   // Reception desk clutter (desk top is at y=1.0, length 3 along X, depth 1.2 z)
@@ -38,10 +39,16 @@ export function decorateReception(scene, decoTickers) {
   papers.position.set(d0[0] + 0.2, d0[1], d0[2] + 0.2);
   scene.add(papers);
 
-  // Doormat at the front doorway
-  const mat = buildDoormat();
-  mat.position.set(0, 0.001, 9);
-  scene.add(mat);
+  // Doormat at the front doorway — Meshy floor mat if loaded, else procedural.
+  const matGlb = makeDecoration('floor_mat', { width: 1.6, depth: 1.0 });
+  if (matGlb) {
+    matGlb.position.set(0, 0.001, 9);
+    scene.add(matGlb);
+  } else {
+    const mat = buildDoormat();
+    mat.position.set(0, 0.001, 9);
+    scene.add(mat);
+  }
 
   // Couch pillows (couches at -8.5 / 8.5, z=5, rotated to face inward)
   for (const [side, color] of [[-1, 0xc62828], [1, 0xfbc02d]]) {
@@ -65,12 +72,43 @@ export function decorateReception(scene, decoTickers) {
     if (clock.userData.hourHand) clock.userData.hourHand.rotation.y = t * 0.04;
   });
 
-  // Recessed ceiling lights (purely visual — actual light comes from
-  // the directional + accents, this just gives the eye something to look up at)
+  // Ceiling pendant lamps — Meshy if loaded, else original recessed flats.
+  // Reception ceiling sits at ~3.7m; the pendants hang from there.
   for (const [x, z] of [[-4, -4], [4, -4], [-4, 4], [4, 4], [0, 0]]) {
-    const ceil = buildCeilingLight(0.5);
-    ceil.position.set(x, 3.7, z);
-    scene.add(ceil);
+    const lampGlb = makeDecoration('ceiling_lamp', { width: 0.4, height: 0.7 });
+    if (lampGlb) {
+      // y offset positions the TOP of the pendant near the ceiling
+      // (makeDecoration parks the bottom of the AABB at the group origin,
+      // so we raise the whole group so its BOTTOM is at ~3.0, top at ~3.7).
+      lampGlb.position.set(x, 3.0, z);
+      scene.add(lampGlb);
+    } else {
+      const ceil = buildCeilingLight(0.5);
+      ceil.position.set(x, 3.7, z);
+      scene.add(ceil);
+    }
+  }
+
+  // Decorative interior doors on the south wall (next to the doorway
+  // opening at z=+9), reading as "side-office doors". Only placed when
+  // the GLB loaded — purely cosmetic.
+  for (const x of [-3.5, 3.5]) {
+    const doorGlb = makeDecoration('door', { width: 1.1, height: 2.3, depth: 0.1 });
+    if (doorGlb) {
+      doorGlb.position.set(x, 0, 10.85);
+      doorGlb.rotation.y = Math.PI;   // face into the room
+      scene.add(doorGlb);
+    }
+  }
+
+  // Decorative window on the west wall, slotted between the GROW poster
+  // (z=+5) and the BE KIND/STAY posters (z=+8). Centered at z=+1 in the
+  // open wall stretch.
+  const winGlb = makeDecoration('window', { width: 2.4, height: 1.8, depth: 0.15 });
+  if (winGlb) {
+    winGlb.position.set(-10.83, 1.4, 1.0);
+    winGlb.rotation.y = Math.PI / 2;
+    scene.add(winGlb);
   }
 
   // Diverse plants (replacing some of the existing identical pots)
