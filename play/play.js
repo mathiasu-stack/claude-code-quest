@@ -364,6 +364,18 @@ let footstepAccum = 0; // distance accumulated since last footstep SFX
 // player.rotation.y, so they must use the same convention or the lerp
 // pulls the camera to the wrong side.
 let cameraYaw = Math.PI;
+// Camera pitch in radians — 0 = ride-height baseline (matches the
+// long-standing fixed-height behaviour), positive = looking down from
+// above, negative = looking up from below. Driven by middle-mouse drag
+// (see setupInput). Clamped to PITCH_MIN/PITCH_MAX so the camera can't
+// flip over or sink through the floor.
+let cameraPitch = 0;
+const PITCH_MIN = -0.45;    // ~-26° (camera looks up at player from low)
+const PITCH_MAX =  0.95;    // ~+54° (camera looks down from above)
+// True while the user holds the middle mouse button — suppresses the
+// auto-follow yaw drift so the manual drag isn't fought by the
+// player-heading-based lerp.
+let mouseLook = false;
 // Third-person camera distance — adjustable with the mouse wheel.
 let cameraDist = 6.5;
 const CAM_DIST_MIN = 2.5;
@@ -392,6 +404,7 @@ let interactionTarget = null;
 let interactObjects = []; // built interactable objects with per-frame update()
 let raf = null;
 let resizeListener, keyDownListener, keyUpListener, wheelListener;
+let mouseDownListener, mouseMoveListener, mouseUpListener;
 let container, promptEl, dialogueEl;
 let inputLocked = false;
 let zoneDoors = []; // each: { mesh, label, gateChapter }
@@ -2881,6 +2894,44 @@ function setupInput() {
   };
   window.addEventListener('wheel', wheelListener, { passive: false });
 
+  // Middle-mouse drag → look around freely (yaw + pitch). Hold the
+  // scroll-wheel button anywhere on the canvas, drag, and release.
+  // The auto-follow lerp is suppressed while held so manual aim sticks.
+  const MOUSE_LOOK_YAW_RATE   = 0.005;  // rad per pixel
+  const MOUSE_LOOK_PITCH_RATE = 0.005;
+  let mouseLookLastX = 0, mouseLookLastY = 0;
+  mouseDownListener = (e) => {
+    if (e.button !== 1) return;   // 1 = middle (scroll-wheel) button
+    if (inputLocked) return;
+    mouseLook = true;
+    mouseLookLastX = e.clientX;
+    mouseLookLastY = e.clientY;
+    e.preventDefault();           // suppress browser auto-scroll cursor
+  };
+  mouseMoveListener = (e) => {
+    if (!mouseLook) return;
+    const dx = e.clientX - mouseLookLastX;
+    const dy = e.clientY - mouseLookLastY;
+    mouseLookLastX = e.clientX;
+    mouseLookLastY = e.clientY;
+    cameraYaw   -= dx * MOUSE_LOOK_YAW_RATE;
+    cameraPitch += dy * MOUSE_LOOK_PITCH_RATE;
+    if (cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN;
+    if (cameraPitch > PITCH_MAX) cameraPitch = PITCH_MAX;
+  };
+  mouseUpListener = (e) => {
+    if (e.button !== 1) return;
+    mouseLook = false;
+  };
+  // Listen on window so a drag that leaves the canvas still releases
+  // properly. preventDefault on mousedown blocks the autoscroll cursor.
+  window.addEventListener('mousedown', mouseDownListener);
+  window.addEventListener('mousemove', mouseMoveListener);
+  window.addEventListener('mouseup', mouseUpListener);
+  // Also release if pointer leaves the document (some browsers
+  // suppress mouseup over chrome).
+  window.addEventListener('blur', () => { mouseLook = false; });
+
   const j = document.getElementById('play-joystick');
   const t = document.getElementById('play-joystick-thumb');
   let active = false, baseX = 0, baseY = 0;
@@ -3340,11 +3391,15 @@ function update(dt) {
     // Auto-follow: while walking, drift cameraYaw toward the player's
     // heading so the camera trails behind. Stiffness 1.2 → noticeably
     // slower than the body's rotation lerp (dt*4 above). When idle, this
-    // block doesn't run, so manual Q/E rotation is preserved.
-    const targetYaw = player.rotation.y;
-    let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (dYaw < -Math.PI) dYaw += Math.PI * 2;
-    cameraYaw += dYaw * (1 - Math.exp(-dt * 1.2));
+    // block doesn't run, so manual Q/E rotation is preserved. Skipped
+    // entirely while the user is mid-mouse-look so the drag isn't
+    // fought.
+    if (!mouseLook) {
+      const targetYaw = player.rotation.y;
+      let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+      cameraYaw += dYaw * (1 - Math.exp(-dt * 1.2));
+    }
   } else {
     const p = player.userData.parts;
     const isGltf = player.userData.faceKind === 'gltf';
@@ -3391,15 +3446,23 @@ function update(dt) {
       effDist = Math.max(CAM_DIST_MIN, hits[0].distance - 0.35);
     }
   }
-  const targetCamX = player.position.x - Math.sin(cameraYaw) * effDist;
-  const targetCamZ = player.position.z - Math.cos(cameraYaw) * effDist;
+  // Orbit: horizontal distance shrinks with pitch (the camera arcs over
+  // the target instead of just sliding up). cos(pitch) only — sin(pitch)
+  // alone would let the camera "fall" inside the target at high pitch.
+  const pitchCos = Math.cos(cameraPitch);
+  const pitchSin = Math.sin(cameraPitch);
+  const horizDist = effDist * pitchCos;
+  const targetCamX = player.position.x - Math.sin(cameraYaw) * horizDist;
+  const targetCamZ = player.position.z - Math.cos(cameraYaw) * horizDist;
   const camLerp = 1 - Math.exp(-dt * 6);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
-  // Camera height = floor baseline + camH (constant ride height), plus
-  // a small bob from the player's jump above their floor.
+  // Camera height = floor baseline + camH (constant ride height when
+  // pitch=0) + pitched vertical offset + a small jump bob. Held at the
+  // current floor's baseline so it doesn't leak across floors.
   const floorY = floorBaseY(currentFloor);
-  camera.position.y = floorY + camH + Math.max(0, player.position.y - floorY) * 0.3;
+  camera.position.y = floorY + camH + effDist * pitchSin
+    + Math.max(0, player.position.y - floorY) * 0.3;
   camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
   // Animate doors live: color tint, label, AND the hinge swing toward
@@ -4000,6 +4063,9 @@ export function stop() {
   if (keyDownListener) window.removeEventListener('keydown', keyDownListener);
   if (keyUpListener) window.removeEventListener('keyup', keyUpListener);
   if (wheelListener) window.removeEventListener('wheel', wheelListener);
+  if (mouseDownListener) window.removeEventListener('mousedown', mouseDownListener);
+  if (mouseMoveListener) window.removeEventListener('mousemove', mouseMoveListener);
+  if (mouseUpListener) window.removeEventListener('mouseup', mouseUpListener);
   if (renderer) {
     if (renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     renderer.dispose();
