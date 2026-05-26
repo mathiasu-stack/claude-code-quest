@@ -1665,8 +1665,10 @@ function buildWorld() {
   // an exception — it spans all floors and stays visible.
   tagSceneFloor1();
 
-  // Build floors 2-4 as compact office templates at higher Y levels.
-  for (let f = 2; f <= FLOORS_TOTAL; f++) buildFloorOffice(f);
+  // Floors 2-4 are NOT built here anymore. They're built lazily by
+  // loadFloor(f) the first time the player rides the elevator to that
+  // floor (see requestFloorChange). Initial page load only pays the
+  // cost of floor 1.
 
   // Surface-attachment rule — DISABLED. The settler caused buildWorld
   // to throw mid-build (symptom: empty canvas / "all white" screen).
@@ -2757,18 +2759,72 @@ function spawnNPC(npcDef) {
 const HAND_BUILT_CHAPTER_IDS = new Set(['ch01', 'ch02']);
 
 function buildNPCs() {
+  // Backwards-compat entry point used by the initial start() path. We
+  // only spawn floor-1 NPCs now; upper-floor NPCs are spawned when the
+  // player rides the elevator there for the first time (loadFloor).
   npcMeshes = [];
-  // Hand-written NPCs for ch01 (Linda's crew) + ch02 (Elena's crew).
-  NPCS.forEach(spawnNPC);
-  // Procedural NPCs for every other chapter, placed at its CURRICULUM
-  // array position. floorForChapterId routes each NPC to its correct
-  // floor (1 if it's a floor-1 chapter after reshuffle, 2-4 otherwise).
+  spawnNPCsForFloor(1);
+}
+
+// Spawn (or re-spawn) every NPC that belongs to floor `f`. Filters
+// both hand-built (NPCS literal) and procedural (generateChapterNPCs)
+// rosters by floorForChapterId. Idempotent per floor — caller is
+// expected to guard against double-calling via the loadedFloors set.
+function spawnNPCsForFloor(f) {
+  const onThisFloor = (npcDef) => (floorForChapterId(npcDef.chapterId) || 1) === f;
+  for (const n of NPCS) {
+    if (onThisFloor(n)) spawnNPC(n);
+  }
   const curriculum = window.CURRICULUM || [];
   for (let i = 0; i < curriculum.length; i++) {
     const ch = curriculum[i];
     if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+    if (floorForChapterIdx(i) !== f) continue;
     generateChapterNPCs(i).forEach(spawnNPC);
   }
+}
+
+// Build the geometry + NPCs for one of the upper floors (2-4) on
+// first visit. No-op if already built. Returns the set of currently
+// loaded floors so callers can introspect if needed.
+const loadedFloors = new Set([1]);
+async function loadFloor(f) {
+  if (loadedFloors.has(f)) return loadedFloors;
+  const overlay = createLoadingOverlay();
+  overlay.show(`Building floor ${f}...`);
+  try {
+    buildFloorOffice(f);
+    spawnNPCsForFloor(f);
+    // Rebuild the cameraWalls list — the new floor added wall meshes
+    // that the camera-occlusion path needs to know about.
+    refreshCameraWalls();
+    loadedFloors.add(f);
+  } catch (err) {
+    console.warn(`[play] loadFloor(${f}) failed:`, err);
+  } finally {
+    overlay.hide();
+  }
+  return loadedFloors;
+}
+
+// Re-scan the scene for wall-like meshes. Same heuristic as the
+// original sweep in buildWorld — extracted so loadFloor() can rerun
+// it incrementally after adding a floor.
+function refreshCameraWalls() {
+  cameraWalls.length = 0;
+  scene.traverse((obj) => {
+    if (!obj.isMesh || obj.isSkinnedMesh) return;
+    const g = obj.geometry;
+    if (!g || !g.isBufferGeometry) return;
+    if (!g.boundingBox) g.computeBoundingBox();
+    const bb = g.boundingBox; if (!bb) return;
+    const sx = bb.max.x - bb.min.x;
+    const sy = bb.max.y - bb.min.y;
+    const sz = bb.max.z - bb.min.z;
+    const thinHoriz = (sx <= 0.5 || sz <= 0.5);
+    const tall = sy >= 2.5;
+    if (thinHoriz && tall) cameraWalls.push(obj);
+  });
 }
 
 // ─── Renderer & camera ───────────────────────────────────────────────────────
@@ -3888,7 +3944,7 @@ function floorThemeName(f) {
   return ({ 1: 'Onboarding', 2: 'Operations', 3: 'Architect', 4: 'Executive' })[f] || `Floor ${f}`;
 }
 
-function requestFloorChange(targetFloor) {
+async function requestFloorChange(targetFloor) {
   if (targetFloor === currentFloor) { closeElevatorModal(); return; }
   closeElevatorModal();
   inputLocked = true;
@@ -3896,6 +3952,13 @@ function requestFloorChange(targetFloor) {
   if (fade) fade.classList.add('opaque');
   // Snap the cab to the target floor so the camera reveal lands on it.
   if (elevatorRef?.snapCabToFloor) elevatorRef.snapCabToFloor(targetFloor);
+  // Lazy-build the target floor on its first visit. Awaiting here is
+  // safe because input is locked and the fade is opaque — the user
+  // sees the loading overlay (createLoadingOverlay inside loadFloor)
+  // on top of the black fade.
+  if (!loadedFloors.has(targetFloor)) {
+    await loadFloor(targetFloor);
+  }
   setTimeout(() => {
     currentFloor = targetFloor;
     applyFloorVisibility();
