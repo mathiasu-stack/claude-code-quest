@@ -3609,9 +3609,16 @@ async function _preloadGltfAssets() {
   await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
   await loader.loadAnimations();   // optional shared anim pack
   gltfAssetLoader = loader;
-  // Preload Meshy decoration GLBs (desks, chairs, plants, etc) in
-  // parallel. Failures are non-fatal — each builder falls back to its
-  // procedural geometry if the GLB isn't cached.
+  overlay.hide();
+}
+
+// Preload Meshy decoration GLBs. Runs BEFORE buildWorld so the
+// procedural builders inside buildWorld (buildDesk, buildChair, …) find
+// them cached when they call makeDecoration(). Failures are non-fatal —
+// each builder falls back to its original procedural geometry if the
+// asset isn't in cache by the time it's called.
+async function _preloadDecorationAssets() {
+  const overlay = createLoadingOverlay();
   overlay.show('Loading decorations...');
   try {
     await preloadDecorations((loaded, total) => overlay.setProgress(loaded, total));
@@ -3629,10 +3636,16 @@ export async function start(host) {
   danceUntil = 0;
   jumpRequested = false;
   setupRenderer();
+  // Preload Meshy decoration GLBs FIRST. buildWorld() calls every
+  // procedural builder (buildDesk, buildChair, buildPlant, …) which now
+  // try makeDecoration() first; if the cache isn't populated yet they
+  // silently fall back to procedural — which is exactly the bug this
+  // ordering avoids.
+  await _preloadDecorationAssets();
   buildWorld();
-  // Preload GLTF assets BEFORE buildPlayer so the player can use one
-  // if the flag is on and the manifest has available assets. This is
-  // a no-op when the flag is off (default).
+  // Preload character GLTF assets BEFORE buildPlayer so the player +
+  // NPCs can use them synchronously. Decorations are already cached at
+  // this point.
   await _preloadGltfAssets();
   buildPlayer();
   buildNPCs();
