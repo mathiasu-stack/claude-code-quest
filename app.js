@@ -239,6 +239,11 @@ const App = {
       const entered = window.prompt('Enter admin passcode:');
       if (entered === null) return; // user cancelled
       if (entered === 'Kapprim') {
+        // Flag admin mode for this browser session. The 3D play view
+        // checks sessionStorage.ccq_admin to expose the "Edit Rooms"
+        // toggle that opens the room editor. Cleared automatically
+        // when the browser tab closes.
+        try { sessionStorage.setItem('ccq_admin', '1'); } catch {}
         App.unlockEverything();
       } else {
         window.alert('Incorrect passcode.');

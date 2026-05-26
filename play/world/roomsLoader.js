@@ -69,7 +69,8 @@ export function registerSharedHelpers({
 export function loadRoom(scene, room, ctx = {}) {
   const tickers = [];
   const yOffset = ctx.yOffset || 0;
-  for (const obj of (room.objects || [])) {
+  for (let i = 0; i < (room.objects || []).length; i++) {
+    const obj = room.objects[i];
     const result = dispatch(obj, scene, ctx);
     if (!result) continue;
     if (Array.isArray(result.tickers)) tickers.push(...result.tickers);
@@ -82,6 +83,12 @@ export function loadRoom(scene, room, ctx = {}) {
     if (room.floor != null) {
       tagFloor(node, room.floor);
     }
+    // Tag with room id + entry index so the Phase 2 in-game editor can
+    // map a clicked mesh back to its data entry (and serialize its
+    // position/rotation/size back out via Export Layout).
+    node.userData._roomId = room.id;
+    node.userData._roomEntryIndex = i;
+    node.userData._yOffset = yOffset;
     if (!node.parent) scene.add(node);
   }
   return tickers;

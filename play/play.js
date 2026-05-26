@@ -30,6 +30,9 @@ import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526l';
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260526a';
+import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
+         exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
+         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527a';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -3930,6 +3933,27 @@ export async function start(host) {
       }
     }
   } catch {}
+
+  // ── Admin-gated room editor (Phase 2) ──────────────────────────────
+  // Toolbar mounts hidden by default; it auto-shows when
+  // sessionStorage.ccq_admin === '1' (set by app.js after the
+  // passcode prompt). Toggling Edit Rooms swaps gameplay for the
+  // selection / TransformControls flow in play/editor/roomsEditor.js.
+  mountEditorToolbar({
+    container,
+    onEnter: () => {
+      enterRoomEdit({
+        scene, camera, renderer, container,
+        suspendGameInput: () => {
+          inputLocked = true;
+          return () => { inputLocked = false; };
+        },
+      });
+    },
+    onExit: () => exitRoomEdit(),
+    onExport: () => exportRoomLayout(),
+  });
+
   loop();
 }
 
