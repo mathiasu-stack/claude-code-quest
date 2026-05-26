@@ -27,7 +27,9 @@ import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260526e';
 import { decorateLibrary } from './decorations/library.js?v=20260526d';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260526d';
+import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526l';
+import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260526a';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -1421,6 +1423,95 @@ function buildCeoPortrait(targetScene) {
   return group;
 }
 
+// ─── Room builder registry (Phase 1 data-driven scene assembly) ─────────────
+// Maps the `fn` strings in data/rooms.js to existing builders. Wrappers
+// translate the loader's (pos, rotY, args, ctx) signature into the
+// individual builder's parameter shape. Compound builders (atrium,
+// elevator, ceiling, decorate_*, centerpiece, windows) accept ctx and
+// piggy-back on scene.add / decoTickers internally — they return null
+// so the loader doesn't double-add anything.
+let _roomBuildersRegistered = false;
+function registerRoomBuilders() {
+  if (_roomBuildersRegistered) return;
+  _roomBuildersRegistered = true;
+
+  // Shared helpers — drawers / texture builders the loader needs for
+  // 'poster', 'wall_sign', 'ceo_portrait' entry types.
+  registerSharedHelpers({
+    makeLabelSprite,
+    makeWallSign,
+    buildPosterTexture,
+    buildCeoPortrait,
+  });
+
+  // ── Furniture / decor builders (return THREE.Object3D) ────────────
+  registerRoomBuilder('chair', (pos, rotY, args) =>
+    buildChair(pos[0], pos[2], rotY || 0, args.color));
+  registerRoomBuilder('desk', (pos, rotY, args) =>
+    buildDesk(pos[0], pos[2], rotY || 0, args.w, args.d, args.color));
+  registerRoomBuilder('monitor', (pos, rotY, args) =>
+    buildMonitor(pos[0], pos[2], rotY || 0, args.screenColor));
+  registerRoomBuilder('plant', (pos) => buildPlant(pos[0], pos[2]));
+  registerRoomBuilder('water_cooler', (pos) => buildWaterCooler(pos[0], pos[2]));
+  registerRoomBuilder('couch', (pos, rotY) => buildCouch(pos[0], pos[2], rotY || 0));
+  registerRoomBuilder('filing_cabinet', (pos, rotY) =>
+    buildFilingCabinet(pos[0], pos[2], rotY || 0));
+  registerRoomBuilder('bookshelf', (pos, rotY, args) =>
+    buildBookshelf(pos[0], pos[2], rotY || 0, args.w));
+  registerRoomBuilder('table', (pos, rotY, args) =>
+    buildTable(pos[0], pos[2], rotY || 0, args.w));
+  registerRoomBuilder('lamp', (pos) => buildLamp(pos[0], pos[2]));
+
+  // ── Compound builders (each owns its own multi-mesh placement) ───
+  // Each returns null because the underlying builder already calls
+  // scene.add internally; we forward any per-frame tickers to ctx.
+  registerRoomBuilder('reception_windows', (pos, rotY, args, ctx) => {
+    try { receptionWindows = buildReceptionWindows(ctx.scene); }
+    catch (e) { console.warn('reception windows failed', e); }
+    return null;
+  });
+  registerRoomBuilder('library_arched_window', (pos, rotY, args, ctx) => {
+    try { libraryWindow = buildLibraryArchedWindow(ctx.scene); }
+    catch (e) { console.warn('library window failed', e); }
+    return null;
+  });
+  registerRoomBuilder('library_ceiling', (pos, rotY, args, ctx) => {
+    try { buildLibraryCeiling(ctx.scene); }
+    catch (e) { console.warn('library ceiling failed', e); }
+    return null;
+  });
+  registerRoomBuilder('decorate_reception', (pos, rotY, args, ctx) => {
+    try { decorateReception(ctx.scene, ctx.decoTickers); }
+    catch (e) { console.warn('reception deco failed', e); }
+    return null;
+  });
+  registerRoomBuilder('decorate_library', (pos, rotY, args, ctx) => {
+    try { decorateLibrary(ctx.scene, ctx.decoTickers); }
+    catch (e) { console.warn('library deco failed', e); }
+    return null;
+  });
+  registerRoomBuilder('reception_centerpiece', (pos, rotY, args, ctx) => {
+    try { buildReceptionCenterpiece(ctx.scene, ctx.decoTickers); }
+    catch (e) { console.warn('centerpiece failed', e); }
+    return null;
+  });
+  registerRoomBuilder('atrium', (pos, rotY, args, ctx) => {
+    try {
+      const atrium = buildAtrium(ctx.scene, { mobile: isMobile() });
+      if (atrium?.tickers) for (const t of atrium.tickers) ctx.decoTickers.push(t);
+    } catch (e) { console.warn('atrium failed', e); }
+    return null;
+  });
+  registerRoomBuilder('elevator', (pos, rotY, args, ctx) => {
+    try {
+      const elev = buildElevator(ctx.scene, { mobile: isMobile() });
+      if (elev?.tick) ctx.decoTickers.push((dt, now) => elev.tick(dt, now));
+      elevatorRef = elev;
+    } catch (e) { console.warn('elevator failed', e); }
+    return null;
+  });
+}
+
 // ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
@@ -1438,218 +1529,33 @@ function buildWorld() {
   skyDome = new SkyDome(scene);
   skyDome.applyPreset(getSkyPresetForZone(0).sky);
 
-  // ─── Zone 1 ground (office) ───
-  const officeFloor = new THREE.Mesh(
-    new THREE.PlaneGeometry(22, 22),
-    new THREE.MeshStandardMaterial({ color: 0x9aa9bc }),
-  );
-  officeFloor.rotation.x = -Math.PI / 2;
-  officeFloor.position.set(0, 0, 0);
-  officeFloor.receiveShadow = true;
-  scene.add(officeFloor);
+  // ─── Phase 1 data-driven assembly ─────────────────────────────────
+  // Floor-1 room contents live in data/rooms.js. The loader walks each
+  // room's `objects` array and dispatches by entry type:
+  //   wall, floor_plate, wall_sign, ceo_portrait      → raw geometry
+  //   decoration                                       → makeDecoration()
+  //   builder | clutter | poster                       → registered fn
+  // Everything that was previously imperative (floor plates, wall
+  // segments, the reception desk, plants, desks, chairs, monitors,
+  // filing cabinets, bookshelves, tables, lamps, library wall sign,
+  // reception/library ceilings, parallax windows, decorate_* passes,
+  // reception centerpiece, atrium, elevator) is now declared in
+  // data/rooms.js under either the `reception` or `library` room.
+  registerRoomBuilders();
+  decoTickers = [];
+  const ctx = { scene, decoTickers };
 
-  // Carpet runner — bumped to y=0.0025 (Bug D fix) so it sits cleanly
-  // above the atrium marble overlay (now at y=0.001) without z-fight.
-  const runner = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.4, 18),
-    new THREE.MeshStandardMaterial({
-      color: 0xc9a44c, metalness: 0.85, roughness: 0.18,
-    }),
-  );
-  runner.rotation.x = -Math.PI / 2;
-  runner.position.set(0, 0.0025, -1);
-  scene.add(runner);
+  loadRoom(scene, window.ROOM_BY_ID('reception'), ctx);
 
-  // Office walls
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xf4ecd8 });
-  const wallH = 3.8;
-  function wall(w, h, d, x, y, z, ry = 0) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-    m.position.set(x, y, z); m.rotation.y = ry;
-    m.castShadow = true; m.receiveShadow = true;
-    scene.add(m);
-    return m;
-  }
-  // back wall (north)
-  wall(22, wallH, 0.3, 0, wallH/2, -11);
-  // West wall — split with a 3.5m-wide doorway centered at z=0 leading
-  // into the floor-1 west-wing Files room.
-  wall(0.3, wallH, 9.25, -11, wallH/2, -6.375);   // south of doorway
-  wall(0.3, wallH, 9.25, -11, wallH/2,  6.375);   // north of doorway
-  wall(0.3, 1.2, 3.5, -11, wallH - 0.6, 0);       // lintel above doorway
-  // East wall — segmented to leave (a) 3 window openings at z=-3, 0, 3
-  // (each 2.4×1.8, centered at y=1.9) and (b) an elevator door opening
-  // at z = -7.6, 2.4m wide × 2.6m tall, matching the shaft built by
-  // world/elevator.js. Wall is 0.3m thick at x=11.
-  // Top strip (y ∈ [2.8, 3.8]) is continuous — windows and elevator door
-  // are all below it.
-  wall(0.3, 1.0, 22, 11, 3.3, 0);
-  // Bottom strip (y ∈ [0, 1.0]) — full except cut for the elevator door
-  // at z ∈ [-8.8, -6.4].
-  wall(0.3, 1.0, 2.2, 11, 0.5, -9.9);   // south of elevator (z=-11..-8.8)
-  wall(0.3, 1.0, 17.4, 11, 0.5,  2.3);  // north of elevator (z=-6.4..+11)
-  // Middle band (y ∈ [1.0, 2.8]) — pillars leaving gaps for the elevator
-  // door and the 3 windows.
-  wall(0.3, 1.8, 2.2, 11, 1.9, -9.9);  // south cap z=-11..-8.8 (before elevator)
-  wall(0.3, 1.8, 2.2, 11, 1.9, -5.3);  // between elevator and window z=-3
-  wall(0.3, 1.8, 0.6, 11, 1.9, -1.5);  // between windows -3 and 0
-  wall(0.3, 1.8, 0.6, 11, 1.9,  1.5);  // between windows 0 and 3
-  wall(0.3, 1.8, 6.8, 11, 1.9,  7.6);  // north cap z=4.2..11
-  // Lintel filling the y ∈ [2.6, 2.8] strip above the elevator door
-  // (door top is at 2.6, top strip starts at 2.8).
-  wall(0.3, 0.2, 2.4, 11, 2.7, -7.6);
-  // front split with doorway at center (z = 11). The doorway opening
-  // (x ∈ [-1.75, +1.75]) matches the door panel built in registerDoor —
-  // previously the opening was 5m wide while the door was only 3.5m,
-  // leaving visible gaps on either side of the closed door.
-  wall(9.25, wallH, 0.3, -6.375, wallH/2, 11);
-  wall(9.25, wallH, 0.3,  6.375, wallH/2, 11);
-  wall(3.5,  1.2,   0.3,  0,     wallH - 0.6, 11);
-
-  // CEO portrait on back wall (replaces wall logo) — real image, not shapes
-  buildCeoPortrait(scene);
-
-  // Wall sign (smaller, off to the side)
-  const logo = makeWallSign('KEDASH CORP', 4, 0.9);
-  logo.position.set(-7.5, 3.2, -10.84);
-  scene.add(logo);
-
-  // Wall posters are placed once by decorateReception() (decorations/reception.js)
-  // — no inline posters here. The previous duplicate-GROW bug was caused
-  // by adding both this set AND the decorator's set, both labeled GROW
-  // on adjacent left-wall positions.
-
-  // Reception desk — Meshy GLB if loaded, else the original brown box.
-  // The new corporate-reception desk source is squarish (1.9×1.07×1.14m).
-  // We non-uniform-stretch it to a SUBSTANTIAL footprint so the back
-  // panel with Kedash branding rises above the hero (≈1.9m tall) and
-  // dominates the reception area as it should:
-  //   - Height 2.2m: total desk reaches above the hero's head; the
-  //     counter top (lower portion of the source mesh) lands around
-  //     y=1.0-1.1m which is realistic counter height.
-  //   - Width 3.6m: wide enough to read as a corporate reception
-  //     counter, not a side table.
-  //   - Depth 1.6m: realistic counter depth.
-  // Stretch ratios are now 1.90 / 1.93 / 1.50 — much more balanced than
-  // the previous 1.58 / 0.92 / 1.12 spread, so the Kedash 3D text and
-  // side decoration distort proportionally instead of skewing.
-  const recDeskGlb = makeDecoration('reception_desk',
-    { width: 3.6, height: 2.2, depth: 1.6, stretch: true });
-  if (recDeskGlb) {
-    recDeskGlb.position.set(0, 0, -8);
-    scene.add(recDeskGlb);
-  } else {
-    const desk = new THREE.Mesh(
-      new THREE.BoxGeometry(3, 1.0, 1.2),
-      new THREE.MeshStandardMaterial({ color: 0x6b4f3a }),
-    );
-    desk.position.set(0, 0.5, -8);
-    desk.castShadow = true; desk.receiveShadow = true;
-    scene.add(desk);
-  }
-
-  // Decor
-  scene.add(buildPlant(-10.2, -10.2));
-  scene.add(buildPlant(10.2, -10.2));
-  scene.add(buildPlant(-10.2, 9.5));
-  scene.add(buildPlant(10.2, 9.5));
-  scene.add(buildWaterCooler(-9.5, -2));
-  scene.add(buildCouch(-8.5, 5, Math.PI / 2));
-  scene.add(buildCouch(8.5, 5, -Math.PI / 2));
-
-  // IT bench (Marcus area, x=-6 z=-3) — the new desk GLB ships with a
-  // built-in monitor, so the previous procedural buildMonitor calls
-  // on top of each desk are gone (they'd clip into the desk's monitor).
-  scene.add(buildDesk(-7.5, -3, Math.PI / 2, 1.6, 0.8));
-  scene.add(buildChair(-6.4, -3));
-
-  // Aisha area (x=6 z=-3)
-  scene.add(buildDesk(7.5, -3, -Math.PI / 2, 1.6, 0.8));
-  scene.add(buildChair(6.4, -3, Math.PI));
-
-  // Kenji area (x=-6 z=3) — wider desk + side accessory monitors that
-  // sit beside (not on top of) the desk's built-in monitor. The center
-  // procedural monitor at z=3.2 was redundant with the built-in and is
-  // dropped; z=2.4 and z=4.0 remain as Kenji's distinctive multi-screen
-  // setup, offset along the desk so they don't overlap.
-  scene.add(buildDesk(-7.5, 3, Math.PI / 2, 2.2, 0.8));
-  scene.add(buildMonitor(-7.5, 2.0, Math.PI / 2, 0xab47bc));
-  scene.add(buildMonitor(-7.5, 4.0, Math.PI / 2, 0xffca28));
-  scene.add(buildChair(-6.4, 3));
-
-  // Diana area (x=6 z=3) — filing cabinets
-  scene.add(buildFilingCabinet(7.6, 2));
-  scene.add(buildFilingCabinet(7.6, 3));
-  scene.add(buildFilingCabinet(7.6, 4));
-  scene.add(buildChair(6.2, 3, Math.PI));
-
-  // Door from zone 1 → zone 2 (gated by ch01 test)
+  // Door from zone 1 (reception) → zone 2 (library), gated by ch01
+  // test. registerDoor is interactable-system glue (gating, animation,
+  // colour state, label refresh) — kept as code, not data.
   registerDoor(scene, 11, 'ch01', 'Knowledge Library');
 
-  // ─── Zone 2 — Knowledge Library ──────────────────────────────────────────
-  // Library starts at z = 11.5 going negative (since we use z=-22 for NPC positions, library is at z=-30 to -10)
-  // Wait — we positioned zone-2 NPCs at z around -22 to -28, that's BEHIND the back wall of zone 1.
-  // Restructure: zone 1 is z=-11..11 and zone 2 is z=-30..-12, accessed via the doorway at z=11... that doesn't match.
-  // Fix: relocate zone 2 to be on the FAR SIDE of the door — z > 11.
-  //   But our NPC positions are negative. Let me just remap: NPC z in NPCS for zone 2 are stored as -22, -22, -28, -27.
-  //   We'll add 35 to them for actual scene placement (so -22 -> 13, -28 -> 7, etc.)
-  //   That keeps the data clean. We do that in spawnNPC().
+  loadRoom(scene, window.ROOM_BY_ID('library'), ctx);
 
-  // Build library walls (at z = 12 to 32)
-  const libFloor = new THREE.Mesh(
-    new THREE.PlaneGeometry(22, 22),
-    new THREE.MeshStandardMaterial({ color: 0x8d6e63 }),
-  );
-  libFloor.rotation.x = -Math.PI / 2;
-  libFloor.position.set(0, 0, 22);
-  libFloor.receiveShadow = true;
-  scene.add(libFloor);
-
-  // Library walls — back wall (north, z=33) is now SOLID since floor 1
-  // ends here in the 2×2 layout (no z=55+ corridor anymore).
-  wall(22, wallH, 0.3, 0, wallH/2, 33);
-  // West wall — split with 3.5m doorway centered at z=22 (the library's
-  // mid-line) leading into the Plan Mode west-wing room.
-  wall(0.3, wallH, 9.25, -11, wallH/2, 17.375);   // south of doorway
-  wall(0.3, wallH, 9.25, -11, wallH/2, 26.625);   // north of doorway
-  wall(0.3, 1.2, 3.5, -11, wallH - 0.6, 22);       // lintel above doorway
-  // East wall — still solid
-  wall(0.3, wallH, 22, 11, wallH/2, 22);
-
-  // Library sign on side wall
-  const libSign = makeWallSign('KNOWLEDGE LIBRARY', 8, 1.6, '#3e2723', '#d4af37');
-  libSign.position.set(-10.83, 2.8, 22);
-  libSign.rotation.y = Math.PI / 2;
-  scene.add(libSign);
-
-  // Bookshelves along walls
-  scene.add(buildBookshelf(-10.5, 14, Math.PI / 2));
-  scene.add(buildBookshelf(-10.5, 18, Math.PI / 2));
-  scene.add(buildBookshelf(-10.5, 26, Math.PI / 2));
-  scene.add(buildBookshelf(10.5, 14, -Math.PI / 2));
-  scene.add(buildBookshelf(10.5, 18, -Math.PI / 2));
-  scene.add(buildBookshelf(10.5, 26, -Math.PI / 2));
-
-  // Reading tables
-  scene.add(buildTable(0, 16));
-  scene.add(buildTable(0, 22));
-  scene.add(buildChair(-1.6, 16, Math.PI / 2, 0x4e342e));
-  scene.add(buildChair(1.6, 16, -Math.PI / 2, 0x4e342e));
-  scene.add(buildChair(-1.6, 22, Math.PI / 2, 0x4e342e));
-  scene.add(buildChair(1.6, 22, -Math.PI / 2, 0x4e342e));
-
-  scene.add(buildLamp(0, 16));
-  scene.add(buildLamp(0, 22));
-
-  scene.add(buildPlant(-9.8, 13));
-  scene.add(buildPlant(9.8, 13));
-  scene.add(buildPlant(-9.8, 30));
-  scene.add(buildPlant(9.8, 30));
-
-  // Door from zone 2 → zone 3
-  // Library→next door: gates on the test of the chapter at CURRICULUM[1]
-  // (new ch02) and is labelled by the next zone's theme title — both
-  // follow whatever ordering the curriculum currently has.
+  // Door from zone 2 (library) → zone 3 — labelled by whichever
+  // chapter is at the next CURRICULUM position after the reshuffle.
   {
     const gateChapter = (window.CURRICULUM || [])[1];
     const nextChapter = (window.CURRICULUM || [])[2];
@@ -1658,30 +1564,11 @@ function buildWorld() {
     registerDoor(scene, 33, gateId, nextTitle);
   }
 
-  // ─── Floor 1 zones 3 - 4 (ch03 + ch04, generated from ZONE_THEMES) ───────
-  // Chapters 5+ live on floors 2-4 in compact office rooms (built below).
-  // Floor-1 ch03 and ch04 rooms now live to the WEST of the atrium /
-  // library (2×2 layout) rather than as a long northward corridor. Build
-  // them in their new positions instead of buildGenericZone(2/3).
-  buildFloor1WestRoom(2, -22, 0);    // Files (CURRICULUM[2]) — west of atrium
-  buildFloor1WestRoom(3, -22, 22);   // Plan Mode (CURRICULUM[3]) — west of library
-
-  // ─── Library ceiling (Reception is now an atrium, built later) ────────────
-  try { buildLibraryCeiling(scene); } catch (e) { console.warn('library ceiling failed', e); }
-
-  // ─── Depth: windows + skyline + library arched window ──────────────────────
-  // Note: the planned hallway-peek feature was skipped — see
-  // NIGHT_RUN_NOTES_ENVIRONMENT.md for why (it conflicted with the
-  // existing room layout). Windows + skyline + Library doorway already
-  // give plenty of depth signal.
-  try { receptionWindows = buildReceptionWindows(scene); } catch (e) { console.warn('reception windows failed', e); }
-  try { libraryWindow    = buildLibraryArchedWindow(scene); } catch (e) { console.warn('library window failed', e); }
-
-  // ─── Decoration density passes ──────────────────────────────────────────────
-  decoTickers = [];
-  try { decorateReception(scene, decoTickers); } catch (e) { console.warn('reception deco failed', e); }
-  try { decorateLibrary(scene, decoTickers);   } catch (e) { console.warn('library deco failed', e); }
-  try { buildReceptionCenterpiece(scene, decoTickers); } catch (e) { console.warn('centerpiece failed', e); }
+  // West-wing rooms — shell (floor / walls / sign / accent strip) is
+  // theme-derived per ZONE_THEMES[idx] and stays in code. Each call
+  // also loads its room's furniture from window.ROOM_BY_ID(...).
+  buildFloor1WestRoom(2, -22, 0);    // Files       (CURRICULUM[2])
+  buildFloor1WestRoom(3, -22, 22);   // Plan Mode   (CURRICULUM[3])
 
   // ─── Interactable objects (Pillar 2) — driven by lessonRegistry ──────────
   // Each chapter's delivery config either spawns an object or stays
@@ -1726,18 +1613,8 @@ function buildWorld() {
     }
   }
 
-  // ─── Atrium upgrade — tall ceiling, marble, chandelier, glass walls ──────
-  try {
-    const atrium = buildAtrium(scene, { mobile: isMobile() });
-    if (atrium?.tickers) for (const t of atrium.tickers) decoTickers.push(t);
-  } catch (e) { console.warn('atrium failed', e); }
-
-  // ─── Glass elevator — visible centerpiece of the atrium ──────────────────
-  try {
-    const elev = buildElevator(scene, { mobile: isMobile() });
-    if (elev?.tick) decoTickers.push((dt, now) => elev.tick(dt, now));
-    elevatorRef = elev;
-  } catch (e) { console.warn('elevator failed', e); }
+  // Atrium + elevator now load via the reception room's `atrium` and
+  // `elevator` builder entries in data/rooms.js (run by loadRoom above).
 
   registerStaticColliders();
 
@@ -1962,8 +1839,18 @@ function buildFloorOffice(floorIdx) {
   sign.userData.floor = floorIdx;
   scene.add(sign);
 
-  // Simple chapter-cluster desks: one buildDesk per chapter slot.
-  // Cluster centers at the 4 corners of the room interior.
+  // ── Chapter-cluster desks from data (data/rooms.js → office_floor<N>) ──
+  // Each desk lives at the same {±5.5, 0, ±5.5} slot per floor; the
+  // loader translates Y by floorBaseY(floorIdx) so the data can stay
+  // floor-relative.
+  const room = window.ROOM_BY_ID && window.ROOM_BY_ID(`office_floor${floorIdx}`);
+  if (room) {
+    loadRoom(scene, room, { scene, decoTickers, yOffset: y0 });
+  }
+
+  // Chapter label signs above each desk — theme-coupled (per chapter
+  // accent colour + title pulled from ZONE_THEMES and CURRICULUM), so
+  // these stay in code rather than data.
   const slots = [
     { x: -5.5, z: -5.5, face: 0 },
     { x:  5.5, z: -5.5, face: 0 },
@@ -1972,11 +1859,6 @@ function buildFloorOffice(floorIdx) {
   ];
   for (let s = 0; s < CHAPTERS_PER_FLOOR; s++) {
     const slot = slots[s];
-    const desk = buildDesk(slot.x, slot.z, slot.face, 1.6, 0.8);
-    desk.position.y = y0;
-    desk.traverse((o) => { o.userData.floor = floorIdx; });
-    scene.add(desk);
-    // Chapter label sign above the desk
     const chapterNum = (floorIdx - 1) * CHAPTERS_PER_FLOOR + s + 1;
     const chTheme = ZONE_THEMES[chapterNum - 1];
     const chTitle = chTheme?.title || (window.CURRICULUM?.[chapterNum - 1]?.title) || `Chapter ${chapterNum}`;
@@ -2233,13 +2115,15 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
   sign.rotation.y = Math.PI / 2;
   scene.add(sign);
 
-  // Generic decor — central table + lamp + 4 corner plants
-  scene.add(buildTable(centerX, centerZ));
-  scene.add(buildPlant(centerX - 9.5, centerZ - 9.5));
-  scene.add(buildPlant(centerX + 9.5, centerZ - 9.5));
-  scene.add(buildPlant(centerX - 9.5, centerZ + 9.5));
-  scene.add(buildPlant(centerX + 9.5, centerZ + 9.5));
-  scene.add(buildLamp(centerX, centerZ));
+  // Generic decor — central table + lamp + 4 corner plants. Loaded
+  // from data/rooms.js (id 'west_files' or 'west_planmode' depending
+  // on idx); the shell above stays in code because the theme drives
+  // every colour/metalness value.
+  const roomId = idx === 2 ? 'west_files' : (idx === 3 ? 'west_planmode' : null);
+  if (roomId && window.ROOM_BY_ID) {
+    const room = window.ROOM_BY_ID(roomId);
+    if (room) loadRoom(scene, room, { scene, decoTickers });
+  }
 
   // Themed accent strip
   const accentColor = parseInt(theme.accent.replace('#',''), 16);
