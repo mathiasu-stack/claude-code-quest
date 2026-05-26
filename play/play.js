@@ -24,7 +24,7 @@ import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
 import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260524d';
 import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
-import { decorateReception } from './decorations/reception.js?v=20260526b';
+import { decorateReception } from './decorations/reception.js?v=20260526e';
 import { decorateLibrary } from './decorations/library.js?v=20260526d';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526d';
@@ -242,7 +242,13 @@ const ZONE_THEMES = (window.CURRICULUM || []).map(c => ZONE_THEMES_BY_ID[c.id] |
 const NAME_FIRST = ['Aiko','Ben','Carmen','Dario','Elena','Felix','Greta','Hassan','Imani','Joel','Kira','Lars','Maya','Nikhil','Omar','Priya','Quinn','Rita','Sven','Tara','Uma','Vince','Wren','Xander','Yara','Zane','Anna','Bilal','Camille','Diego','Esme','Farid','Gabi','Hugo','Iris','Jin','Karim'];
 const NAME_LAST = ['Chen','Diaz','Hassan','Kim','Liu','Mehta','Nakamura','Olsen','Park','Rao','Singh','Tanaka','Volkov','Wong','Zhang','Patel','Garcia','Lopez','Khan','Hassan','Andersson','Dubois','Rossi','Schmidt'];
 const PORTRAITS = ['👩‍💼','👨‍💼','🧑‍💼','👩‍💻','👨‍💻','🧑‍💻','👩‍🔬','👨‍🔬','👩‍🏫','👨‍🏫','🧑‍🚀','👨‍🚀','👩‍🚀','🧑‍🎨','👨‍🔧','👩‍🔧','👨‍⚕️','👩‍⚕️','👨‍🍳','👩‍🍳'];
-const ROLES_LESSON = ['Senior Engineer','Tech Lead','Architect','Specialist','Principal','Researcher','Trainer','Practitioner','Coach','Engineer','Strategist','Operator','Maintainer','Designer','Reviewer'];
+// Role pool for the procedurally-generated NPCs. Each string MUST NOT
+// exactly match any player-rank label in the RANKS array above (Intern,
+// Junior Hire, Associate, Engineer, Senior, Lead, Principal, Director)
+// or the NPC ends up showing the player-tier badge text instead of its
+// role — the Diana-as-Intern bug. Audit data::1.1 enforces this.
+// 'Engineer' → 'Staff Engineer', 'Principal' → 'Principal Engineer'.
+const ROLES_LESSON = ['Senior Engineer','Tech Lead','Architect','Specialist','Principal Engineer','Researcher','Trainer','Practitioner','Coach','Staff Engineer','Strategist','Operator','Maintainer','Designer','Reviewer'];
 const SKIN_COLORS = [0xfdd9b5, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524];
 const HAIR_COLORS = [0x000000, 0x1a1a1a, 0x3e2723, 0x5d4037, 0x8b6914, 0xb87333, 0xc0c0c0, 0xb87333, 0x4a2c0f];
 const HAIR_STYLES = ['short','long','bun','short','long','short'];

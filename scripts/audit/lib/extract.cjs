@@ -109,9 +109,26 @@ function lineMap(src, base) {
 // lessonId/testId, kind). Used to enumerate the NPCs created for
 // chapters 3-16 by the procedural generator.
 
-const NAME_FIRST = ['Aiko','Ben','Carmen','Dario','Elena','Felix','Greta','Hassan','Imani','Joel','Kira','Lars','Maya','Nikhil','Omar','Priya','Quinn','Rita','Sven','Tara','Uma','Vince','Wren','Xander','Yara','Zane','Anna','Bilal','Camille','Diego','Esme','Farid','Gabi','Hugo','Iris','Jin','Karim'];
-const NAME_LAST = ['Chen','Diaz','Hassan','Kim','Liu','Mehta','Nakamura','Olsen','Park','Rao','Singh','Tanaka','Volkov','Wong','Zhang','Patel','Garcia','Lopez','Khan','Hassan','Andersson','Dubois','Rossi','Schmidt'];
-const ROLES_LESSON = ['Senior Engineer','Tech Lead','Architect','Specialist','Principal','Researcher','Trainer','Practitioner','Coach','Engineer','Strategist','Operator','Maintainer','Designer','Reviewer'];
+// Parse these arrays out of play.js at audit time so the audit can't
+// drift from the live data. Each is matched by name then bracket-balanced.
+function parseStringArray(src, name) {
+  const re = new RegExp(`const ${name}\\s*=\\s*\\[`);
+  const m = src.match(re);
+  if (!m) throw new Error(`${name} not found in play.js`);
+  let i = m.index + m[0].length, depth = 1;
+  while (i < src.length && depth > 0) {
+    if (src[i] === '[') depth++;
+    else if (src[i] === ']') depth--;
+    i++;
+  }
+  // eslint-disable-next-line no-new-func
+  return new Function(`return [${src.slice(m.index + m[0].length, i - 1)}];`)();
+}
+
+const _playSrc = readFile('play/play.js');
+const NAME_FIRST = parseStringArray(_playSrc, 'NAME_FIRST');
+const NAME_LAST = parseStringArray(_playSrc, 'NAME_LAST');
+const ROLES_LESSON = parseStringArray(_playSrc, 'ROLES_LESSON');
 const pick = (arr, seed) => arr[(seed * 9301 + 49297) % arr.length];
 
 // play.js:HAND_BUILT_CHAPTER_IDS — chapters whose NPCs are in the

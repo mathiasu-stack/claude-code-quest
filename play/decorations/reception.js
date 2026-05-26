@@ -217,11 +217,17 @@ export function decorateReception(scene, decoTickers) {
   // Moved south to z=+5 so it sits clear of the stair footprint, in the
   // open wall section between the stair (z<+0.7) and the doorway corner
   // (z>+9). The other three posters were already clear.
+  // East-wall posters must clear the windows at z=-3, 0, +3 (each 2.4m
+  // wide so they span ±1.2 around their center). SHIP IT was at z=0
+  // directly over the middle window — moved to z=+5.5, the open
+  // stretch between the last window (z=+3, ends at z=+4.2) and the
+  // BE KIND poster (z=+8, starts at z=+7.2). Caught by audit
+  // spatial::3.1.
   const posters = [
-    { title: 'GROW',      sub: 'with Kedash',     pos: [-10.83, 2.2,  5], rot: Math.PI / 2 },
-    { title: 'SHIP IT',   sub: 'every Friday',    pos: [10.83, 2.2,  0], rot: -Math.PI / 2 },
-    { title: 'STAY',      sub: 'curious',         pos: [-10.83, 2.2,  8], rot: Math.PI / 2 },
-    { title: 'BE KIND',   sub: 'always',          pos: [10.83, 2.2,  8], rot: -Math.PI / 2 },
+    { title: 'GROW',      sub: 'with Kedash',     pos: [-10.83, 2.2,  5  ], rot: Math.PI / 2 },
+    { title: 'SHIP IT',   sub: 'every Friday',    pos: [ 10.83, 2.2,  5.5], rot: -Math.PI / 2 },
+    { title: 'STAY',      sub: 'curious',         pos: [-10.83, 2.2,  8  ], rot: Math.PI / 2 },
+    { title: 'BE KIND',   sub: 'always',          pos: [ 10.83, 2.2,  8  ], rot: -Math.PI / 2 },
   ];
   for (const p of posters) {
     const tex = buildPosterTexture(p.title, p.sub);
