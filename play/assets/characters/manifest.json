@@ -56,6 +56,16 @@
       "yOffset": 0.0
     },
     {
+      "id": "executive_male_01",
+      "file": "marcus.glb",
+      "available": true,
+      "tags": ["male", "business", "executive", "rigged"],
+      "scale": 1.0,
+      "yOffset": 0.0,
+      "stanceFactor": 0.65,
+      "extraAnimations": ["marcus_walk.glb", "marcus_run.glb"]
+    },
+    {
       "id": "casual_male_03",
       "file": "Character_Casual_03.glb",
       "available": false,

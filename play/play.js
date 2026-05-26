@@ -3829,6 +3829,7 @@ async function _preloadGltfAssets() {
     'business_female_01', 'business_female_02', 'business_female_03',
     'glasses_female_01', 'beard_male_01', 'hijab_female_01',
     'hoodie_male_01',
+    'executive_male_01',
   ];
   await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
   await loader.loadAnimations();   // optional shared anim pack

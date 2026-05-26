@@ -11,7 +11,7 @@
 export const NPC_CASTING = {
   player:  { gltfAssetId: 'hero',               fallbackAssetId: 'hoodie_male_01' },
   linda:   { gltfAssetId: 'business_female_01', fallbackAssetId: 'casual_female_01' },
-  marcus:  { gltfAssetId: 'casual_male_02',     fallbackAssetId: 'hoodie_male_01' },
+  marcus:  { gltfAssetId: 'executive_male_01',  fallbackAssetId: 'casual_male_02' },
   aisha:   { gltfAssetId: 'glasses_female_01',  fallbackAssetId: 'casual_female_01' },
   kenji:   { gltfAssetId: 'casual_male_03',     fallbackAssetId: 'casual_male_01' },
   diana:   { gltfAssetId: 'business_female_02', fallbackAssetId: 'casual_female_01' },
