@@ -396,6 +396,26 @@ let occluderWalls = [];
 // Wall meshes collected after build, used by the camera to clamp distance
 // so the orbit doesn't punch through an exterior wall.
 let cameraWalls = [];
+// Per-frame cache of the floor-filtered cameraWalls list. Invalidated
+// when cameraWalls itself changes (loadFloor → refreshCameraWalls) or
+// when currentFloor changes. Avoids allocating a fresh Array.filter
+// result every frame for the camera-occlusion raycast.
+let _cameraWallsForCurrentFloor = null;
+let _cameraWallsCacheFloor = -1;
+let _cameraWallsCacheVersion = 0;
+function _bumpCameraWallsVersion() {
+  _cameraWallsCacheVersion++;
+}
+function _filteredCameraWalls() {
+  if (_cameraWallsCacheFloor === currentFloor && _cameraWallsForCurrentFloor) {
+    return _cameraWallsForCurrentFloor;
+  }
+  _cameraWallsForCurrentFloor = cameraWalls.filter(w =>
+    !w.userData?.floor || w.userData.floor === currentFloor || w.userData.crossFloor
+  );
+  _cameraWallsCacheFloor = currentFloor;
+  return _cameraWallsForCurrentFloor;
+}
 const _camRay = new THREE.Raycaster();
 const _camRayDir = new THREE.Vector3();
 const _camRayOrigin = new THREE.Vector3();
@@ -1501,11 +1521,14 @@ function buildWorld() {
 
   // Reception desk — Meshy GLB if loaded, else the original brown box.
   // The new corporate-reception desk source is squarish (1.9×1.07×1.14m)
-  // so we use stretch to spread it across the wider reception slot
-  // (3.0×1.2×1.05m). Slight aspect distortion is acceptable; alternative
-  // (uniform-min scale) ends up barely wider than Linda is tall.
+  // and gets non-uniform-scaled to fit the reception slot. Previous
+  // stretch (3.0×1.05×1.2) was too aggressive on X (1.58×): distorted
+  // the Kedash branding and revealed internal/decorative geometry
+  // (drawer voids, side wings) as visible dark patches near the floor.
+  // Reduced to 2.4×1.0×1.0 — still reads as a wide counter, much less
+  // distortion (X-stretch is now 1.26×).
   const recDeskGlb = makeDecoration('reception_desk',
-    { width: 3.0, depth: 1.2, height: 1.05, stretch: true });
+    { width: 2.4, height: 1.0, depth: 1.0, stretch: true });
   if (recDeskGlb) {
     recDeskGlb.position.set(0, 0, -8);
     scene.add(recDeskGlb);
@@ -1753,6 +1776,7 @@ function buildWorld() {
     const tall = sy >= 2.5;
     if (thinHoriz && tall) cameraWalls.push(obj);
   });
+  _cameraWallsCacheFloor = -1;
 }
 
 // ─── Surface-attachment rule ────────────────────────────────────────────────
@@ -2875,6 +2899,8 @@ function refreshCameraWalls() {
     const tall = sy >= 2.5;
     if (thinHoriz && tall) cameraWalls.push(obj);
   });
+  // Invalidate the floor-filtered cache so the next frame rebuilds it.
+  _cameraWallsCacheFloor = -1;
 }
 
 // ─── Renderer & camera ───────────────────────────────────────────────────────
@@ -3510,11 +3536,11 @@ function update(dt) {
     _camRay.set(_camRayOrigin, _camRayDir);
     _camRay.near = 0;
     _camRay.far = cameraDist;
-    // Filter by current floor visibility so other-floor walls (which are
-    // hidden but still in the scene graph) don't block the camera.
-    const candidates = cameraWalls.filter(w =>
-      w.visible && (!w.userData?.floor || w.userData.floor === currentFloor || w.userData.crossFloor)
-    );
+    // Floor-filter cached per (cameraWalls list × currentFloor). The
+    // `.visible` predicate was previously inside the filter — moved
+    // into the raycast loop below since visibility can flip per frame
+    // (during fade transitions) but floor membership doesn't.
+    const candidates = _filteredCameraWalls().filter(w => w.visible);
     const hits = _camRay.intersectObjects(candidates, false);
     if (hits.length) {
       effDist = Math.max(CAM_DIST_MIN, hits[0].distance - 0.35);
