@@ -376,6 +376,10 @@ const PITCH_MAX =  0.95;    // ~+54° (camera looks down from above)
 // auto-follow yaw drift so the manual drag isn't fought by the
 // player-heading-based lerp.
 let mouseLook = false;
+// Active touch IDs that are panning the camera. Used by the touch-swipe
+// look path (mobile analog of middle-mouse drag). Auto-follow is
+// suppressed whenever this is non-empty.
+const cameraTouches = new Map();
 // Third-person camera distance — adjustable with the mouse wheel.
 let cameraDist = 6.5;
 const CAM_DIST_MIN = 2.5;
@@ -405,6 +409,7 @@ let interactObjects = []; // built interactable objects with per-frame update()
 let raf = null;
 let resizeListener, keyDownListener, keyUpListener, wheelListener;
 let mouseDownListener, mouseMoveListener, mouseUpListener;
+let cameraTouchStartListener, cameraTouchMoveListener, cameraTouchEndListener;
 let container, promptEl, dialogueEl;
 let inputLocked = false;
 let zoneDoors = []; // each: { mesh, label, gateChapter }
@@ -2930,7 +2935,44 @@ function setupInput() {
   window.addEventListener('mouseup', mouseUpListener);
   // Also release if pointer leaves the document (some browsers
   // suppress mouseup over chrome).
-  window.addEventListener('blur', () => { mouseLook = false; });
+  window.addEventListener('blur', () => { mouseLook = false; cameraTouches.clear(); });
+
+  // Touch swipe → look around (mobile analog of middle-mouse drag).
+  // Listeners attached to the WebGL canvas only, so touches on the
+  // joystick / action buttons / modals (separate DOM elements over
+  // the canvas) don't trigger camera-look. Multi-touch supported:
+  // each touch identifier tracked independently so the joystick
+  // touch on the left half doesn't block a swipe on the right half.
+  const TOUCH_YAW_RATE   = 0.005;
+  const TOUCH_PITCH_RATE = 0.005;
+  cameraTouchStartListener = (e) => {
+    if (inputLocked) return;
+    for (const t of e.changedTouches) {
+      cameraTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+  };
+  cameraTouchMoveListener = (e) => {
+    if (inputLocked) return;
+    for (const t of e.changedTouches) {
+      const prev = cameraTouches.get(t.identifier);
+      if (!prev) continue;
+      const dx = t.clientX - prev.x;
+      const dy = t.clientY - prev.y;
+      cameraYaw   -= dx * TOUCH_YAW_RATE;
+      cameraPitch += dy * TOUCH_PITCH_RATE;
+      if (cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN;
+      if (cameraPitch > PITCH_MAX) cameraPitch = PITCH_MAX;
+      cameraTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+    e.preventDefault();    // prevent the browser's pull-to-refresh / swipe gestures
+  };
+  cameraTouchEndListener = (e) => {
+    for (const t of e.changedTouches) cameraTouches.delete(t.identifier);
+  };
+  renderer.domElement.addEventListener('touchstart', cameraTouchStartListener, { passive: true });
+  renderer.domElement.addEventListener('touchmove', cameraTouchMoveListener, { passive: false });
+  renderer.domElement.addEventListener('touchend', cameraTouchEndListener);
+  renderer.domElement.addEventListener('touchcancel', cameraTouchEndListener);
 
   const j = document.getElementById('play-joystick');
   const t = document.getElementById('play-joystick-thumb');
@@ -3394,7 +3436,7 @@ function update(dt) {
     // block doesn't run, so manual Q/E rotation is preserved. Skipped
     // entirely while the user is mid-mouse-look so the drag isn't
     // fought.
-    if (!mouseLook) {
+    if (!mouseLook && cameraTouches.size === 0) {
       const targetYaw = player.rotation.y;
       let dYaw = ((targetYaw - cameraYaw + Math.PI) % (Math.PI * 2)) - Math.PI;
       if (dYaw < -Math.PI) dYaw += Math.PI * 2;
@@ -4066,6 +4108,13 @@ export function stop() {
   if (mouseDownListener) window.removeEventListener('mousedown', mouseDownListener);
   if (mouseMoveListener) window.removeEventListener('mousemove', mouseMoveListener);
   if (mouseUpListener) window.removeEventListener('mouseup', mouseUpListener);
+  if (renderer?.domElement && cameraTouchStartListener) {
+    renderer.domElement.removeEventListener('touchstart', cameraTouchStartListener);
+    renderer.domElement.removeEventListener('touchmove', cameraTouchMoveListener);
+    renderer.domElement.removeEventListener('touchend', cameraTouchEndListener);
+    renderer.domElement.removeEventListener('touchcancel', cameraTouchEndListener);
+  }
+  cameraTouches.clear();
   if (renderer) {
     if (renderer.domElement?.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     renderer.dispose();
