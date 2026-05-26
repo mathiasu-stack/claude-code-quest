@@ -117,6 +117,16 @@ function dispatch(obj, scene, ctx) {
   }
 }
 
+// Public single-entry dispatcher — used by the in-game editor's
+// "Add Item" path to place a freshly-created entry without re-loading
+// the whole room. Returns the same shape dispatch() does (Object3D,
+// { root, tickers }, or null). Caller is responsible for setting
+// userData._roomId / ._roomEntryIndex / ._yOffset and adding the
+// result to scene if it isn't already.
+export function dispatchEntry(obj, scene, ctx = {}) {
+  return dispatch(obj, scene, ctx);
+}
+
 function buildDecorationEntry(obj) {
   const node = makeDecoration(obj.id, obj.size || {});
   if (!node) return null;

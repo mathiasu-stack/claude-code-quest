@@ -32,7 +32,7 @@ import { preloadDecorations, makeDecoration, hasDecoration } from './decorations
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260526a';
 import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
-         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527a';
+         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527c';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -190,6 +190,10 @@ function floorForChapterId(chId) {
   return idx < 0 ? 1 : floorForChapterIdx(idx);
 }
 let currentFloor = 1;
+// Mirror currentFloor onto window so the in-game editor's "Add Item"
+// spawn picker can pick the right room without needing a play.js
+// import. Kept in sync with currentFloor changes below.
+try { if (typeof window !== 'undefined') window.__playCurrentFloor = currentFloor; } catch {}
 
 // ─── Zone layout ─────────────────────────────────────────────────────────────
 // Each zone is 22m wide and 22m deep. Zones extend along +Z.
@@ -3950,7 +3954,19 @@ export async function start(host) {
         },
       });
     },
-    onExit: () => exitRoomEdit(),
+    onExit: () => {
+      exitRoomEdit();
+      // Belt-and-suspenders reset: regardless of what the editor's
+      // own cleanup did, force every input-related module-scope flag
+      // back to its idle state. The previous reliance on the
+      // suspendGameInput closure release alone produced "can't move
+      // or rotate camera after Resume Play" reports.
+      inputLocked = false;
+      mouseLook = false;
+      if (cameraTouches?.clear) cameraTouches.clear();
+      for (const k in keys) keys[k] = false;
+      jumpRequested = false;
+    },
     onExport: () => exportRoomLayout(),
   });
 
@@ -4039,6 +4055,7 @@ async function requestFloorChange(targetFloor) {
   }
   setTimeout(() => {
     currentFloor = targetFloor;
+    try { window.__playCurrentFloor = currentFloor; } catch {}
     applyFloorVisibility();
     spawnPlayerOnFloor(targetFloor);
     updateBadgeHud();

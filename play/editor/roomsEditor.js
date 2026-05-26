@@ -31,6 +31,7 @@
 
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { dispatchEntry } from '../world/roomsLoader.js?v=20260527b';
 
 // ── Public API ───────────────────────────────────────────────────────
 
@@ -41,11 +42,24 @@ let _selected = null;   // tagged Object3D currently in TransformControls
 let _selectedEntry = null;  // the data entry the selected node maps to
 let _panelEl = null;
 let _toolbarEl = null;
+let _libraryModalEl = null;
 let _onWindowKeyDown = null;
 let _onCanvasPointerDown = null;
+let _onCanvasPointerMove = null;
+let _onCanvasPointerUp = null;
 let _onTransformChange = null;
 let _onObjectChange = null;
 let _onGameInputSuspendListeners = [];  // unsuspend fns
+
+// Free-drag state. Populated on pointerdown atop a tagged mesh, cleared
+// on pointerup. While set, pointermove projects the cursor onto a
+// horizontal plane at planeY and updates the node's XZ position so the
+// node tracks the cursor with a stable grab-point offset.
+let _dragMode = null;
+const _raycaster = new THREE.Raycaster();
+const _ndc = new THREE.Vector2();
+const _dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const _dragHit = new THREE.Vector3();
 
 export function isEditorActive() { return isActive; }
 
@@ -75,6 +89,7 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
   `;
   el.innerHTML = `
     <button class="ccq-ed-btn ccq-ed-toggle">✏️ Edit Rooms</button>
+    <button class="ccq-ed-btn ccq-ed-add"    style="display:none;">➕ Add Item</button>
     <button class="ccq-ed-btn ccq-ed-export" style="display:none;">📋 Export Layout</button>
     <button class="ccq-ed-btn ccq-ed-cancel" style="display:none;">✕ Cancel (reload)</button>
   `;
@@ -83,6 +98,7 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
   _toolbarEl = el;
 
   const toggleBtn = el.querySelector('.ccq-ed-toggle');
+  const addBtn    = el.querySelector('.ccq-ed-add');
   const exportBtn = el.querySelector('.ccq-ed-export');
   const cancelBtn = el.querySelector('.ccq-ed-cancel');
 
@@ -90,6 +106,7 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
     if (isActive) onExit?.();
     else onEnter?.();
   });
+  addBtn.addEventListener('click', () => showLibraryModal());
   exportBtn.addEventListener('click', () => onExport?.());
   cancelBtn.addEventListener('click', () => {
     if (confirm('Discard unsaved edits and reload?')) {
@@ -102,9 +119,11 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
 function setToolbarMode(editing) {
   if (!_toolbarEl) return;
   const toggleBtn = _toolbarEl.querySelector('.ccq-ed-toggle');
+  const addBtn    = _toolbarEl.querySelector('.ccq-ed-add');
   const exportBtn = _toolbarEl.querySelector('.ccq-ed-export');
   const cancelBtn = _toolbarEl.querySelector('.ccq-ed-cancel');
   toggleBtn.textContent = editing ? '🎮 Resume Play' : '✏️ Edit Rooms';
+  addBtn.style.display    = editing ? 'inline-block' : 'none';
   exportBtn.style.display = editing ? 'inline-block' : 'none';
   cancelBtn.style.display = editing ? 'inline-block' : 'none';
 }
@@ -154,37 +173,58 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
   };
   _transformControls.addEventListener('objectChange', _onObjectChange);
 
-  // Click handler on the WebGL canvas: raycast to select an object.
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
+  // Pointerdown: raycast, select, AND start free-drag on the mesh
+  // body. While dragging, the mesh tracks the cursor on a horizontal
+  // plane at its current Y. The TransformControls gizmo handles still
+  // work independently for fine-grain rotate; they take priority
+  // (transformControls.dragging short-circuits this handler).
   _onCanvasPointerDown = (e) => {
-    // Ignore clicks on the TransformControls handles themselves.
     if (_transformControls?.dragging) return;
-    // Only LMB (or single-touch).
     if (e.button !== undefined && e.button !== 0) return;
 
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-
-    const hits = raycaster.intersectObjects(scene.children, true);
+    _ndcFromEvent(e);
+    _raycaster.setFromCamera(_ndc, camera);
+    const hits = _raycaster.intersectObjects(scene.children, true);
+    let target = null;
     for (const hit of hits) {
-      // Ignore TransformControls helper meshes.
       if (isTransformHelper(hit.object)) continue;
       const tagged = findTaggedAncestor(hit.object);
-      if (tagged) { select(tagged); return; }
+      if (tagged) { target = tagged; break; }
     }
-    // Empty click — deselect.
-    select(null);
+    if (!target) {
+      select(null);
+      return;
+    }
+    if (target !== _selected) select(target);
+    beginFreeDrag(target, e);
   };
+  _onCanvasPointerMove = (e) => {
+    if (!_dragMode) return;
+    const hit = raycastDragPlane(e);
+    if (!hit) return;
+    _dragMode.node.position.x = hit.x + _dragMode.offsetX;
+    _dragMode.node.position.z = hit.z + _dragMode.offsetZ;
+    syncDataEntryFromSelection();
+    syncPanelFromSelection();
+  };
+  _onCanvasPointerUp = () => { _dragMode = null; };
   renderer.domElement.addEventListener('pointerdown', _onCanvasPointerDown);
+  renderer.domElement.addEventListener('pointermove', _onCanvasPointerMove);
+  renderer.domElement.addEventListener('pointerup',   _onCanvasPointerUp);
+  renderer.domElement.addEventListener('pointercancel', _onCanvasPointerUp);
 
-  // Esc closes the panel / deselects.
+  // Esc closes the panel / deselects. Del / Backspace deletes the
+  // selected entry. G/R toggle TransformControls mode.
   _onWindowKeyDown = (e) => {
+    // Don't intercept while focus is in an <input> (so panel typing
+    // doesn't trigger delete / mode switches).
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (e.key === 'Escape') select(null);
     if (e.key === 'g') _transformControls?.setMode('translate');
     if (e.key === 'r') _transformControls?.setMode('rotate');
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (_selected) { deleteSelected(); e.preventDefault(); }
+    }
   };
   window.addEventListener('keydown', _onWindowKeyDown);
 
@@ -197,17 +237,39 @@ export function exitEditMode() {
   if (!isActive) return;
   isActive = false;
   setToolbarMode(false);
+  _dragMode = null;
 
   if (_transformControls) {
-    _transformControls.detach();
-    _transformControls.removeEventListener('dragging-changed', _onTransformChange);
-    _transformControls.removeEventListener('objectChange', _onObjectChange);
-    _ctx.scene.remove(_transformControls);
-    _transformControls.dispose?.();
+    // Defensive cleanup — disable BEFORE detach so internal raycasts
+    // stop processing, then remove the gizmo's children manually in
+    // case dispose() leaves them behind in this Three.js version.
+    try { _transformControls.enabled = false; } catch {}
+    try { _transformControls.detach(); } catch {}
+    try { _transformControls.removeEventListener('dragging-changed', _onTransformChange); } catch {}
+    try { _transformControls.removeEventListener('objectChange', _onObjectChange); } catch {}
+    try { _ctx.scene.remove(_transformControls); } catch {}
+    // Also remove the gizmo's helper Object3D — in r166+ TransformControls
+    // is itself an Object3D wrapper but its internal _root sometimes
+    // stays parented even after scene.remove.
+    try {
+      if (_transformControls.children?.length) {
+        for (const child of [..._transformControls.children]) {
+          _transformControls.remove(child);
+        }
+      }
+    } catch {}
+    try { _transformControls.dispose?.(); } catch {}
     _transformControls = null;
   }
-  if (_ctx?.renderer?.domElement && _onCanvasPointerDown) {
-    _ctx.renderer.domElement.removeEventListener('pointerdown', _onCanvasPointerDown);
+  if (_ctx?.renderer?.domElement) {
+    const el = _ctx.renderer.domElement;
+    if (_onCanvasPointerDown) el.removeEventListener('pointerdown', _onCanvasPointerDown);
+    if (_onCanvasPointerMove) el.removeEventListener('pointermove', _onCanvasPointerMove);
+    if (_onCanvasPointerUp)   el.removeEventListener('pointerup',   _onCanvasPointerUp);
+    if (_onCanvasPointerUp)   el.removeEventListener('pointercancel', _onCanvasPointerUp);
+    // Best-effort: release any lingering pointer capture the gizmo
+    // may have grabbed during a drag.
+    try { el.releasePointerCapture?.(1); } catch {}
   }
   if (_onWindowKeyDown) window.removeEventListener('keydown', _onWindowKeyDown);
 
@@ -220,6 +282,7 @@ export function exitEditMode() {
   if (_ctx?.scene) _restoreFloorVisibility(_ctx.scene);
 
   if (_panelEl) _panelEl.style.display = 'none';
+  if (_libraryModalEl) _libraryModalEl.style.display = 'none';
   _selected = null;
   _selectedEntry = null;
   _ctx = null;
@@ -303,10 +366,11 @@ function refreshPanel() {
     _panelEl.innerHTML = `
       <div class="ccq-ed-h">Edit Rooms</div>
       <div class="ccq-ed-hint">
-        Click an object to select it.<br>
-        <kbd>G</kbd> translate · <kbd>R</kbd> rotate · <kbd>Esc</kbd> deselect.<br>
-        Compound builders (atrium, elevator, decorate_*) aren't directly editable —
-        only their top-level data entries.
+        Click + hold an object to drag it on the floor plane.<br>
+        Click once to select; gizmo handles work for fine moves + rotates.<br>
+        <kbd>G</kbd> translate · <kbd>R</kbd> rotate · <kbd>Esc</kbd> deselect · <kbd>Del</kbd> delete.<br>
+        <b>➕ Add Item</b> opens the library; spawn lands ~3 m in front of the camera.<br>
+        Compound builders (atrium, elevator, decorate_*) aren't directly editable.
       </div>
     `;
     return;
@@ -372,7 +436,10 @@ function refreshPanel() {
     ` : `<div class="ccq-ed-hint">Size for "${entry.type}" entries is not editable — adjust args in data/rooms.js directly.</div>`}
 
     <div class="ccq-ed-divider"></div>
-    <button class="ccq-ed-btn ccq-ed-btn-sm" id="ccq-deselect">Deselect</button>
+    <div style="display:flex; gap:6px;">
+      <button class="ccq-ed-btn ccq-ed-btn-sm" id="ccq-deselect" style="flex:1;">Deselect</button>
+      <button class="ccq-ed-btn ccq-ed-btn-sm ccq-ed-danger" id="ccq-delete" style="flex:1;">🗑 Delete</button>
+    </div>
   `;
 
   _panelEl.querySelector('#ccq-pos-x').addEventListener('input', onPosInput);
@@ -388,6 +455,7 @@ function refreshPanel() {
     }
   }
   _panelEl.querySelector('#ccq-deselect').addEventListener('click', () => select(null));
+  _panelEl.querySelector('#ccq-delete').addEventListener('click', deleteSelected);
 }
 
 function onPosInput(e) {
@@ -650,6 +718,274 @@ function fmtNum(n) {
   return s.replace(/\.?0+$/, '');
 }
 
+// ── Free-drag (click-and-hold a mesh body, drag on ground plane) ─────
+
+function _ndcFromEvent(e) {
+  const rect = _ctx.renderer.domElement.getBoundingClientRect();
+  _ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  _ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+// Project a pointer event onto a horizontal plane at the selected
+// node's current Y. Returns null if the ray is parallel-ish.
+function raycastDragPlane(e) {
+  if (!_ctx || !_dragMode) return null;
+  _ndcFromEvent(e);
+  _raycaster.setFromCamera(_ndc, _ctx.camera);
+  _dragPlane.constant = -_dragMode.planeY;
+  _dragHit.set(0, 0, 0);
+  return _raycaster.ray.intersectPlane(_dragPlane, _dragHit) ? _dragHit : null;
+}
+
+function beginFreeDrag(node, e) {
+  if (!_ctx) return;
+  const planeY = node.position.y;
+  _ndcFromEvent(e);
+  _raycaster.setFromCamera(_ndc, _ctx.camera);
+  _dragPlane.constant = -planeY;
+  _dragHit.set(0, 0, 0);
+  if (!_raycaster.ray.intersectPlane(_dragPlane, _dragHit)) return;
+  _dragMode = {
+    node,
+    planeY,
+    offsetX: node.position.x - _dragHit.x,
+    offsetZ: node.position.z - _dragHit.z,
+  };
+}
+
+// ── Delete selected entry ────────────────────────────────────────────
+
+function deleteSelected() {
+  if (!_selected || !_selectedEntry || !_ctx) return;
+  const { room, index } = _selectedEntry;
+  const node = _selected;
+
+  // Detach gizmo + remove mesh from scene.
+  try { _transformControls?.detach(); } catch {}
+  try { _ctx.scene.remove(node); } catch {}
+
+  // Splice the entry out of the room's data array.
+  room.objects.splice(index, 1);
+
+  // Re-index every node still tagged with this room — anything that
+  // was at a higher index now shifts down by 1.
+  _ctx.scene.traverse((o) => {
+    if (o.userData?._roomId !== room.id) return;
+    if (typeof o.userData._roomEntryIndex !== 'number') return;
+    if (o.userData._roomEntryIndex > index) {
+      o.userData._roomEntryIndex -= 1;
+    }
+  });
+
+  _selected = null;
+  _selectedEntry = null;
+  _dragMode = null;
+  refreshPanel();
+}
+
+// ── Add Item library modal ───────────────────────────────────────────
+
+const LIBRARY_CATALOG = {
+  Walls: [
+    { label: 'Wall — 1 m × 3.8 m', template: { type: 'wall', size: { w: 1, h: 3.8, d: 0.3 } } },
+    { label: 'Wall — 3 m × 3.8 m', template: { type: 'wall', size: { w: 3, h: 3.8, d: 0.3 } } },
+    { label: 'Wall — 5 m × 3.8 m', template: { type: 'wall', size: { w: 5, h: 3.8, d: 0.3 } } },
+    { label: 'Wall — 10 m × 3.8 m', template: { type: 'wall', size: { w: 10, h: 3.8, d: 0.3 } } },
+    { label: 'Wall — lintel (3.5 × 1.2)', template: { type: 'wall', size: { w: 3.5, h: 1.2, d: 0.3 } } },
+  ],
+  Floors: [
+    { label: 'Floor plate — 5 × 5 m', template: { type: 'floor_plate', size: { w: 5, d: 5 }, color: 0xa1887f } },
+    { label: 'Floor plate — 10 × 10 m', template: { type: 'floor_plate', size: { w: 10, d: 10 }, color: 0xa1887f } },
+    { label: 'Floor plate — 22 × 22 m (room)', template: { type: 'floor_plate', size: { w: 22, d: 22 }, color: 0x9aa9bc } },
+    { label: 'Carpet runner', template: { type: 'floor_plate', size: { w: 2.4, d: 18 }, color: 0xc9a44c, metalness: 0.85, roughness: 0.18 } },
+  ],
+  Signs: [
+    { label: 'Wall sign — short',  template: { type: 'wall_sign', text: 'NEW SIGN', size: { width: 4, height: 0.9 } } },
+    { label: 'Wall sign — large',  template: { type: 'wall_sign', text: 'BIG SIGN', size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' } },
+    { label: 'Poster — corporate', template: { type: 'poster', title: 'NEW POSTER', sub: 'subtitle', size: { width: 1.6, height: 2.4 } } },
+  ],
+  Furniture: [
+    { label: 'Chair',          template: { type: 'builder', fn: 'chair' } },
+    { label: 'Desk',           template: { type: 'builder', fn: 'desk', args: { w: 1.6, d: 0.8 } } },
+    { label: 'Desk — wide',    template: { type: 'builder', fn: 'desk', args: { w: 2.2, d: 0.8 } } },
+    { label: 'Monitor',        template: { type: 'builder', fn: 'monitor' } },
+    { label: 'Table',          template: { type: 'builder', fn: 'table', args: { w: 2.2 } } },
+    { label: 'Lamp',           template: { type: 'builder', fn: 'lamp' } },
+    { label: 'Plant',          template: { type: 'builder', fn: 'plant' } },
+    { label: 'Couch',          template: { type: 'builder', fn: 'couch' } },
+    { label: 'Water cooler',   template: { type: 'builder', fn: 'water_cooler' } },
+    { label: 'Filing cabinet', template: { type: 'builder', fn: 'filing_cabinet' } },
+    { label: 'Bookshelf',      template: { type: 'builder', fn: 'bookshelf' } },
+  ],
+  Decorations: [
+    { label: 'Desk (Meshy)',         template: { type: 'decoration', id: 'desk',           size: { width: 1.6, depth: 0.8, height: 0.78 } } },
+    { label: 'Chair (Meshy)',        template: { type: 'decoration', id: 'chair',          size: { width: 0.6, depth: 0.6, height: 1.1 } } },
+    { label: 'Monitor (Meshy)',      template: { type: 'decoration', id: 'monitor',        size: { width: 0.6, height: 0.55, depth: 0.2 } } },
+    { label: 'Reception desk (Meshy)', template: { type: 'decoration', id: 'reception_desk', size: { width: 3.0, depth: 1.2, height: 1.05 } } },
+    { label: 'Door (Meshy)',         template: { type: 'decoration', id: 'door',           size: { width: 1.1, height: 2.3, depth: 0.1 } } },
+    { label: 'Window (Meshy)',       template: { type: 'decoration', id: 'window',         size: { width: 2.4, height: 1.8, depth: 0.15 } } },
+    { label: 'Cabinet (Meshy)',      template: { type: 'decoration', id: 'cabinet',        size: { width: 0.6, height: 1.4, depth: 0.5 } } },
+    { label: 'Plant (Meshy)',        template: { type: 'decoration', id: 'plant',          size: { width: 0.7, depth: 0.7, height: 1.4 } } },
+    { label: 'Table (Meshy)',        template: { type: 'decoration', id: 'table',          size: { width: 2.2, depth: 1.2, height: 0.78 } } },
+    { label: 'Floor mat (Meshy)',    template: { type: 'decoration', id: 'floor_mat',      size: { width: 1.6, depth: 1.0 } } },
+    { label: 'Ceiling lamp (Meshy)', template: { type: 'decoration', id: 'ceiling_lamp',   size: { width: 0.4, height: 0.7 } } },
+    { label: 'Couch (Meshy)',        template: { type: 'decoration', id: 'couch',          size: { width: 2.2, depth: 0.9, height: 0.95 } } },
+    { label: 'Bookshelf (Meshy)',    template: { type: 'decoration', id: 'bookshelf',      size: { width: 2.2, height: 2.6, depth: 0.45 } } },
+    { label: 'Water cooler (Meshy)', template: { type: 'decoration', id: 'water_cooler',   size: { width: 0.45, height: 1.4, depth: 0.45 } } },
+    { label: 'Laptop (Meshy)',       template: { type: 'decoration', id: 'laptop',         size: { width: 0.36, height: 0.26, depth: 0.26 } } },
+    { label: 'Table lamp (Meshy)',   template: { type: 'decoration', id: 'table_lamp',     size: { width: 0.35, height: 0.55, depth: 0.35 } } },
+    { label: 'Hanging plant (Meshy)',template: { type: 'decoration', id: 'hanging_plant',  size: { width: 0.5,  height: 0.8, depth: 0.5 } } },
+    { label: 'Succulent (Meshy)',    template: { type: 'decoration', id: 'succulent',      size: { width: 0.18, height: 0.18, depth: 0.18 } } },
+    { label: 'Mug (Meshy)',          template: { type: 'decoration', id: 'mug',            size: { width: 0.1,  height: 0.12, depth: 0.1 } } },
+    { label: 'Pen cup (Meshy)',      template: { type: 'decoration', id: 'pen_cup',        size: { width: 0.1,  height: 0.2, depth: 0.1 } } },
+    { label: 'Stapler (Meshy)',      template: { type: 'decoration', id: 'stapler',        size: { width: 0.18, height: 0.07, depth: 0.08 } } },
+    { label: 'Paper stack (Meshy)',  template: { type: 'decoration', id: 'paper_stack',    size: { width: 0.2,  height: 0.04, depth: 0.26 } } },
+    { label: 'Elevator (Meshy)',     template: { type: 'decoration', id: 'elevator',       size: { width: 1.8, height: 2.6, depth: 0.2 } } },
+  ],
+};
+
+function showLibraryModal() {
+  if (!_ctx) return;
+  if (!_libraryModalEl) buildLibraryModal();
+  _libraryModalEl.style.display = 'flex';
+}
+
+function hideLibraryModal() {
+  if (_libraryModalEl) _libraryModalEl.style.display = 'none';
+}
+
+function buildLibraryModal() {
+  const el = document.createElement('div');
+  el.className = 'ccq-library-modal';
+  el.style.cssText = `
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; align-items: flex-start; justify-content: center;
+    background: rgba(0,0,0,0.55);
+    pointer-events: auto;
+    font: 13px system-ui, sans-serif;
+  `;
+  // Backdrop click closes.
+  el.addEventListener('click', (e) => { if (e.target === el) hideLibraryModal(); });
+
+  const card = document.createElement('div');
+  card.style.cssText = `
+    margin-top: 60px; width: min(720px, 90vw); max-height: 80vh;
+    background: rgba(20,28,48,0.97); color: #e6edf7;
+    border: 1px solid rgba(201,164,76,0.6); border-radius: 10px;
+    padding: 16px; overflow-y: auto;
+  `;
+  card.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <div style="font-weight:600; color:#ffd166; font-size:14px;">➕ Add Item</div>
+      <button class="ccq-ed-btn ccq-ed-btn-sm" data-close>✕ Close</button>
+    </div>
+    <div class="ccq-ed-hint" style="margin-bottom:10px;">
+      Pick a template. The item spawns ~3m in front of the camera, on the current floor.
+      The target room is inferred from the spawn XZ (Reception / Library / West-wing).
+    </div>
+    <div class="ccq-library-grid"></div>
+  `;
+  el.appendChild(card);
+
+  const grid = card.querySelector('.ccq-library-grid');
+  for (const [cat, items] of Object.entries(LIBRARY_CATALOG)) {
+    const h = document.createElement('div');
+    h.textContent = cat;
+    h.style.cssText = `
+      grid-column: 1/-1; margin: 10px 0 4px;
+      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+      opacity: 0.65; color: #ffd166;
+    `;
+    grid.appendChild(h);
+    for (const item of items) {
+      const btn = document.createElement('button');
+      btn.className = 'ccq-lib-btn';
+      btn.textContent = item.label;
+      btn.addEventListener('click', () => {
+        hideLibraryModal();
+        addEntryFromTemplate(item.template);
+      });
+      grid.appendChild(btn);
+    }
+  }
+  card.querySelector('[data-close]').addEventListener('click', hideLibraryModal);
+  _ctx.container.appendChild(el);
+  _libraryModalEl = el;
+}
+
+// Spawn a new entry from a library template. The entry is appended to
+// whichever room contains the spawn point (heuristic based on
+// camera-target XZ + currentFloor). The new node is auto-selected so
+// the user can immediately drag it into place.
+function addEntryFromTemplate(template) {
+  if (!_ctx) return;
+  const spawn = pickSpawnPoint();
+  if (!spawn) {
+    alert('Could not determine a target room — try moving the camera into a known room first.');
+    return;
+  }
+  // Clone the template so future spawns of the same template aren't
+  // accidentally mutated by the user's tweaks.
+  const entry = JSON.parse(JSON.stringify(template));
+  entry.pos = [+spawn.x.toFixed(3), 0, +spawn.z.toFixed(3)];
+  spawn.room.objects.push(entry);
+
+  // Place the new entry via the loader's single-entry dispatcher.
+  const result = dispatchEntry(entry, _ctx.scene, { scene: _ctx.scene, decoTickers: [] });
+  if (!result) {
+    console.warn('[editor] dispatchEntry returned null for', entry);
+    return;
+  }
+  let node = result.isObject3D ? result : result.root;
+  if (!node) {
+    console.warn('[editor] dispatch returned no root node for', entry);
+    return;
+  }
+  if (spawn.yOffset) node.position.y += spawn.yOffset;
+  if (spawn.room.floor != null && node.userData.floor === undefined) {
+    node.userData.floor = spawn.room.floor;
+  }
+  node.userData._roomId = spawn.room.id;
+  node.userData._roomEntryIndex = spawn.room.objects.length - 1;
+  node.userData._yOffset = spawn.yOffset;
+  if (!node.parent) _ctx.scene.add(node);
+  select(node);
+}
+
+// Pick a spawn point ~3m in front of the camera, snapped to the
+// containing room (so the entry gets appended to the right ROOMS[]).
+function pickSpawnPoint() {
+  if (!_ctx) return null;
+  const cam = _ctx.camera;
+  const camPos = cam.position;
+  const camDir = new THREE.Vector3();
+  cam.getWorldDirection(camDir);
+  camDir.y = 0; camDir.normalize();
+  const spawn = new THREE.Vector3()
+    .copy(camPos)
+    .addScaledVector(camDir, 3);
+  // Snap to a sensible Y — current floor base in world space.
+  const floor = window.__playCurrentFloor || 1;
+  const yOffset = floor === 1 ? 0 : (floor - 1) * 4.5;
+  spawn.y = yOffset;
+
+  // Heuristic room picker. For floor 1 we have reception (z<11),
+  // library (11≤z<33), west_files (x<-11, z<11), west_planmode
+  // (x<-11, z≥11). For floors 2-4 the only data-driven room is
+  // office_floorN.
+  let roomId = null;
+  if (floor === 1) {
+    if (spawn.x < -11) roomId = (spawn.z < 11) ? 'west_files' : 'west_planmode';
+    else if (spawn.z < 11) roomId = 'reception';
+    else roomId = 'library';
+  } else {
+    roomId = `office_floor${floor}`;
+  }
+  const room = window.ROOM_BY_ID?.(roomId);
+  if (!room) return null;
+  return { x: spawn.x, y: 0, z: spawn.z, room, yOffset };
+}
+
 // ── Styles ───────────────────────────────────────────────────────────
 
 let _stylesInjected = false;
@@ -684,6 +1020,22 @@ function injectStylesOnce() {
     .ccq-ed-hint kbd {
       background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
       border-radius: 3px; padding: 1px 4px; font-size: 10px;
+    }
+    .ccq-ed-danger {
+      border-color: rgba(220,80,80,0.6); color: #ffb0b0;
+    }
+    .ccq-ed-danger:hover { background: rgba(80,30,30,0.7); }
+    .ccq-library-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px;
+    }
+    .ccq-lib-btn {
+      background: rgba(0,0,0,0.3); color: #e6edf7;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+      padding: 7px 9px; text-align: left; cursor: pointer; font: 12px system-ui, sans-serif;
+    }
+    .ccq-lib-btn:hover {
+      background: rgba(50,70,110,0.5);
+      border-color: rgba(201,164,76,0.6);
     }
   `;
   document.head.appendChild(style);
