@@ -747,6 +747,32 @@ function makeLabelSprite(text, fg = '#fff', bg = 'rgba(26,39,68,0.92)') {
   return sprite;
 }
 
+// Name tag for NPCs floating above their heads. Unlike makeLabelSprite,
+// there's NO background pill — just white text with a thin dark stroke
+// for legibility on bright/dark scene backgrounds alike. Used by
+// spawnNPC; the CEO portrait plaque, player tier badge, and other
+// pill-style HUD labels keep makeLabelSprite.
+function makeNpcNameTag(text) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 96;
+  const ctx = c.getContext('2d');
+  ctx.font = '600 36px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Subtle dark stroke first, then white fill — looks like a soft
+  // outline rather than a hard border, but keeps the name readable
+  // against the cream walls and dark floors.
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.strokeText(text, c.width / 2, c.height / 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, c.width / 2, c.height / 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.scale.set(1.8, 0.34, 1);
+  return sprite;
+}
+
 function makeWallSign(text, w = 8, h = 2, bg = '#1a2744', fg = '#c9a44c') {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 256;
@@ -1497,21 +1523,23 @@ function buildWorld() {
   scene.add(buildCouch(-8.5, 5, Math.PI / 2));
   scene.add(buildCouch(8.5, 5, -Math.PI / 2));
 
-  // IT bench (Marcus area, x=-6 z=-3)
+  // IT bench (Marcus area, x=-6 z=-3) — the new desk GLB ships with a
+  // built-in monitor, so the previous procedural buildMonitor calls
+  // on top of each desk are gone (they'd clip into the desk's monitor).
   scene.add(buildDesk(-7.5, -3, Math.PI / 2, 1.6, 0.8));
-  scene.add(buildMonitor(-7.5, -3.4, Math.PI / 2));
-  scene.add(buildMonitor(-7.5, -2.6, Math.PI / 2, 0x66bb6a));
   scene.add(buildChair(-6.4, -3));
 
   // Aisha area (x=6 z=-3)
   scene.add(buildDesk(7.5, -3, -Math.PI / 2, 1.6, 0.8));
-  scene.add(buildMonitor(7.5, -3, -Math.PI / 2, 0xff8a65));
   scene.add(buildChair(6.4, -3, Math.PI));
 
-  // Kenji area (x=-6 z=3) — multiple monitors / demo
+  // Kenji area (x=-6 z=3) — wider desk + side accessory monitors that
+  // sit beside (not on top of) the desk's built-in monitor. The center
+  // procedural monitor at z=3.2 was redundant with the built-in and is
+  // dropped; z=2.4 and z=4.0 remain as Kenji's distinctive multi-screen
+  // setup, offset along the desk so they don't overlap.
   scene.add(buildDesk(-7.5, 3, Math.PI / 2, 2.2, 0.8));
-  scene.add(buildMonitor(-7.5, 2.4, Math.PI / 2, 0xab47bc));
-  scene.add(buildMonitor(-7.5, 3.2, Math.PI / 2, 0x29b6f6));
+  scene.add(buildMonitor(-7.5, 2.0, Math.PI / 2, 0xab47bc));
   scene.add(buildMonitor(-7.5, 4.0, Math.PI / 2, 0xffca28));
   scene.add(buildChair(-6.4, 3));
 
@@ -2759,12 +2787,11 @@ function spawnNPC(npcDef) {
   mesh.visible = (npcFloor === currentFloor);
   scene.add(mesh);
 
-  // Consistent base scale for every NPC tag (was inconsistent before —
-  // led to giant Linda/Sarah tags). NameTagSystem applies opacity fade
-  // on top per-frame; scale stays put.
-  const tag = makeLabelSprite(`${npcDef.portrait} ${npcDef.name}`);
-  tag.position.set(0, 2.45, 0);
-  tag.scale.set(2.4, 0.5, 1);
+  // Name-only tag (no pill background). Smaller than the old pill tag
+  // because there's no fill to compete with; the dark stroke around
+  // the white text keeps it legible without a backdrop.
+  const tag = makeNpcNameTag(`${npcDef.portrait} ${npcDef.name}`);
+  tag.position.set(0, 2.30, 0);
   mesh.userData._isNameTag = true;
   mesh.add(tag);
 
