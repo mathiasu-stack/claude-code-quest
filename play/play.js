@@ -27,7 +27,7 @@ import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260526e';
 import { decorateLibrary } from './decorations/library.js?v=20260526d';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260526d';
-import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526d';
+import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526l';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -1500,7 +1500,12 @@ function buildWorld() {
   // on adjacent left-wall positions.
 
   // Reception desk — Meshy GLB if loaded, else the original brown box.
-  const recDeskGlb = makeDecoration('reception_desk', { width: 3.0, depth: 1.2, height: 1.05 });
+  // The new corporate-reception desk source is squarish (1.9×1.07×1.14m)
+  // so we use stretch to spread it across the wider reception slot
+  // (3.0×1.2×1.05m). Slight aspect distortion is acceptable; alternative
+  // (uniform-min scale) ends up barely wider than Linda is tall.
+  const recDeskGlb = makeDecoration('reception_desk',
+    { width: 3.0, depth: 1.2, height: 1.05, stretch: true });
   if (recDeskGlb) {
     recDeskGlb.position.set(0, 0, -8);
     scene.add(recDeskGlb);

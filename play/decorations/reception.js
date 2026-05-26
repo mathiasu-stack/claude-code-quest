@@ -9,11 +9,18 @@ import {
   buildClock, buildPosterTexture, buildPillow, buildDoormat,
   buildCeilingLight, buildServerTower, buildWhiteboard, buildDemoScreen,
 } from './shared.js?v=20260526d';
-import { makeDecoration } from './decorationAssets.js?v=20260526d';
+import { makeDecoration } from './decorationAssets.js?v=20260526l';
 
 export function decorateReception(scene, decoTickers) {
-  // Reception desk clutter (desk top is at y=1.0, length 3 along X, depth 1.2 z)
-  const d0 = [0, 1.0, -7]; // desk top centre
+  // Reception desk clutter — coords are the desk's top centre. The desk
+  // itself is placed at (0, 0, -8) with the new GLB stretched to span
+  // 3.0×1.2×1.05m, so its top is at y≈1.05 and its centre on Z is -8.
+  // Previously this was [0, 1.0, -7], which put everything ~0.5m in
+  // front of the desk's actual footprint (caught visually, then by the
+  // user — clutter appeared to float in mid-air just south of the desk).
+  // The ±0.9m X / ±0.2m Z offsets below keep the items distributed
+  // across the desk top.
+  const d0 = [0, 1.05, -8]; // desk top centre
 
   const stapler = buildStapler();
   stapler.position.set(d0[0] - 0.9, d0[1], d0[2] - 0.05);

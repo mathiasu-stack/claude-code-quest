@@ -6,7 +6,7 @@
 // .update(dt, now, playerPos) for parallax / time-of-day animation.
 
 import * as THREE from 'three';
-import { makeDecoration } from '../decorations/decorationAssets.js?v=20260526d';
+import { makeDecoration } from '../decorations/decorationAssets.js?v=20260526l';
 
 // ── Reception windows + parallax city skyline ──────────────────────────────
 // Strategy: replace the right-side wall (or part of it) with a window

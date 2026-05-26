@@ -115,13 +115,16 @@ export function hasDecoration(id) {
   return _cache.has(id);
 }
 
-// Build a positioned + uniformly-scaled instance.
+// Build a positioned + scaled instance.
 //
 // opts:
 //   width, depth, height — any subset. The instance is uniformly scaled
-//     so that the LARGEST specified axis fits its target. If multiple
-//     axes are specified, the most restrictive wins (so the instance
-//     fits inside the AABB you describe).
+//     so that the most restrictive specified axis fits its target.
+//   stretch — when true, each specified axis is scaled INDEPENDENTLY
+//     (non-uniform scale) so the bbox matches the target dimensions
+//     exactly. Useful when the source asset's natural proportions
+//     don't match the scene slot — e.g. a squarish desk that needs
+//     to span a wide reception counter. Distorts the model.
 //   yOffset — vertical translation after scale (e.g. plant pots should
 //     sit on the floor at y=0, so yOffset = 0).
 //   rotationY — applied after scaling (so it works regardless of the
@@ -142,20 +145,32 @@ export function makeDecoration(id, opts = {}) {
   const size = new THREE.Vector3();
   bbox.getSize(size);
 
-  // Compute uniform scale so each specified target axis is fit.
-  let scale = 1;
+  // Compute scale. Uniform unless `stretch` requested.
   const want = (name, axis) => {
     const t = opts[name];
     if (typeof t !== 'number' || t <= 0) return Infinity;
     return t / Math.max(size[axis], 1e-6);
   };
-  scale = Math.min(want('width', 'x'), want('height', 'y'), want('depth', 'z'));
-  if (!isFinite(scale)) scale = 1;
+  const sX = want('width', 'x'), sY = want('height', 'y'), sZ = want('depth', 'z');
+  let scaleX, scaleY, scaleZ;
+  if (opts.stretch) {
+    // Non-uniform: any axis with no target falls through to a sensible
+    // default — use the MAX scale of the specified axes so the whole
+    // model grows together if some axes are constrained and others aren't.
+    const specified = [sX, sY, sZ].filter(s => isFinite(s));
+    const fallback = specified.length ? Math.max(...specified) : 1;
+    scaleX = isFinite(sX) ? sX : fallback;
+    scaleY = isFinite(sY) ? sY : fallback;
+    scaleZ = isFinite(sZ) ? sZ : fallback;
+  } else {
+    const uniform = Math.min(sX, sY, sZ);
+    scaleX = scaleY = scaleZ = isFinite(uniform) ? uniform : 1;
+  }
 
   // Apply scale on a wrapper group so the caller can still position via
   // .position / .rotation on the returned group itself.
   const root = new THREE.Group();
-  inst.scale.setScalar(scale);
+  inst.scale.set(scaleX, scaleY, scaleZ);
 
   // Re-measure after scaling, then translate so the bottom-center of the
   // bbox sits at the group's origin. This makes the existing builder
