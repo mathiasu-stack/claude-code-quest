@@ -299,16 +299,38 @@ export function makeGltfCharacter(look, assetLoader) {
   // yaws (arms swung into A-pose or cross-body when the player turned).
   const ARM_CHAIN = ['LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
                      'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand'];
+  // Rest-pose quaternions for the arm chain. Used by update() to reset
+  // each bone before the unconditional TUCK/TILT multiplies — without
+  // this reset the tuck rotation accumulates on bones the current clip
+  // doesn't animate, producing the helicopter-arm bug.
+  //
+  // Priority: idle clip first frame → walk clip first frame → bone bind
+  // pose. Characters without an idle clip (e.g. the post-rig Crimson
+  // Linda which only ships walk + run) fall through to the walk-first
+  // frame, which is a neutral mid-step pose — better than the bind pose
+  // (which on Meshy rigs is arms-pinned-to-sides and kills the walking
+  // arm swing entirely after the BLEND).
   const idleArmQuat = {};
-  if (inst.skeleton && actions.idle) {
-    const idleClip = actions.idle.getClip();
+  function copyArmTrackToRest(clip) {
     for (const boneName of ARM_CHAIN) {
-      const trk = idleClip.tracks.find(t => t.name === boneName + '.quaternion');
+      if (idleArmQuat[boneName]) continue;
+      const trk = clip.tracks.find(t => t.name === boneName + '.quaternion');
       if (trk && trk.values.length >= 4) {
         idleArmQuat[boneName] = new THREE.Quaternion(
           trk.values[0], trk.values[1], trk.values[2], trk.values[3]
         );
       }
+    }
+  }
+  if (inst.skeleton) {
+    if (actions.idle) copyArmTrackToRest(actions.idle.getClip());
+    if (actions.walk) copyArmTrackToRest(actions.walk.getClip());
+    // Final fallback — current bone quaternion at instantiation time IS
+    // the bind-pose value (no mixer.update has run yet).
+    for (const boneName of ARM_CHAIN) {
+      if (idleArmQuat[boneName]) continue;
+      const b = inst.skeleton.getBoneByName(boneName);
+      if (b) idleArmQuat[boneName] = b.quaternion.clone();
     }
   }
 
