@@ -8,3 +8,8 @@ play/assets/characters/_originals/
 # Same pattern for the Meshy decoration GLBs (desk, chair, plant, …).
 # Pre-optimization sources ~44 MB; keep local, ship only optimized files.
 play/assets/decorations/_originals/
+
+# Synology DSM auto-creates @eaDir folders next to user files to hold
+# extended-attribute / thumbnail sidecars (filename suffix @SynoEAStream).
+# We don't want those in the repo.
+**/@eaDir/
