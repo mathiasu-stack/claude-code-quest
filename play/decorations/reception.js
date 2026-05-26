@@ -111,10 +111,29 @@ export function decorateReception(scene, decoTickers) {
     scene.add(winGlb);
   }
 
-  // Diverse plants (replacing some of the existing identical pots)
-  const tallPlant = buildPlantTall();
-  tallPlant.position.set(-9.5, 0, 9);
-  scene.add(tallPlant);
+  // Service elevator on the west wall, at z=-5 (clear stretch between the
+  // back corner and the GROW poster at z=+5). The functional atrium
+  // elevator stays at its existing east-side shaft — this is purely a
+  // decorative second-elevator facade.
+  const elevGlb = makeDecoration('elevator', { width: 1.8, height: 2.6, depth: 0.2 });
+  if (elevGlb) {
+    elevGlb.position.set(-10.83, 0, -5.0);
+    elevGlb.rotation.y = Math.PI / 2;
+    scene.add(elevGlb);
+  }
+
+  // Diverse plants (replacing some of the existing identical pots).
+  // The tall standing plant near the entrance uses the Meshy plant GLB
+  // when loaded; falls back to the procedural fiddle-leaf-ish builder.
+  const tallPlantGlb = makeDecoration('plant', { width: 0.9, height: 1.7, depth: 0.9 });
+  if (tallPlantGlb) {
+    tallPlantGlb.position.set(-9.5, 0, 9);
+    scene.add(tallPlantGlb);
+  } else {
+    const tallPlant = buildPlantTall();
+    tallPlant.position.set(-9.5, 0, 9);
+    scene.add(tallPlant);
+  }
   const hanging = buildPlantHanging();
   hanging.position.set(0, 3.6, 6);
   scene.add(hanging);

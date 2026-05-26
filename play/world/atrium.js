@@ -225,27 +225,12 @@ export function buildAtrium(scene, opts = {}) {
   scene.add(logoPlane);
   out.objects.push(logoPlane);
 
-  // ── 7. Sleek modern reception desk replacement ─────────────────────
-  // Existing reception desk at (0, 0.5, -8) is a brown box. Add a darker
-  // stone desk SLIGHTLY in front and taller, plus a brushed silver
-  // counter top.
-  const newDesk = new THREE.Mesh(
-    new THREE.BoxGeometry(3.4, 1.05, 1.0),
-    darkStone(),
-  );
-  newDesk.position.set(0, 0.525, -7.6);
-  newDesk.castShadow = true;
-  newDesk.receiveShadow = true;
-  scene.add(newDesk);
-  out.objects.push(newDesk);
-
-  const counterTop = new THREE.Mesh(
-    new THREE.BoxGeometry(3.5, 0.04, 1.05),
-    brushedSilver(),
-  );
-  counterTop.position.set(0, 1.07, -7.6);
-  scene.add(counterTop);
-  out.objects.push(counterTop);
+  // ── 7. Reception desk ──────────────────────────────────────────────
+  // Previously this section added a SECOND desk (darkStone + brushedSilver
+  // counter) at z=-7.6 to "modernize" the original brown box. After the
+  // Meshy reception_desk GLB swap in play.js:buildWorld(), the main desk
+  // at (0, 0, -8) is already the polished walnut + navy + brass model —
+  // adding the overlay made it look like two stacked desks. Removed.
 
   // ── 8. Kinetic chandelier hanging from the atrium ceiling ──────────
   // Cluster of glass rods + lights at descending heights, slowly rotating.

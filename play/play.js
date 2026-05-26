@@ -24,13 +24,13 @@ import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
 import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260524d';
 import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
-import { decorateReception } from './decorations/reception.js';
+import { decorateReception } from './decorations/reception.js?v=20260526b';
 import { decorateLibrary } from './decorations/library.js';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526a';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
-import { buildAtrium } from './world/atrium.js';
+import { buildAtrium } from './world/atrium.js?v=20260526b';
 import { buildElevator } from './world/elevator.js';
 import { CeremonyManager } from './ceremony/ceremonyManager.js';
 import {
