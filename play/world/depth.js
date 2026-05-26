@@ -6,6 +6,7 @@
 // .update(dt, now, playerPos) for parallax / time-of-day animation.
 
 import * as THREE from 'three';
+import { makeDecoration } from '../decorations/decorationAssets.js?v=20260526d';
 
 // ── Reception windows + parallax city skyline ──────────────────────────────
 // Strategy: replace the right-side wall (or part of it) with a window
@@ -13,6 +14,21 @@ import * as THREE from 'three';
 // -5% of player horizontal motion so it appears further away.
 
 function makeWindowFrame(width, height, color = 0x4e342e) {
+  // Meshy frame-only window if the asset preloaded (depth ≤ 0.20 keeps
+  // it flush against the wall plane so the skyline behind still reads).
+  // The GLB origin is at floor-bottom; this function expects the frame
+  // to be centered on its own midline, so we wrap the GLB so its
+  // CENTER lands at the call-site's local (0, 0, 0).
+  const glb = makeDecoration('window', { width, height, depth: 0.20 });
+  if (glb) {
+    // makeDecoration parks the bottom of the AABB at y=0; shift up by
+    // height/2 so the frame's center aligns with the caller's origin
+    // (the call-sites position the wrapper at y = window-center).
+    const wrapper = new THREE.Group();
+    glb.position.y = -height / 2;
+    wrapper.add(glb);
+    return wrapper;
+  }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
   const tFrame = new THREE.Mesh(new THREE.BoxGeometry(width, 0.18, 0.12), mat);

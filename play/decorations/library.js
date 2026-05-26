@@ -5,7 +5,7 @@ import {
   buildOpenBook, buildBookmark, buildArmchair, buildGlobe, buildLadder,
   buildGrandfatherClock, buildSidetable, buildBookStack, buildLibraryCart,
   buildMug, buildPlantHanging, buildPosterTexture,
-} from './shared.js';
+} from './shared.js?v=20260526d';
 
 export function decorateLibrary(scene, decoTickers) {
   // Open books on the two reading tables (existing tables at z=16 & z=22)

@@ -14,7 +14,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const ASSET_DIR = 'play/assets/decorations/';
-const CACHE_BUST = '?v=20260526a';
+const CACHE_BUST = '?v=20260526d';
 
 // Asset id → file (relative to ASSET_DIR).
 const FILES = {
@@ -30,6 +30,18 @@ const FILES = {
   floor_mat: 'floor_mat.glb',
   window: 'window.glb',
   ceiling_lamp: 'ceiling_lamp.glb',
+  // Round 2: replaces remaining procedural props.
+  mug: 'mug.glb',
+  pen_cup: 'pen_cup.glb',
+  stapler: 'stapler.glb',
+  paper_stack: 'paper_stack.glb',
+  couch: 'couch.glb',
+  bookshelf: 'bookshelf.glb',
+  water_cooler: 'water_cooler.glb',
+  laptop: 'laptop.glb',
+  table_lamp: 'table_lamp.glb',
+  hanging_plant: 'hanging_plant.glb',
+  succulent: 'succulent.glb',
 };
 
 const _cache = new Map(); // id → { gltf, bbox: THREE.Box3 }

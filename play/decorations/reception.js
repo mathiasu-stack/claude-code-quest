@@ -8,8 +8,8 @@ import {
   buildPaperStack, buildPlantTall, buildPlantSucculent, buildPlantHanging,
   buildClock, buildPosterTexture, buildPillow, buildDoormat,
   buildCeilingLight, buildServerTower, buildWhiteboard, buildDemoScreen,
-} from './shared.js';
-import { makeDecoration } from './decorationAssets.js?v=20260526a';
+} from './shared.js?v=20260526d';
+import { makeDecoration } from './decorationAssets.js?v=20260526d';
 
 export function decorateReception(scene, decoTickers) {
   // Reception desk clutter (desk top is at y=1.0, length 3 along X, depth 1.2 z)

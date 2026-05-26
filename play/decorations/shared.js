@@ -1,8 +1,13 @@
 // shared.js — small reusable decoration primitives used by Reception and
 // Library decorators. Keep each one in <30 lines and avoid heavy
 // allocations (cache materials where possible).
+//
+// Each builder that has a matching Meshy GLB tries makeDecoration()
+// first and only falls back to its procedural geometry if the asset
+// failed to preload.
 
 import * as THREE from 'three';
+import { makeDecoration } from './decorationAssets.js?v=20260526d';
 
 const _matCache = new Map();
 function mat(key, ctor) {
@@ -12,6 +17,8 @@ function mat(key, ctor) {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 export function buildMug(color = 0xffffff, accent = null) {
+  const glb = makeDecoration('mug', { width: 0.10, height: 0.12, depth: 0.10 });
+  if (glb) return glb;
   const g = new THREE.Group();
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(0.06, 0.05, 0.12, 14),
@@ -36,6 +43,8 @@ export function buildMug(color = 0xffffff, accent = null) {
 }
 
 export function buildPenCup() {
+  const glb = makeDecoration('pen_cup', { width: 0.10, height: 0.20, depth: 0.10 });
+  if (glb) return glb;
   const g = new THREE.Group();
   const cup = new THREE.Mesh(
     new THREE.CylinderGeometry(0.05, 0.045, 0.1, 14),
@@ -56,6 +65,8 @@ export function buildPenCup() {
 }
 
 export function buildStapler() {
+  const glb = makeDecoration('stapler', { width: 0.18, height: 0.07, depth: 0.08 });
+  if (glb) return glb;
   const g = new THREE.Group();
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(0.18, 0.05, 0.08),
@@ -80,6 +91,8 @@ export function buildStickyPad() {
 }
 
 export function buildLaptopOpen() {
+  const glb = makeDecoration('laptop', { width: 0.36, height: 0.26, depth: 0.26 });
+  if (glb) return glb;
   const g = new THREE.Group();
   const matBody = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.7, roughness: 0.3 });
   const base = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.02, 0.26), matBody);
@@ -99,6 +112,8 @@ export function buildLaptopOpen() {
 }
 
 export function buildPaperStack(count = 3) {
+  const glb = makeDecoration('paper_stack', { width: 0.20, height: 0.04, depth: 0.26 });
+  if (glb) return glb;
   const g = new THREE.Group();
   for (let i = 0; i < count; i++) {
     const sheet = new THREE.Mesh(
@@ -137,6 +152,11 @@ export function buildPlantTall() {
 }
 
 export function buildPlantSucculent() {
+  const glb = makeDecoration('succulent', { width: 0.18, height: 0.18, depth: 0.18 });
+  if (glb) return glb;
+  return buildPlantSucculentProcedural();
+}
+function buildPlantSucculentProcedural() {
   const g = new THREE.Group();
   const pot = new THREE.Mesh(
     new THREE.CylinderGeometry(0.1, 0.08, 0.1, 12),
@@ -157,6 +177,11 @@ export function buildPlantSucculent() {
 }
 
 export function buildPlantHanging() {
+  const glb = makeDecoration('hanging_plant', { width: 0.50, height: 0.80, depth: 0.50 });
+  if (glb) return glb;
+  return buildPlantHangingProcedural();
+}
+function buildPlantHangingProcedural() {
   const g = new THREE.Group();
   // Cord from the pot up to the ceiling — without this the plant
   // appeared to float ("flying stool" feedback from playtest). Both

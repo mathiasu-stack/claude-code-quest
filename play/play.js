@@ -25,9 +25,9 @@ import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260524d';
 import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260526b';
-import { decorateLibrary } from './decorations/library.js';
-import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
-import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526a';
+import { decorateLibrary } from './decorations/library.js?v=20260526d';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260526d';
+import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526d';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -45,7 +45,7 @@ import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
-import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
+import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js';
 import { NameTagSystem } from './ui/nameTags.js';
@@ -868,6 +868,12 @@ function buildPlant(x, z) {
 }
 
 function buildWaterCooler(x, z) {
+  const glb = makeDecoration('water_cooler', { width: 0.45, height: 1.4, depth: 0.45 });
+  if (glb) {
+    glb.position.set(x, 0, z);
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   // Base reads as smooth painted plastic
   const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4),
@@ -886,6 +892,12 @@ function buildWaterCooler(x, z) {
 }
 
 function buildCouch(x, z, ry = 0) {
+  const glb = makeDecoration('couch', { width: 2.2, depth: 0.9, height: 0.95 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   // Fabric — high roughness, no metalness.
   const mat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.95 });
@@ -928,6 +940,12 @@ function buildFilingCabinet(x, z, ry = 0) {
 }
 
 function buildBookshelf(x, z, ry = 0, w = 2.2) {
+  const glb = makeDecoration('bookshelf', { width: w, height: 2.6, depth: 0.45 });
+  if (glb) {
+    glb.position.set(x, 0, z); glb.rotation.y = ry;
+    glb.userData.surface = 'floor';
+    return glb;
+  }
   const g = new THREE.Group();
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
   const back = new THREE.Mesh(new THREE.BoxGeometry(w, 2.6, 0.05), woodMat);
@@ -984,6 +1002,18 @@ function buildTable(x, z, ry = 0, w = 2.2) {
 }
 
 function buildLamp(x, z) {
+  // Table lamp — sits on top of a 0.78m table, so the GLB origin needs
+  // to be raised to y=0.78. The GLB itself is ~0.55m tall (lamp body).
+  const glb = makeDecoration('table_lamp', { width: 0.35, height: 0.55, depth: 0.35 });
+  if (glb) {
+    glb.position.set(x, 0.78, z);
+    // Warm point light at the bulb height for actual illumination.
+    const point = new THREE.PointLight(0xfff59d, 0.6, 4);
+    point.position.set(0, 0.35, 0);
+    glb.add(point);
+    glb.userData.surface = 'top';
+    return glb;
+  }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x37474f });
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), mat);
