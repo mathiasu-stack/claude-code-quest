@@ -1520,15 +1520,21 @@ function buildWorld() {
   // on adjacent left-wall positions.
 
   // Reception desk — Meshy GLB if loaded, else the original brown box.
-  // The new corporate-reception desk source is squarish (1.9×1.07×1.14m)
-  // and gets non-uniform-scaled to fit the reception slot. Previous
-  // stretch (3.0×1.05×1.2) was too aggressive on X (1.58×): distorted
-  // the Kedash branding and revealed internal/decorative geometry
-  // (drawer voids, side wings) as visible dark patches near the floor.
-  // Reduced to 2.4×1.0×1.0 — still reads as a wide counter, much less
-  // distortion (X-stretch is now 1.26×).
+  // The new corporate-reception desk source is squarish (1.9×1.07×1.14m).
+  // We non-uniform-stretch it to a SUBSTANTIAL footprint so the back
+  // panel with Kedash branding rises above the hero (≈1.9m tall) and
+  // dominates the reception area as it should:
+  //   - Height 2.2m: total desk reaches above the hero's head; the
+  //     counter top (lower portion of the source mesh) lands around
+  //     y=1.0-1.1m which is realistic counter height.
+  //   - Width 3.6m: wide enough to read as a corporate reception
+  //     counter, not a side table.
+  //   - Depth 1.6m: realistic counter depth.
+  // Stretch ratios are now 1.90 / 1.93 / 1.50 — much more balanced than
+  // the previous 1.58 / 0.92 / 1.12 spread, so the Kedash 3D text and
+  // side decoration distort proportionally instead of skewing.
   const recDeskGlb = makeDecoration('reception_desk',
-    { width: 2.4, height: 1.0, depth: 1.0, stretch: true });
+    { width: 3.6, height: 2.2, depth: 1.6, stretch: true });
   if (recDeskGlb) {
     recDeskGlb.position.set(0, 0, -8);
     scene.add(recDeskGlb);

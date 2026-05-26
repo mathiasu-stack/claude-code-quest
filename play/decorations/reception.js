@@ -12,10 +12,15 @@ import {
 import { makeDecoration } from './decorationAssets.js?v=20260526l';
 
 export function decorateReception(scene, decoTickers) {
-  // Reception desk clutter — coords are the desk's top centre. The desk
-  // itself is placed at (0, 0, -8) and stretched to 2.4×1.0×1.0m, so
-  // top is at y=1.0 and centre on Z is -8.
-  const d0 = [0, 1.0, -8]; // desk top centre
+  // Reception desk clutter — coords are the COUNTER top (the lower
+  // working surface of the desk, NOT the top of the tall back panel).
+  // The desk is placed at (0, 0, -8) and stretched to 3.6W×2.2H×1.6D m,
+  // so its depth spans z=-8.8..-7.2. The COUNTER occupies the front
+  // half of that depth (z=-8.0..-7.2 → centre z=-7.6); the BACK PANEL
+  // with Kedash branding rises from the rear half. Counter top lands
+  // at ~y=1.10 after stretch + wrapper-bottom-at-origin (source
+  // counter sits near Y=0 midline of the -0.57..0.57 bbox).
+  const d0 = [0, 1.10, -7.6]; // counter top centre, front half
 
   const stapler = buildStapler();
   stapler.position.set(d0[0] - 0.9, d0[1], d0[2] - 0.05);
