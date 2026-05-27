@@ -379,8 +379,13 @@ let cameraYaw = Math.PI;
 // (see setupInput). Clamped to PITCH_MIN/PITCH_MAX so the camera can't
 // flip over or sink through the floor.
 let cameraPitch = 0;
-const PITCH_MIN = -0.45;    // ~-26° (camera looks up at player from low)
-const PITCH_MAX =  0.95;    // ~+54° (camera looks down from above)
+// Pitch range is generous (~-70° to ~+83°) so the player can crane up
+// at the atrium ceiling or look almost straight down. The camera Y is
+// clamped below to keep it from punching through the floor at large
+// effDist + extreme negative pitch, so we don't have to make the limits
+// conservative here.
+const PITCH_MIN = -1.20;    // ~-69° (camera looks up at player from below)
+const PITCH_MAX =  1.45;    // ~+83° (camera looks down from nearly overhead)
 // True while the user holds the middle mouse button — suppresses the
 // auto-follow yaw drift so the manual drag isn't fought by the
 // player-heading-based lerp.
@@ -3476,8 +3481,13 @@ function update(dt) {
   // pitch=0) + pitched vertical offset + a small jump bob. Held at the
   // current floor's baseline so it doesn't leak across floors.
   const floorY = floorBaseY(currentFloor);
-  camera.position.y = floorY + camH + effDist * pitchSin
+  const rawCamY = floorY + camH + effDist * pitchSin
     + Math.max(0, player.position.y - floorY) * 0.3;
+  // Clamp so extreme pitches don't push the camera below the floor or
+  // above the atrium ceiling. 0.4m above floor is enough that the
+  // camera can still see the player's shoes; 14m caps it just under
+  // the atrium roof so the lookAt stays anchored on the character.
+  camera.position.y = Math.max(floorY + 0.4, Math.min(floorY + 14, rawCamY));
   camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
 
   // Animate doors live: color tint, label, AND the hinge swing toward
