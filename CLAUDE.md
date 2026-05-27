@@ -1,5 +1,13 @@
 # Claude Code Quest
 
+> **READ THIS FIRST**: At the start of every session, read `./RESUME.md` in the
+> repo root. It carries forward state that this file deliberately doesn't —
+> recent commits, current architecture decisions, in-flight work, conventions
+> the user has confirmed, and likely next asks. This file is the stable project
+> doc; `RESUME.md` is the rolling handoff. If you make non-trivial changes
+> during the session, update `RESUME.md` before ending so the next session
+> picks up cleanly.
+
 A gamified Claude Code training app built as a vanilla JS SPA with a "Kedash Corp" corporate theme.
 
 ## Running locally
