@@ -2834,8 +2834,12 @@ function setupInput() {
   keyDownListener = (e) => {
     if (inputLocked) return;
     keys[e.key.toLowerCase()] = true;
-    if (e.key === 'e' || e.key === 'E') tryInteract();
-    if (e.key === ' ' || e.code === 'Space') {
+    // Editor mode lets the user move + rotate camera (so `keys[...]`
+    // are still recorded above), but actions that change game state
+    // are suppressed at their fire sites.
+    const editing = isRoomEditorActive();
+    if (!editing && (e.key === 'e' || e.key === 'E')) tryInteract();
+    if (!editing && (e.key === ' ' || e.code === 'Space')) {
       jumpRequested = true;
       e.preventDefault();
     }
@@ -3033,6 +3037,10 @@ const ELEVATOR_TARGET = { __elevator: true };
 
 function tryInteract() {
   if (!interactionTarget || inputLocked) return;
+  // Editor mode allows movement + camera control but should never
+  // open NPC dialogues or door / elevator UIs — they'd interrupt
+  // the editing flow and leak state changes into the saved layout.
+  if (isRoomEditorActive()) return;
   if (interactionTarget === ELEVATOR_TARGET) {
     openElevatorModal();
     return;
@@ -3948,10 +3956,13 @@ export async function start(host) {
     onEnter: () => {
       enterRoomEdit({
         scene, camera, renderer, container,
-        suspendGameInput: () => {
-          inputLocked = true;
-          return () => { inputLocked = false; };
-        },
+        // suspendGameInput intentionally omitted — gameplay movement
+        // (WASD / joystick / Q/E camera yaw / middle-mouse + touch
+        // look / scroll zoom) stays live during edit mode so the
+        // user can drive the camera around to inspect placements.
+        // The actions that DO get blocked (E-interact NPC dialogue,
+        // Space-jump, door-tests) check isRoomEditorActive() at
+        // their fire sites instead.
       });
     },
     onExit: () => {
