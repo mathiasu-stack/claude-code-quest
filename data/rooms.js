@@ -64,7 +64,7 @@ window.ROOMS = [
       { type: 'wall', pos: [ 0,     wallH - 0.6, 11], size: { w: 3.5, h: 1.2, d: 0.3 } },
 
       // ── Wall signs ──────────────────────────────────────────────
-      { type: 'ceo_portrait' },
+      { type: 'ceo_portrait', pos: [0, 2.0, -10.86] },
       { type: 'wall_sign', text: 'KEDASH CORP',
         pos: [-7.5, 3.2, -10.84], size: { width: 4, height: 0.9 } },
 

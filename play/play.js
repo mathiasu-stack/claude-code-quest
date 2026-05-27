@@ -1424,9 +1424,11 @@ function buildCeoPortrait(targetScene) {
     group.add(ceoHearts);
   }
 
-  // Position centered on back wall, above reception desk
-  group.position.set(0, 2.0, -10.86);
-  targetScene.add(group);
+  // Position + scene.add deliberately handled by the caller (the
+  // rooms loader does this so the group gets tagged with _roomId /
+  // _roomEntryIndex and the editor can select / drag the portrait
+  // like any other room object). The default back-wall slot is set
+  // via the data entry in data/rooms.js → pos: [0, 2.0, -10.86].
   return group;
 }
 

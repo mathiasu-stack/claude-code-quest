@@ -110,7 +110,7 @@ function dispatch(obj, scene, ctx) {
     case 'wall':          return buildWallEntry(obj, ctx);
     case 'floor_plate':   return buildFloorPlateEntry(obj);
     case 'wall_sign':     return buildWallSignEntry(obj);
-    case 'ceo_portrait':  return buildCeoPortraitEntry(scene);
+    case 'ceo_portrait':  return buildCeoPortraitEntry(obj);
     default:
       console.warn('[rooms] unknown object type:', obj.type);
       return null;
@@ -200,8 +200,17 @@ function buildWallSignEntry(obj) {
   return sign;
 }
 
-function buildCeoPortraitEntry(scene) {
+function buildCeoPortraitEntry(obj) {
   if (!_buildCeoPortrait) return null;
-  _buildCeoPortrait(scene);  // adds itself to scene at a fixed position
-  return null;  // already added; nothing for the loader to add again
+  const group = _buildCeoPortrait();
+  if (!group) return null;
+  if (Array.isArray(obj.pos)) {
+    group.position.set(obj.pos[0], obj.pos[1] || 0, obj.pos[2] || 0);
+  } else {
+    // Default back-wall slot if the data entry is missing pos for
+    // some reason (e.g., a hand-edited rooms.js).
+    group.position.set(0, 2.0, -10.86);
+  }
+  if (typeof obj.rotY === 'number') group.rotation.y = obj.rotY;
+  return group;
 }
