@@ -32,7 +32,7 @@ import { preloadDecorations, makeDecoration, hasDecoration } from './decorations
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260526a';
 import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
-         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527c';
+         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527f';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260526b';
@@ -2706,6 +2706,14 @@ function spawnNPC(npcDef) {
   mesh.position.set(npcDef.pos[0], floorBaseY(npcFloor), npcDef.pos[1]);
   mesh.rotation.y = npcDef.face;
   mesh.userData.npc = npcDef;
+  // Editor-affordance tags: the room editor's findTaggedAncestor uses
+  // either _roomId (room placement) OR _isNpc (NPC) to map a click
+  // back to its data. NPC pos is 2D ([x, z]) so we also tag the
+  // floor-base Y the spawn was rendered at — the editor subtracts
+  // this when writing pos back, just like the room loader's _yOffset.
+  mesh.userData._isNpc = true;
+  mesh.userData._npcId = npcDef.id;
+  mesh.userData._yOffset = floorBaseY(npcFloor);
   mesh.userData.floor = npcFloor;
   // Hide NPCs that don't belong to the player's current floor — they
   // were previously visible on top of the (correctly hidden) upper-floor
@@ -3810,6 +3818,23 @@ export async function start(host) {
   await _preloadGltfAssets();
   buildPlayer();
   buildNPCs();
+  // Expose a tiny NPC mutation API for the in-game editor (Phase 2).
+  // Editor uses these to spawn / despawn / list characters without a
+  // circular import.
+  try {
+    window.__playApi = {
+      spawnNpcFromDef: (def) => {
+        spawnNPC(def);
+        return npcMeshes[npcMeshes.length - 1];
+      },
+      removeNpcMesh: (mesh) => {
+        const idx = npcMeshes.indexOf(mesh);
+        if (idx >= 0) npcMeshes.splice(idx, 1);
+        scene.remove(mesh);
+      },
+      getHandBuiltNpcs: () => NPCS,
+    };
+  } catch {}
   setupInput();
   // Apply the initial zone preset so the first frame renders with proper
   // lighting; subsequent transitions are picked up by update().

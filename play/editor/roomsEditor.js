@@ -60,6 +60,16 @@ const _raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
 const _dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const _dragHit = new THREE.Vector3();
+// Per-selection axis locks. When an axis is locked, free-drag skips
+// it AND the TransformControls gizmo hides that axis's handle. Reset
+// to all-unlocked when selection changes.
+let _axisLocks = { x: false, y: false, z: false };
+function applyAxisLocksToGizmo() {
+  if (!_transformControls) return;
+  _transformControls.showX = !_axisLocks.x;
+  _transformControls.showY = !_axisLocks.y;
+  _transformControls.showZ = !_axisLocks.z;
+}
 
 export function isEditorActive() { return isActive; }
 
@@ -202,8 +212,9 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
     if (!_dragMode) return;
     const hit = raycastDragPlane(e);
     if (!hit) return;
-    _dragMode.node.position.x = hit.x + _dragMode.offsetX;
-    _dragMode.node.position.z = hit.z + _dragMode.offsetZ;
+    // Honor per-axis locks: a locked axis just doesn't update.
+    if (!_axisLocks.x) _dragMode.node.position.x = hit.x + _dragMode.offsetX;
+    if (!_axisLocks.z) _dragMode.node.position.z = hit.z + _dragMode.offsetZ;
     syncDataEntryFromSelection();
     syncPanelFromSelection();
   };
@@ -303,11 +314,21 @@ function isTransformHelper(obj) {
 function findTaggedAncestor(obj) {
   let p = obj;
   while (p) {
-    if (p.userData && p.userData._roomId != null && p.userData._roomEntryIndex != null) {
-      return p;
+    if (p.userData) {
+      if (p.userData._roomId != null && p.userData._roomEntryIndex != null) return p;
+      if (p.userData._isNpc) return p;
     }
     p = p.parent;
   }
+  return null;
+}
+
+// Returns 'room' for room-entry placements, 'npc' for NPC characters,
+// or null. Determines which mutation path to use downstream.
+function tagKind(node) {
+  if (!node || !node.userData) return null;
+  if (node.userData._isNpc) return 'npc';
+  if (node.userData._roomId != null) return 'room';
   return null;
 }
 
@@ -316,21 +337,33 @@ function select(node) {
   if (!node) {
     _transformControls?.detach();
     _selectedEntry = null;
+    _axisLocks = { x: false, y: false, z: false };
     refreshPanel();
     return;
   }
   _selectedEntry = lookupEntry(node);
+  _axisLocks = { x: false, y: false, z: false };
   _transformControls?.attach(node);
+  applyAxisLocksToGizmo();
   refreshPanel();
 }
 
 function lookupEntry(node) {
-  const roomId = node.userData._roomId;
-  const idx = node.userData._roomEntryIndex;
-  const room = window.ROOM_BY_ID?.(roomId);
-  if (!room) return null;
-  const entry = room.objects[idx];
-  return { room, entry, index: idx };
+  const kind = tagKind(node);
+  if (kind === 'room') {
+    const roomId = node.userData._roomId;
+    const idx = node.userData._roomEntryIndex;
+    const room = window.ROOM_BY_ID?.(roomId);
+    if (!room) return null;
+    const entry = room.objects[idx];
+    return { kind: 'room', room, entry, index: idx };
+  }
+  if (kind === 'npc') {
+    const npcDef = node.userData.npc;
+    if (!npcDef) return null;
+    return { kind: 'npc', npcDef };
+  }
+  return null;
 }
 
 // ── Panel (hand-rolled — zero deps) ──────────────────────────────────
@@ -375,65 +408,89 @@ function refreshPanel() {
     `;
     return;
   }
-  const { entry, room, index } = _selectedEntry;
   const node = _selected;
   const yOffset = node.userData._yOffset || 0;
   const dataPosY = (node.position.y - yOffset).toFixed(3);
+  const sel = _selectedEntry;
 
-  const typeLabel = entry.type === 'builder'
-    ? `builder · ${entry.fn || '?'}`
-    : entry.type === 'decoration'
-      ? `decoration · ${entry.id || '?'}`
-      : entry.type;
+  let headerLabel = '';
+  let typeLabel = '';
+  let sizeEditable = false;
 
-  const sizeEditable = ['decoration', 'wall', 'floor_plate'].includes(entry.type);
+  if (sel.kind === 'room') {
+    const { entry, room, index } = sel;
+    headerLabel = `${room.id} #${index}`;
+    typeLabel = entry.type === 'builder'
+      ? `builder · ${entry.fn || '?'}`
+      : entry.type === 'decoration'
+        ? `decoration · ${entry.id || '?'}`
+        : entry.type;
+    sizeEditable = ['decoration', 'wall', 'floor_plate'].includes(entry.type);
+  } else if (sel.kind === 'npc') {
+    const { npcDef } = sel;
+    headerLabel = npcDef.name || npcDef.id;
+    typeLabel = `npc · ${npcDef.role || npcDef.kind || '?'}`;
+  }
+
+  const lockRow = (axis) => `
+    <span class="ccq-ed-lock">
+      <input type="checkbox" id="ccq-lock-${axis}" ${_axisLocks[axis] ? 'checked' : ''}>
+      <label for="ccq-lock-${axis}" title="Lock this axis — drag skips it, gizmo hides the handle">🔒</label>
+    </span>
+  `;
 
   _panelEl.innerHTML = `
-    <div class="ccq-ed-h">${room.id} #${index}</div>
+    <div class="ccq-ed-h">${headerLabel}</div>
     <div class="ccq-ed-sub">${typeLabel}</div>
 
     <div class="ccq-ed-row">
       <label>x</label>
       <input class="ccq-ed-num" id="ccq-pos-x" type="number" step="0.05" value="${node.position.x.toFixed(3)}">
+      ${lockRow('x')}
     </div>
     <div class="ccq-ed-row">
       <label>y</label>
       <input class="ccq-ed-num" id="ccq-pos-y" type="number" step="0.05" value="${dataPosY}">
+      ${lockRow('y')}
     </div>
     <div class="ccq-ed-row">
       <label>z</label>
       <input class="ccq-ed-num" id="ccq-pos-z" type="number" step="0.05" value="${node.position.z.toFixed(3)}">
+      ${lockRow('z')}
     </div>
     <div class="ccq-ed-row">
       <label>rotY</label>
       <input class="ccq-ed-num" id="ccq-rot-y" type="number" step="0.087266" value="${node.rotation.y.toFixed(4)}">
-    </div>
+    </div>${sel.kind === 'npc' ? `
+    <div class="ccq-ed-hint" style="margin-top:6px;">NPC position is stored as [x, z] + face (rotY).</div>` : ''}
 
     ${sizeEditable ? `
       <div class="ccq-ed-divider"></div>
       <div class="ccq-ed-sub" style="margin-bottom:6px;">size</div>
       <div class="ccq-ed-row">
         <label>width</label>
-        <input class="ccq-ed-num" id="ccq-size-w" type="number" step="0.05" value="${(entry.size?.width || entry.size?.w || '').toString()}">
+        <input class="ccq-ed-num" id="ccq-size-w" type="number" step="0.05" value="${(sel.entry.size?.width || sel.entry.size?.w || '').toString()}">
       </div>
       <div class="ccq-ed-row">
         <label>height</label>
-        <input class="ccq-ed-num" id="ccq-size-h" type="number" step="0.05" value="${(entry.size?.height || entry.size?.h || '').toString()}">
+        <input class="ccq-ed-num" id="ccq-size-h" type="number" step="0.05" value="${(sel.entry.size?.height || sel.entry.size?.h || '').toString()}">
       </div>
       <div class="ccq-ed-row">
         <label>depth</label>
-        <input class="ccq-ed-num" id="ccq-size-d" type="number" step="0.05" value="${(entry.size?.depth || entry.size?.d || '').toString()}">
+        <input class="ccq-ed-num" id="ccq-size-d" type="number" step="0.05" value="${(sel.entry.size?.depth || sel.entry.size?.d || '').toString()}">
       </div>
-      ${entry.type === 'decoration' ? `
+      ${sel.entry.type === 'decoration' ? `
       <div class="ccq-ed-row">
         <label>stretch</label>
-        <input id="ccq-stretch" type="checkbox" ${entry.size?.stretch ? 'checked' : ''}>
+        <input id="ccq-stretch" type="checkbox" ${sel.entry.size?.stretch ? 'checked' : ''}>
       </div>
       ` : ''}
       <div class="ccq-ed-hint" style="margin-top:6px;">
         Changing size rebuilds the mesh in place.
       </div>
-    ` : `<div class="ccq-ed-hint">Size for "${entry.type}" entries is not editable — adjust args in data/rooms.js directly.</div>`}
+    ` : (sel.kind === 'room'
+        ? `<div class="ccq-ed-hint">Size for "${sel.entry.type}" entries is not editable here — adjust args in data/rooms.js directly.</div>`
+        : '')}
 
     <div class="ccq-ed-divider"></div>
     <div style="display:flex; gap:6px;">
@@ -446,11 +503,18 @@ function refreshPanel() {
   _panelEl.querySelector('#ccq-pos-y').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-pos-z').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-rot-y').addEventListener('input', onRotInput);
+  for (const axis of ['x', 'y', 'z']) {
+    const cb = _panelEl.querySelector(`#ccq-lock-${axis}`);
+    if (cb) cb.addEventListener('change', (e) => {
+      _axisLocks[axis] = !!e.target.checked;
+      applyAxisLocksToGizmo();
+    });
+  }
   if (sizeEditable) {
     _panelEl.querySelector('#ccq-size-w').addEventListener('input', onSizeInput);
     _panelEl.querySelector('#ccq-size-h').addEventListener('input', onSizeInput);
     _panelEl.querySelector('#ccq-size-d').addEventListener('input', onSizeInput);
-    if (entry.type === 'decoration') {
+    if (sel.entry?.type === 'decoration') {
       _panelEl.querySelector('#ccq-stretch').addEventListener('change', onStretchToggle);
     }
   }
@@ -464,7 +528,11 @@ function onPosInput(e) {
   const x = parseFloat(document.getElementById('ccq-pos-x').value) || 0;
   const yData = parseFloat(document.getElementById('ccq-pos-y').value) || 0;
   const z = parseFloat(document.getElementById('ccq-pos-z').value) || 0;
-  _selected.position.set(x, yData + yOffset, z);
+  _selected.position.set(
+    _axisLocks.x ? _selected.position.x : x,
+    _axisLocks.y ? _selected.position.y : (yData + yOffset),
+    _axisLocks.z ? _selected.position.z : z,
+  );
   syncDataEntryFromSelection();
 }
 
@@ -553,17 +621,27 @@ function rebuildSelectedMesh() {
 
 // Mirror the selected node's transform into the data entry it
 // represents. Called both when TransformControls drags the gizmo and
-// when the panel's number inputs change.
+// when the panel's number inputs change. Handles both 'room' entries
+// (pos: [x, y, z], rotY) and 'npc' entries (pos: [x, z], face).
 function syncDataEntryFromSelection() {
   if (!_selected || !_selectedEntry) return;
-  const { entry } = _selectedEntry;
   const yOffset = _selected.userData._yOffset || 0;
-  entry.pos = [
-    +_selected.position.x.toFixed(4),
-    +(_selected.position.y - yOffset).toFixed(4),
-    +_selected.position.z.toFixed(4),
-  ];
-  entry.rotY = +_selected.rotation.y.toFixed(5);
+  if (_selectedEntry.kind === 'room') {
+    const { entry } = _selectedEntry;
+    entry.pos = [
+      +_selected.position.x.toFixed(4),
+      +(_selected.position.y - yOffset).toFixed(4),
+      +_selected.position.z.toFixed(4),
+    ];
+    entry.rotY = +_selected.rotation.y.toFixed(5);
+  } else if (_selectedEntry.kind === 'npc') {
+    const { npcDef } = _selectedEntry;
+    npcDef.pos = [
+      +_selected.position.x.toFixed(4),
+      +_selected.position.z.toFixed(4),
+    ];
+    npcDef.face = +_selected.rotation.y.toFixed(5);
+  }
 }
 
 // Mirror node → panel input fields. Called when TransformControls
@@ -757,25 +835,30 @@ function beginFreeDrag(node, e) {
 
 function deleteSelected() {
   if (!_selected || !_selectedEntry || !_ctx) return;
-  const { room, index } = _selectedEntry;
   const node = _selected;
 
-  // Detach gizmo + remove mesh from scene.
+  // Detach gizmo for both kinds.
   try { _transformControls?.detach(); } catch {}
-  try { _ctx.scene.remove(node); } catch {}
 
-  // Splice the entry out of the room's data array.
-  room.objects.splice(index, 1);
-
-  // Re-index every node still tagged with this room — anything that
-  // was at a higher index now shifts down by 1.
-  _ctx.scene.traverse((o) => {
-    if (o.userData?._roomId !== room.id) return;
-    if (typeof o.userData._roomEntryIndex !== 'number') return;
-    if (o.userData._roomEntryIndex > index) {
-      o.userData._roomEntryIndex -= 1;
+  if (_selectedEntry.kind === 'room') {
+    const { room, index } = _selectedEntry;
+    try { _ctx.scene.remove(node); } catch {}
+    room.objects.splice(index, 1);
+    // Re-index every node still tagged with this room — anything that
+    // was at a higher index now shifts down by 1.
+    _ctx.scene.traverse((o) => {
+      if (o.userData?._roomId !== room.id) return;
+      if (typeof o.userData._roomEntryIndex !== 'number') return;
+      if (o.userData._roomEntryIndex > index) o.userData._roomEntryIndex -= 1;
+    });
+  } else if (_selectedEntry.kind === 'npc') {
+    // NPC removal routes through the play.js API so npcMeshes stays
+    // consistent (collision / repulsion code iterates that array).
+    try { window.__playApi?.removeNpcMesh?.(node); } catch (e) {
+      console.warn('[editor] NPC remove failed, falling back to scene.remove', e);
+      try { _ctx.scene.remove(node); } catch {}
     }
-  });
+  }
 
   _selected = null;
   _selectedEntry = null;
@@ -846,7 +929,13 @@ const LIBRARY_CATALOG = {
 
 function showLibraryModal() {
   if (!_ctx) return;
-  if (!_libraryModalEl) buildLibraryModal();
+  // Rebuild every time so the Characters list reflects which NPCs
+  // are currently present vs deleted in this session.
+  if (_libraryModalEl) {
+    _libraryModalEl.remove();
+    _libraryModalEl = null;
+  }
+  buildLibraryModal();
   _libraryModalEl.style.display = 'flex';
 }
 
@@ -908,9 +997,68 @@ function buildLibraryModal() {
       grid.appendChild(btn);
     }
   }
+
+  // ── Characters — hand-built NPC roster from play.js ────────────────
+  // Lets the user respawn an NPC that was deleted this session, OR
+  // add a duplicate copy of one for visual mock-ups. Auto-generated
+  // NPCs (ch03..ch16) aren't listed here — they regenerate from the
+  // curriculum on reload.
+  const npcRoster = (() => {
+    try { return window.__playApi?.getHandBuiltNpcs?.() || []; }
+    catch { return []; }
+  })();
+  if (npcRoster.length) {
+    const h = document.createElement('div');
+    h.textContent = 'Characters';
+    h.style.cssText = `
+      grid-column: 1/-1; margin: 10px 0 4px;
+      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+      opacity: 0.65; color: #ffd166;
+    `;
+    grid.appendChild(h);
+    // Track which NPC ids are currently alive so we can dim entries
+    // that are still in the scene (vs deleted earlier and now
+    // re-spawnable).
+    const aliveIds = new Set();
+    _ctx.scene.traverse((o) => {
+      if (o.userData?._isNpc) aliveIds.add(o.userData._npcId);
+    });
+    for (const npc of npcRoster) {
+      const btn = document.createElement('button');
+      btn.className = 'ccq-lib-btn';
+      const isAlive = aliveIds.has(npc.id);
+      btn.textContent = `${npc.portrait || '👤'} ${npc.name}${isAlive ? ' (live)' : ''}`;
+      btn.title = `${npc.role || ''}\nchapter: ${npc.chapterId || '—'}`;
+      if (isAlive) btn.style.opacity = '0.55';
+      btn.addEventListener('click', () => {
+        hideLibraryModal();
+        spawnNpcAtCamera(npc);
+      });
+      grid.appendChild(btn);
+    }
+  }
+
   card.querySelector('[data-close]').addEventListener('click', hideLibraryModal);
   _ctx.container.appendChild(el);
   _libraryModalEl = el;
+}
+
+// Spawn a fresh NPC instance from a roster def. Pos is overridden to
+// land in front of the camera. The play.js API handles the actual
+// THREE mesh build via spawnNPC() and pushes it to npcMeshes; we
+// then select the new mesh for immediate drag-to-place.
+function spawnNpcAtCamera(npcTemplate) {
+  if (!_ctx || !window.__playApi?.spawnNpcFromDef) return;
+  const spawn = pickSpawnPoint();
+  const x = spawn ? +spawn.x.toFixed(2) : (npcTemplate.pos?.[0] ?? 0);
+  const z = spawn ? +spawn.z.toFixed(2) : (npcTemplate.pos?.[1] ?? 0);
+  // Deep-clone the template so editing this instance doesn't mutate
+  // the original NPCS entry.
+  const def = JSON.parse(JSON.stringify(npcTemplate));
+  def.pos = [x, z];
+  // Same face direction; user can rotate after.
+  const mesh = window.__playApi.spawnNpcFromDef(def);
+  if (mesh) select(mesh);
 }
 
 // Spawn a new entry from a library template. The entry is appended to
@@ -1037,6 +1185,12 @@ function injectStylesOnce() {
       background: rgba(50,70,110,0.5);
       border-color: rgba(201,164,76,0.6);
     }
+    .ccq-ed-lock {
+      display: inline-flex; align-items: center; gap: 2px;
+      margin-left: 4px;
+    }
+    .ccq-ed-lock label { width: auto; opacity: 0.7; cursor: pointer; font-size: 12px; }
+    .ccq-ed-lock input[type=checkbox]:checked + label { opacity: 1; color: #ffd166; }
   `;
   document.head.appendChild(style);
 }
