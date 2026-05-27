@@ -2526,9 +2526,9 @@ function buildPlayer() {
   player.userData.grounded = true;
   scene.add(player);
 
-  const tierTag = makeLabelSprite(o.label, '#1a2744', 'rgba(201,164,76,0.95)');
-  tierTag.position.set(0, 2.4, 0);
-  player.add(tierTag);
+  // The player's rank label is already shown in the top-right HUD
+  // ("Tier: Director" etc.) — having a duplicate gold pill floating
+  // above the avatar was redundant and visually noisy. Removed.
 }
 
 // Ines: kid waiting in the office, cycles through child-like activities.
