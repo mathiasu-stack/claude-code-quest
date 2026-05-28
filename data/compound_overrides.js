@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:11:03.644Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T20:01:44.504Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.
@@ -29,11 +29,35 @@ window.COMPOUND_OVERRIDES = {
     'marcus_succulent': { pos: [-7.554, 0.8, -3.489], rotY: 0 },
     'service_elevator': { pos: [11.2866, 0, -7.5032], rotY: 1.5708, scale: [4.7, 5.2, 4.7] },
     'aisha_whiteboard': { pos: [10.1831, 2, -9.6273], rotY: -1.5708, scale: [0.65, 0.65, 0.65] },
+    'clock': { hidden: true },
+    'west_window': { hidden: true },
   },
   'atrium': {
     'mullion_h_0': { hidden: true },
   },
   'reception_centerpiece': {
     'k_sculpture': { pos: [0.0358, 0, 0.6345], rotY: 0 },
+  },
+  'library_ceiling': {
+    'beam_0': { hidden: true },
+    'beam_1': { hidden: true },
+    'beam_2': { hidden: true },
+    'molding_1': { hidden: true },
+  },
+  'library_arched_window': {
+    'header': { hidden: true },
+    'glass': { hidden: true },
+    'arch': { hidden: true },
+    'jamb_left': { hidden: true },
+    'jamb_right': { hidden: true },
+    'light_stream': { hidden: true },
+  },
+  'reception_windows': {
+    'window_2_frame': { hidden: true },
+    'window_1_frame': { hidden: true },
+    'window_0_frame': { hidden: true },
+    'window_0_glass': { pos: [10.84, 1.9, -3], rotY: -1.5708, scale: [1.2, 1.2, 1.2] },
+    'window_1_glass': { pos: [10.84, 1.9, 0], rotY: -1.5708, scale: [1.2, 1.2, 1.2] },
+    'window_2_glass': { pos: [10.84, 1.9, 3], rotY: -1.5708, scale: [1.2, 1.2, 1.2] },
   },
 };

@@ -483,13 +483,14 @@ const PLAYER_RADIUS = 0.30;
 function clampMove(oldX, oldZ, newX, newZ) {
   // Floor 1 has a 2×2 layout: the atrium + library occupy x∈[-10.5, 10.5]
   // while the new west-wing rooms (Files, Plan Mode) occupy x∈[-32.5, -10.5].
-  // Floors 2-4 are a single 22×22 office (z∈[-10.5, 10.5]).
+  // Floors 2-4 are now a 36×36 open floor centered at origin
+  // (z∈[-17.5, 17.5], x∈[-17.5, 17.5]) — 2.7× larger than the old 22×22.
   if (currentFloor === 1) {
     newX = Math.max(-32.5, Math.min(10.5, newX));
     newZ = Math.max(-10.5, Math.min(32.5, newZ));
   } else {
-    newX = Math.max(-10.5, Math.min(10.5, newX));
-    newZ = Math.max(-10.5, Math.min(10.5, newZ));
+    newX = Math.max(-17.5, Math.min(17.5, newX));
+    newZ = Math.max(-17.5, Math.min(17.5, newZ));
   }
 
   if (currentFloor !== 1) {
@@ -1808,15 +1809,25 @@ function tagSceneFloor1() {
 // atrium) opens into the NE quadrant. Internal cross-walls at x=0 and
 // z=0 divide the room into 4; each cross-wall has a 2m doorway at the
 // origin so the player can walk between quadrants.
+// Floor 2-4 outer envelope is now twice as big as the ground floor —
+// 36×36 m, centered at origin, with the elevator shaft (at x≈12.3,
+// existing geometry) sitting as an INTERIOR column rather than an
+// east-wall fixture. clampMove + floorOfficePositionForNPC are
+// adjusted accordingly. Floor area: 1296 m² each (was 484, +168%).
+const FLOOR_OFFICE_HALF = 18;   // half-extent of the 36×36 floor
+const FLOOR_OFFICE_WALL_H = 3.8;
+
 function buildFloorOffice(floorIdx) {
   const y0 = floorBaseY(floorIdx);
-  const wallH = 3.8;
+  const wallH = FLOOR_OFFICE_WALL_H;
+  const H = FLOOR_OFFICE_HALF;     // shorthand
+  const FULL = H * 2;              // 36 m
   const themeIdx = (floorIdx - 1) * CHAPTERS_PER_FLOOR;
   const theme = ZONE_THEMES[themeIdx] || { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', metal: 0.1, title: floorThemeName(floorIdx) };
 
-  // Floor plate
+  // Floor plate — 36×36
   const floorMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(22, 22),
+    new THREE.PlaneGeometry(FULL, FULL),
     new THREE.MeshStandardMaterial({
       color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
     }),
@@ -1827,9 +1838,9 @@ function buildFloorOffice(floorIdx) {
   floorMesh.userData.floor = floorIdx;
   scene.add(floorMesh);
 
-  // Ceiling
+  // Ceiling — same size
   const ceilingMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(22, 22),
+    new THREE.PlaneGeometry(FULL, FULL),
     new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
   );
   ceilingMesh.rotation.x = Math.PI / 2;
@@ -1840,11 +1851,6 @@ function buildFloorOffice(floorIdx) {
   const wallMat = new THREE.MeshStandardMaterial({
     color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
   });
-  // Slightly different tint for internal partitions so they read as a
-  // step away from the outer envelope.
-  const innerWallMat = new THREE.MeshStandardMaterial({
-    color: 0xf4ecd8, metalness: 0.03, roughness: 0.7,
-  });
   function addWall(w, h, d, x, z, mat = wallMat) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y0 + h / 2, z);
@@ -1853,27 +1859,19 @@ function buildFloorOffice(floorIdx) {
     scene.add(m);
   }
 
-  // ── Outer perimeter ────────────────────────────────────────────────
-  // North, south, west walls — solid 22m.
-  addWall(22, wallH, 0.3, 0, -11);
-  addWall(22, wallH, 0.3, 0,  11);
-  addWall(0.3, wallH, 22, -11, 0);
-  // East wall — split around the elevator door at z=-7.6 (matches
-  // elevator.js's shaft door which faces west into this floor). Door
-  // opening is 2.4m wide and 2.6m tall.
-  addWall(0.3, wallH, 2.2, 11, -9.9);    // north stub (z=-11..-8.8)
-  addWall(0.3, wallH, 17.4, 11, 2.3);    // south of elevator (z=-6.4..+11)
-  // Lintel above the elevator door — 1.2m tall closing y∈[2.6, 3.8].
-  const elevLintel = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 2.4), wallMat);
-  elevLintel.position.set(11, y0 + wallH - 0.6, -7.6);
-  elevLintel.castShadow = true; elevLintel.receiveShadow = true;
-  elevLintel.userData.floor = floorIdx;
-  scene.add(elevLintel);
+  // ── Outer perimeter — 36 m per side ────────────────────────────────
+  // North, south, west walls — solid.
+  addWall(FULL, wallH, 0.3, 0, -H);
+  addWall(FULL, wallH, 0.3, 0,  H);
+  addWall(0.3, wallH, FULL, -H, 0);
+  // East wall — solid (elevator no longer punches through it; the
+  // shaft is now an interior column).
+  addWall(0.3, wallH, FULL,  H, 0);
 
   // Internal walls are now per-floor and live in data/rooms.js as
   // `wall` entries under each office_floor{N} room. That lets each
   // floor have a different layout (coworking vs pods vs corridor)
-  // while sharing this builder's outer envelope + elevator door.
+  // while sharing this builder's outer envelope.
 
   // Floor title sign on north wall
   const sign = makeWallSign(`FLOOR ${floorIdx} — ${(theme.title || '').toUpperCase()}`, 9, 1.4, '#1a2744', theme.accent || '#ffd54f');
@@ -1951,11 +1949,14 @@ function floorOfficePositionForNPC(npcDef) {
   const f = floorForChapterIdx(idx);
   if (f <= 1) return null; // floor 1 keeps original positions
   const slotIdx = idx % CHAPTERS_PER_FLOOR; // 0..3 within floor
+  // Slots spread to the four quadrants of the 36×36 floor (±13 from
+  // origin so they sit ~5 m inside each outer wall). rearZ is the
+  // "back of the desk" position for the test NPC.
   const slots = [
-    { cx: -5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
-    { cx:  5.5, cz: -5.5, face: 0,        rearZ: -7.0 },
-    { cx: -5.5, cz:  5.5, face: Math.PI,  rearZ:  7.0 },
-    { cx:  5.5, cz:  5.5, face: Math.PI,  rearZ:  7.0 },
+    { cx: -13, cz: -13, face: 0,        rearZ: -15 },
+    { cx:  13, cz: -13, face: 0,        rearZ: -15 },
+    { cx: -13, cz:  13, face: Math.PI,  rearZ:  15 },
+    { cx:  13, cz:  13, face: Math.PI,  rearZ:  15 },
   ];
   const slot = slots[slotIdx];
   // Spread lesson NPCs in a small arc in front of the desk; test NPC
