@@ -1064,9 +1064,9 @@ export async function savePermanently() {
   return exportLayout();
 }
 
-// Same payload shape as save.php; sidecar listens on the editor's
-// host but a different port (8889). Cross-origin → browser does a
-// preflight; sidecar serves CORS headers.
+// Same payload shape as save.php; sidecar now serves the project AND
+// /save from the same origin (port 8888), so a plain relative URL
+// works and no preflight is needed.
 async function _trySaveViaSidecar(files) {
   let pass = '';
   try { pass = sessionStorage.getItem('ccq_admin_pass') || ''; } catch {}
@@ -1075,7 +1075,7 @@ async function _trySaveViaSidecar(files) {
     if (!pass) return 'unavailable';
     try { sessionStorage.setItem('ccq_admin_pass', pass); } catch {}
   }
-  const url = `${location.protocol}//${location.hostname}:8889/save`;
+  const url = './save';
   let resp;
   try {
     // 2 s timeout — if the sidecar isn't up we want to fall through

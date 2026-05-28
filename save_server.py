@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
-"""save_server.py — sidecar HTTP server for the in-game editor's
-'💾 Save Permanently' button.
+"""save_server.py — single-process HTTP server for the project.
 
-Stands in for save.php when Web Station's PHP-FPM isn't wired up
-(Synology DSM script-language settings can be fiddly). Listens on
-port 8889 and accepts the same JSON payload as save.php — the editor
-POSTs to whichever endpoint answers first.
+Replaces Web Station for this folder. Serves the static game files
+(GET *) AND accepts the in-game editor's "💾 Save Permanently" POSTs
+at /save. Same origin → no CORS preflight, simpler editor wiring.
 
 Protocol:
     POST /save
     Content-Type: application/json
     { "passcode": "<admin>", "files": [ { "name": "<allow-listed>", "content": "..." } ] }
 
-Hard restrictions:
+Hard restrictions on the save endpoint:
     • POST /save only,
     • filename must be in ALLOWED,
     • writes only into ./data/,
     • passcode must match constant-time,
     • 1 MB cap per file content.
 
-CORS:
-    The editor pages from port 8888; this serves on 8889. Cross-origin,
-    so OPTIONS preflight + Access-Control-Allow-Origin: * are sent.
-    Auth is the passcode, not the origin.
+Static-serving:
+    • Document root = project root (where this script lives).
+    • MIME types extended for .glb (model/gltf-binary), .webp, .gltf.
 
 Run:
     nohup python3 /volume1/projects/claude-code-quest/save_server.py \
-      > /tmp/save_server.log 2>&1 &
+      > /tmp/save_server.log 2>&1 < /dev/null &
+
+Optional argv:
+    save_server.py [port]              # default 8888
 
 Persist across reboots: add a DSM Task Scheduler task (boot-up trigger)
 running the same command. See setup instructions in the deploy chat.
@@ -35,10 +35,10 @@ running the same command. See setup instructions in the deploy chat.
 import hmac
 import http.server
 import json
+import mimetypes
 import os
 import sys
 
-PORT = 8889
 PASS = 'Kapprim'  # keep in sync with sessionStorage.ccq_admin_pass set by app.js
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
@@ -51,8 +51,18 @@ ALLOWED = frozenset({
 MAX_BYTES = 1024 * 1024  # 1 MB per file
 MAX_REQUEST = 16 * 1024 * 1024  # 16 MB total payload ceiling
 
+# Python's mimetypes table predates the gaming/3D extensions we use.
+mimetypes.add_type('model/gltf-binary', '.glb')
+mimetypes.add_type('model/gltf+json',   '.gltf')
+mimetypes.add_type('image/webp',        '.webp')
+mimetypes.add_type('application/javascript', '.js')  # belt + suspenders
 
-class Handler(http.server.BaseHTTPRequestHandler):
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    # SimpleHTTPRequestHandler serves files from `directory` for GET/HEAD,
+    # which gives us the static-game-serving for free. We override
+    # do_POST for the save endpoint and add CORS in case the editor is
+    # ever served from a different origin.
     def _send_cors(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -73,12 +83,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._send_cors()
         self.end_headers()
 
+    # Files in the project root we do NOT want anyone to GET. The
+    # passcode in save_server.py / save.php isn't a hard secret (the
+    # user types it into localStorage) but there's no reason to hand
+    # it out either. .git carries history that probably shouldn't be
+    # served from a LAN box.
+    _BLOCKED_PREFIXES = ('/save_server.py', '/save.php', '/.git/', '/.git',
+                         '/RESUME.md', '/scripts/', '/CLAUDE.md')
+
     def do_GET(self):
-        # Probe convenience: a GET to /save tells the editor (or curl)
-        # the service is alive without revealing config.
-        if self.path in ('/save', '/save/', '/'):
+        if self.path == '/save' or self.path == '/save/':
             return self._send_json(405, {'ok': False, 'error': 'POST only'})
-        return self._send_json(404, {'ok': False, 'error': 'unknown path'})
+        for blocked in self._BLOCKED_PREFIXES:
+            if self.path == blocked or self.path.startswith(blocked + '/') or self.path.startswith(blocked):
+                return self._send_json(403, {'ok': False, 'error': 'forbidden'})
+        return super().do_GET()
+
+    def do_HEAD(self):
+        if self.path == '/save' or self.path == '/save/':
+            return self._send_json(405, {'ok': False, 'error': 'POST only'})
+        return super().do_HEAD()
 
     def do_POST(self):
         if self.path not in ('/save', '/save/'):
@@ -143,8 +167,16 @@ def main():
     if not os.path.isdir(DATA_DIR):
         print(f'[save_server] error: data dir missing at {DATA_DIR}', flush=True)
         sys.exit(1)
-    print(f'[save_server] listening on 0.0.0.0:{PORT}, writes -> {DATA_DIR}', flush=True)
-    server = http.server.ThreadingHTTPServer(('0.0.0.0', PORT), Handler)
+    port = 8888
+    if len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])
+        except ValueError:
+            print(f'[save_server] bad port arg: {sys.argv[1]!r}, using {port}', flush=True)
+    # `directory` is honored by SimpleHTTPRequestHandler for GET/HEAD.
+    handler_factory = lambda *a, **kw: Handler(*a, directory=PROJECT_ROOT, **kw)
+    print(f'[save_server] listening on 0.0.0.0:{port} | static root: {PROJECT_ROOT} | writes: {DATA_DIR}', flush=True)
+    server = http.server.ThreadingHTTPServer(('0.0.0.0', port), handler_factory)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
