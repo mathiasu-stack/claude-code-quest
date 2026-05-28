@@ -14,7 +14,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const ASSET_DIR = 'play/assets/decorations/';
-const CACHE_BUST = '?v=20260528i';
+const CACHE_BUST = '?v=20260528j';
 
 // Asset id → file (relative to ASSET_DIR).
 const FILES = {

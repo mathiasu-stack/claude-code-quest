@@ -24,6 +24,26 @@
 
 const wallH = 3.8;
 
+// Generate an N×N grid of floor_tile decorations covering a span×span
+// area centered at the origin. Each tile is editable individually via
+// the in-game editor; Export Layout materialises them as discrete
+// entries when the user saves so per-tile edits survive a reload.
+function _floorTiles(N, span, y) {
+  const tiles = [];
+  const tileSize = span / N;
+  const start = -span / 2 + tileSize / 2;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      tiles.push({
+        type: 'decoration', id: 'floor_tile',
+        pos: [start + i * tileSize, y, start + j * tileSize],
+        size: { width: tileSize, depth: tileSize, height: 0.005, stretch: true },
+      });
+    }
+  }
+  return tiles;
+}
+
 window.ROOMS = [
 
   // ─────────────────────────────────────────────────────────────────
@@ -36,15 +56,17 @@ window.ROOMS = [
     description: 'Onboarding zone — Linda, IT bench, Aisha, Kenji, Diana',
     objects: [
 
-      // ── Shell: floor + carpet runner ────────────────────────────
-      // The visible reception floor is the atrium's white marble
-      // overlay (y=0.001, see play/world/atrium.js → marbleWhite()):
-      // warm off-white #f3efe8 with soft grey veining, metalness 0.04,
-      // roughness 0.22 — reads as a semi-realistic cream ceramic.
-      // This gray plate is kept underneath as a defensive fallback in
-      // case the atrium builder fails.
+      // ── Shell: floor + ivory tile grid + carpet runner ──────────
+      // Base gray floor_plate is a defensive fallback if the GLB
+      // fails. Ivory-marble-with-gold-embellishment Meshy tiles, 9×9
+      // = 81 instances at 22/9 ≈ 2.44 m each (scale 1.28× from the
+      // natural 1.9 m so the gold detail stays recognizable). Atrium
+      // marble overlay (y=0.001) sits below and is hidden by the
+      // tiles. Runner lifted from y=0.0025 to y=0.012 so it stays
+      // above the tiles (top of tile ≈ 0.007).
       { type: 'floor_plate', pos: [0, 0, 0], size: { w: 22, d: 22 }, color: 0x9aa9bc },
-      { type: 'floor_plate', pos: [0, 0.0025, -1], size: { w: 2.4, d: 18 },
+      ..._floorTiles(9, 22, 0.002),
+      { type: 'floor_plate', pos: [0, 0.012, -1], size: { w: 2.4, d: 18 },
         color: 0xc9a44c, metalness: 0.85, roughness: 0.18 },
 
       // ── Reception room walls ────────────────────────────────────
