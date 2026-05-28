@@ -77,6 +77,12 @@ export function loadRoom(scene, room, ctx = {}) {
     const node = result.isObject3D ? result : result.root;
     if (!node) continue;
     if (yOffset) node.position.y += yOffset;
+    // Editor-set per-entry scale (entry.scale = [sx, sy, sz]). Applied
+    // here so EVERY entry type (decoration, builder, wall, …) gets
+    // resized uniformly regardless of how the dispatcher built it.
+    if (Array.isArray(obj.scale) && obj.scale.length === 3) {
+      node.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+    }
     // Tag every node with room.floor for visibility culling. Builders
     // that need per-mesh override can set userData.floor before
     // returning; we only OVERWRITE entries that are currently undefined.

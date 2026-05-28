@@ -28,8 +28,26 @@
   <!-- Data -->
   <script src="data/curriculum.js?v=20260524d"></script>
   <script src="data/curriculum2.js?v=20260524d"></script>
-  <!-- Scene-layout data — read by play/world/roomsLoader.js -->
-  <script src="data/rooms.js?v=20260527g"></script>
+  <!--
+    Editor-writable data files — loaded with a per-page-load timestamp
+    cache-bust so the in-game editor's "Save Permanently" can drop a
+    new file on disk and a normal reload picks it up. Costs ~10 KB
+    re-fetch per page load, no manual ?v= bumping required.
+  -->
+  <script>
+    (function() {
+      var t = Date.now();
+      var files = [
+        'rooms.js',                     // scene-layout data (read by roomsLoader)
+        'npc_overrides.js',             // per-NPC pos/face overrides
+        'lesson_delivery_overrides.js', // per-chapter interactable overrides
+        'compound_overrides.js',        // per-child overrides for compound builders
+      ];
+      for (var i = 0; i < files.length; i++) {
+        document.write('<script src="data/' + files[i] + '?t=' + t + '"><\/script>');
+      }
+    })();
+  </script>
 
   <!-- Achievements (depends on Progress + CURRICULUM) -->
   <script src="engine/achievements.js?v=20260524d"></script>
@@ -48,10 +66,10 @@
     }
   }
   </script>
-  <script type="module" src="play/play.js?v=20260527h"></script>
+  <script type="module" src="play/play.js?v=20260528h"></script>
 
   <!-- App Bootstrap -->
-  <script src="app.js?v=20260524d"></script>
+  <script src="app.js?v=20260528h"></script>
 
 </body>
 </html>

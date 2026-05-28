@@ -16,6 +16,9 @@ import {
   brushedSilver, polishedChrome, glassClear,
   marbleDarkGreen, brass,
 } from '../materials/modernLibrary.js';
+import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
+
+const OWNER = 'elevator';
 
 // Shaft now sits OUTSIDE the atrium's east wall (which is at x=11), so
 // the elevator takes no floor space inside the reception room. The
@@ -37,7 +40,7 @@ export function buildElevator(scene, opts = {}) {
   shaftGroup.position.set(SHAFT_X, 0, SHAFT_Z);
   shaftGroup.rotation.y = -Math.PI / 2; // opening now faces west (into atrium)
   shaftGroup.userData.crossFloor = true;
-  scene.add(shaftGroup);
+  placeCompoundChild(scene, shaftGroup, OWNER, 'shaft_group');
 
   // ── 1. Shaft — glass tube ──────────────────────────────────────────
   // 4 glass walls (plus a frame) running floor to ceiling+more.
@@ -190,7 +193,7 @@ export function buildElevator(scene, opts = {}) {
   );
   btnHousing.position.set(CALL_BTN_X, 1.2, CALL_BTN_Z + 1.5);
   btnHousing.userData.crossFloor = true;
-  scene.add(btnHousing);
+  placeCompoundChild(scene, btnHousing, OWNER, 'call_button_housing');
   const btnUp = new THREE.Mesh(
     new THREE.SphereGeometry(0.04, 12, 8),
     new THREE.MeshStandardMaterial({
@@ -199,7 +202,7 @@ export function buildElevator(scene, opts = {}) {
   );
   btnUp.position.set(CALL_BTN_X - 0.03, 1.32, CALL_BTN_Z + 1.5);
   btnUp.userData.crossFloor = true;
-  scene.add(btnUp);
+  placeCompoundChild(scene, btnUp, OWNER, 'call_button_light');
   out.callButton = btnHousing;
 
   // ── 4. Floor signage above the elevator door, atrium-side.
@@ -226,7 +229,7 @@ export function buildElevator(scene, opts = {}) {
     sign.position.set(10.94, 3.0 + (f - 2) * 0.45, SHAFT_Z);
     sign.rotation.y = -Math.PI / 2;
     sign.userData.crossFloor = true;
-    scene.add(sign);
+    placeCompoundChild(scene, sign, OWNER, `floor_sign_${f}`);
   }
 
   // Expose constants the host needs (call-button XZ for proximity, cab

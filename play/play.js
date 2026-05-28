@@ -24,18 +24,20 @@ import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
 import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260526i';
 import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
-import { decorateReception } from './decorations/reception.js?v=20260526e';
-import { decorateLibrary } from './decorations/library.js?v=20260526d';
-import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260526d';
+import { decorateReception } from './decorations/reception.js?v=20260528g';
+import { decorateLibrary } from './decorations/library.js?v=20260528g';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528g';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526l';
-import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260526a';
+import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260528g';
 import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
-         exportLayout as exportRoomLayout } from './editor/roomsEditor.js?v=20260527f';
+         isEditorDragging as isRoomEditorDragging,
+         exportLayout as exportRoomLayout,
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528h';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
-import { buildAtrium } from './world/atrium.js?v=20260526b';
+import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
 import { CeremonyManager } from './ceremony/ceremonyManager.js';
 import {
@@ -1612,16 +1614,40 @@ function buildWorld() {
     if (!builder) continue;
     const loc = cfg.objectLocation;
     if (!loc?.position) continue;
+    const cid = cfg.chapterId || chapterId;
+    const ov = window.LESSON_DELIVERY_OVERRIDES?.[cid];
+    // Editor-set deletion: skip the build entirely on this load.
+    if (ov?.hidden === true) continue;
     try {
+      // Editor-written per-chapter override (data/lesson_delivery_overrides.js).
+      // If present, use it for the spawn position; the original loc
+      // stays the unedited default that the override layers on top of.
+      const position = (ov?.position && ov.position.length === 3) ? ov.position : loc.position;
       const obj = builder({
         scene,
-        position: loc.position,
+        position,
         lookAt: 0,
-        chapterId: cfg.chapterId || chapterId,
+        chapterId: cid,
         lessonId: cfg.lessonId,
         onInteract: onObjectInteract,
       });
       interactObjects.push(obj);
+      // Tag the returned group so the in-game editor can resolve a
+      // raycast hit back to the LESSON_DELIVERY entry and mirror
+      // edits into LESSON_DELIVERY_OVERRIDES. registerInteractable()
+      // already set _isInteractable + _interactable on the mesh;
+      // here we add the back-references the editor needs to (a)
+      // display chapter info, (b) write x/y/z into the overrides map.
+      const root = obj?.group;
+      if (root && root.userData) {
+        root.userData._lessonDeliveryRef = loc;
+        root.userData._interactableChapterId = cid;
+        root.userData._interactableKind = cfg.delivery;
+        root.userData.floor = loc.floor || 1;
+        if (Array.isArray(ov?.scale) && ov.scale.length === 3) {
+          root.scale.set(ov.scale[0], ov.scale[1], ov.scale[2]);
+        }
+      }
     } catch (e) {
       console.warn(`object build failed for ${chapterId} (${cfg.delivery})`, e);
     }
@@ -1962,74 +1988,122 @@ function applyFloorVisibility() {
 // buildAtrium. Padding of ~0.05m on each side keeps the player visually
 // off the surface; the global PLAYER_RADIUS handles the player's
 // half-width.
+// Per-builder default footprint (width × depth before rotY). Items
+// not listed here are treated as non-blocking (chair / plant / lamp /
+// monitor / small clutter). Each entry derives a collider AABB
+// centered on the entry's pos.
+const BUILDER_FOOTPRINTS = {
+  desk:           (args) => ({ w: args?.w ?? 1.6, d: args?.d ?? 0.8 }),
+  table:          (args) => ({ w: args?.w ?? 2.2, d: 1.2 }),
+  couch:                () => ({ w: 1.8, d: 0.8 }),
+  filing_cabinet:       () => ({ w: 0.6, d: 0.6 }),
+  bookshelf:            () => ({ w: 2.2, d: 0.4 }),
+  water_cooler:         () => ({ w: 0.5, d: 0.5 }),
+};
+const DECORATION_BLOCKERS = new Set([
+  'reception_desk', 'desk', 'table', 'bookshelf', 'couch',
+  'filing_cabinet', 'cabinet',
+]);
+
+// Derive an AABB collider for one room entry. Returns null for
+// non-blocking entries (chair, plant, wall, floor_plate, posters,
+// compound builders, …).
+//
+// entry.collide is an editor-set tri-state:
+//   undefined  → use the default rule (BUILDER_FOOTPRINTS /
+//                DECORATION_BLOCKERS membership decides).
+//   true       → force a collider even if the type isn't in the
+//                default list (uses size or a 1×1 fallback).
+//   false      → force no collider even if the type is normally a
+//                blocker (lets the editor make a desk walk-through).
+function aabbForRoomEntry(entry, floor) {
+  if (!entry || !Array.isArray(entry.pos)) return null;
+  if (entry.collide === false) return null;
+  let w = 0, d = 0;
+  if (entry.type === 'builder') {
+    const f = BUILDER_FOOTPRINTS[entry.fn];
+    if (f) {
+      const dims = f(entry.args || {});
+      w = dims.w; d = dims.d;
+    } else if (entry.collide === true) {
+      w = entry.args?.w ?? 1.0;
+      d = entry.args?.d ?? 1.0;
+    } else {
+      return null;
+    }
+  } else if (entry.type === 'decoration') {
+    const isDefaultBlocker = DECORATION_BLOCKERS.has(entry.id);
+    if (!isDefaultBlocker && entry.collide !== true) return null;
+    w = entry.size?.width ?? entry.size?.w ?? 1.0;
+    d = entry.size?.depth ?? entry.size?.d ?? 1.0;
+  } else {
+    return null;
+  }
+  // rotY ±π/2 swaps the footprint axes. For arbitrary angles use the
+  // axis-aligned bbox of the rotated rectangle.
+  const rotY = entry.rotY || 0;
+  const c = Math.abs(Math.cos(rotY));
+  const s = Math.abs(Math.sin(rotY));
+  const eX = (w * c + d * s) / 2;
+  const eZ = (w * s + d * c) / 2;
+  const x = entry.pos[0] || 0;
+  const z = entry.pos[2] || 0;
+  return {
+    minX: x - eX, maxX: x + eX,
+    minZ: z - eZ, maxZ: z + eZ,
+    floor: floor || 1,
+  };
+}
+
 function registerStaticColliders() {
   colliders.length = 0;
 
+  // ─── Walls / dividers (not in window.ROOMS) ──────────────────────
   // Floor-1 internal walls — the 2×2 layout adds shared walls between
   // atrium ↔ Files (at x=-11) and library ↔ Plan Mode (at x=-11), plus
   // a Files ↔ Plan Mode wall at z=11 in the west wing. Each has a
   // 3.5m doorway centered at the shared mid-line; the segments below
   // are the SOLID parts the player can't pass through.
-  // Atrium / Files boundary (x=-11), doorway at z=0:
-  addColliderAABB(-11.15, -10.85, -11, -1.75, 1);   // south of doorway
-  addColliderAABB(-11.15, -10.85,  1.75, 11, 1);    // north of doorway
-  // Library / Plan Mode boundary (x=-11), doorway at z=22:
-  addColliderAABB(-11.15, -10.85, 11, 20.25, 1);    // south of doorway
-  addColliderAABB(-11.15, -10.85, 23.75, 33, 1);    // north of doorway
-  // Files / Plan Mode boundary (z=11 in west wing), doorway at x=-22:
-  addColliderAABB(-33, -23.75, 10.85, 11.15, 1);   // west of doorway
-  addColliderAABB(-20.25, -11, 10.85, 11.15, 1);   // east of doorway
+  addColliderAABB(-11.15, -10.85, -11, -1.75, 1);
+  addColliderAABB(-11.15, -10.85,  1.75, 11, 1);
+  addColliderAABB(-11.15, -10.85, 11, 20.25, 1);
+  addColliderAABB(-11.15, -10.85, 23.75, 33, 1);
+  addColliderAABB(-33, -23.75, 10.85, 11.15, 1);
+  addColliderAABB(-20.25, -11, 10.85, 11.15, 1);
 
-  // Zone 1 — reception/onboarding.
-  // Original brown reception desk (play.js:1173): 3.0 × 1.2 centered at (0,-8).
-  addColliderAABB(-1.55, 1.55, -8.65, -7.35);
-  // Atrium replacement reception desk (atrium.js:265): 3.5 × 1.05 at (0,-7.6).
-  addColliderAABB(-1.80, 1.80, -8.18, -7.02);
-  // Marcus IT bench at (-7.5,-3), rotated π/2 — buildDesk 1.6×0.8 → footprint 0.8×1.6 after rotation.
-  addColliderAABB(-7.95, -7.05, -3.85, -2.15);
-  // Aisha desk at (7.5,-3), rotated -π/2 — same shape mirrored.
-  addColliderAABB(7.05, 7.95, -3.85, -2.15);
-  // Kenji desk at (-7.5,3), rotated π/2 — 2.2×0.8 → 0.8×2.2 after rotation.
-  addColliderAABB(-7.95, -7.05, 1.85, 4.15);
-  // Diana filing cabinets at x=7.6, z={2,3,4} — small chest-high boxes.
-  addColliderAABB(7.25, 7.95, 1.65, 4.35);
-  // Couches at (-8.5,5) and (8.5,5), rotated to face inward.
-  // buildCouch default footprint ≈ 1.8×0.8; rotation puts long axis along Z.
-  addColliderAABB(-9.10, -7.90, 4.30, 5.70);
-  addColliderAABB(7.90, 9.10, 4.30, 5.70);
-
-  // Zone 2 — library bookshelves and reading tables.
-  // Bookshelves at (-10.5, {14,18,26}) rotated π/2 — back is 2.2 wide × 0.4 deep,
-  // rotated so 2.2 axis aligns with Z. Sit flush against the wall.
-  for (const z of [14, 18, 26]) {
-    addColliderAABB(-10.50, -10.10, z - 1.15, z + 1.15);
-    addColliderAABB( 10.10,  10.50, z - 1.15, z + 1.15);
-  }
-  // Reading tables at z=16, z=22 — modest height boxes.
-  for (const z of [16, 22]) {
-    addColliderAABB(-1.15, 1.15, z - 0.55, z + 0.55);
-  }
-  // Grandfather clock at (-9.5,31), library cart at (8,14).
+  // ─── Compound-builder items not in window.ROOMS ──────────────────
+  // Grandfather clock (decorate_library) at (-9.5,31), library cart (8,14).
   addColliderAABB(-9.85, -9.15, 30.70, 31.30);
   addColliderAABB( 7.55,  8.45, 13.65, 14.35);
 
-  // Floors 2-4: four chapter-desks per floor at the cluster centers,
-  // plus the internal 2×2-divider walls so the player can only pass
-  // through the central doorways.
+  // Floors 2-4 internal dividers (the desks themselves are derived
+  // from window.ROOMS below — only the partition walls are hardcoded
+  // since they aren't representable as room entries today).
   for (let f = 2; f <= FLOORS_TOTAL; f++) {
-    const slots = [
-      [-5.5, -5.5], [5.5, -5.5], [-5.5, 5.5], [5.5, 5.5],
-    ];
-    for (const [cx, cz] of slots) {
-      addColliderAABB(cx - 0.85, cx + 0.85, cz - 0.45, cz + 0.45, f);
-    }
-    // Horizontal divider at z=0 — two 10m segments leaving a 2m gap at x=0.
     addColliderAABB(-11, -1, -0.15, 0.15, f);
     addColliderAABB(  1, 11, -0.15, 0.15, f);
-    // Vertical divider at x=0 — two 10m segments leaving a 2m gap at z=0.
     addColliderAABB(-0.15, 0.15, -11, -1, f);
     addColliderAABB(-0.15, 0.15,   1, 11, f);
   }
+
+  // ─── Furniture derived from window.ROOMS ─────────────────────────
+  // Re-derived from current pos + size, so editor edits (move /
+  // resize / paste) take effect immediately when rebuildColliders()
+  // is called. See aabbForRoomEntry for blocking-type rules.
+  for (const room of (window.ROOMS || [])) {
+    const f = room.floor || 1;
+    for (const e of (room.objects || [])) {
+      const c = aabbForRoomEntry(e, f);
+      if (c) colliders.push(c);
+    }
+  }
+}
+
+// Public alias for the editor — same code path, fresh re-derivation
+// of the rooms-data colliders so moves/resizes/pastes are reflected
+// in collision immediately.
+function rebuildColliders() {
+  registerStaticColliders();
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
@@ -2710,8 +2784,24 @@ function spawnNPC(npcDef) {
       npcDef = { ...npcDef, pos: override.pos, face: override.face };
     }
   }
+  // Editor-written per-NPC override (data/npc_overrides.js). Applied
+  // LAST so it wins over the floor-relocation overrides above. Keyed
+  // by NPC id; works for both hand-built (NPCS) and auto-generated
+  // chapter NPCs since both use stable ids.
+  const editorOverride = window.NPC_OVERRIDES && window.NPC_OVERRIDES[npcDef.id];
+  if (editorOverride) {
+    npcDef = {
+      ...npcDef,
+      pos: editorOverride.pos || npcDef.pos,
+      face: (typeof editorOverride.face === 'number') ? editorOverride.face : npcDef.face,
+    };
+  }
   mesh.position.set(npcDef.pos[0], floorBaseY(npcFloor), npcDef.pos[1]);
   mesh.rotation.y = npcDef.face;
+  // Editor-set per-NPC scale override (NPC_OVERRIDES[id].scale).
+  if (editorOverride && Array.isArray(editorOverride.scale) && editorOverride.scale.length === 3) {
+    mesh.scale.set(editorOverride.scale[0], editorOverride.scale[1], editorOverride.scale[2]);
+  }
   mesh.userData.npc = npcDef;
   // Editor-affordance tags: the room editor's findTaggedAncestor uses
   // either _roomId (room placement) OR _isNpc (NPC) to map a click
@@ -2889,10 +2979,12 @@ function setupInput() {
   };
   mouseMoveListener = (e) => {
     if (!mouseLook) return;
+    // Track position even when suppressed so deltas don't snap on resume.
     const dx = e.clientX - mouseLookLastX;
     const dy = e.clientY - mouseLookLastY;
     mouseLookLastX = e.clientX;
     mouseLookLastY = e.clientY;
+    if (isRoomEditorDragging()) return;  // suppress while dragging an object
     cameraYaw   -= dx * MOUSE_LOOK_YAW_RATE;
     cameraPitch += dy * MOUSE_LOOK_PITCH_RATE;
     if (cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN;
@@ -2909,7 +3001,11 @@ function setupInput() {
   window.addEventListener('mouseup', mouseUpListener);
   // Also release if pointer leaves the document (some browsers
   // suppress mouseup over chrome).
-  window.addEventListener('blur', () => { mouseLook = false; cameraTouches.clear(); });
+  window.addEventListener('blur', () => {
+    mouseLook = false;
+    cameraTouches.clear();
+    isPinching = false;
+  });
 
   // Touch swipe → look around (mobile analog of middle-mouse drag).
   // Listeners attached to the WebGL canvas only, so touches on the
@@ -2917,31 +3013,74 @@ function setupInput() {
   // the canvas) don't trigger camera-look. Multi-touch supported:
   // each touch identifier tracked independently so the joystick
   // touch on the left half doesn't block a swipe on the right half.
+  //
+  // Two-finger pinch on the canvas → zoom (cameraDist). While
+  // pinching, the per-touch yaw/pitch deltas are suppressed so the
+  // camera doesn't spin from the fingers' arcing motion.
   const TOUCH_YAW_RATE   = 0.005;
   const TOUCH_PITCH_RATE = 0.005;
+  let isPinching = false;
+  let pinchInitialDist = 0;
+  let pinchInitialCamDist = 0;
+  const _twoTouchDistance = () => {
+    if (cameraTouches.size < 2) return 0;
+    const it = cameraTouches.values();
+    const a = it.next().value, b = it.next().value;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
   cameraTouchStartListener = (e) => {
     if (inputLocked) return;
     for (const t of e.changedTouches) {
       cameraTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
     }
+    if (cameraTouches.size >= 2 && !isPinching) {
+      isPinching = true;
+      pinchInitialDist = _twoTouchDistance();
+      pinchInitialCamDist = cameraDist;
+    }
   };
   cameraTouchMoveListener = (e) => {
     if (inputLocked) return;
+    // While the in-game editor is mid-drag, suppress camera-look /
+    // pinch-zoom — the same finger that's dragging an object would
+    // otherwise also spin the camera, making fine placement impossible.
+    // We still update the stored positions so the camera doesn't snap
+    // when the drag ends.
+    const editorDragging = isRoomEditorDragging();
     for (const t of e.changedTouches) {
       const prev = cameraTouches.get(t.identifier);
       if (!prev) continue;
-      const dx = t.clientX - prev.x;
-      const dy = t.clientY - prev.y;
-      cameraYaw   -= dx * TOUCH_YAW_RATE;
-      cameraPitch += dy * TOUCH_PITCH_RATE;
-      if (cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN;
-      if (cameraPitch > PITCH_MAX) cameraPitch = PITCH_MAX;
+      // Refresh stored position regardless of mode so that when the
+      // user lifts back to a single finger the swipe doesn't snap.
+      if (!isPinching && !editorDragging) {
+        const dx = t.clientX - prev.x;
+        const dy = t.clientY - prev.y;
+        cameraYaw   -= dx * TOUCH_YAW_RATE;
+        cameraPitch += dy * TOUCH_PITCH_RATE;
+        if (cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN;
+        if (cameraPitch > PITCH_MAX) cameraPitch = PITCH_MAX;
+      }
       cameraTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+    if (isPinching && !editorDragging && cameraTouches.size >= 2 && pinchInitialDist > 0) {
+      const cur = _twoTouchDistance();
+      if (cur > 0) {
+        // Spread fingers → cur > initial → scale < 1 → zoom in (smaller dist).
+        // Pinch fingers in → cur < initial → scale > 1 → zoom out.
+        const scale = pinchInitialDist / cur;
+        let next = pinchInitialCamDist * scale;
+        if (next < CAM_DIST_MIN) next = CAM_DIST_MIN;
+        if (next > CAM_DIST_MAX) next = CAM_DIST_MAX;
+        cameraDist = next;
+      }
     }
     e.preventDefault();    // prevent the browser's pull-to-refresh / swipe gestures
   };
   cameraTouchEndListener = (e) => {
     for (const t of e.changedTouches) cameraTouches.delete(t.identifier);
+    if (cameraTouches.size < 2 && isPinching) {
+      isPinching = false;
+    }
   };
   renderer.domElement.addEventListener('touchstart', cameraTouchStartListener, { passive: true });
   renderer.domElement.addEventListener('touchmove', cameraTouchMoveListener, { passive: false });
@@ -3241,30 +3380,46 @@ function update(dt) {
     return;
   }
 
-  // Jump
-  if (jumpRequested && player.userData.grounded) {
-    player.userData.velocityY = 6.5;
+  // Edit-mode fly: Space ascends, C descends. Gravity + ground-snap
+  // are suppressed so the hero can hover at any Y to reach ceiling
+  // items / look around without the camera arc-limit fighting the
+  // floor. Vertical range is clamped to [floor − 0.2, floor + 12].
+  if (isRoomEditorActive()) {
+    const FLY_SPEED = 5.0; // m/s
+    if (keys[' ']) player.position.y += FLY_SPEED * dt;
+    if (keys['c']) player.position.y -= FLY_SPEED * dt;
+    const groundY = floorBaseY(currentFloor);
+    if (player.position.y < groundY - 0.2) player.position.y = groundY - 0.2;
+    if (player.position.y > groundY + 12)  player.position.y = groundY + 12;
+    player.userData.velocityY = 0;
     player.userData.grounded = false;
-    playJumpGrunt();
-  }
-  jumpRequested = false;
-
-  // Gravity + Y position. The atrium is flat (no staircase/mezzanine
-  // since they were removed), so the ground is simply the player's
-  // current floor's baseline Y.
-  const wasAirborne = !player.userData.grounded;
-  const groundY = floorBaseY(currentFloor);
-  if (!player.userData.grounded || player.position.y > groundY) {
-    player.userData.velocityY -= 18 * dt;
-    player.position.y += player.userData.velocityY * dt;
-    if (player.position.y <= groundY) {
-      player.position.y = groundY;
-      player.userData.velocityY = 0;
-      player.userData.grounded = true;
-      if (wasAirborne) playLandThud();
-    }
+    jumpRequested = false;
   } else {
-    player.position.y = groundY;
+    // Jump
+    if (jumpRequested && player.userData.grounded) {
+      player.userData.velocityY = 6.5;
+      player.userData.grounded = false;
+      playJumpGrunt();
+    }
+    jumpRequested = false;
+
+    // Gravity + Y position. The atrium is flat (no staircase/mezzanine
+    // since they were removed), so the ground is simply the player's
+    // current floor's baseline Y.
+    const wasAirborne = !player.userData.grounded;
+    const groundY = floorBaseY(currentFloor);
+    if (!player.userData.grounded || player.position.y > groundY) {
+      player.userData.velocityY -= 18 * dt;
+      player.position.y += player.userData.velocityY * dt;
+      if (player.position.y <= groundY) {
+        player.position.y = groundY;
+        player.userData.velocityY = 0;
+        player.userData.grounded = true;
+        if (wasAirborne) playLandThud();
+      }
+    } else {
+      player.position.y = groundY;
+    }
   }
 
   // Camera yaw — Q / E rotate freely without cap. The auto-follow drift
@@ -3845,6 +4000,10 @@ export async function start(host) {
         scene.remove(mesh);
       },
       getHandBuiltNpcs: () => NPCS,
+      // Re-derive collider AABBs from the live window.ROOMS data.
+      // Editor calls this after every drag / resize / paste so the
+      // player can't walk through a moved desk's old footprint.
+      rebuildColliders: () => rebuildColliders(),
     };
   } catch {}
   setupInput();
@@ -4016,6 +4175,7 @@ export async function start(host) {
       jumpRequested = false;
     },
     onExport: () => exportRoomLayout(),
+    onSavePermanently: () => savePermanentlyEdits(),
   });
 
   loop();

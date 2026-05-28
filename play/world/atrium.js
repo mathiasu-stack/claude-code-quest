@@ -24,6 +24,9 @@ import {
   marbleWhite, marbleDarkGreen, brushedSilver,
   glassClear, glassFrosted, darkStone, brass, polishedChrome, coveLight,
 } from '../materials/modernLibrary.js';
+import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
+
+const OWNER = 'atrium';
 
 const ATRIUM_HEIGHT = 12;     // total atrium height
 // Y at which the wall material transitions (lower upperWallMat band →
@@ -54,7 +57,7 @@ export function buildAtrium(scene, opts = {}) {
   marbleFloor.rotation.x = -Math.PI / 2;
   marbleFloor.position.set(0, 0.001, 0);
   marbleFloor.receiveShadow = true;
-  scene.add(marbleFloor);
+  placeCompoundChild(scene, marbleFloor, OWNER, 'marble_floor');
   out.objects.push(marbleFloor);
 
   // Gold runway stays — we only overlay the surrounding marble.
@@ -72,6 +75,7 @@ export function buildAtrium(scene, opts = {}) {
     color: 0xd5d2c8, roughness: 0.7,
   });
   // Helper: vertical wall segment on a side
+  let _wallIdx = 0;
   function tallWall(width, x, z, ry, fromY, toY, mat) {
     const m = new THREE.Mesh(
       new THREE.BoxGeometry(width, toY - fromY, 0.3),
@@ -81,7 +85,7 @@ export function buildAtrium(scene, opts = {}) {
     m.rotation.y = ry;
     m.castShadow = false;
     m.receiveShadow = true;
-    scene.add(m);
+    placeCompoundChild(scene, m, OWNER, `tall_wall_${_wallIdx++}`);
     out.objects.push(m);
     return m;
   }
@@ -110,6 +114,7 @@ export function buildAtrium(scene, opts = {}) {
   const glassMat = glassClear({ mobile });
   // Frame
   const frameMat = brushedSilver();
+  let _paneIdx = 0;
   for (let h = 3.8; h < ATRIUM_HEIGHT; h += 2.5) {
     for (let zSeg = -10; zSeg <= 8.5; zSeg += 2.5) {
       // Glass pane
@@ -119,21 +124,23 @@ export function buildAtrium(scene, opts = {}) {
       );
       pane.position.set(10.94, h + 1.25, zSeg + 1.25);
       pane.rotation.y = -Math.PI / 2;
-      scene.add(pane);
+      placeCompoundChild(scene, pane, OWNER, `glass_pane_${_paneIdx++}`);
       out.objects.push(pane);
     }
   }
   // Vertical mullions (silver bars between panes)
+  let _vMulIdx = 0;
   for (let zSeg = -10; zSeg <= 11; zSeg += 2.5) {
     const mullion = new THREE.Mesh(
       new THREE.BoxGeometry(0.08, ATRIUM_HEIGHT - 3.8, 0.06),
       frameMat,
     );
     mullion.position.set(10.94, 3.8 + (ATRIUM_HEIGHT - 3.8) / 2, zSeg);
-    scene.add(mullion);
+    placeCompoundChild(scene, mullion, OWNER, `mullion_v_${_vMulIdx++}`);
     out.objects.push(mullion);
   }
   // Horizontal mullions
+  let _hMulIdx = 0;
   for (let h = 3.8; h <= ATRIUM_HEIGHT; h += 2.5) {
     const horMullion = new THREE.Mesh(
       new THREE.BoxGeometry(0.08, 0.06, ROOM_D),
@@ -141,7 +148,7 @@ export function buildAtrium(scene, opts = {}) {
     );
     horMullion.position.set(10.94, h, 0);
     horMullion.rotation.y = Math.PI / 2;
-    scene.add(horMullion);
+    placeCompoundChild(scene, horMullion, OWNER, `mullion_h_${_hMulIdx++}`);
     out.objects.push(horMullion);
   }
 
@@ -154,7 +161,7 @@ export function buildAtrium(scene, opts = {}) {
   );
   atriumCeil.rotation.x = Math.PI / 2;
   atriumCeil.position.set(0, ATRIUM_HEIGHT, 0);
-  scene.add(atriumCeil);
+  placeCompoundChild(scene, atriumCeil, OWNER, 'ceiling');
   out.objects.push(atriumCeil);
 
   // Skylight panel — a glass panel in the centre of the ceiling that
@@ -167,7 +174,7 @@ export function buildAtrium(scene, opts = {}) {
   );
   skylight.rotation.x = Math.PI / 2;
   skylight.position.set(0, ATRIUM_HEIGHT - 0.02, 0);
-  scene.add(skylight);
+  placeCompoundChild(scene, skylight, OWNER, 'skylight');
   out.objects.push(skylight);
 
   // (Mezzanine railing + walkable mezzanine L removed by request — the
@@ -193,7 +200,7 @@ export function buildAtrium(scene, opts = {}) {
     }),
   );
   logoBacking.position.set(0, 5.6, -10.85);
-  scene.add(logoBacking);
+  placeCompoundChild(scene, logoBacking, OWNER, 'logo_backing');
   out.objects.push(logoBacking);
 
   // The wordmark — backlit KEDASH text with a soft blue halo, painted
@@ -222,7 +229,7 @@ export function buildAtrium(scene, opts = {}) {
     new THREE.MeshBasicMaterial({ map: wmTex, transparent: true }),
   );
   logoPlane.position.set(0, 5.6, -10.81);
-  scene.add(logoPlane);
+  placeCompoundChild(scene, logoPlane, OWNER, 'logo_plane');
   out.objects.push(logoPlane);
 
   // ── 7. Reception desk ──────────────────────────────────────────────
@@ -236,7 +243,7 @@ export function buildAtrium(scene, opts = {}) {
   // Cluster of glass rods + lights at descending heights, slowly rotating.
   const chandPivot = new THREE.Group();
   chandPivot.position.set(0, ATRIUM_HEIGHT - 0.5, 0);
-  scene.add(chandPivot);
+  placeCompoundChild(scene, chandPivot, OWNER, 'chandelier');
   out.objects.push(chandPivot);
 
   const rodMat = glassClear({ mobile, tint: 0xfff5c8 });
@@ -290,6 +297,7 @@ export function buildAtrium(scene, opts = {}) {
 
   // ── 10. Cove lighting strip around the perimeter at MEZZ_HEIGHT ────
   const coveMat = coveLight(0xfff5d4);
+  let _coveIdx = 0;
   function cove(length, x, z, ry) {
     const m = new THREE.Mesh(
       new THREE.BoxGeometry(length, 0.04, 0.06),
@@ -297,7 +305,7 @@ export function buildAtrium(scene, opts = {}) {
     );
     m.position.set(x, MEZZ_HEIGHT - 0.05, z);
     m.rotation.y = ry;
-    scene.add(m);
+    placeCompoundChild(scene, m, OWNER, `cove_${_coveIdx++}`);
     out.objects.push(m);
   }
   cove(ROOM_W - 0.6, 0, -10.7, 0);

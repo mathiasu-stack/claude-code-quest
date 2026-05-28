@@ -65,6 +65,16 @@ export function registerInteractable({
   it.glow = ring;
   if (parent) parent.add(ring); else mesh.parent?.add?.(ring);
 
+  // Tag the visible mesh + glow ring so the in-game editor can find
+  // them via findTaggedAncestor. The editor uses _isInteractable as
+  // the selection root; _isInteractableGlow on the ring lets the
+  // editor (a) hide rings in edit mode and (b) resolve a ring click
+  // back to the owner mesh.
+  mesh.userData._isInteractable = true;
+  mesh.userData._interactable = it;
+  ring.userData._isInteractableGlow = true;
+  ring.userData._ownerMesh = mesh;
+
   _state.list.push(it);
   return it;
 }
@@ -108,3 +118,25 @@ export function updateInteractables(dt, now, playerPos) {
 }
 
 export function listInteractables() { return _state.list; }
+
+// Editor-only helpers. The in-game editor hides all glow rings while
+// active so they don't visually compete with the underlying objects or
+// block raycaster picks. Restored on exit.
+export function setAllGlowsVisible(visible) {
+  for (const it of _state.list) {
+    if (it.glow) it.glow.visible = visible;
+  }
+}
+
+// Editor-only: after dragging an interactable mesh, the glow ring
+// (parented to the scene at world coords, not to the mesh) must be
+// re-anchored to the new XZ. Y stays at the floor (0.02).
+export function syncGlowToMesh(mesh) {
+  if (!mesh?.userData?._interactable) return;
+  const it = mesh.userData._interactable;
+  it.position = [mesh.position.x, mesh.position.z];
+  if (it.glow) {
+    it.glow.position.x = mesh.position.x;
+    it.glow.position.z = mesh.position.z;
+  }
+}

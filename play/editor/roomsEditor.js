@@ -32,6 +32,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { dispatchEntry } from '../world/roomsLoader.js?v=20260527b';
+import { setAllGlowsVisible, syncGlowToMesh } from '../world/interactables.js?v=20260527i';
 
 // ── Public API ───────────────────────────────────────────────────────
 
@@ -73,6 +74,13 @@ function applyAxisLocksToGizmo() {
 
 export function isEditorActive() { return isActive; }
 
+// True while the editor is mid-drag (free-drag OR gizmo). play.js
+// checks this from its camera-touch handler to suppress yaw/pitch
+// updates so dragging an object doesn't also spin the camera.
+export function isEditorDragging() {
+  return !!_dragMode || !!_transformControls?.dragging;
+}
+
 // Returns true if admin mode is enabled for this browser session.
 export function isAdminEnabled() {
   try { return sessionStorage.getItem('ccq_admin') === '1'; }
@@ -82,7 +90,7 @@ export function isAdminEnabled() {
 // Build the toolbar (Edit Rooms toggle + Export + Cancel buttons).
 // Returns the toolbar DOM element. Caller appends it inside the play
 // view container. Hidden via display:none when admin isn't on.
-export function mountToolbar({ container, onEnter, onExit, onExport }) {
+export function mountToolbar({ container, onEnter, onExit, onExport, onSavePermanently }) {
   if (_toolbarEl) return _toolbarEl;
   const el = document.createElement('div');
   el.className = 'ccq-editor-toolbar';
@@ -99,9 +107,10 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
   `;
   el.innerHTML = `
     <button class="ccq-ed-btn ccq-ed-toggle">✏️ Edit Rooms</button>
-    <button class="ccq-ed-btn ccq-ed-add"    style="display:none;">➕ Add Item</button>
-    <button class="ccq-ed-btn ccq-ed-export" style="display:none;">📋 Export Layout</button>
-    <button class="ccq-ed-btn ccq-ed-cancel" style="display:none;">✕ Cancel (reload)</button>
+    <button class="ccq-ed-btn ccq-ed-add"      style="display:none;">➕ Add Item</button>
+    <button class="ccq-ed-btn ccq-ed-savefs"   style="display:none;" title="Write all edits straight to disk (Chrome/Edge desktop) and reload">💾 Save Permanently</button>
+    <button class="ccq-ed-btn ccq-ed-export"   style="display:none;" title="Download files for manual replacement">📋 Export Layout</button>
+    <button class="ccq-ed-btn ccq-ed-cancel"   style="display:none;">✕ Cancel (reload)</button>
   `;
   injectStylesOnce();
   container.appendChild(el);
@@ -109,6 +118,7 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
 
   const toggleBtn = el.querySelector('.ccq-ed-toggle');
   const addBtn    = el.querySelector('.ccq-ed-add');
+  const saveFsBtn = el.querySelector('.ccq-ed-savefs');
   const exportBtn = el.querySelector('.ccq-ed-export');
   const cancelBtn = el.querySelector('.ccq-ed-cancel');
 
@@ -117,6 +127,7 @@ export function mountToolbar({ container, onEnter, onExit, onExport }) {
     else onEnter?.();
   });
   addBtn.addEventListener('click', () => showLibraryModal());
+  saveFsBtn.addEventListener('click', () => onSavePermanently?.());
   exportBtn.addEventListener('click', () => onExport?.());
   cancelBtn.addEventListener('click', () => {
     if (confirm('Discard unsaved edits and reload?')) {
@@ -130,10 +141,12 @@ function setToolbarMode(editing) {
   if (!_toolbarEl) return;
   const toggleBtn = _toolbarEl.querySelector('.ccq-ed-toggle');
   const addBtn    = _toolbarEl.querySelector('.ccq-ed-add');
+  const saveFsBtn = _toolbarEl.querySelector('.ccq-ed-savefs');
   const exportBtn = _toolbarEl.querySelector('.ccq-ed-export');
   const cancelBtn = _toolbarEl.querySelector('.ccq-ed-cancel');
   toggleBtn.textContent = editing ? '🎮 Resume Play' : '✏️ Edit Rooms';
   addBtn.style.display    = editing ? 'inline-block' : 'none';
+  saveFsBtn.style.display = editing ? 'inline-block' : 'none';
   exportBtn.style.display = editing ? 'inline-block' : 'none';
   cancelBtn.style.display = editing ? 'inline-block' : 'none';
 }
@@ -162,6 +175,11 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
   // tag the current visibility state so the exit path can restore it.
   _saveAndShowAllFloors(scene);
 
+  // Hide interactable hover glow rings — they're player-only UX, and
+  // in edit mode they visually compete with the underlying object and
+  // would otherwise sit on top of the floor blocking picks.
+  try { setAllGlowsVisible(false); } catch {}
+
   // TransformControls — drag-to-move / rotate / scale gizmo.
   _transformControls = new TransformControls(camera, renderer.domElement);
   _transformControls.setSize(1.2);
@@ -183,11 +201,22 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
   };
   _transformControls.addEventListener('objectChange', _onObjectChange);
 
-  // Pointerdown: raycast, select, AND start free-drag on the mesh
-  // body. While dragging, the mesh tracks the cursor on a horizontal
-  // plane at its current Y. The TransformControls gizmo handles still
-  // work independently for fine-grain rotate; they take priority
-  // (transformControls.dragging short-circuits this handler).
+  // Pointerdown: tap routing.
+  //   * Double-tap (within DOUBLE_TAP_MS and DOUBLE_TAP_PX of the
+  //     previous tap) commits selection — the click selects the
+  //     tagged object under the cursor (or deselects if no target).
+  //     This intentionally does NOT start a drag, so the second tap
+  //     can't accidentally fling the object the moment it's picked.
+  //   * Single tap on the currently-selected object starts free-drag.
+  //   * Single tap anywhere else is a no-op (it just records the tap
+  //     so the next tap can complete a double-tap pair).
+  // The double-tap gate stops the editor from grabbing whatever's
+  // under the cursor every time the player taps to look around.
+  let _lastTapMs = 0;
+  let _lastTapX = 0;
+  let _lastTapY = 0;
+  const DOUBLE_TAP_MS = 400;
+  const DOUBLE_TAP_PX = 30;
   _onCanvasPointerDown = (e) => {
     if (_transformControls?.dragging) return;
     if (e.button !== undefined && e.button !== 0) return;
@@ -201,12 +230,29 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
       const tagged = findTaggedAncestor(hit.object);
       if (tagged) { target = tagged; break; }
     }
-    if (!target) {
-      select(null);
-      return;
+
+    const now = performance.now();
+    const dt = now - _lastTapMs;
+    const dx = e.clientX - _lastTapX;
+    const dy = e.clientY - _lastTapY;
+    const isDoubleTap = dt < DOUBLE_TAP_MS && Math.hypot(dx, dy) < DOUBLE_TAP_PX;
+    _lastTapMs = now;
+    _lastTapX  = e.clientX;
+    _lastTapY  = e.clientY;
+
+    if (isDoubleTap) {
+      // Reset the timer so a third tap doesn't pair with the second.
+      _lastTapMs = 0;
+      select(target);  // null deselects
+      return;          // do NOT start drag from the second tap
     }
-    if (target !== _selected) select(target);
-    beginFreeDrag(target, e);
+
+    // Single tap. Only start a drag if the user already had this
+    // object selected — that makes "select → move" a single fluid
+    // gesture without requiring a second deliberate double-tap.
+    if (target && target === _selected) {
+      beginFreeDrag(target, e);
+    }
   };
   _onCanvasPointerMove = (e) => {
     if (!_dragMode) return;
@@ -225,7 +271,9 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
   renderer.domElement.addEventListener('pointercancel', _onCanvasPointerUp);
 
   // Esc closes the panel / deselects. Del / Backspace deletes the
-  // selected entry. G/R toggle TransformControls mode.
+  // selected entry. G/R toggle TransformControls mode. Ctrl/Cmd+C
+  // copies the current selection; Ctrl/Cmd+V pastes a duplicate ~1 m
+  // offset from the original so it's immediately visible & selectable.
   _onWindowKeyDown = (e) => {
     // Don't intercept while focus is in an <input> (so panel typing
     // doesn't trigger delete / mode switches).
@@ -235,6 +283,12 @@ export function enterEditMode({ scene, camera, renderer, container, suspendGameI
     if (e.key === 'r') _transformControls?.setMode('rotate');
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (_selected) { deleteSelected(); e.preventDefault(); }
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+      if (copySelection()) e.preventDefault();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+      if (pasteClipboard()) e.preventDefault();
     }
   };
   window.addEventListener('keydown', _onWindowKeyDown);
@@ -291,11 +345,13 @@ export function exitEditMode() {
   _onGameInputSuspendListeners.length = 0;
 
   if (_ctx?.scene) _restoreFloorVisibility(_ctx.scene);
+  try { setAllGlowsVisible(true); } catch {}
 
   if (_panelEl) _panelEl.style.display = 'none';
   if (_libraryModalEl) _libraryModalEl.style.display = 'none';
   _selected = null;
   _selectedEntry = null;
+  _clipboard = null;
   _ctx = null;
 }
 
@@ -312,11 +368,21 @@ function isTransformHelper(obj) {
 }
 
 function findTaggedAncestor(obj) {
+  // Special case: clicking on an interactable's hover glow ring routes
+  // selection back to the owner mesh (clicks land on the ring AT the
+  // floor, the actual object sits above). _isInteractableGlow is set
+  // by registerInteractable; ring is hidden in edit mode anyway, but
+  // kept here for robustness if a future call leaves it visible.
+  if (obj?.userData?._isInteractableGlow && obj.userData._ownerMesh) {
+    obj = obj.userData._ownerMesh;
+  }
   let p = obj;
   while (p) {
     if (p.userData) {
       if (p.userData._roomId != null && p.userData._roomEntryIndex != null) return p;
       if (p.userData._isNpc) return p;
+      if (p.userData._isInteractable) return p;
+      if (p.userData._isCompoundChild) return p;
     }
     p = p.parent;
   }
@@ -324,10 +390,15 @@ function findTaggedAncestor(obj) {
 }
 
 // Returns 'room' for room-entry placements, 'npc' for NPC characters,
-// or null. Determines which mutation path to use downstream.
+// 'interactable' for chapter-delivery objects, 'compound_child' for
+// items spawned by compound builders (decorate_reception / atrium /
+// elevator / etc.), or null. Determines which mutation path to use
+// downstream.
 function tagKind(node) {
   if (!node || !node.userData) return null;
   if (node.userData._isNpc) return 'npc';
+  if (node.userData._isInteractable) return 'interactable';
+  if (node.userData._isCompoundChild) return 'compound_child';
   if (node.userData._roomId != null) return 'room';
   return null;
 }
@@ -362,6 +433,21 @@ function lookupEntry(node) {
     const npcDef = node.userData.npc;
     if (!npcDef) return null;
     return { kind: 'npc', npcDef };
+  }
+  if (kind === 'interactable') {
+    return {
+      kind: 'interactable',
+      lessonDeliveryRef: node.userData._lessonDeliveryRef,
+      chapterId: node.userData._interactableChapterId,
+      interactableKind: node.userData._interactableKind,
+    };
+  }
+  if (kind === 'compound_child') {
+    return {
+      kind: 'compound_child',
+      ownerId: node.userData._compoundOwner,
+      childId: node.userData._compoundChildId,
+    };
   }
   return null;
 }
@@ -399,11 +485,13 @@ function refreshPanel() {
     _panelEl.innerHTML = `
       <div class="ccq-ed-h">Edit Rooms</div>
       <div class="ccq-ed-hint">
-        Click + hold an object to drag it on the floor plane.<br>
-        Click once to select; gizmo handles work for fine moves + rotates.<br>
+        <b>Double-tap</b> to select. Then drag with a single press.<br>
+        Camera-look is suppressed while you're dragging.<br>
+        Use <kbd>Space</kbd> to fly up, <kbd>C</kbd> to fly down.<br>
+        Gizmo handles work for fine moves + rotates.<br>
         <kbd>G</kbd> translate · <kbd>R</kbd> rotate · <kbd>Esc</kbd> deselect · <kbd>Del</kbd> delete.<br>
-        <b>➕ Add Item</b> opens the library; spawn lands ~3 m in front of the camera.<br>
-        Compound builders (atrium, elevator, decorate_*) aren't directly editable.
+        <kbd>Ctrl/Cmd+C</kbd> copy · <kbd>Ctrl/Cmd+V</kbd> paste (room items + NPCs).<br>
+        <b>➕ Add Item</b> opens the library; spawn lands ~3 m in front of the camera.
       </div>
     `;
     return;
@@ -417,6 +505,11 @@ function refreshPanel() {
   let typeLabel = '';
   let sizeEditable = false;
 
+  // Per-room-entry collision toggle. Only meaningful for builder/
+  // decoration entries (walls/floors always block; signs/posters never
+  // block — their collide state is fixed). Default state mirrors the
+  // play.js default lookup (BUILDER_FOOTPRINTS / DECORATION_BLOCKERS).
+  let collideRow = '';
   if (sel.kind === 'room') {
     const { entry, room, index } = sel;
     headerLabel = `${room.id} #${index}`;
@@ -426,10 +519,31 @@ function refreshPanel() {
         ? `decoration · ${entry.id || '?'}`
         : entry.type;
     sizeEditable = ['decoration', 'wall', 'floor_plate'].includes(entry.type);
+    if (entry.type === 'builder' || entry.type === 'decoration') {
+      const isDefault = _defaultBlocksByEntry(entry);
+      const effective = (entry.collide === true) ? true
+                      : (entry.collide === false) ? false
+                      : isDefault;
+      const overridden = (entry.collide === true || entry.collide === false);
+      collideRow = `
+      <div class="ccq-ed-row" style="margin-top:4px;">
+        <label>collide</label>
+        <input type="checkbox" id="ccq-collide" ${effective ? 'checked' : ''}>
+        <span style="font-size:11px; opacity:0.65; margin-left:4px;">
+          ${overridden ? '(override)' : `(default: ${isDefault ? 'on' : 'off'})`}
+        </span>
+      </div>`;
+    }
   } else if (sel.kind === 'npc') {
     const { npcDef } = sel;
     headerLabel = npcDef.name || npcDef.id;
     typeLabel = `npc · ${npcDef.role || npcDef.kind || '?'}`;
+  } else if (sel.kind === 'interactable') {
+    headerLabel = `${sel.chapterId || '?'} · ${sel.interactableKind || '?'}`;
+    typeLabel = `interactable · LESSON_DELIVERY`;
+  } else if (sel.kind === 'compound_child') {
+    headerLabel = `${sel.ownerId || '?'} · ${sel.childId || '?'}`;
+    typeLabel = `compound child`;
   }
 
   const lockRow = (axis) => `
@@ -461,8 +575,16 @@ function refreshPanel() {
     <div class="ccq-ed-row">
       <label>rotY</label>
       <input class="ccq-ed-num" id="ccq-rot-y" type="number" step="0.087266" value="${node.rotation.y.toFixed(4)}">
-    </div>${sel.kind === 'npc' ? `
-    <div class="ccq-ed-hint" style="margin-top:6px;">NPC position is stored as [x, z] + face (rotY).</div>` : ''}
+    </div>
+    <div class="ccq-ed-row">
+      <label>scale</label>
+      <input class="ccq-ed-num" id="ccq-scale-x" type="number" step="0.05" value="${node.scale.x.toFixed(3)}" style="flex:1;">
+      <input class="ccq-ed-num" id="ccq-scale-y" type="number" step="0.05" value="${node.scale.y.toFixed(3)}" style="flex:1;">
+      <input class="ccq-ed-num" id="ccq-scale-z" type="number" step="0.05" value="${node.scale.z.toFixed(3)}" style="flex:1;">
+    </div>${collideRow}${sel.kind === 'npc' ? `
+    <div class="ccq-ed-hint" style="margin-top:6px;">NPC position is stored as [x, z] + face (rotY). Mirrored into <code>data/npc_overrides.js</code> on every drag — exports via "Export Layout".</div>` : ''}${sel.kind === 'interactable' ? `
+    <div class="ccq-ed-hint" style="margin-top:6px;">Position layered as an override over <code>LESSON_DELIVERY.${sel.chapterId}.objectLocation.position</code>. Mirrored into <code>data/lesson_delivery_overrides.js</code> on every drag — exports via "Export Layout".</div>` : ''}${sel.kind === 'compound_child' ? `
+    <div class="ccq-ed-hint" style="margin-top:6px;">Position layered as an override over the compound builder's default. Mirrored into <code>data/compound_overrides.js</code> on every drag — exports via "Export Layout".</div>` : ''}
 
     ${sizeEditable ? `
       <div class="ccq-ed-divider"></div>
@@ -503,6 +625,9 @@ function refreshPanel() {
   _panelEl.querySelector('#ccq-pos-y').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-pos-z').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-rot-y').addEventListener('input', onRotInput);
+  _panelEl.querySelector('#ccq-scale-x').addEventListener('input', onScaleInput);
+  _panelEl.querySelector('#ccq-scale-y').addEventListener('input', onScaleInput);
+  _panelEl.querySelector('#ccq-scale-z').addEventListener('input', onScaleInput);
   for (const axis of ['x', 'y', 'z']) {
     const cb = _panelEl.querySelector(`#ccq-lock-${axis}`);
     if (cb) cb.addEventListener('change', (e) => {
@@ -520,6 +645,36 @@ function refreshPanel() {
   }
   _panelEl.querySelector('#ccq-deselect').addEventListener('click', () => select(null));
   _panelEl.querySelector('#ccq-delete').addEventListener('click', deleteSelected);
+  const collideCb = _panelEl.querySelector('#ccq-collide');
+  if (collideCb) collideCb.addEventListener('change', (e) => {
+    if (!_selectedEntry || _selectedEntry.kind !== 'room') return;
+    const entry = _selectedEntry.entry;
+    const wantsOn = !!e.target.checked;
+    const isDefault = _defaultBlocksByEntry(entry);
+    // If toggling back to default state, drop the explicit override so
+    // the entry stays clean on export.
+    if (wantsOn === isDefault) delete entry.collide;
+    else entry.collide = wantsOn;
+    try { window.__playApi?.rebuildColliders?.(); } catch {}
+    refreshPanel();
+  });
+}
+
+// Mirrors play.js BUILDER_FOOTPRINTS / DECORATION_BLOCKERS — used by
+// the panel to show whether a checkbox state is the default or an
+// override. Keep in sync with play.js if either list changes.
+const _DEFAULT_BLOCKING_BUILDERS = new Set([
+  'desk', 'table', 'couch', 'filing_cabinet', 'bookshelf', 'water_cooler',
+]);
+const _DEFAULT_BLOCKING_DECOS = new Set([
+  'reception_desk', 'desk', 'table', 'bookshelf', 'couch',
+  'filing_cabinet', 'cabinet',
+]);
+function _defaultBlocksByEntry(entry) {
+  if (!entry) return false;
+  if (entry.type === 'builder')    return _DEFAULT_BLOCKING_BUILDERS.has(entry.fn);
+  if (entry.type === 'decoration') return _DEFAULT_BLOCKING_DECOS.has(entry.id);
+  return false;
 }
 
 function onPosInput(e) {
@@ -540,6 +695,16 @@ function onRotInput() {
   if (!_selected) return;
   const ry = parseFloat(document.getElementById('ccq-rot-y').value) || 0;
   _selected.rotation.y = ry;
+  syncDataEntryFromSelection();
+}
+
+function onScaleInput() {
+  if (!_selected) return;
+  // Reject zero / negative — they flip or implode the mesh.
+  const sx = Math.max(0.001, parseFloat(document.getElementById('ccq-scale-x').value) || 1);
+  const sy = Math.max(0.001, parseFloat(document.getElementById('ccq-scale-y').value) || 1);
+  const sz = Math.max(0.001, parseFloat(document.getElementById('ccq-scale-z').value) || 1);
+  _selected.scale.set(sx, sy, sz);
   syncDataEntryFromSelection();
 }
 
@@ -585,6 +750,8 @@ function rebuildSelectedMesh() {
   if (!_selected || !_selectedEntry) return;
   const { entry } = _selectedEntry;
   const node = _selected;
+  // Footprint just changed — refresh collider AABBs.
+  try { window.__playApi?.rebuildColliders?.(); } catch {}
 
   if (entry.type === 'wall') {
     // Replace BoxGeometry on the first mesh child (or self).
@@ -626,6 +793,10 @@ function rebuildSelectedMesh() {
 function syncDataEntryFromSelection() {
   if (!_selected || !_selectedEntry) return;
   const yOffset = _selected.userData._yOffset || 0;
+  const sx = +_selected.scale.x.toFixed(4);
+  const sy = +_selected.scale.y.toFixed(4);
+  const sz = +_selected.scale.z.toFixed(4);
+  const scaleIsDefault = (sx === 1 && sy === 1 && sz === 1);
   if (_selectedEntry.kind === 'room') {
     const { entry } = _selectedEntry;
     entry.pos = [
@@ -634,6 +805,12 @@ function syncDataEntryFromSelection() {
       +_selected.position.z.toFixed(4),
     ];
     entry.rotY = +_selected.rotation.y.toFixed(5);
+    if (scaleIsDefault) delete entry.scale;
+    else entry.scale = [sx, sy, sz];
+    // The player can't walk through a moved desk's old position
+    // unless we re-derive the AABB collider list. Cheap to redo on
+    // every edit (linear over window.ROOMS).
+    try { window.__playApi?.rebuildColliders?.(); } catch {}
   } else if (_selectedEntry.kind === 'npc') {
     const { npcDef } = _selectedEntry;
     npcDef.pos = [
@@ -641,6 +818,58 @@ function syncDataEntryFromSelection() {
       +_selected.position.z.toFixed(4),
     ];
     npcDef.face = +_selected.rotation.y.toFixed(5);
+    // Mirror into the editor-overrides map so Export Layout can write
+    // a data/npc_overrides.js that survives reload. Without this,
+    // mutating npcDef alone is session-only (hand-built NPCS stays in
+    // memory until reload; generated chapter NPCs are re-built fresh).
+    if (!window.NPC_OVERRIDES) window.NPC_OVERRIDES = {};
+    if (npcDef.id) {
+      const ov = { pos: npcDef.pos, face: npcDef.face };
+      if (!scaleIsDefault) ov.scale = [sx, sy, sz];
+      window.NPC_OVERRIDES[npcDef.id] = ov;
+    }
+  } else if (_selectedEntry.kind === 'interactable') {
+    const chapterId = _selectedEntry.chapterId;
+    if (!window.LESSON_DELIVERY_OVERRIDES) window.LESSON_DELIVERY_OVERRIDES = {};
+    if (chapterId) {
+      // Preserve any existing flags (e.g. hidden) when writing the
+      // position so dragging back after a delete doesn't accidentally
+      // un-hide an entry. Position always written from current node.
+      const existing = window.LESSON_DELIVERY_OVERRIDES[chapterId] || {};
+      const ov = {
+        ...existing,
+        position: [
+          +_selected.position.x.toFixed(4),
+          +_selected.position.y.toFixed(4),
+          +_selected.position.z.toFixed(4),
+        ],
+      };
+      if (scaleIsDefault) delete ov.scale;
+      else ov.scale = [sx, sy, sz];
+      window.LESSON_DELIVERY_OVERRIDES[chapterId] = ov;
+    }
+    // Keep the floor glow ring in sync with the new XZ so when the
+    // user exits edit mode the hover halo still sits under the object.
+    try { syncGlowToMesh(_selected); } catch {}
+  } else if (_selectedEntry.kind === 'compound_child') {
+    const { ownerId, childId } = _selectedEntry;
+    if (!window.COMPOUND_OVERRIDES) window.COMPOUND_OVERRIDES = {};
+    if (ownerId && childId) {
+      if (!window.COMPOUND_OVERRIDES[ownerId]) window.COMPOUND_OVERRIDES[ownerId] = {};
+      const existing = window.COMPOUND_OVERRIDES[ownerId][childId] || {};
+      const ov = {
+        ...existing,
+        pos: [
+          +_selected.position.x.toFixed(4),
+          +_selected.position.y.toFixed(4),
+          +_selected.position.z.toFixed(4),
+        ],
+        rotY: +_selected.rotation.y.toFixed(5),
+      };
+      if (scaleIsDefault) delete ov.scale;
+      else ov.scale = [sx, sy, sz];
+      window.COMPOUND_OVERRIDES[ownerId][childId] = ov;
+    }
   }
 }
 
@@ -654,6 +883,9 @@ function syncPanelFromSelection() {
   set('ccq-pos-y', (_selected.position.y - yOffset).toFixed(3));
   set('ccq-pos-z', _selected.position.z.toFixed(3));
   set('ccq-rot-y', _selected.rotation.y.toFixed(4));
+  set('ccq-scale-x', _selected.scale.x.toFixed(3));
+  set('ccq-scale-y', _selected.scale.y.toFixed(3));
+  set('ccq-scale-z', _selected.scale.z.toFixed(3));
 }
 
 // ── Floor visibility — temporarily show all floors while editing ─────
@@ -678,28 +910,299 @@ function _restoreFloorVisibility(scene) {
 
 // ── Export ───────────────────────────────────────────────────────────
 
+// Build the full set of files the export pipeline produces. Returns
+// [{ path, name, content }] — only includes overrides files when there
+// are edits. rooms.js is always included.
+function _collectExportFiles() {
+  const out = [
+    { path: 'data', name: 'rooms.js', content: serializeRooms(window.ROOMS || []) },
+  ];
+  if (Object.keys(window.NPC_OVERRIDES || {}).length) {
+    out.push({ path: 'data', name: 'npc_overrides.js',
+      content: serializeNpcOverrides(window.NPC_OVERRIDES) });
+  }
+  if (Object.keys(window.LESSON_DELIVERY_OVERRIDES || {}).length) {
+    out.push({ path: 'data', name: 'lesson_delivery_overrides.js',
+      content: serializeDeliveryOverrides(window.LESSON_DELIVERY_OVERRIDES) });
+  }
+  if (_countCompoundOverrides(window.COMPOUND_OVERRIDES || {})) {
+    out.push({ path: 'data', name: 'compound_overrides.js',
+      content: serializeCompoundOverrides(window.COMPOUND_OVERRIDES) });
+  }
+  return out;
+}
+
+// "📋 Export Layout" — manual-flow button: downloads files, shows
+// instructions for replacing them on disk. Cache-bust is now per-load
+// (see index.html), so the workflow is short: replace files → reload.
 export function exportLayout() {
-  const text = serializeRooms(window.ROOMS || []);
-  // Clipboard copy.
+  const files = _collectExportFiles();
+  // Clipboard copy (rooms.js content only — overrides go via download).
   let copied = false;
   try {
-    navigator.clipboard.writeText(text).then(() => {}, () => {});
+    navigator.clipboard.writeText(files[0].content).then(() => {}, () => {});
     copied = true;
   } catch {}
-  // Download as file.
+  for (const f of files) _downloadAs(f.name, f.content);
+  const parts = [];
+  parts.push(copied
+    ? 'rooms.js copied to clipboard AND downloaded.'
+    : 'rooms.js downloaded.');
+  for (const f of files.slice(1)) parts.push(`${f.name} downloaded.`);
+  parts.push('');
+  parts.push('To make these stick after reload:');
+  files.forEach((f, i) => parts.push(`  ${i + 1}. Replace ${f.path}/${f.name} with the downloaded file.`));
+  parts.push(`  ${files.length + 1}. Reload the page.`);
+  parts.push('');
+  parts.push('Tip: on a Chrome/Edge desktop browser, use "💾 Save Permanently" instead — it writes the files directly and reloads automatically.');
+  alert(parts.join('\n'));
+}
+
+// "💾 Save Permanently" — tries three save mechanisms in order:
+//   1. POST to save.php (works on any browser over the NAS deployment,
+//      including HTTP/Firefox where FSA isn't available);
+//   2. File System Access API (Chrome/Edge desktop on HTTPS/localhost);
+//   3. Download-and-replace via exportLayout() (universal fallback).
+// Whichever succeeds first wins; on success the editor confirms and
+// reloads so the changes take effect immediately.
+let _projectDirHandle = null;
+let _saveEndpointAvailable = null; // null=unknown, true/false=probed
+export async function savePermanently() {
+  const files = _collectExportFiles();
+
+  // ── Path 1: save.php on the host ──────────────────────────────────
+  // Available on Synology Web Station + any other PHP-enabled deploy.
+  // Probed once per session via a HEAD-equivalent check; cached.
+  if (_saveEndpointAvailable !== false) {
+    const result = await _trySaveViaEndpoint(files);
+    if (result === 'ok') {
+      _confirmAndReload(files);
+      return;
+    }
+    if (result === 'unavailable') {
+      _saveEndpointAvailable = false;
+      // fall through to FSA / download
+    }
+    if (result === 'auth') {
+      // Server is there but rejected us; no point trying again silently.
+      alert('save.php rejected the admin passcode.\n\nRe-enter via the sidebar admin-unlock button, then try again.');
+      return;
+    }
+    if (result === 'error') {
+      // Real server-side failure — surfaced inside _trySaveViaEndpoint.
+      return;
+    }
+  }
+
+  // ── Path 2: File System Access API ────────────────────────────────
+  if (_fsaSupported()) {
+    try {
+      if (!_projectDirHandle) {
+        _projectDirHandle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+          startIn: 'documents',
+        });
+      } else {
+        const perm = await _projectDirHandle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+          const req = await _projectDirHandle.requestPermission({ mode: 'readwrite' });
+          if (req !== 'granted') {
+            _projectDirHandle = null;
+            alert('Write permission denied. Pick the folder again to save.');
+            return;
+          }
+        }
+      }
+      let dataDir;
+      try {
+        dataDir = await _projectDirHandle.getDirectoryHandle('data', { create: false });
+      } catch {
+        _projectDirHandle = null;
+        alert('Picked folder doesn\'t contain a "data/" subdirectory. Pick the claude-code-quest project root.');
+        return;
+      }
+      for (const f of files) {
+        const fileHandle = await dataDir.getFileHandle(f.name, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(f.content);
+        await writable.close();
+      }
+      _confirmAndReload(files);
+      return;
+    } catch (e) {
+      if (e?.name !== 'AbortError') {
+        console.error('[editor] FSA save failed:', e);
+        alert(`FSA save failed: ${e?.message || e}\n\nFalling back to download.`);
+        return exportLayout();
+      }
+      return;
+    }
+  }
+
+  // ── Path 3: fallback ──────────────────────────────────────────────
+  // Firefox / Safari / mobile + no save.php. The user gets the manual
+  // download-and-replace flow.
+  return exportLayout();
+}
+
+async function _trySaveViaEndpoint(files) {
+  let pass = '';
+  try { pass = sessionStorage.getItem('ccq_admin_pass') || ''; } catch {}
+  if (!pass) {
+    // Older admin sessions might not have stored the passcode. Prompt
+    // once and persist for the session.
+    pass = window.prompt('Enter admin passcode to save:') || '';
+    if (!pass) return 'unavailable';
+    try { sessionStorage.setItem('ccq_admin_pass', pass); } catch {}
+  }
+  let resp;
+  try {
+    resp = await fetch('./save.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        passcode: pass,
+        files: files.map(f => ({ name: f.name, content: f.content })),
+      }),
+    });
+  } catch {
+    return 'unavailable';   // network error / endpoint not reachable
+  }
+  // PHP not deployed → Web Station typically serves the raw source or
+  // returns 404. Either way, not an auth error.
+  if (resp.status === 404) return 'unavailable';
+  if (resp.status === 405) return 'unavailable';
+  let body = null;
+  try { body = await resp.json(); } catch {}
+  if (resp.status === 403) {
+    // Clear the cached passcode so the next attempt re-prompts.
+    try { sessionStorage.removeItem('ccq_admin_pass'); } catch {}
+    return 'auth';
+  }
+  if (!resp.ok || !body?.ok) {
+    const msg = body?.error || `HTTP ${resp.status}`;
+    alert(`save.php failed: ${msg}\n\nFalling back to download.`);
+    exportLayout();
+    return 'error';
+  }
+  return 'ok';
+}
+
+function _confirmAndReload(files) {
+  const fileList = files.map(f => `  • ${f.path}/${f.name}`).join('\n');
+  const yes = confirm(`Saved ${files.length} file(s):\n${fileList}\n\nReload now to see the changes?`);
+  if (yes) window.location.reload();
+}
+
+function _fsaSupported() {
+  return typeof window !== 'undefined'
+    && typeof window.showDirectoryPicker === 'function';
+}
+
+function _countCompoundOverrides(co) {
+  let n = 0;
+  for (const owner of Object.values(co)) n += Object.keys(owner || {}).length;
+  return n;
+}
+
+function _downloadAs(filename, text) {
   const blob = new Blob([text], { type: 'application/javascript' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'rooms.js';
+  a.download = filename;
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
-  alert(copied
-    ? 'Layout copied to clipboard AND downloaded as rooms.js.\nPaste into data/rooms.js or replace the file.'
-    : 'Layout downloaded as rooms.js.\nReplace data/rooms.js with the new file.'
-  );
+}
+
+function serializeNpcOverrides(overrides) {
+  const header = `// npc_overrides.js — per-NPC position/face overrides applied at spawn.
+// EXPORTED FROM IN-GAME EDITOR — generated ${new Date().toISOString()}
+//
+// Keyed by NPC id (hand-built or auto-\${lessonId}). Applied in
+// spawnNPC() after floor-relocation overrides.
+window.NPC_OVERRIDES = {
+`;
+  const lines = [];
+  for (const [id, ov] of Object.entries(overrides)) {
+    if (!ov?.pos) continue;
+    const fields = [`pos: [${fmtNum(ov.pos[0])}, ${fmtNum(ov.pos[1])}]`];
+    if (typeof ov.face === 'number') fields.push(`face: ${fmtNum(ov.face)}`);
+    if (Array.isArray(ov.scale) && ov.scale.length === 3) {
+      fields.push(`scale: [${ov.scale.map(n => fmtNum(n)).join(', ')}]`);
+    }
+    lines.push(`  ${q(id)}: { ${fields.join(', ')} },`);
+  }
+  return header + lines.join('\n') + (lines.length ? '\n' : '') + '};\n';
+}
+
+function serializeDeliveryOverrides(overrides) {
+  const header = `// lesson_delivery_overrides.js — per-chapter interactable position overrides.
+// EXPORTED FROM IN-GAME EDITOR — generated ${new Date().toISOString()}
+//
+// Keyed by chapterId. Applied at build time in play.js's interactable
+// spawn loop, layered over LESSON_DELIVERY[chapterId].objectLocation.
+//
+// Supported per-chapter fields:
+//   position: [x, y, z]   — move the spawn point
+//   scale:    [sx, sy, sz] — resize at spawn
+//   hidden:   true        — skip spawn entirely (editor delete)
+window.LESSON_DELIVERY_OVERRIDES = {
+`;
+  const lines = [];
+  for (const [chapterId, ov] of Object.entries(overrides)) {
+    const fields = [];
+    if (Array.isArray(ov?.position) && ov.position.length === 3) {
+      fields.push(`position: [${ov.position.map(n => fmtNum(n)).join(', ')}]`);
+    }
+    if (Array.isArray(ov?.scale) && ov.scale.length === 3) {
+      fields.push(`scale: [${ov.scale.map(n => fmtNum(n)).join(', ')}]`);
+    }
+    if (ov?.hidden === true) fields.push(`hidden: true`);
+    if (!fields.length) continue;
+    lines.push(`  ${q(chapterId)}: { ${fields.join(', ')} },`);
+  }
+  return header + lines.join('\n') + (lines.length ? '\n' : '') + '};\n';
+}
+
+function serializeCompoundOverrides(overrides) {
+  const header = `// compound_overrides.js — per-child position/rotation/scale/hidden overrides
+// for compound builders.
+// EXPORTED FROM IN-GAME EDITOR — generated ${new Date().toISOString()}
+//
+// Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
+// at build time.
+//
+// Supported per-child fields:
+//   pos:    [x, y, z]      — move spawn position
+//   rotY:   number         — set Y rotation
+//   scale:  [sx, sy, sz]   — resize at spawn
+//   hidden: true           — skip spawn entirely (editor delete)
+window.COMPOUND_OVERRIDES = {
+`;
+  const ownerLines = [];
+  for (const [ownerId, ownerMap] of Object.entries(overrides)) {
+    const childLines = [];
+    for (const [childId, ov] of Object.entries(ownerMap || {})) {
+      const fields = [];
+      if (Array.isArray(ov?.pos) && ov.pos.length === 3) {
+        fields.push(`pos: [${ov.pos.map(n => fmtNum(n)).join(', ')}]`);
+      }
+      if (typeof ov?.rotY === 'number') fields.push(`rotY: ${fmtNum(ov.rotY)}`);
+      if (Array.isArray(ov?.scale) && ov.scale.length === 3) {
+        fields.push(`scale: [${ov.scale.map(n => fmtNum(n)).join(', ')}]`);
+      }
+      if (ov?.hidden === true) fields.push(`hidden: true`);
+      if (!fields.length) continue;
+      childLines.push(`    ${q(childId)}: { ${fields.join(', ')} },`);
+    }
+    if (childLines.length) {
+      ownerLines.push(`  ${q(ownerId)}: {\n${childLines.join('\n')}\n  },`);
+    }
+  }
+  return header + ownerLines.join('\n') + (ownerLines.length ? '\n' : '') + '};\n';
 }
 
 function serializeRooms(rooms) {
@@ -765,6 +1268,10 @@ function stringifyEntry(e) {
   if (e.bg) parts.push(`bg: ${q(e.bg)}`);
   if (e.fg) parts.push(`fg: ${q(e.fg)}`);
   if (e.args) parts.push(`args: ${stringifyArgs(e.args)}`);
+  if (e.collide === true || e.collide === false) parts.push(`collide: ${e.collide}`);
+  if (Array.isArray(e.scale) && e.scale.length === 3) {
+    parts.push(`scale: [${e.scale.map(n => fmtNum(n)).join(', ')}]`);
+  }
   return `{ ${parts.join(', ')} }`;
 }
 
@@ -851,6 +1358,7 @@ function deleteSelected() {
       if (typeof o.userData._roomEntryIndex !== 'number') return;
       if (o.userData._roomEntryIndex > index) o.userData._roomEntryIndex -= 1;
     });
+    try { window.__playApi?.rebuildColliders?.(); } catch {}
   } else if (_selectedEntry.kind === 'npc') {
     // NPC removal routes through the play.js API so npcMeshes stays
     // consistent (collision / repulsion code iterates that array).
@@ -858,12 +1366,134 @@ function deleteSelected() {
       console.warn('[editor] NPC remove failed, falling back to scene.remove', e);
       try { _ctx.scene.remove(node); } catch {}
     }
+  } else if (_selectedEntry.kind === 'interactable') {
+    // Interactables come from LESSON_DELIVERY. We can't remove the
+    // config entry, but we can mark it hidden so the spawn loop skips
+    // it on next load. The mesh is yanked from the scene immediately
+    // so the editor reflects the change without a reload.
+    const chapterId = _selectedEntry.chapterId;
+    if (chapterId) {
+      if (!window.LESSON_DELIVERY_OVERRIDES) window.LESSON_DELIVERY_OVERRIDES = {};
+      const existing = window.LESSON_DELIVERY_OVERRIDES[chapterId] || {};
+      window.LESSON_DELIVERY_OVERRIDES[chapterId] = { ...existing, hidden: true };
+    }
+    try { _ctx.scene.remove(node); } catch {}
+    // Also yank the hover glow ring (it sits on the scene at floor level
+    // separately from the mesh; otherwise it lingers after deletion).
+    try {
+      const glow = node.userData?._interactable?.glow;
+      if (glow?.parent) glow.parent.remove(glow);
+    } catch {}
+  } else if (_selectedEntry.kind === 'compound_child') {
+    // Compound-builder children are baked into their compound's source
+    // function — we can't remove the source call, but we can set a
+    // hidden flag in COMPOUND_OVERRIDES so placeCompoundChild() skips
+    // it on next load. Yank from the scene now so the editor responds.
+    const { ownerId, childId } = _selectedEntry;
+    if (ownerId && childId) {
+      if (!window.COMPOUND_OVERRIDES) window.COMPOUND_OVERRIDES = {};
+      if (!window.COMPOUND_OVERRIDES[ownerId]) window.COMPOUND_OVERRIDES[ownerId] = {};
+      const existing = window.COMPOUND_OVERRIDES[ownerId][childId] || {};
+      window.COMPOUND_OVERRIDES[ownerId][childId] = { ...existing, hidden: true };
+    }
+    try { _ctx.scene.remove(node); } catch {}
   }
 
   _selected = null;
   _selectedEntry = null;
   _dragMode = null;
   refreshPanel();
+}
+
+// ── Clipboard (Ctrl+C / Ctrl+V) ──────────────────────────────────────
+
+// Holds the most recently copied entry. Cleared on exit. Only 'room'
+// and 'npc' kinds are copyable — interactables (LESSON_DELIVERY) and
+// compound children come from source code, not data, so duplicating
+// them via the clipboard would create scene-only ghosts the next load
+// wouldn't reproduce.
+let _clipboard = null;  // { kind: 'room' | 'npc', payload: {...} }
+
+function copySelection() {
+  if (!_selected || !_selectedEntry) return false;
+  if (_selectedEntry.kind === 'room') {
+    _clipboard = {
+      kind: 'room',
+      roomId: _selectedEntry.room.id,
+      entry: JSON.parse(JSON.stringify(_selectedEntry.entry)),
+    };
+    return true;
+  }
+  if (_selectedEntry.kind === 'npc') {
+    _clipboard = {
+      kind: 'npc',
+      npcDef: JSON.parse(JSON.stringify(_selectedEntry.npcDef)),
+    };
+    return true;
+  }
+  alert('Copy is supported for room items and NPCs only.\n\nInteractables (phones / computers / etc.) and compound-builder children are baked into source files — they can\'t be duplicated via the editor.');
+  return false;
+}
+
+function pasteClipboard() {
+  if (!_clipboard || !_ctx) return false;
+
+  if (_clipboard.kind === 'room') {
+    const room = window.ROOM_BY_ID?.(_clipboard.roomId);
+    if (!room) {
+      alert(`Paste failed — original room "${_clipboard.roomId}" not loaded.`);
+      return false;
+    }
+    // Deep-clone again so further pastes don't share array references
+    // with the previous one.
+    const entry = JSON.parse(JSON.stringify(_clipboard.entry));
+    // Offset ~1 m so the duplicate doesn't z-fight with the original.
+    if (Array.isArray(entry.pos) && entry.pos.length >= 3) {
+      entry.pos = [entry.pos[0] + 1, entry.pos[1], entry.pos[2] + 1];
+    } else if (Array.isArray(entry.pos)) {
+      entry.pos = entry.pos.map((v, i) => i === 0 ? v + 1 : v);
+    }
+    room.objects.push(entry);
+    const yOffsetForFloor = room.floor != null && room.floor > 1
+      ? (room.floor - 1) * 4.5
+      : 0;
+    const result = dispatchEntry(entry, _ctx.scene, { scene: _ctx.scene, decoTickers: [] });
+    if (!result) {
+      alert(`Paste failed — dispatcher returned no node for entry type "${entry.type}".`);
+      return false;
+    }
+    const node = result.isObject3D ? result : result.root;
+    if (!node) return false;
+    if (yOffsetForFloor) node.position.y += yOffsetForFloor;
+    if (room.floor != null && node.userData.floor === undefined) {
+      node.userData.floor = room.floor;
+    }
+    node.userData._roomId = room.id;
+    node.userData._roomEntryIndex = room.objects.length - 1;
+    node.userData._yOffset = yOffsetForFloor;
+    if (!node.parent) _ctx.scene.add(node);
+    select(node);
+    // Re-derive colliders so the pasted blocker (desk / couch / etc.)
+    // is impassable immediately.
+    try { window.__playApi?.rebuildColliders?.(); } catch {}
+    return true;
+  }
+
+  if (_clipboard.kind === 'npc') {
+    if (!window.__playApi?.spawnNpcFromDef) return false;
+    const def = JSON.parse(JSON.stringify(_clipboard.npcDef));
+    // Fresh id so the duplicate doesn't share NPC_OVERRIDES with the
+    // source. Suffix with a short timestamp so repeated pastes diverge.
+    if (def.id) def.id = `${def.id}-copy${Date.now().toString(36).slice(-4)}`;
+    // Offset ~1 m on XZ.
+    if (Array.isArray(def.pos) && def.pos.length >= 2) {
+      def.pos = [def.pos[0] + 1, def.pos[1] + 1];
+    }
+    const mesh = window.__playApi.spawnNpcFromDef(def);
+    if (mesh) select(mesh);
+    return true;
+  }
+  return false;
 }
 
 // ── Add Item library modal ───────────────────────────────────────────
@@ -1098,6 +1728,7 @@ function addEntryFromTemplate(template) {
   node.userData._yOffset = spawn.yOffset;
   if (!node.parent) _ctx.scene.add(node);
   select(node);
+  try { window.__playApi?.rebuildColliders?.(); } catch {}
 }
 
 // Pick a spawn point ~3m in front of the camera, snapped to the

@@ -9,6 +9,9 @@
 //   - small "KEDASH" name plate facing the entrance
 
 import * as THREE from 'three';
+import { placeCompoundChild } from '../world/compoundChildren.js?v=20260528g';
+
+const OWNER = 'reception_centerpiece';
 
 export function buildReceptionCenterpiece(scene, decoTickers) {
   const group = new THREE.Group();
@@ -108,7 +111,7 @@ export function buildReceptionCenterpiece(scene, decoTickers) {
   plate.position.set(0, 0.52, 0.86);
   group.add(plate);
 
-  scene.add(group);
+  placeCompoundChild(scene, group, OWNER, 'k_sculpture');
 
   decoTickers.push((dt, now) => {
     kPivot.rotation.y = now * 0.0005;
