@@ -28,7 +28,7 @@ import { decorateReception } from './decorations/reception.js?v=20260528g';
 import { decorateLibrary } from './decorations/library.js?v=20260528g';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528g';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
-import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260526l';
+import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260528i';
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260528g';
 import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,

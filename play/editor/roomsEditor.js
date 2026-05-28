@@ -769,7 +769,7 @@ function rebuildSelectedMesh() {
   } else if (entry.type === 'decoration') {
     // Rebuild via makeDecoration. The wrapper group's identity changes;
     // we attach TransformControls to the new node.
-    import('../decorations/decorationAssets.js?v=20260526l').then(({ makeDecoration }) => {
+    import('../decorations/decorationAssets.js?v=20260528i').then(({ makeDecoration }) => {
       const next = makeDecoration(entry.id, entry.size || {});
       if (!next) return;
       next.position.copy(node.position);

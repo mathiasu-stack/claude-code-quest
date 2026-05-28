@@ -36,9 +36,18 @@ window.ROOMS = [
     description: 'Onboarding zone — Linda, IT bench, Aisha, Kenji, Diana',
     objects: [
 
-      // ── Shell: floor + carpet runner ────────────────────────────
+      // ── Shell: floor + tile + carpet runner ─────────────────────
+      // Base gray floor_plate stays as a fallback if the Meshy tile
+      // GLB fails to load. The tile sits ~2 mm above it, just covering
+      // the atrium marble overlay (at y=0.001) so the patterned tile
+      // is what the player sees.
       { type: 'floor_plate', pos: [0, 0, 0], size: { w: 22, d: 22 }, color: 0x9aa9bc },
-      { type: 'floor_plate', pos: [0, 0.0025, -1], size: { w: 2.4, d: 18 },
+      { type: 'decoration', id: 'floor_tile',
+        pos: [0, 0.002, 0],
+        size: { width: 22, depth: 22, height: 0.005, stretch: true } },
+      // Gold carpet runner — lifted from y=0.0025 to y=0.012 so it
+      // stays above the new tile (top of tile ≈ 0.007).
+      { type: 'floor_plate', pos: [0, 0.012, -1], size: { w: 2.4, d: 18 },
         color: 0xc9a44c, metalness: 0.85, roughness: 0.18 },
 
       // ── Reception room walls ────────────────────────────────────

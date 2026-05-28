@@ -14,7 +14,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const ASSET_DIR = 'play/assets/decorations/';
-const CACHE_BUST = '?v=20260526d';
+const CACHE_BUST = '?v=20260528i';
 
 // Asset id → file (relative to ASSET_DIR).
 const FILES = {
@@ -42,6 +42,9 @@ const FILES = {
   table_lamp: 'table_lamp.glb',
   hanging_plant: 'hanging_plant.glb',
   succulent: 'succulent.glb',
+  // Reception floor tile — golden-frame tile pattern, intended to be
+  // stretched to cover the 22×22 reception floor as a single instance.
+  floor_tile: 'floor_tile.glb',
 };
 
 const _cache = new Map(); // id → { gltf, bbox: THREE.Box3 }
