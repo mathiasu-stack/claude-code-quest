@@ -1870,14 +1870,10 @@ function buildFloorOffice(floorIdx) {
   elevLintel.userData.floor = floorIdx;
   scene.add(elevLintel);
 
-  // ── Internal cross-walls — 2×2 quadrant layout ──────────────────────
-  // Horizontal divider at z=0: two 5m segments leaving a 2m doorway at
-  // x=0 (player can walk between north and south quadrants).
-  addWall(10, wallH, 0.3, -6, 0, innerWallMat);   // west half (x=-11..-1)
-  addWall(10, wallH, 0.3,  6, 0, innerWallMat);   // east half (x=+1..+11)
-  // Vertical divider at x=0: two 5m segments leaving a 2m doorway at z=0.
-  addWall(0.3, wallH, 10, 0, -6, innerWallMat);   // north half (z=-11..-1)
-  addWall(0.3, wallH, 10, 0,  6, innerWallMat);   // south half (z=+1..+11)
+  // Internal walls are now per-floor and live in data/rooms.js as
+  // `wall` entries under each office_floor{N} room. That lets each
+  // floor have a different layout (coworking vs pods vs corridor)
+  // while sharing this builder's outer envelope + elevator door.
 
   // Floor title sign on north wall
   const sign = makeWallSign(`FLOOR ${floorIdx} — ${(theme.title || '').toUpperCase()}`, 9, 1.4, '#1a2744', theme.accent || '#ffd54f');
@@ -2043,6 +2039,15 @@ function aabbForRoomEntry(entry, floor) {
     if (!isDefaultBlocker && entry.collide !== true) return null;
     w = entry.size?.width ?? entry.size?.w ?? 1.0;
     d = entry.size?.depth ?? entry.size?.d ?? 1.0;
+  } else if (entry.type === 'wall') {
+    // Walls block by default. Skip lintels / transom strips that sit
+    // entirely above the player's head — bottom Y >= 1.6 m means the
+    // player walks under freely.
+    const wallY = entry.pos[1] || 0;
+    const wh = entry.size?.h ?? 1.0;
+    if (wallY - wh / 2 >= 1.6) return null;
+    w = entry.size?.w ?? 1.0;
+    d = entry.size?.d ?? 0.3;
   } else {
     return null;
   }
@@ -2178,15 +2183,10 @@ function registerStaticColliders() {
   addColliderAABB(-9.85, -9.15, 30.70, 31.30);
   addColliderAABB( 7.55,  8.45, 13.65, 14.35);
 
-  // Floors 2-4 internal dividers (the desks themselves are derived
-  // from window.ROOMS below — only the partition walls are hardcoded
-  // since they aren't representable as room entries today).
-  for (let f = 2; f <= FLOORS_TOTAL; f++) {
-    addColliderAABB(-11, -1, -0.15, 0.15, f);
-    addColliderAABB(  1, 11, -0.15, 0.15, f);
-    addColliderAABB(-0.15, 0.15, -11, -1, f);
-    addColliderAABB(-0.15, 0.15,   1, 11, f);
-  }
+  // Floors 2-4 internal walls now come from window.ROOMS too — each
+  // office_floor{N} room declares its own unique partitioning (so
+  // floor 2 / 3 / 4 don't all look identical). The wall auto-collide
+  // branch in aabbForRoomEntry produces colliders for those walls.
 
   // ─── Furniture derived from window.ROOMS ─────────────────────────
   // Re-derived from current pos + size, so editor edits (move /
