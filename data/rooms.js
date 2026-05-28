@@ -1,5 +1,5 @@
 // rooms.js — declarative scene-layout data.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T18:52:23.836Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:00:33.281Z
 //
 // See play/world/roomsLoader.js for the entry-type spec.
 
@@ -146,11 +146,10 @@ window.ROOMS = [
     description: 'Knowledge Library — reading tables, bookshelves, library NPCs',
     objects: [
       { type: 'floor_plate', pos: [0, 0, 22], size: { w: 22, d: 22 }, color: 0x8d6e63 },
-      { type: 'wall', pos: [0, 1.9, 33], size: { w: 22, h: 3.8, d: 0.3 } },
-      { type: 'wall', pos: [-11, 1.9, 17.375], size: { w: 0.3, h: 3.8, d: 9.25 } },
-      { type: 'wall', pos: [-11, 1.9, 26.625], size: { w: 0.3, h: 3.8, d: 9.25 } },
+      { type: 'wall', pos: [-10.9917, 1.9, 16.6015], rotY: 0, size: { w: 0.3, h: 3.8, d: 10.9 } },
+      { type: 'wall', pos: [-10.995, 1.9, 27.4087], rotY: 0, size: { w: 0.3, h: 3.8, d: 10.85 } },
       { type: 'wall', pos: [-11, 3.2, 22], size: { w: 0.3, h: 1.2, d: 3.5 } },
-      { type: 'wall', pos: [11, 1.9, 22], size: { w: 0.3, h: 3.8, d: 22 } },
+      { type: 'wall', pos: [11.0446, 1.9, 22.2897], rotY: 0, size: { w: 0.3, h: 3.8, d: 22 } },
       { type: 'wall_sign', text: 'KNOWLEDGE LIBRARY', pos: [-10.83, 2.8, 22], rotY: 1.5708, size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' },
       { type: 'builder', fn: 'bookshelf', pos: [-10.5, 0, 14], rotY: 1.5708, args: { seed: 14 } },
       { type: 'builder', fn: 'bookshelf', pos: [-10.5, 0, 18], rotY: 1.5708, args: { seed: 18 } },
@@ -172,7 +171,8 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [9.8, 0, 30] },
       { type: 'builder', fn: 'library_ceiling' },
       { type: 'builder', fn: 'library_arched_window' },
-      { type: 'builder', fn: 'decorate_library' }
+      { type: 'builder', fn: 'decorate_library' },
+      { type: 'wall', pos: [-0.0097, 0, 33.1334], rotY: 0, size: { w: 21.8, h: 7.6, d: 0.3 } }
     ],
   },
   {

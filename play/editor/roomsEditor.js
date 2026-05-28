@@ -578,9 +578,14 @@ function refreshPanel() {
     </div>
     <div class="ccq-ed-row">
       <label>scale</label>
-      <input class="ccq-ed-num" id="ccq-scale-x" type="number" step="0.05" value="${node.scale.x.toFixed(3)}" style="flex:1;">
-      <input class="ccq-ed-num" id="ccq-scale-y" type="number" step="0.05" value="${node.scale.y.toFixed(3)}" style="flex:1;">
-      <input class="ccq-ed-num" id="ccq-scale-z" type="number" step="0.05" value="${node.scale.z.toFixed(3)}" style="flex:1;">
+      <input class="ccq-ed-num" id="ccq-scale-u" type="number" step="0.05" value="${node.scale.x.toFixed(3)}" style="flex:1;" title="Uniform — sets all three axes together">
+      <span style="font-size:11px; opacity:0.6;">uniform</span>
+    </div>
+    <div class="ccq-ed-row">
+      <label style="opacity:0.7;">  x/y/z</label>
+      <input class="ccq-ed-num" id="ccq-scale-x" type="number" step="0.05" value="${node.scale.x.toFixed(3)}" style="flex:1;" title="Per-axis X scale (non-uniform)">
+      <input class="ccq-ed-num" id="ccq-scale-y" type="number" step="0.05" value="${node.scale.y.toFixed(3)}" style="flex:1;" title="Per-axis Y scale (non-uniform)">
+      <input class="ccq-ed-num" id="ccq-scale-z" type="number" step="0.05" value="${node.scale.z.toFixed(3)}" style="flex:1;" title="Per-axis Z scale (non-uniform)">
     </div>${collideRow}${sel.kind === 'npc' ? `
     <div class="ccq-ed-hint" style="margin-top:6px;">NPC position is stored as [x, z] + face (rotY). Mirrored into <code>data/npc_overrides.js</code> on every drag — exports via "Export Layout".</div>` : ''}${sel.kind === 'interactable' ? `
     <div class="ccq-ed-hint" style="margin-top:6px;">Position layered as an override over <code>LESSON_DELIVERY.${sel.chapterId}.objectLocation.position</code>. Mirrored into <code>data/lesson_delivery_overrides.js</code> on every drag — exports via "Export Layout".</div>` : ''}${sel.kind === 'compound_child' ? `
@@ -625,6 +630,7 @@ function refreshPanel() {
   _panelEl.querySelector('#ccq-pos-y').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-pos-z').addEventListener('input', onPosInput);
   _panelEl.querySelector('#ccq-rot-y').addEventListener('input', onRotInput);
+  _panelEl.querySelector('#ccq-scale-u').addEventListener('input', onScaleUniformInput);
   _panelEl.querySelector('#ccq-scale-x').addEventListener('input', onScaleInput);
   _panelEl.querySelector('#ccq-scale-y').addEventListener('input', onScaleInput);
   _panelEl.querySelector('#ccq-scale-z').addEventListener('input', onScaleInput);
@@ -706,6 +712,25 @@ function onScaleInput() {
   const sz = Math.max(0.001, parseFloat(document.getElementById('ccq-scale-z').value) || 1);
   _selected.scale.set(sx, sy, sz);
   syncDataEntryFromSelection();
+  // Keep the "uniform" input in sync — show the largest axis so the
+  // user can read "how big it currently is" at a glance.
+  const u = document.getElementById('ccq-scale-u');
+  if (u && document.activeElement !== u) u.value = Math.max(sx, sy, sz).toFixed(3);
+}
+
+// Uniform scale — sets all three axes to the same value. Used for
+// "make this thing 2x bigger" without worrying about which axis is which.
+function onScaleUniformInput() {
+  if (!_selected) return;
+  const u = Math.max(0.001, parseFloat(document.getElementById('ccq-scale-u').value) || 1);
+  _selected.scale.set(u, u, u);
+  syncDataEntryFromSelection();
+  // Push the new uniform value into the per-axis inputs so they don't
+  // show stale values when the user switches to fine control.
+  const fmt = u.toFixed(3);
+  document.getElementById('ccq-scale-x').value = fmt;
+  document.getElementById('ccq-scale-y').value = fmt;
+  document.getElementById('ccq-scale-z').value = fmt;
 }
 
 function onSizeInput() {
@@ -886,6 +911,7 @@ function syncPanelFromSelection() {
   set('ccq-scale-x', _selected.scale.x.toFixed(3));
   set('ccq-scale-y', _selected.scale.y.toFixed(3));
   set('ccq-scale-z', _selected.scale.z.toFixed(3));
+  set('ccq-scale-u', Math.max(_selected.scale.x, _selected.scale.y, _selected.scale.z).toFixed(3));
 }
 
 // ── Floor visibility — temporarily show all floors while editing ─────

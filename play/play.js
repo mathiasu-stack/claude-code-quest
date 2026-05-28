@@ -34,9 +34,9 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528n';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528o';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
-import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
+import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
 import { CeremonyManager } from './ceremony/ceremonyManager.js';
