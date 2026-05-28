@@ -24,6 +24,27 @@
 
 const wallH = 3.8;
 
+// Generate an N×N grid of floor_tile decorations covering a span×span
+// area centered at the origin. Used for the reception floor — a single
+// stretched instance distorted the chip texture; tiling keeps each
+// tile's gold-frame pattern recognizable. Each tile is editable
+// individually via the in-game editor.
+function _floorTiles(N, span, y) {
+  const tiles = [];
+  const tileSize = span / N;
+  const start = -span / 2 + tileSize / 2;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      tiles.push({
+        type: 'decoration', id: 'floor_tile',
+        pos: [start + i * tileSize, y, start + j * tileSize],
+        size: { width: tileSize, depth: tileSize, height: 0.005, stretch: true },
+      });
+    }
+  }
+  return tiles;
+}
+
 window.ROOMS = [
 
   // ─────────────────────────────────────────────────────────────────
@@ -36,17 +57,15 @@ window.ROOMS = [
     description: 'Onboarding zone — Linda, IT bench, Aisha, Kenji, Diana',
     objects: [
 
-      // ── Shell: floor + tile + carpet runner ─────────────────────
+      // ── Shell: floor + tile grid + carpet runner ────────────────
       // Base gray floor_plate stays as a fallback if the Meshy tile
-      // GLB fails to load. The tile sits ~2 mm above it, just covering
-      // the atrium marble overlay (at y=0.001) so the patterned tile
-      // is what the player sees.
+      // GLB fails to load. 7×7 = 49 tiles cover the 22×22 floor, each
+      // ~3.14 m square (scale factor 1.65× from the natural 1.9 m).
+      // The atrium marble overlay (y=0.001) sits below the tiles.
       { type: 'floor_plate', pos: [0, 0, 0], size: { w: 22, d: 22 }, color: 0x9aa9bc },
-      { type: 'decoration', id: 'floor_tile',
-        pos: [0, 0.002, 0],
-        size: { width: 22, depth: 22, height: 0.005, stretch: true } },
+      ..._floorTiles(7, 22, 0.002),
       // Gold carpet runner — lifted from y=0.0025 to y=0.012 so it
-      // stays above the new tile (top of tile ≈ 0.007).
+      // stays above the tile grid (top of tile ≈ 0.007).
       { type: 'floor_plate', pos: [0, 0.012, -1], size: { w: 2.4, d: 18 },
         color: 0xc9a44c, metalness: 0.85, roughness: 0.18 },
 
