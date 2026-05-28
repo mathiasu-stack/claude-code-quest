@@ -958,21 +958,44 @@ export function exportLayout() {
   alert(parts.join('\n'));
 }
 
-// "💾 Save Permanently" — tries three save mechanisms in order:
-//   1. POST to save.php (works on any browser over the NAS deployment,
-//      including HTTP/Firefox where FSA isn't available);
-//   2. File System Access API (Chrome/Edge desktop on HTTPS/localhost);
-//   3. Download-and-replace via exportLayout() (universal fallback).
+// "💾 Save Permanently" — tries four save mechanisms in order:
+//   1. POST to the Python sidecar on port 8889 (preferred — no DSM
+//      Web Station / PHP fiddling required);
+//   2. POST to save.php on the same host (works if PHP-FPM is wired);
+//   3. File System Access API (Chrome/Edge desktop on HTTPS/localhost);
+//   4. Download-and-replace via exportLayout() (universal fallback).
 // Whichever succeeds first wins; on success the editor confirms and
 // reloads so the changes take effect immediately.
 let _projectDirHandle = null;
+let _sidecarAvailable = null;      // null=unknown, true/false=probed
 let _saveEndpointAvailable = null; // null=unknown, true/false=probed
 export async function savePermanently() {
   const files = _collectExportFiles();
 
-  // ── Path 1: save.php on the host ──────────────────────────────────
-  // Available on Synology Web Station + any other PHP-enabled deploy.
-  // Probed once per session via a HEAD-equivalent check; cached.
+  // ── Path 1: Python sidecar on port 8889 ───────────────────────────
+  // Same protocol as save.php; runs as a background process so it
+  // works regardless of Web Station's PHP state. Probed once per
+  // session; failure caches.
+  if (_sidecarAvailable !== false) {
+    const result = await _trySaveViaSidecar(files);
+    if (result === 'ok') {
+      _confirmAndReload(files);
+      return;
+    }
+    if (result === 'unavailable') {
+      _sidecarAvailable = false;
+      // fall through
+    }
+    if (result === 'auth') {
+      alert('Sidecar rejected the admin passcode.\n\nRe-enter via the sidebar admin-unlock button, then try again.');
+      return;
+    }
+    if (result === 'error') {
+      return; // sidecar surfaced its own alert + fell back to download
+    }
+  }
+
+  // ── Path 2: save.php on the host ──────────────────────────────────
   if (_saveEndpointAvailable !== false) {
     const result = await _trySaveViaEndpoint(files);
     if (result === 'ok') {
@@ -981,20 +1004,17 @@ export async function savePermanently() {
     }
     if (result === 'unavailable') {
       _saveEndpointAvailable = false;
-      // fall through to FSA / download
     }
     if (result === 'auth') {
-      // Server is there but rejected us; no point trying again silently.
       alert('save.php rejected the admin passcode.\n\nRe-enter via the sidebar admin-unlock button, then try again.');
       return;
     }
     if (result === 'error') {
-      // Real server-side failure — surfaced inside _trySaveViaEndpoint.
       return;
     }
   }
 
-  // ── Path 2: File System Access API ────────────────────────────────
+  // ── Path 3: File System Access API ────────────────────────────────
   if (_fsaSupported()) {
     try {
       if (!_projectDirHandle) {
@@ -1039,10 +1059,55 @@ export async function savePermanently() {
     }
   }
 
-  // ── Path 3: fallback ──────────────────────────────────────────────
-  // Firefox / Safari / mobile + no save.php. The user gets the manual
-  // download-and-replace flow.
+  // ── Path 4: fallback ──────────────────────────────────────────────
+  // Sidecar down, no PHP, no FSA. User gets manual download-and-replace.
   return exportLayout();
+}
+
+// Same payload shape as save.php; sidecar listens on the editor's
+// host but a different port (8889). Cross-origin → browser does a
+// preflight; sidecar serves CORS headers.
+async function _trySaveViaSidecar(files) {
+  let pass = '';
+  try { pass = sessionStorage.getItem('ccq_admin_pass') || ''; } catch {}
+  if (!pass) {
+    pass = window.prompt('Enter admin passcode to save:') || '';
+    if (!pass) return 'unavailable';
+    try { sessionStorage.setItem('ccq_admin_pass', pass); } catch {}
+  }
+  const url = `${location.protocol}//${location.hostname}:8889/save`;
+  let resp;
+  try {
+    // 2 s timeout — if the sidecar isn't up we want to fall through
+    // to the next path quickly instead of hanging the click.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2000);
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        passcode: pass,
+        files: files.map(f => ({ name: f.name, content: f.content })),
+      }),
+    });
+    clearTimeout(timer);
+  } catch {
+    return 'unavailable';
+  }
+  let body = null;
+  try { body = await resp.json(); } catch {}
+  if (resp.status === 403) {
+    try { sessionStorage.removeItem('ccq_admin_pass'); } catch {}
+    return 'auth';
+  }
+  if (!resp.ok || !body?.ok) {
+    const msg = body?.error || `HTTP ${resp.status}`;
+    alert(`Sidecar save failed: ${msg}\n\nFalling back to download.`);
+    exportLayout();
+    return 'error';
+  }
+  return 'ok';
 }
 
 async function _trySaveViaEndpoint(files) {
