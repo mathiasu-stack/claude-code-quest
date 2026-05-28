@@ -1,5 +1,5 @@
 // rooms.js — declarative scene-layout data.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T17:05:05.594Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T18:52:23.836Z
 //
 // See play/world/roomsLoader.js for the entry-type spec.
 

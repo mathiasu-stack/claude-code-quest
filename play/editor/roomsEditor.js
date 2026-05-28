@@ -611,7 +611,7 @@ function refreshPanel() {
         Changing size rebuilds the mesh in place.
       </div>
     ` : (sel.kind === 'room'
-        ? `<div class="ccq-ed-hint">Size for "${sel.entry.type}" entries is not editable here — adjust args in data/rooms.js directly.</div>`
+        ? `<div class="ccq-ed-hint">No native size field for "${sel.entry.type}" entries. Use the <b>scale</b> row above to resize — works for every kind. For builder-specific args (desk w/d, etc.) edit data/rooms.js.</div>`
         : '')}
 
     <div class="ccq-ed-divider"></div>

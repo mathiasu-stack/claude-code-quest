@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T17:05:05.595Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T18:52:23.837Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.
@@ -24,6 +24,8 @@ window.COMPOUND_OVERRIDES = {
     'hanging_plant': { hidden: true },
     'ceiling_lamp_3': { hidden: true },
     'ceiling_lamp_0': { hidden: true },
+    'marcus_server_tower': { pos: [-7.4987, 0, -4.0663], rotY: 0 },
+    'marcus_laptop': { pos: [-7.5767, 0.455, -2.6045], rotY: 1.9199 },
   },
   'atrium': {
     'mullion_h_0': { hidden: true },

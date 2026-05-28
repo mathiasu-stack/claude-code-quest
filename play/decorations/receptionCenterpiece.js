@@ -88,27 +88,33 @@ export function buildReceptionCenterpiece(scene, decoTickers) {
   lower.rotation.z = -Math.PI / 4;
   kPivot.add(lower);
 
-  // Brand name plate facing the entrance (south-facing).
+  // Brand name plate facing the entrance (south-facing). Previously
+  // the plate was transparent and sat 0.86 m forward of the K sculpture,
+  // so the gold bars behind composited through and washed out the
+  // "KEDASH" word from the player's POV. Switched to opaque material +
+  // 2× canvas resolution + heavier wordmark; pushed the plate further
+  // out so it stands clearly in front of the K.
   const c = document.createElement('canvas');
-  c.width = 512; c.height = 128;
+  c.width = 1024; c.height = 256;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#0a0a14'; ctx.fillRect(0, 0, c.width, c.height);
-  ctx.strokeStyle = '#c9a44c'; ctx.lineWidth = 6;
-  ctx.strokeRect(8, 8, c.width - 16, c.height - 16);
-  ctx.fillStyle = '#c9a44c';
-  ctx.font = 'bold 56px serif';
+  ctx.strokeStyle = '#c9a44c'; ctx.lineWidth = 10;
+  ctx.strokeRect(12, 12, c.width - 24, c.height - 24);
+  ctx.fillStyle = '#ffd76b';
+  ctx.font = '900 130px "Cinzel", "Trajan Pro", Georgia, serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('KEDASH', c.width / 2, c.height * 0.4);
-  ctx.fillStyle = '#fff';
-  ctx.font = '22px sans-serif';
-  ctx.fillText('Empowering Engineers Since Now™', c.width / 2, c.height * 0.7);
+  ctx.fillText('KEDASH', c.width / 2, c.height * 0.42);
+  ctx.fillStyle = '#fff8e0';
+  ctx.font = '44px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Empowering Engineers Since Now™', c.width / 2, c.height * 0.78);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   const plate = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.7, 0.42),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true }),
+    new THREE.PlaneGeometry(1.9, 0.48),
+    new THREE.MeshBasicMaterial({ map: tex }), // opaque — no composite through to the K bars
   );
-  plate.position.set(0, 0.52, 0.86);
+  plate.position.set(0, 0.52, 0.94);
   group.add(plate);
 
   placeCompoundChild(scene, group, OWNER, 'k_sculpture');

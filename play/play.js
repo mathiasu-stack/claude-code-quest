@@ -26,7 +26,7 @@ import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260528g';
 import { decorateLibrary } from './decorations/library.js?v=20260528g';
-import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528g';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528n';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260528j';
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260528g';
@@ -34,7 +34,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528m';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528n';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
@@ -2038,6 +2038,14 @@ function aabbForRoomEntry(entry, floor) {
     d = entry.size?.depth ?? entry.size?.d ?? 1.0;
   } else {
     return null;
+  }
+  // Editor-set scale multiplies the footprint. Without this a desk
+  // scaled to 2× would visually grow but its collider would stay the
+  // original size — the player could walk through the visible mesh.
+  // scale[1] (Y) doesn't affect XZ collision.
+  if (Array.isArray(entry.scale) && entry.scale.length === 3) {
+    w *= Math.max(0.01, Math.abs(entry.scale[0] || 1));
+    d *= Math.max(0.01, Math.abs(entry.scale[2] || 1));
   }
   // rotY ±π/2 swaps the footprint axes. For arbitrary angles use the
   // axis-aligned bbox of the rotated rectangle.
