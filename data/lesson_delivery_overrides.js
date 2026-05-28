@@ -1,5 +1,5 @@
 // lesson_delivery_overrides.js — per-chapter interactable position overrides.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:00:33.281Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:11:03.644Z
 //
 // Keyed by chapterId. Applied at build time in play.js's interactable
 // spawn loop, layered over LESSON_DELIVERY[chapterId].objectLocation.

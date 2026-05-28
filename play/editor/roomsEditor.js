@@ -1498,12 +1498,19 @@ function deleteSelected() {
 
 // ── Clipboard (Ctrl+C / Ctrl+V) ──────────────────────────────────────
 
-// Holds the most recently copied entry. Cleared on exit. Only 'room'
-// and 'npc' kinds are copyable — interactables (LESSON_DELIVERY) and
-// compound children come from source code, not data, so duplicating
-// them via the clipboard would create scene-only ghosts the next load
-// wouldn't reproduce.
-let _clipboard = null;  // { kind: 'room' | 'npc', payload: {...} }
+// Clipboard for Ctrl+C/V. Supports every selection kind:
+//   • room: deep-clones the data entry and re-dispatches.
+//   • npc: deep-clones the NPC def with a fresh id.
+//   • interactable: deep-clones the live mesh; persists across reload
+//     via a synthetic LESSON_DELIVERY_OVERRIDES entry that play.js
+//     re-spawns from on next load.
+//   • compound_child: deep-clones the live mesh; persists via a
+//     synthetic COMPOUND_OVERRIDES entry that a post-build pass in
+//     play.js re-creates from the source mesh on next load.
+// Cleared on exit edit mode.
+let _clipboard = null;
+
+function _shortTs() { return Date.now().toString(36).slice(-5); }
 
 function copySelection() {
   if (!_selected || !_selectedEntry) return false;
@@ -1522,7 +1529,27 @@ function copySelection() {
     };
     return true;
   }
-  alert('Copy is supported for room items and NPCs only.\n\nInteractables (phones / computers / etc.) and compound-builder children are baked into source files — they can\'t be duplicated via the editor.');
+  if (_selectedEntry.kind === 'interactable') {
+    _clipboard = {
+      kind: 'interactable',
+      chapterId: _selectedEntry.chapterId,
+      interactableKind: _selectedEntry.interactableKind,
+      pos: [_selected.position.x, _selected.position.y, _selected.position.z],
+      scale: [_selected.scale.x, _selected.scale.y, _selected.scale.z],
+    };
+    return true;
+  }
+  if (_selectedEntry.kind === 'compound_child') {
+    _clipboard = {
+      kind: 'compound_child',
+      ownerId: _selectedEntry.ownerId,
+      childId: _selectedEntry.childId,
+      pos: [_selected.position.x, _selected.position.y, _selected.position.z],
+      rotY: _selected.rotation.y,
+      scale: [_selected.scale.x, _selected.scale.y, _selected.scale.z],
+    };
+    return true;
+  }
   return false;
 }
 
@@ -1564,8 +1591,6 @@ function pasteClipboard() {
     node.userData._yOffset = yOffsetForFloor;
     if (!node.parent) _ctx.scene.add(node);
     select(node);
-    // Re-derive colliders so the pasted blocker (desk / couch / etc.)
-    // is impassable immediately.
     try { window.__playApi?.rebuildColliders?.(); } catch {}
     return true;
   }
@@ -1573,10 +1598,7 @@ function pasteClipboard() {
   if (_clipboard.kind === 'npc') {
     if (!window.__playApi?.spawnNpcFromDef) return false;
     const def = JSON.parse(JSON.stringify(_clipboard.npcDef));
-    // Fresh id so the duplicate doesn't share NPC_OVERRIDES with the
-    // source. Suffix with a short timestamp so repeated pastes diverge.
-    if (def.id) def.id = `${def.id}-copy${Date.now().toString(36).slice(-4)}`;
-    // Offset ~1 m on XZ.
+    if (def.id) def.id = `${def.id}-copy${_shortTs()}`;
     if (Array.isArray(def.pos) && def.pos.length >= 2) {
       def.pos = [def.pos[0] + 1, def.pos[1] + 1];
     }
@@ -1584,7 +1606,128 @@ function pasteClipboard() {
     if (mesh) select(mesh);
     return true;
   }
+
+  if (_clipboard.kind === 'interactable') {
+    return _pasteInteractable(_clipboard);
+  }
+
+  if (_clipboard.kind === 'compound_child') {
+    return _pasteCompoundChild(_clipboard);
+  }
+
   return false;
+}
+
+// Find the live source mesh for a (sourceOwner, sourceChildId) pair,
+// deep-clone its geometry/materials, tag with new ids, drop into the
+// scene at the requested position. Used by paste flows for both
+// interactables and compound children. Returns the new node or null.
+function _cloneTaggedMesh(predicate) {
+  if (!_ctx?.scene) return null;
+  let source = null;
+  _ctx.scene.traverse((o) => {
+    if (source) return;
+    if (predicate(o)) source = o;
+  });
+  if (!source) return null;
+  const clone = source.clone(true);
+  // Clone materials so per-instance tweaks don't leak.
+  clone.traverse((o) => {
+    if (o.isMesh && o.material) {
+      o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
+    }
+  });
+  return clone;
+}
+
+function _pasteInteractable(cb) {
+  const sourceChapterId = cb.chapterId;
+  const newChapterId = `${sourceChapterId}-copy${_shortTs()}`;
+  const clone = _cloneTaggedMesh(
+    (o) => o.userData?._isInteractable && o.userData._interactableChapterId === sourceChapterId
+  );
+  if (!clone) {
+    alert(`Paste failed — couldn't find live source mesh for ${sourceChapterId}.`);
+    return false;
+  }
+  // Offset on XZ.
+  clone.position.set(cb.pos[0] + 1, cb.pos[1], cb.pos[2] + 1);
+  if (cb.scale) clone.scale.set(cb.scale[0], cb.scale[1], cb.scale[2]);
+  // Re-tag the clone with the new chapter id. _isInteractable stays
+  // so the editor recognizes it on the next selection.
+  clone.userData._isInteractable = true;
+  clone.userData._interactableChapterId = newChapterId;
+  // We DON'T set _lessonDeliveryRef — clones aren't part of LESSON_DELIVERY,
+  // so the editor's sync writes to LESSON_DELIVERY_OVERRIDES directly.
+  // Glow ring: the cloned mesh's _interactable backref still points at
+  // the source's interactable entry. We don't register a new
+  // interactable (no E-key behaviour for clones — they're decorative).
+  // Clear the backref so the editor doesn't try to follow it.
+  clone.userData._interactable = null;
+  _ctx.scene.add(clone);
+
+  // Persistence: record as a synthetic LESSON_DELIVERY override.
+  // play.js's interactable spawn loop sees `clonedFrom` and re-creates
+  // by cloning the source on next load.
+  if (!window.LESSON_DELIVERY_OVERRIDES) window.LESSON_DELIVERY_OVERRIDES = {};
+  window.LESSON_DELIVERY_OVERRIDES[newChapterId] = {
+    clonedFrom: sourceChapterId,
+    position: [
+      +(cb.pos[0] + 1).toFixed(4),
+      +cb.pos[1].toFixed(4),
+      +(cb.pos[2] + 1).toFixed(4),
+    ],
+    scale: cb.scale && (cb.scale[0] !== 1 || cb.scale[1] !== 1 || cb.scale[2] !== 1)
+      ? [+cb.scale[0].toFixed(4), +cb.scale[1].toFixed(4), +cb.scale[2].toFixed(4)]
+      : undefined,
+  };
+  if (!window.LESSON_DELIVERY_OVERRIDES[newChapterId].scale) {
+    delete window.LESSON_DELIVERY_OVERRIDES[newChapterId].scale;
+  }
+  select(clone);
+  return true;
+}
+
+function _pasteCompoundChild(cb) {
+  const { ownerId, childId } = cb;
+  const newChildId = `${childId}-copy${_shortTs()}`;
+  const clone = _cloneTaggedMesh(
+    (o) => o.userData?._isCompoundChild
+        && o.userData._compoundOwner === ownerId
+        && o.userData._compoundChildId === childId
+  );
+  if (!clone) {
+    alert(`Paste failed — couldn't find live source mesh for ${ownerId}/${childId}.`);
+    return false;
+  }
+  clone.position.set(cb.pos[0] + 1, cb.pos[1], cb.pos[2] + 1);
+  if (typeof cb.rotY === 'number') clone.rotation.y = cb.rotY;
+  if (cb.scale) clone.scale.set(cb.scale[0], cb.scale[1], cb.scale[2]);
+  clone.userData._isCompoundChild = true;
+  clone.userData._compoundOwner = ownerId;
+  clone.userData._compoundChildId = newChildId;
+  _ctx.scene.add(clone);
+
+  // Persistence: record as a synthetic COMPOUND_OVERRIDES entry.
+  // The post-build pass in play.js sees `clonedFrom` and re-creates
+  // the clone after the source compound builder runs.
+  if (!window.COMPOUND_OVERRIDES) window.COMPOUND_OVERRIDES = {};
+  if (!window.COMPOUND_OVERRIDES[ownerId]) window.COMPOUND_OVERRIDES[ownerId] = {};
+  const ov = {
+    clonedFrom: childId,
+    pos: [
+      +(cb.pos[0] + 1).toFixed(4),
+      +cb.pos[1].toFixed(4),
+      +(cb.pos[2] + 1).toFixed(4),
+    ],
+  };
+  if (typeof cb.rotY === 'number') ov.rotY = +cb.rotY.toFixed(5);
+  if (cb.scale && (cb.scale[0] !== 1 || cb.scale[1] !== 1 || cb.scale[2] !== 1)) {
+    ov.scale = [+cb.scale[0].toFixed(4), +cb.scale[1].toFixed(4), +cb.scale[2].toFixed(4)];
+  }
+  window.COMPOUND_OVERRIDES[ownerId][newChildId] = ov;
+  select(clone);
+  return true;
 }
 
 // ── Add Item library modal ───────────────────────────────────────────

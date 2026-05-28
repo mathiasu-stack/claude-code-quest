@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { makeDecoration } from '../decorations/decorationAssets.js?v=20260528j';
+import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
 
 // ── Reception windows + parallax city skyline ──────────────────────────────
 // Strategy: replace the right-side wall (or part of it) with a window
@@ -241,22 +242,26 @@ export function buildReceptionWindows(scene) {
   // visible through the new window openings.
   out.exterior = buildExterior(scene);
 
-  // Three windows along the east wall.
+  // Three windows along the east wall. Tagged so the editor can
+  // select / move / delete them (the user noticed these were the
+  // last untagged "black bar" geometry in the room).
   const positions = [
     { z: -3, w: 2.4, h: 1.8 },
     { z:  0, w: 2.4, h: 1.8 },
     { z:  3, w: 2.4, h: 1.8 },
   ];
+  let winIdx = 0;
   for (const p of positions) {
     const frame = makeWindowFrame(p.w, p.h);
     frame.position.set(10.78, 1.9, p.z);
     frame.rotation.y = -Math.PI / 2;
-    scene.add(frame);
+    placeCompoundChild(scene, frame, 'reception_windows', `window_${winIdx}_frame`);
     const glass = makeWindowGlass(p.w * 0.9, p.h * 0.9);
     glass.position.set(10.84, 1.9, p.z);
     glass.rotation.y = -Math.PI / 2;
-    scene.add(glass);
+    placeCompoundChild(scene, glass, 'reception_windows', `window_${winIdx}_glass`);
     out.windows.push({ frame, glass });
+    winIdx++;
   }
 
   // Skyline behind those windows. Place beyond the wall (positive X).
@@ -293,19 +298,20 @@ export function buildReceptionWindows(scene) {
 // shafts-of-light would need volumetrics; we fake with an additive
 // quad oriented toward the floor.
 export function buildLibraryArchedWindow(scene) {
+  const OWNER = 'library_arched_window';
   const out = { update: null };
 
   // Arched frame approximated with one box + half-circle on top.
   const frameMat = new THREE.MeshStandardMaterial({ color: 0x3e2418, roughness: 0.65 });
   const lower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.0, 0.16), frameMat);
   lower.position.set(10.78, 1.9, 22.4);
-  scene.add(lower);
+  placeCompoundChild(scene, lower, OWNER, 'jamb_left');
   const lowerR = lower.clone();
   lowerR.position.z = 25.6;
-  scene.add(lowerR);
+  placeCompoundChild(scene, lowerR, OWNER, 'jamb_right');
   const top = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 3.2), frameMat);
   top.position.set(10.78, 3.4, 24);
-  scene.add(top);
+  placeCompoundChild(scene, top, OWNER, 'header');
   // Arch — semicircle approximation
   const arch = new THREE.Mesh(
     new THREE.TorusGeometry(1.6, 0.09, 8, 16, Math.PI),
@@ -314,7 +320,7 @@ export function buildLibraryArchedWindow(scene) {
   arch.position.set(10.78, 3.4, 24);
   arch.rotation.y = Math.PI / 2;
   arch.rotation.z = -Math.PI / 2;
-  scene.add(arch);
+  placeCompoundChild(scene, arch, OWNER, 'arch');
 
   // Glass panel
   const glass = new THREE.Mesh(
@@ -326,7 +332,7 @@ export function buildLibraryArchedWindow(scene) {
   );
   glass.position.set(10.83, 2.0, 24);
   glass.rotation.y = -Math.PI / 2;
-  scene.add(glass);
+  placeCompoundChild(scene, glass, OWNER, 'glass');
 
   // Golden "streaming light" plane angled across the floor toward the
   // reading tables. Additive blending so it lifts whatever it crosses.
@@ -341,7 +347,7 @@ export function buildLibraryArchedWindow(scene) {
   stream.position.set(7.8, 0.04, 22);
   stream.rotation.x = -Math.PI / 2;
   stream.rotation.z = Math.PI / 6;
-  scene.add(stream);
+  placeCompoundChild(scene, stream, OWNER, 'light_stream');
 
   out.stream = stream;
   return out;

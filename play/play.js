@@ -34,7 +34,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528o';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528p';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
@@ -1656,6 +1656,13 @@ function buildWorld() {
   // Atrium + elevator now load via the reception room's `atrium` and
   // `elevator` builder entries in data/rooms.js (run by loadRoom above).
 
+  // Editor-created clones — pasted via Ctrl+V. These don't come from
+  // any builder; they're synthetic entries in the overrides files.
+  // Run AFTER all compound builders + interactable spawn loop so the
+  // source meshes already exist in the scene to clone from.
+  try { _spawnSyntheticCompoundClones(scene); } catch (e) { console.warn('synthetic compound clones failed', e); }
+  try { _spawnSyntheticInteractableClones(scene); } catch (e) { console.warn('synthetic interactable clones failed', e); }
+
   registerStaticColliders();
 
   // Tag everything built up to here as floor 1. The elevator shaft is
@@ -2061,6 +2068,93 @@ function aabbForRoomEntry(entry, floor) {
     minZ: z - eZ, maxZ: z + eZ,
     floor: floor || 1,
   };
+}
+
+// ─── Synthetic clones from editor Ctrl+C/V ──────────────────────────────────
+// When the user pastes a compound child or an interactable, the editor
+// writes a synthetic entry into the matching *_OVERRIDES file. Source
+// builders don't reproduce these on load; we walk the overrides here,
+// find each clone's live source mesh in the scene, deep-clone it, tag
+// the clone with the new id, and add to scene. Position / rotY / scale
+// from the override are applied. Idempotent — if a clone tag already
+// exists in the scene, we skip.
+
+function _findTaggedMesh(scene, predicate) {
+  let found = null;
+  scene.traverse((o) => { if (!found && predicate(o)) found = o; });
+  return found;
+}
+
+function _deepCloneWithMaterials(source) {
+  const clone = source.clone(true);
+  clone.traverse((o) => {
+    if (o.isMesh && o.material) {
+      o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
+    }
+  });
+  return clone;
+}
+
+function _spawnSyntheticCompoundClones(scene) {
+  const overrides = window.COMPOUND_OVERRIDES || {};
+  for (const [ownerId, childMap] of Object.entries(overrides)) {
+    for (const [newChildId, ov] of Object.entries(childMap || {})) {
+      if (!ov?.clonedFrom) continue;
+      // Idempotency: skip if already present.
+      const exists = _findTaggedMesh(scene, (o) =>
+        o.userData?._isCompoundChild
+        && o.userData._compoundOwner === ownerId
+        && o.userData._compoundChildId === newChildId
+      );
+      if (exists) continue;
+      const source = _findTaggedMesh(scene, (o) =>
+        o.userData?._isCompoundChild
+        && o.userData._compoundOwner === ownerId
+        && o.userData._compoundChildId === ov.clonedFrom
+      );
+      if (!source) {
+        console.warn(`[clones] compound source not found: ${ownerId}/${ov.clonedFrom}`);
+        continue;
+      }
+      const clone = _deepCloneWithMaterials(source);
+      if (Array.isArray(ov.pos) && ov.pos.length === 3) clone.position.set(ov.pos[0], ov.pos[1], ov.pos[2]);
+      if (typeof ov.rotY === 'number') clone.rotation.y = ov.rotY;
+      if (Array.isArray(ov.scale) && ov.scale.length === 3) clone.scale.set(ov.scale[0], ov.scale[1], ov.scale[2]);
+      clone.userData._isCompoundChild = true;
+      clone.userData._compoundOwner = ownerId;
+      clone.userData._compoundChildId = newChildId;
+      scene.add(clone);
+    }
+  }
+}
+
+function _spawnSyntheticInteractableClones(scene) {
+  const overrides = window.LESSON_DELIVERY_OVERRIDES || {};
+  for (const [newChapterId, ov] of Object.entries(overrides)) {
+    if (!ov?.clonedFrom) continue;
+    const exists = _findTaggedMesh(scene, (o) =>
+      o.userData?._isInteractable && o.userData._interactableChapterId === newChapterId
+    );
+    if (exists) continue;
+    const source = _findTaggedMesh(scene, (o) =>
+      o.userData?._isInteractable && o.userData._interactableChapterId === ov.clonedFrom
+    );
+    if (!source) {
+      console.warn(`[clones] interactable source not found: ${ov.clonedFrom}`);
+      continue;
+    }
+    const clone = _deepCloneWithMaterials(source);
+    if (Array.isArray(ov.position) && ov.position.length === 3) {
+      clone.position.set(ov.position[0], ov.position[1], ov.position[2]);
+    }
+    if (Array.isArray(ov.scale) && ov.scale.length === 3) {
+      clone.scale.set(ov.scale[0], ov.scale[1], ov.scale[2]);
+    }
+    clone.userData._isInteractable = true;
+    clone.userData._interactableChapterId = newChapterId;
+    clone.userData._interactable = null; // decorative clone — no E-key behaviour
+    scene.add(clone);
+  }
 }
 
 function registerStaticColliders() {

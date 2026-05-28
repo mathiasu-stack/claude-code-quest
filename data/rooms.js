@@ -1,5 +1,5 @@
 // rooms.js — declarative scene-layout data.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:00:33.281Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T19:11:03.644Z
 //
 // See play/world/roomsLoader.js for the entry-type spec.
 
@@ -120,7 +120,7 @@ window.ROOMS = [
       { type: 'builder', fn: 'water_cooler', pos: [-9.5, 0, -2] },
       { type: 'builder', fn: 'couch', pos: [-8.5, 0, 5], rotY: 1.5708 },
       { type: 'builder', fn: 'couch', pos: [8.5, 0, 5], rotY: -1.5708 },
-      { type: 'builder', fn: 'desk', pos: [-7.5, 0, -3], rotY: 1.5708, args: { w: 1.6, d: 0.8 } },
+      { type: 'builder', fn: 'desk', pos: [-7.5, 0, -3], rotY: 1.5708, args: { w: 1.6, d: 0.8 }, scale: [1.55, 1.55, 1.55] },
       { type: 'builder', fn: 'chair', pos: [-6.4, 0, -3] },
       { type: 'builder', fn: 'desk', pos: [7.5, 0, -3], rotY: -1.5708, args: { w: 1.6, d: 0.8 } },
       { type: 'builder', fn: 'chair', pos: [6.4, 0, -3], rotY: 3.1416 },
