@@ -1,12 +1,13 @@
 // lesson_delivery_overrides.js — per-chapter interactable position overrides.
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T17:05:05.595Z
 //
 // Keyed by chapterId. Applied at build time in play.js's interactable
-// spawn loop, AFTER reading LESSON_DELIVERY[chapterId].objectLocation.
+// spawn loop, layered over LESSON_DELIVERY[chapterId].objectLocation.
 //
-// Format: { [chapterId]: { position: [x, y, z] } }
-//
-// Updated by the in-game editor's Export Layout when phones / computers /
-// books / whiteboards / servers / display screens are moved. Hand-edit
-// here only if you want to lock in a placement permanently — otherwise
-// prefer the editor.
-window.LESSON_DELIVERY_OVERRIDES = {};
+// Supported per-chapter fields:
+//   position: [x, y, z]   — move the spawn point
+//   scale:    [sx, sy, sz] — resize at spawn
+//   hidden:   true        — skip spawn entirely (editor delete)
+window.LESSON_DELIVERY_OVERRIDES = {
+  'ch05': { position: [-1.3884, 1.03, -8.746] },
+};
