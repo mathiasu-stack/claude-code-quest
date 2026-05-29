@@ -1566,10 +1566,14 @@ function buildWorld() {
 
   loadRoom(scene, window.ROOM_BY_ID('reception'), ctx);
 
-  // Door from zone 1 (reception) → zone 2 (library), gated by ch01
-  // test. registerDoor is interactable-system glue (gating, animation,
-  // colour state, label refresh) — kept as code, not data.
-  registerDoor(scene, 11, 'ch01', 'Knowledge Library');
+  // Library moved to the west wing (north of Files). Its gated door
+  // is now at the Files-Library boundary (z=-11, centered at x=-22).
+  // openRot = +π/2 because the player approaches from the SOUTH side
+  // (from Files) and the door swings into the library to the NORTH.
+  // The old door at z=11 (south of reception) was repurposed — that
+  // doorway is now the building's outside entrance (no gating, the
+  // door decoration in data/rooms.js fills the gap).
+  registerDoor(scene, -11, 'ch01', 'Knowledge Library', -22, Math.PI / 2);
 
   loadRoom(scene, window.ROOM_BY_ID('library'), ctx);
 
@@ -2222,25 +2226,27 @@ function rebuildColliders() {
 }
 
 // ─── Generic zone builder (used for chapters 3-16) ───────────────────────────
-function registerDoor(targetScene, atZ, gateChId, nextTitle) {
+function registerDoor(targetScene, atZ, gateChId, nextTitle, centerX = 0, openRot = -Math.PI / 2) {
   const passed = isTestDone(`${gateChId}-test`);
   const doorMat = new THREE.MeshStandardMaterial({
     color: passed ? 0x4caf50 : 0x5d4037,
     metalness: 0.3, roughness: 0.6,
   });
-  // Hinge group at the door's LEFT edge so a Y-axis rotation swings the
-  // door open like a real door. The door mesh is offset +1.75 in pivot-local
-  // X so its left edge lines up with the hinge.
+  // Hinge group at the door's LEFT edge (relative to centerX) so a
+  // Y-axis rotation swings the door open like a real door.
+  // openRot < 0 = swings clockwise (looking down) — right for south-facing
+  // walls (door opens into destination at +z). openRot > 0 swings the
+  // other way — right for north-facing walls (door opens at -z).
   const DOOR_W = 3.5;
   const pivot = new THREE.Group();
-  pivot.position.set(-DOOR_W / 2, 1.3, atZ - 0.01);
+  // Z offset puts the door on the source-room side of the wall (a
+  // 0.01 m bias on the side the player approaches from).
+  const zBias = openRot < 0 ? -0.01 : 0.01;
+  pivot.position.set(centerX - DOOR_W / 2, 1.3, atZ + zBias);
   const door = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W, 2.6, 0.2), doorMat);
   door.position.set(DOOR_W / 2, 0, 0);
   pivot.add(door);
-  // -π/2 swings the door INTO the destination zone (away from the player
-  // who approaches from the south). 0 = closed.
-  const OPEN_ROT = -Math.PI / 2;
-  pivot.rotation.y = passed ? OPEN_ROT : 0;
+  pivot.rotation.y = passed ? openRot : 0;
   targetScene.add(pivot);
 
   const label = makeLabelSprite(
@@ -2248,14 +2254,14 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle) {
     '#fff', passed ? 'rgba(38,140,90,0.95)' : 'rgba(60,72,110,0.95)',
   );
   label.scale.set(3.0, 0.7, 1);
-  label.position.set(0, 3.4, atZ + 0.05);
+  label.position.set(centerX, 3.4, atZ + zBias * 5);  // sign further off the wall
   targetScene.add(label);
 
   zoneDoors.push({
     mesh: door, pivot, label,
     gateChapter: gateChId, nextTitle,
     lastOpen: passed,
-    openRot: OPEN_ROT,
+    openRot,
   });
 }
 

@@ -107,11 +107,17 @@ window.ROOMS = [
       { type: 'wall', pos: [11, 1.9, 1.5], size: { w: 0.3, h: 1.8, d: 0.6 } },
       { type: 'wall', pos: [11, 1.9, 7.6], size: { w: 0.3, h: 1.8, d: 6.8 } },
       { type: 'wall', pos: [11, 2.7, -7.6], size: { w: 0.3, h: 0.2, d: 2.4 } },
-      // South wall — solid; this is the building's front facade to the
-      // outside. (Previously had a 3.5 m doorway leading to a library
-      // room directly south of reception, which didn't make architectural
-      // sense — library moved to a new west-wing room north of Files.)
-      { type: 'wall', pos: [0, 1.9, 11], size: { w: 22, h: 3.8, d: 0.3 } },
+      // South wall — the building's front facade. 3.5 m doorway centered
+      // at x=0 leads outside (the door decoration below sits in the gap;
+      // no zone gate — the entrance is always open).
+      { type: 'wall', pos: [-6.375, 1.9, 11], size: { w: 9.25, h: 3.8, d: 0.3 } },
+      { type: 'wall', pos: [ 6.375, 1.9, 11], size: { w: 9.25, h: 3.8, d: 0.3 } },
+      { type: 'wall', pos: [ 0,     3.2, 11], size: { w: 3.5,  h: 1.2, d: 0.3 } },
+      // Glass entrance door — Meshy `door` decoration stretched to fill
+      // the 3.5 m × 2.6 m doorway. Faces south (outward toward exterior).
+      { type: 'decoration', id: 'door',
+        pos: [0, 0, 11], rotY: 0,
+        size: { width: 3.5, height: 2.6, depth: 0.1, stretch: true } },
       { type: 'wall_sign', text: 'KEDASH CORP', pos: [-7.5, 3.2, -10.84], size: { width: 4, height: 0.9 } },
       { type: 'decoration', id: 'reception_desk', pos: [-0.039, 0, -9.035], rotY: 0, size: { width: 5.5, height: 2.9, depth: 2, stretch: true } },
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, -10.2] },
