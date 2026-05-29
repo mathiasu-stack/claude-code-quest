@@ -34,7 +34,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260529a';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260529b';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
@@ -1590,11 +1590,21 @@ function buildWorld() {
   // Library now lives north of Files in the west wing (it used to sit
   // directly south of reception, but the south side is now the
   // building's outdoor front facade). Walls + furniture come entirely
-  // from data/rooms.js's 'library' entry — no need for a code-side
-  // shell here.
+  // from data/rooms.js's 'library' entry. Ceiling added in code here
+  // so a high camera doesn't see the room as an open box.
   try {
     const libRoom = window.ROOM_BY_ID && window.ROOM_BY_ID('library');
-    if (libRoom) loadRoom(scene, libRoom, { scene, decoTickers });
+    if (libRoom) {
+      loadRoom(scene, libRoom, { scene, decoTickers });
+      const libCeil = new THREE.Mesh(
+        new THREE.PlaneGeometry(22, 22),
+        new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
+      );
+      libCeil.rotation.x = Math.PI / 2;
+      libCeil.position.set(-22, 3.8 + 0.2, -22);   // wallH + a hair
+      libCeil.userData.floor = 1;
+      scene.add(libCeil);
+    }
   } catch (e) { console.warn('library load failed', e); }
 
   // ─── Interactable objects (Pillar 2) — driven by lessonRegistry ──────────
@@ -1949,6 +1959,11 @@ function floor1WestWingPositionForNPC(npcDef) {
   // Lesson NPCs — same alternating slot pattern as the other west-wing rooms.
   const m = (npcDef.lessonId || '').match(/-l(\d+)$/);
   const li = m ? Math.max(0, parseInt(m[1], 10) - 1) : 0;
+  // Library's lesson-1 NPC (Elena) is the librarian — stand her behind
+  // the reception counter near the south entrance, facing the door.
+  if (idx === 1 && li === 0) {
+    return { pos: [-22, -14], face: 0 };
+  }
   const xSign = (li % 2 === 0) ? -1 : 1;
   const zOff = [-4, 0, 4][(li >> 1) % 3];
   return {
@@ -2281,6 +2296,20 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
   floor.position.set(centerX, 0, centerZ);
   floor.receiveShadow = true;
   scene.add(floor);
+
+  // Ceiling — same dimensions as the floor, capping the room. Without
+  // this, looking down from outside the building (via fly mode or just
+  // a high camera) the west-wing rooms look like open boxes. Material
+  // matches the theme wall so the underside reads as a finished
+  // surface from inside.
+  const ceiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
+  );
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.set(centerX, wallH + 0.2, centerZ);
+  ceiling.receiveShadow = true;
+  scene.add(ceiling);
 
   // Walls — west / north / south are SOLID. East wall has the doorway
   // that connects to atrium (idx=2) or library (idx=3). For idx=2 the

@@ -144,9 +144,17 @@ const LIBRARY_PRESET = {
 };
 
 // Indexed lookup. Add new entries here for zones 2..15 as they're authored.
+//
+// Zone 1 used to map to LIBRARY_PRESET (the old library sat at z=+11..+33,
+// directly south of reception). Library moved to the west wing in the
+// floor-1 restructure, so zone 1 (z=+11..+33) is now exterior space —
+// using LIBRARY_PRESET there made "outside" feel like a dim reading
+// room. Alias it to RECEPTION_PRESET so the player's lighting stays
+// consistent (bright daytime) when they walk through the south door
+// to the outside.
 export const ZONE_PRESETS = {
   0: RECEPTION_PRESET,
-  1: LIBRARY_PRESET,
+  1: RECEPTION_PRESET, // was LIBRARY_PRESET — see comment above.
   // 2: ATRIUM_PRESET,         // ch03 — to author later
   // 3: MEMORY_VAULT_PRESET,   // ch04 — to author later
   // ...

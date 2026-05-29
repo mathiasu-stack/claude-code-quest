@@ -142,31 +142,78 @@ window.ROOMS = [
     id: 'library',
     floor: 1,
     zoneIdx: 1,
-    description: 'Knowledge Library — reading tables, bookshelves, library NPCs',
+    description: 'Knowledge Library — corridors of bookshelves, lounge, reception counter',
     objects: [
+      // Shell — floor + outer walls (south is shared with Files).
       { type: 'floor_plate', pos: [-22, 0, -22], size: { w: 22, d: 22 }, color: 0x8d6e63 },
       { type: 'wall', pos: [-22, 1.9, -33], size: { w: 22, h: 3.8, d: 0.3 } },
       { type: 'wall', pos: [-33, 1.9, -22], size: { w: 0.3, h: 3.8, d: 22 } },
       { type: 'wall', pos: [-11, 1.9, -22], size: { w: 0.3, h: 3.8, d: 22 } },
-      { type: 'wall_sign', text: 'KNOWLEDGE LIBRARY', pos: [-32.83, 2.8, -22], rotY: 1.5708, size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' },
-      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -28], rotY: 1.5708, args: { seed: 14 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -24], rotY: 1.5708, args: { seed: 18 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -16], rotY: 1.5708, args: { seed: 26 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -28], rotY: -1.5708, args: { seed: 114 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -24], rotY: -1.5708, args: { seed: 118 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -16], rotY: -1.5708, args: { seed: 126 } },
-      { type: 'builder', fn: 'table', pos: [-22, 0, -26] },
-      { type: 'builder', fn: 'table', pos: [-22, 0, -18] },
-      { type: 'builder', fn: 'chair', pos: [-23.6, 0, -26], rotY: 1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [-20.4, 0, -26], rotY: -1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [-23.6, 0, -18], rotY: 1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [-20.4, 0, -18], rotY: -1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'lamp', pos: [-22, 0, -26] },
-      { type: 'builder', fn: 'lamp', pos: [-22, 0, -18] },
+      { type: 'wall_sign', text: 'KNOWLEDGE LIBRARY',
+        pos: [-32.83, 2.8, -22], rotY: 1.5708,
+        size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' },
+
+      // ── Reception counter near the south entrance ────────────────
+      // Reception desk decoration with a librarian (Elena, repositioned
+      // via floor1WestWingPositionForNPC) standing behind it.
+      { type: 'decoration', id: 'reception_desk',
+        pos: [-22, 0, -13], rotY: 0,
+        size: { width: 3.6, height: 1.05, depth: 1.2, stretch: true } },
+      { type: 'builder', fn: 'plant', pos: [-25, 0, -13] },
+      { type: 'builder', fn: 'plant', pos: [-19, 0, -13] },
+
+      // ── Corridors of bookshelves (3 corridors, 6 rows × 3 shelves) ──
+      // Layout (Z is depth, -33 = north back wall, -11 = south entrance):
+      //   z=-31  Lounge (sofa + armchairs)
+      //   z=-28  Row 1 (front faces +Z south, rotY=0)
+      //   z=-27  Corridor 1 ───────────────────
+      //   z=-26  Row 2 (front faces -Z north, rotY=π)
+      //   z=-24  Row 3 (front faces +Z south, rotY=0)
+      //   z=-23  Corridor 2 ───────────────────
+      //   z=-22  Row 4 (front faces -Z north, rotY=π)
+      //   z=-20  Row 5 (front faces +Z south, rotY=0)
+      //   z=-19  Corridor 3 ───────────────────
+      //   z=-18  Row 6 (front faces -Z north, rotY=π)
+      //   z=-13  Reception counter
+      //   z=-11  Entrance from Files
+      // Cross-aisles between shelves at x≈-26 and x≈-18 (3.8m gaps).
+      // Row 1 (faces south) — z=-28
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -28], rotY: 0, args: { seed: 1 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -28], rotY: 0, args: { seed: 2 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -28], rotY: 0, args: { seed: 3 } },
+      // Row 2 (faces north) — z=-26
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -26], rotY: Math.PI, args: { seed: 4 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -26], rotY: Math.PI, args: { seed: 5 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -26], rotY: Math.PI, args: { seed: 6 } },
+      // Row 3 (faces south) — z=-24
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -24], rotY: 0, args: { seed: 7 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -24], rotY: 0, args: { seed: 8 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -24], rotY: 0, args: { seed: 9 } },
+      // Row 4 (faces north) — z=-22
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -22], rotY: Math.PI, args: { seed: 10 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -22], rotY: Math.PI, args: { seed: 11 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -22], rotY: Math.PI, args: { seed: 12 } },
+      // Row 5 (faces south) — z=-20
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -20], rotY: 0, args: { seed: 13 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -20], rotY: 0, args: { seed: 14 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -20], rotY: 0, args: { seed: 15 } },
+      // Row 6 (faces north) — z=-18
+      { type: 'builder', fn: 'bookshelf', pos: [-28, 0, -18], rotY: Math.PI, args: { seed: 16 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-22, 0, -18], rotY: Math.PI, args: { seed: 17 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-16, 0, -18], rotY: Math.PI, args: { seed: 18 } },
+
+      // ── Reading lounge at the back (north) ───────────────────────
+      { type: 'builder', fn: 'couch', pos: [-22, 0, -31],     rotY: Math.PI },
+      { type: 'builder', fn: 'chair', pos: [-26, 0, -30.5],   rotY: Math.PI / 2,  args: { color: 5125166 } },
+      { type: 'builder', fn: 'chair', pos: [-18, 0, -30.5],   rotY: -Math.PI / 2, args: { color: 5125166 } },
+      { type: 'builder', fn: 'lamp',  pos: [-26, 0, -32] },
+      { type: 'builder', fn: 'lamp',  pos: [-18, 0, -32] },
+
+      // ── Corner plants ────────────────────────────────────────────
       { type: 'builder', fn: 'plant', pos: [-31.8, 0, -31.8] },
       { type: 'builder', fn: 'plant', pos: [-12.2, 0, -31.8] },
-      { type: 'builder', fn: 'plant', pos: [-31.8, 0, -12.2] },
-      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -12.2] }
+      { type: 'builder', fn: 'plant', pos: [-31.8, 0, -16] },
+      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -16] }
     ],
   },
   {
