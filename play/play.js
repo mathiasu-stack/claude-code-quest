@@ -487,7 +487,9 @@ function clampMove(oldX, oldZ, newX, newZ) {
   // (z∈[-17.5, 17.5], x∈[-17.5, 17.5]) — 2.7× larger than the old 22×22.
   if (currentFloor === 1) {
     newX = Math.max(-32.5, Math.min(10.5, newX));
-    newZ = Math.max(-10.5, Math.min(32.5, newZ));
+    // Floor 1 now extends NORTH too (Library at z=-33..-11 in west
+    // wing). South range still covers Plan Mode (z=+11..+33).
+    newZ = Math.max(-32.5, Math.min(32.5, newZ));
   } else {
     newX = Math.max(-17.5, Math.min(17.5, newX));
     newZ = Math.max(-17.5, Math.min(17.5, newZ));
@@ -1586,6 +1588,15 @@ function buildWorld() {
   // also loads its room's furniture from window.ROOM_BY_ID(...).
   buildFloor1WestRoom(2, -22, 0);    // Files       (CURRICULUM[2])
   buildFloor1WestRoom(3, -22, 22);   // Plan Mode   (CURRICULUM[3])
+  // Library now lives north of Files in the west wing (it used to sit
+  // directly south of reception, but the south side is now the
+  // building's outdoor front facade). Walls + furniture come entirely
+  // from data/rooms.js's 'library' entry — no need for a code-side
+  // shell here.
+  try {
+    const libRoom = window.ROOM_BY_ID && window.ROOM_BY_ID('library');
+    if (libRoom) loadRoom(scene, libRoom, { scene, decoTickers });
+  } catch (e) { console.warn('library load failed', e); }
 
   // ─── Interactable objects (Pillar 2) — driven by lessonRegistry ──────────
   // Each chapter's delivery config either spawns an object or stays
@@ -1920,18 +1931,23 @@ function buildFloorOffice(floorIdx) {
 // and z=66; this snaps them to the new room centers.
 function floor1WestWingPositionForNPC(npcDef) {
   const idx = indexForChapterId(npcDef.chapterId);
-  if (idx !== 2 && idx !== 3) return null; // only ch03/ch04 (new positions 3/4)
+  // ch02 = library (idx 1), ch03 = Files (idx 2), ch04 = Plan Mode (idx 3).
+  // Library used to live south of reception (z=+22) but now sits in
+  // the west wing north of Files at center (-22, -22).
+  if (idx !== 1 && idx !== 2 && idx !== 3) return null;
   const centerX = -22;
-  const centerZ = idx === 2 ? 0 : 22; // Files at z=0, Plan Mode at z=22
-  // Use the same slot offsets the original generateChapterNPCs uses,
-  // but recentered on the new room.
+  // Files = z=0, Plan Mode = z=+22, Library = z=-22.
+  const centerZ = idx === 1 ? -22 : (idx === 2 ? 0 : 22);
   const ch = window.CURRICULUM?.[idx];
   if (!ch) return null;
   if (npcDef.kind === 'test') {
-    return { pos: [centerX, centerZ + 8.5], face: Math.PI };
+    // Test NPC stands at the south end of the room (toward the doorway
+    // for library/Files; toward the back for Plan Mode).
+    const tz = idx === 3 ? centerZ + 8.5 : centerZ - 8.5;
+    const face = idx === 3 ? Math.PI : 0;
+    return { pos: [centerX, tz], face };
   }
-  // Lesson NPCs — generateChapterNPCs slot pattern: x = ±6 alternating,
-  // z = centerZ - 4, 0, +4 cycling. We replicate by lesson index.
+  // Lesson NPCs — same alternating slot pattern as the other west-wing rooms.
   const m = (npcDef.lessonId || '').match(/-l(\d+)$/);
   const li = m ? Math.max(0, parseInt(m[1], 10) - 1) : 0;
   const xSign = (li % 2 === 0) ? -1 : 1;
@@ -2166,23 +2182,19 @@ function _spawnSyntheticInteractableClones(scene) {
 function registerStaticColliders() {
   colliders.length = 0;
 
-  // ─── Walls / dividers (not in window.ROOMS) ──────────────────────
-  // Floor-1 internal walls — the 2×2 layout adds shared walls between
-  // atrium ↔ Files (at x=-11) and library ↔ Plan Mode (at x=-11), plus
-  // a Files ↔ Plan Mode wall at z=11 in the west wing. Each has a
-  // 3.5m doorway centered at the shared mid-line; the segments below
-  // are the SOLID parts the player can't pass through.
+  // ─── Walls built in code (not in window.ROOMS) ──────────────────
+  // Atrium ↔ Files boundary at x=-11, doorway gap at z=0 (reception
+  // west wall in rooms.js draws the visible wall; clampMove needs
+  // colliders here too for the segments above the doorway lintel).
   addColliderAABB(-11.15, -10.85, -11, -1.75, 1);
   addColliderAABB(-11.15, -10.85,  1.75, 11, 1);
-  addColliderAABB(-11.15, -10.85, 11, 20.25, 1);
-  addColliderAABB(-11.15, -10.85, 23.75, 33, 1);
+  // Files ↔ Plan Mode boundary (z=+11, west wing), doorway at x=-22.
   addColliderAABB(-33, -23.75, 10.85, 11.15, 1);
   addColliderAABB(-20.25, -11, 10.85, 11.15, 1);
-
-  // ─── Compound-builder items not in window.ROOMS ──────────────────
-  // Grandfather clock (decorate_library) at (-9.5,31), library cart (8,14).
-  addColliderAABB(-9.85, -9.15, 30.70, 31.30);
-  addColliderAABB( 7.55,  8.45, 13.65, 14.35);
+  // Files ↔ Library boundary (z=-11, west wing), doorway at x=-22.
+  // (Library moved here from south-of-reception.)
+  addColliderAABB(-33, -23.75, -11.15, -10.85, 1);
+  addColliderAABB(-20.25, -11, -11.15, -10.85, 1);
 
   // Floors 2-4 internal walls now come from window.ROOMS too — each
   // office_floor{N} room declares its own unique partitioning (so
@@ -2289,7 +2301,11 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
   // For Files (idx=2): north is outer, south is the shared boundary
   // with Plan Mode and carries the inter-room doorway.
   if (idx === 2) {
-    w(22, wallH, 0.3, centerX, wallH / 2, centerZ - 11);   // north outer
+    // North wall split (boundary with the new Library room at center
+    // [-22, -22]); 3.5 m doorway centered at room center (x=-22, z=-11).
+    w(9.25, wallH, 0.3, centerX - 6.375, wallH / 2, centerZ - 11);
+    w(9.25, wallH, 0.3, centerX + 6.375, wallH / 2, centerZ - 11);
+    w(3.5, 1.2, 0.3, centerX, wallH - 0.6, centerZ - 11);
     // South wall split (boundary with Plan Mode), 3.5m doorway at room center
     w(9.25, wallH, 0.3, centerX - 6.375, wallH / 2, centerZ + 11);
     w(9.25, wallH, 0.3, centerX + 6.375, wallH / 2, centerZ + 11);

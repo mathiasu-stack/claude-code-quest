@@ -107,9 +107,11 @@ window.ROOMS = [
       { type: 'wall', pos: [11, 1.9, 1.5], size: { w: 0.3, h: 1.8, d: 0.6 } },
       { type: 'wall', pos: [11, 1.9, 7.6], size: { w: 0.3, h: 1.8, d: 6.8 } },
       { type: 'wall', pos: [11, 2.7, -7.6], size: { w: 0.3, h: 0.2, d: 2.4 } },
-      { type: 'wall', pos: [-6.375, 1.9, 11], size: { w: 9.25, h: 3.8, d: 0.3 } },
-      { type: 'wall', pos: [6.375, 1.9, 11], size: { w: 9.25, h: 3.8, d: 0.3 } },
-      { type: 'wall', pos: [0, 3.2, 11], size: { w: 3.5, h: 1.2, d: 0.3 } },
+      // South wall — solid; this is the building's front facade to the
+      // outside. (Previously had a 3.5 m doorway leading to a library
+      // room directly south of reception, which didn't make architectural
+      // sense — library moved to a new west-wing room north of Files.)
+      { type: 'wall', pos: [0, 1.9, 11], size: { w: 22, h: 3.8, d: 0.3 } },
       { type: 'wall_sign', text: 'KEDASH CORP', pos: [-7.5, 3.2, -10.84], size: { width: 4, height: 0.9 } },
       { type: 'decoration', id: 'reception_desk', pos: [-0.039, 0, -9.035], rotY: 0, size: { width: 5.5, height: 2.9, depth: 2, stretch: true } },
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, -10.2] },
@@ -138,40 +140,58 @@ window.ROOMS = [
       { type: 'builder', fn: 'elevator' }
     ],
   },
+  // ─────────────────────────────────────────────────────────────────
+  // FLOOR 1 — Knowledge Library (west wing, north of Files)
+  // Center (-22, 0, -22), 22×22. Accessed via the west doorway of
+  // reception → Files → north doorway → here. Previously sat south of
+  // reception (z=+11..+33); moved so south of reception can be exterior
+  // (the building's front facade to the outside).
+  // ─────────────────────────────────────────────────────────────────
   {
     id: 'library',
     floor: 1,
     zoneIdx: 1,
     description: 'Knowledge Library — reading tables, bookshelves, library NPCs',
     objects: [
-      { type: 'floor_plate', pos: [0, 0, 22], size: { w: 22, d: 22 }, color: 0x8d6e63 },
-      { type: 'wall', pos: [-10.9917, 1.9, 16.6015], rotY: 0, size: { w: 0.3, h: 3.8, d: 10.9 } },
-      { type: 'wall', pos: [-10.995, 1.9, 27.4087], rotY: 0, size: { w: 0.3, h: 3.8, d: 10.85 } },
-      { type: 'wall', pos: [-11, 3.2, 22], size: { w: 0.3, h: 1.2, d: 3.5 } },
-      { type: 'wall', pos: [11.0446, 1.9, 22.2897], rotY: 0, size: { w: 0.3, h: 3.8, d: 22 } },
-      { type: 'wall_sign', text: 'KNOWLEDGE LIBRARY', pos: [-10.83, 2.8, 22], rotY: 1.5708, size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' },
-      { type: 'builder', fn: 'bookshelf', pos: [-10.5, 0, 14], rotY: 1.5708, args: { seed: 14 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-10.5, 0, 18], rotY: 1.5708, args: { seed: 18 } },
-      { type: 'builder', fn: 'bookshelf', pos: [-10.5, 0, 26], rotY: 1.5708, args: { seed: 26 } },
-      { type: 'builder', fn: 'bookshelf', pos: [10.5, 0, 14], rotY: -1.5708, args: { seed: 114 } },
-      { type: 'builder', fn: 'bookshelf', pos: [10.5, 0, 18], rotY: -1.5708, args: { seed: 118 } },
-      { type: 'builder', fn: 'bookshelf', pos: [10.5, 0, 26], rotY: -1.5708, args: { seed: 126 } },
-      { type: 'builder', fn: 'table', pos: [0, 0, 16] },
-      { type: 'builder', fn: 'table', pos: [0, 0, 22] },
-      { type: 'builder', fn: 'chair', pos: [-1.6, 0, 16], rotY: 1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [1.6, 0, 16], rotY: -1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [-1.6, 0, 22], rotY: 1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'chair', pos: [1.6, 0, 22], rotY: -1.5708, args: { color: 5125166 } },
-      { type: 'builder', fn: 'lamp', pos: [0, 0, 16] },
-      { type: 'builder', fn: 'lamp', pos: [0, 0, 22] },
-      { type: 'builder', fn: 'plant', pos: [-9.8, 0, 13] },
-      { type: 'builder', fn: 'plant', pos: [9.8, 0, 13] },
-      { type: 'builder', fn: 'plant', pos: [-9.8, 0, 30] },
-      { type: 'builder', fn: 'plant', pos: [9.8, 0, 30] },
-      { type: 'builder', fn: 'library_ceiling' },
-      { type: 'builder', fn: 'library_arched_window' },
-      { type: 'builder', fn: 'decorate_library' },
-      { type: 'wall', pos: [-0.0097, 0, 33.1334], rotY: 0, size: { w: 21.8, h: 7.6, d: 0.3 } }
+      // Floor.
+      { type: 'floor_plate', pos: [-22, 0, -22], size: { w: 22, d: 22 }, color: 0x8d6e63 },
+      // Walls — outer perimeter except the south wall (shared with Files,
+      // which carries the doorway). Each segment auto-collides via
+      // aabbForRoomEntry's wall branch.
+      // North outer wall (z=-33).
+      { type: 'wall', pos: [-22, 1.9, -33],   size: { w: 22,  h: 3.8, d: 0.3 } },
+      // West outer wall (x=-33).
+      { type: 'wall', pos: [-33, 1.9, -22],   size: { w: 0.3, h: 3.8, d: 22  } },
+      // East wall (x=-11) — shared with reception's west side. Split
+      // around the reception–Files doorway (z=-1.75..+1.75) is on the
+      // reception side; library's east wall is at z=-33..-11 (above the
+      // doorway), so it can be solid.
+      { type: 'wall', pos: [-11, 1.9, -22],   size: { w: 0.3, h: 3.8, d: 22  } },
+      // Sign on inside of west wall, facing east.
+      { type: 'wall_sign', text: 'KNOWLEDGE LIBRARY',
+        pos: [-32.83, 2.8, -22], rotY: 1.5708,
+        size: { width: 8, height: 1.6 }, bg: '#3e2723', fg: '#d4af37' },
+      // ── Bookshelves along the west + east walls (3 each) ─────────
+      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -28], rotY:  Math.PI / 2, args: { seed: 14 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -24], rotY:  Math.PI / 2, args: { seed: 18 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-32.5, 0, -16], rotY:  Math.PI / 2, args: { seed: 26 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -28], rotY: -Math.PI / 2, args: { seed: 114 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -24], rotY: -Math.PI / 2, args: { seed: 118 } },
+      { type: 'builder', fn: 'bookshelf', pos: [-11.5, 0, -16], rotY: -Math.PI / 2, args: { seed: 126 } },
+      // ── Two reading tables with chairs + reading lamps ───────────
+      { type: 'builder', fn: 'table', pos: [-22, 0, -26] },
+      { type: 'builder', fn: 'table', pos: [-22, 0, -18] },
+      { type: 'builder', fn: 'chair', pos: [-23.6, 0, -26], rotY:  Math.PI / 2, args: { color: 5125166 } },
+      { type: 'builder', fn: 'chair', pos: [-20.4, 0, -26], rotY: -Math.PI / 2, args: { color: 5125166 } },
+      { type: 'builder', fn: 'chair', pos: [-23.6, 0, -18], rotY:  Math.PI / 2, args: { color: 5125166 } },
+      { type: 'builder', fn: 'chair', pos: [-20.4, 0, -18], rotY: -Math.PI / 2, args: { color: 5125166 } },
+      { type: 'builder', fn: 'lamp',  pos: [-22, 0, -26] },
+      { type: 'builder', fn: 'lamp',  pos: [-22, 0, -18] },
+      // ── Corner plants ────────────────────────────────────────────
+      { type: 'builder', fn: 'plant', pos: [-31.8, 0, -31.8] },
+      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -31.8] },
+      { type: 'builder', fn: 'plant', pos: [-31.8, 0, -12.2] },
+      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -12.2] }
     ],
   },
   {
@@ -196,6 +216,10 @@ window.ROOMS = [
     template: 'west_room',
     center: [-22, 0, 22],
     objects: [
+      // East wall (x=-11) — used to be supplied by the old library's
+      // shared west wall. Library moved north; Plan Mode now needs its
+      // own east wall so the room stays enclosed.
+      { type: 'wall', pos: [-11, 1.9, 22], size: { w: 0.3, h: 3.8, d: 22 } },
       { type: 'builder', fn: 'table', pos: [-22, 0, 22] },
       { type: 'builder', fn: 'lamp', pos: [-22, 0, 22] },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 13] },
