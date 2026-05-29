@@ -160,6 +160,13 @@ export const ZONE_PRESETS = {
   // ...
 };
 
+// Unauthored zones (chapters 3-16 on floor 1's z-axis don't represent
+// real interior rooms anymore; the building is now multi-room with
+// the library + west wing on the X axis instead) fall back to
+// RECEPTION_PRESET. That means anywhere outside the building — far
+// south, north, or wherever a player wanders without a preset —
+// reads as bright daytime instead of the dim DEFAULT_PRESET which
+// was making "outside" feel like night.
 export function getPresetForZone(idx) {
-  return ZONE_PRESETS[idx] || DEFAULT_PRESET;
+  return ZONE_PRESETS[idx] || RECEPTION_PRESET;
 }

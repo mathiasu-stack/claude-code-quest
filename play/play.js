@@ -486,10 +486,14 @@ function clampMove(oldX, oldZ, newX, newZ) {
   // Floors 2-4 are now a 36×36 open floor centered at origin
   // (z∈[-17.5, 17.5], x∈[-17.5, 17.5]) — 2.7× larger than the old 22×22.
   if (currentFloor === 1) {
-    newX = Math.max(-32.5, Math.min(10.5, newX));
-    // Floor 1 now extends NORTH too (Library at z=-33..-11 in west
-    // wing). South range still covers Plan Mode (z=+11..+33).
-    newZ = Math.max(-32.5, Math.min(32.5, newZ));
+    // Walk-around bounds: a ~85×85 m fenced yard around the building.
+    // West fence at x=-42 (9 m west of library outer wall at x=-33).
+    // East fence at x=+42 (well past the elevator at x=+12.3).
+    // North fence at z=-42 (9 m north of library back at z=-33).
+    // South fence at z=+42 (well south of the old Plan Mode back wall).
+    // Walls inside the building still block via colliders.
+    newX = Math.max(-42, Math.min(42, newX));
+    newZ = Math.max(-42, Math.min(42, newZ));
   } else {
     newX = Math.max(-17.5, Math.min(17.5, newX));
     newZ = Math.max(-17.5, Math.min(17.5, newZ));
@@ -1684,6 +1688,14 @@ function buildWorld() {
   try { _spawnSyntheticCompoundClones(scene); } catch (e) { console.warn('synthetic compound clones failed', e); }
   try { _spawnSyntheticInteractableClones(scene); } catch (e) { console.warn('synthetic interactable clones failed', e); }
 
+  // ── Outdoor yard: grass plane + perimeter fence ─────────────────
+  // depth.js's buildExterior covers only the east side (road, trees);
+  // here we add a big grass plane underneath everything so the player
+  // can walk around the building's west, north, and south sides
+  // without rendering on void. The fence reads as the property
+  // boundary so the walkable area feels intentional.
+  try { _buildOutdoorYard(scene); } catch (e) { console.warn('yard build failed', e); }
+
   registerStaticColliders();
 
   // Tag everything built up to here as floor 1. The elevator shaft is
@@ -2190,6 +2202,72 @@ function _spawnSyntheticInteractableClones(scene) {
     clone.userData._interactableChapterId = newChapterId;
     clone.userData._interactable = null; // decorative clone — no E-key behaviour
     scene.add(clone);
+  }
+}
+
+// Build the outdoor "yard" — a grass plane + 4-sided wood fence
+// around the property at the clampMove bounds (±42). Placed slightly
+// below the building's floor (y=-0.01) so the indoor floor plates
+// stay on top. Fence segments register as walls for visual + the
+// clamp already keeps the player inside, so no colliders needed.
+function _buildOutdoorYard(scene) {
+  const YARD = 42;      // half-extent of the fenced area
+  const FENCE_H = 1.2;  // wooden fence height
+  // Grass — single big plane, well below the building floor so it's
+  // hidden by floor_plates inside but visible outside.
+  const grassMat = new THREE.MeshStandardMaterial({ color: 0x6aa05a, roughness: 0.95 });
+  const grass = new THREE.Mesh(new THREE.PlaneGeometry(YARD * 2 + 4, YARD * 2 + 4), grassMat);
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.set(0, -0.01, 0);
+  grass.receiveShadow = true;
+  grass.userData.floor = 1;
+  scene.add(grass);
+
+  // Wooden fence — picket-style slats along each side. We approximate
+  // with one continuous low BoxGeometry per side for cheapness, with
+  // a 4 m gap on the south side aligned to the building's entrance
+  // (door at x=0, z=+11; gap at x=-2..+2 on the south fence so the
+  // player can walk out to the front of the property and the path
+  // reads as a real "front gate" approach).
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0x5d3a1a, roughness: 0.82 });
+  const addFence = (w, x, z, rotY = 0) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, FENCE_H, 0.12), fenceMat);
+    m.position.set(x, FENCE_H / 2, z);
+    m.rotation.y = rotY;
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData.floor = 1;
+    scene.add(m);
+    return m;
+  };
+  // North fence — solid 84 m at z=-42.
+  addFence(YARD * 2, 0, -YARD);
+  // South fence — two segments leaving a 4 m gap centered at x=0.
+  const southHalfW = (YARD * 2 - 4) / 2;  // 40 m each
+  addFence(southHalfW, -(YARD + 2) / 2, YARD);   // x ≈ -22
+  addFence(southHalfW,  (YARD + 2) / 2, YARD);   // x ≈ +22
+  // East fence at x=+42, vertical.
+  addFence(YARD * 2, YARD, 0, Math.PI / 2);
+  // West fence at x=-42, vertical.
+  addFence(YARD * 2, -YARD, 0, Math.PI / 2);
+
+  // Fence posts every 4 m so the fence reads as picket-style not just
+  // a flat slab. Each side gets posts at its bottom rail height,
+  // slightly taller than the rail to break the silhouette.
+  const POST_H = FENCE_H + 0.15;
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x4a2e15, roughness: 0.8 });
+  const addPost = (x, z) => {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.18, POST_H, 0.18), postMat);
+    p.position.set(x, POST_H / 2, z);
+    p.castShadow = true; p.receiveShadow = true;
+    p.userData.floor = 1;
+    scene.add(p);
+  };
+  for (let i = -YARD; i <= YARD; i += 4) {
+    addPost(i, -YARD); // north
+    // skip posts where the south gap is.
+    if (i < -2 || i > 2) addPost(i, YARD); // south
+    addPost(-YARD, i); // west
+    addPost(YARD, i); // east
   }
 }
 
