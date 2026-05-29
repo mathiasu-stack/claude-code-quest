@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-28T20:01:44.504Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-29T08:10:04.655Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.
@@ -31,6 +31,10 @@ window.COMPOUND_OVERRIDES = {
     'aisha_whiteboard': { pos: [10.1831, 2, -9.6273], rotY: -1.5708, scale: [0.65, 0.65, 0.65] },
     'clock': { hidden: true },
     'west_window': { hidden: true },
+    'poster_be_kind': { hidden: true },
+    'poster_ship_it': { hidden: true },
+    'poster_grow': { hidden: true },
+    'poster_stay': { hidden: true },
   },
   'atrium': {
     'mullion_h_0': { hidden: true },

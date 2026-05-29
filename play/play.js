@@ -34,7 +34,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260528p';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260529a';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
@@ -1577,15 +1577,10 @@ function buildWorld() {
 
   loadRoom(scene, window.ROOM_BY_ID('library'), ctx);
 
-  // Door from zone 2 (library) → zone 3 — labelled by whichever
-  // chapter is at the next CURRICULUM position after the reshuffle.
-  {
-    const gateChapter = (window.CURRICULUM || [])[1];
-    const nextChapter = (window.CURRICULUM || [])[2];
-    const gateId    = gateChapter?.id || 'ch02';
-    const nextTitle = ZONE_THEMES[2]?.title || nextChapter?.title || 'Next Zone';
-    registerDoor(scene, 33, gateId, nextTitle);
-  }
+  // (The old zone-2 → zone-3 door at z=33 was removed when the
+  // library moved out of the south-of-reception slot. Files / Plan
+  // Mode are now accessed via reception's west doorway, not a
+  // z-axis corridor.)
 
   // West-wing rooms — shell (floor / walls / sign / accent strip) is
   // theme-derived per ZONE_THEMES[idx] and stays in code. Each call
@@ -2720,13 +2715,16 @@ function buildPlayer() {
   }
 
   let startX = 0, startZ = 5;
+  // Saved floor restored AFTER buildPlayer returns — see init() chain
+  // which calls _restoreSavedFloor() once buildNPCs / setupInput are
+  // done. Here we just read the XZ and Y-from-current-floor.
   try {
     const saved = JSON.parse(sessionStorage.getItem('ccq_play_pos') || 'null');
     if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z)) {
       startX = saved.x; startZ = saved.z;
     }
   } catch {}
-  player.position.set(startX, 0, startZ);
+  player.position.set(startX, floorBaseY(currentFloor), startZ);
   player.rotation.y = Math.PI; // face north (toward Linda) by default
   player.userData.velocityY = 0;
   player.userData.grounded = true;
@@ -2989,6 +2987,23 @@ function spawnNPCsForFloor(f) {
 // first visit. No-op if already built. Returns the set of currently
 // loaded floors so callers can introspect if needed.
 const loadedFloors = new Set([1]);
+// Read sessionStorage.ccq_play_pos.floor and, if set, teleport the
+// player there. Lazy-builds floors 2-4 if needed (same path the
+// elevator uses). Floor 1 is built at startup so this is a fast path.
+async function _restoreSavedFloor() {
+  let savedFloor = 1;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('ccq_play_pos') || 'null');
+    if (saved && Number.isFinite(saved.floor)) savedFloor = saved.floor;
+  } catch {}
+  savedFloor = Math.max(1, Math.min(FLOORS_TOTAL, savedFloor | 0));
+  if (savedFloor === currentFloor) return;
+  if (savedFloor > 1) await loadFloor(savedFloor);
+  currentFloor = savedFloor;
+  if (player) player.position.y = floorBaseY(currentFloor);
+  applyFloorVisibility();
+}
+
 async function loadFloor(f) {
   if (loadedFloors.has(f)) return loadedFloors;
   const overlay = createLoadingOverlay();
@@ -3211,6 +3226,16 @@ function setupInput() {
   renderer.domElement.addEventListener('touchmove', cameraTouchMoveListener, { passive: false });
   renderer.domElement.addEventListener('touchend', cameraTouchEndListener);
   renderer.domElement.addEventListener('touchcancel', cameraTouchEndListener);
+  // Suppress the browser's native drag-image preview when the user
+  // press-and-drags on the canvas. Without this Chrome/Firefox capture
+  // the canvas pixels as a translucent ghost and follow the mouse —
+  // looks like the "whole picture" is being dragged. Especially
+  // visible while using the in-game editor's free-drag.
+  renderer.domElement.addEventListener('dragstart', (e) => e.preventDefault());
+  renderer.domElement.draggable = false;
+  renderer.domElement.style.userSelect = 'none';
+  renderer.domElement.style.webkitUserSelect = 'none';
+  renderer.domElement.style.webkitUserDrag = 'none';
 
   const j = document.getElementById('play-joystick');
   const t = document.getElementById('play-joystick-thumb');
@@ -3396,7 +3421,7 @@ function openDialogue(npc) {
       playUi('confirm');
       if (player) {
         sessionStorage.setItem('ccq_play_pos', JSON.stringify({
-          x: player.position.x, z: player.position.z,
+          x: player.position.x, z: player.position.z, floor: currentFloor,
         }));
       }
       if (npc.kind === 'test') {
@@ -4132,6 +4157,10 @@ export async function start(host) {
     };
   } catch {}
   setupInput();
+  // Restore the player's saved floor (sessionStorage.ccq_play_pos.floor)
+  // so reloads keep them on the same floor they left. Lazy-builds the
+  // floor first if it hasn't been built this session.
+  await _restoreSavedFloor();
   // Apply the initial zone preset so the first frame renders with proper
   // lighting; subsequent transitions are picked up by update().
   if (lighting) {

@@ -37,18 +37,22 @@ export const LESSON_DELIVERY = {
     chapterId: 'ch05', lessonId: 'ch05-l01',
   },
 
-  // Chapter 6 — File Workshop. Book in the Library.
+  // Chapter 6 — File Workshop. Book on the south reading table in the
+  // new west-wing library (relocated when the library moved off the
+  // south-of-reception slot).
   ch06: {
     delivery: 'book',
-    objectLocation: { floor: 1, position: [-3, 0, 14] },
+    objectLocation: { floor: 1, position: [-22, 0.78, -26] },
     uiStyle: 'book',
     chapterId: 'ch06', lessonId: 'ch06-l01',
   },
 
-  // Chapter 16 — NAS Capstone. Server rack in the Library back area.
+  // Chapter 16 — NAS Capstone. Server rack in the new library back
+  // (north end). Was at [3, 0, 30] in the old library — that area is
+  // now exterior, so the server got relocated.
   ch16: {
     delivery: 'server',
-    objectLocation: { floor: 1, position: [3, 0, 30] },
+    objectLocation: { floor: 1, position: [-12, 0, -31] },
     uiStyle: 'terminal',
     chapterId: 'ch16', lessonId: 'ch16-l01',
   },
