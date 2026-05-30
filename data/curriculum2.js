@@ -195,6 +195,41 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
 <h3>Test the skill before committing</h3>
 <p>Run the skill 2–3 times on real tasks before committing it to the repo. If it needs corrections again, update the skill file. Repeat until it runs cleanly without manual intervention.</p>`,
       },
+      {
+        id: 'ch09-l04', title: 'Closing the Loop with learnings.md', xpReward: 100, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Skills That Get Smarter Over Time</h2>
+<p>A skill shipped to the repo is not "done" — it's "ready to start learning". Every imperfect run is data. The team's job is to capture that data and feed it back into the skill file.</p>
+<h3>Failure modes to listen for</h3>
+<ul>
+  <li><strong>Missing context</strong> — the skill didn't have information it needed; add an input or a reference.</li>
+  <li><strong>Ambiguous instructions</strong> — a phrase got read two ways; rephrase or add an example.</li>
+  <li><strong>Missing guardrails</strong> — an edge case wasn't anticipated; add a quality criterion.</li>
+  <li><strong>Stale assumptions</strong> — the codebase changed; refresh the references.</li>
+</ul>
+<h3>The learnings.md pattern</h3>
+<p>Keep a <code>learnings.md</code> next to your skills folder. One entry per meaningful change, dated, with Problem / Fix / Verified fields. Future you (and the rest of the team) reads it before editing the skill again.</p>
+<pre><code># Skill Learnings
+
+## pr-description
+### v1 → v2 (2026-05-21)
+**Problem**: Output too technical for non-engineering reviewers
+**Fix**: Added "Assume the reader is a product manager, not an engineer"
+**Verified**: Ran on 3 PRs; PM feedback improved significantly
+
+### v2 → v3 (2026-05-29)
+**Problem**: Section "Breaking changes" silently omitted when there were none
+**Fix**: Require the section header even if the body is "None this release"
+**Verified**: Next 5 PRs all rendered the header consistently</code></pre>
+<h3>Building feedback INTO the skill</h3>
+<p>The most self-improving skills ask for feedback at the end of every run:</p>
+<pre><code>## Feedback Request
+After delivering output, ask:
+"Does this meet the brief? If not, what would you change?
+Your answer becomes the next learnings.md entry."</code></pre>
+<p>A skill that requests feedback after every use and gets updated from that feedback will be dramatically better after 20 uses than after 1. The compounding is real.</p>`,
+      },
     ],
     practicalTest: {
       id: 'ch09-test',
@@ -217,46 +252,131 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
   // ── Chapter 12 ────────────────────────────────────────────────────────────
   {
     id: 'ch10',
-    title: 'Recursive Skill Refinement',
-    subtitle: 'Week 12 — Skills That Get Smarter',
-    icon: '🔄',
-    xpReward: 420,
+    title: 'Choosing Your Model',
+    subtitle: 'Week 12 — Opus, Sonnet, Haiku — and When to Switch',
+    icon: '🧠',
+    xpReward: 460,
     lessons: [
       {
-        id: 'ch10-l01', title: 'Failures Are Data', xpReward: 105, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Every Failure is an Upgrade Opportunity</h2><p>Skills are not write-once artefacts. They\'re living documents that improve every time the workflow produces suboptimal output. When a skill fails, diagnose why and update the skill so it won\'t fail that way again.</p><h3>Common failure patterns</h3><ul><li><strong>Missing context</strong> — the skill didn\'t have information it needed</li><li><strong>Ambiguous instructions</strong> — a phrase was interpreted differently than intended</li><li><strong>Missing guardrails</strong> — an edge case wasn\'t anticipated</li><li><strong>Stale assumptions</strong> — the skill was written when the codebase looked different</li></ul><h3>The update loop</h3><ol><li>Skill produces bad output</li><li>Diagnose the root cause</li><li>Update the skill file to address it</li><li>Re-run on the same input to verify the fix</li><li>Document the change in learnings.md</li></ol>',
+        id: 'ch10-l01', title: 'Meet the Engines', xpReward: 110, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
+<p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
+<p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
+<h3>The Claude 4 family in Claude Code</h3>
+<p>Three model tiers are available, each with a different cost/intelligence trade-off:</p>
+<ul>
+  <li><strong>Claude Opus 4.8</strong> — the smartest model. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest cost per token; slowest output.</li>
+  <li><strong>Claude Sonnet 4.6</strong> — the balanced default. Most coding work, day-to-day prompts, skill execution, code review. Strong intelligence at ~⅕ the cost of Opus.</li>
+  <li><strong>Claude Haiku 4.5</strong> — the fast lane. Quick edits, log triage, short summaries, scripted hook actions. Sub-second time-to-first-token; cheapest tier.</li>
+</ul>
+<h3>Why this matters</h3>
+<p>The wrong model for the job costs you either money (Opus on a one-line typo fix) or time and quality (Haiku on a multi-file architectural change). The first habit of a senior Claude Code user is matching the engine to the workload.</p>
+<h3>What Claude Code picks by default</h3>
+<p>On launch Claude Code uses Sonnet. That's almost always correct. But the moment a task obviously falls outside Sonnet's sweet spot, you should switch — explicitly, every time, not as an afterthought.</p>`,
       },
       {
-        id: 'ch10-l02', title: 'The learnings.md Pattern', xpReward: 105, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Institutional Memory for AI Workflows</h2><p>A <code>learnings.md</code> file captures what you\'ve discovered about how your AI workflows behave — what works, what doesn\'t, and what you\'ve changed and why.</p><pre><code># Skill Learnings\n\n## pr-description.md\n### v1 → v2 (2024-03-15)\n**Problem**: Output too technical for non-engineering reviewers\n**Fix**: Added "Assume the reader is a product manager, not an engineer"\n**Verified**: Ran on 3 PRs; PM feedback improved significantly</code></pre><p>Without learnings.md, the same mistakes get repeated by new team members who don\'t know the history. With it, the team\'s collective prompt-engineering knowledge compounds over time.</p><h3>Format</h3><ul><li>One entry per meaningful change</li><li>Always include Problem, Fix, and Verified fields</li><li>Date every entry</li></ul>',
+        id: 'ch10-l02', title: 'Switching with /model and Fast Mode', xpReward: 110, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Three Levers, One Session</h2>
+<p>Claude Code exposes three switches that change which model executes your next prompt. Learning all three keeps you in control instead of letting defaults silently drive your bill.</p>
+<h3>1. /model — pick the tier</h3>
+<pre><code>/model opus       # Opus 4.8
+/model sonnet     # Sonnet 4.6  (default)
+/model haiku      # Haiku 4.5
+/model            # opens an interactive picker</code></pre>
+<p>The choice persists for the rest of the session (or until you switch again). You'll see the active model in the status line.</p>
+<h3>2. /fast — Fast Mode for Opus</h3>
+<p><code>/fast</code> toggles <strong>Fast Mode</strong> while on Opus. It does <em>not</em> downgrade you to Sonnet or Haiku — you stay on Opus, but output streams much faster. Worth it when you're paired with Opus on a long refactor and don't want to watch tokens drip out.</p>
+<h3>3. The 1M-context window</h3>
+<p>Opus 4.7 and 4.8 support a <strong>1,000,000-token context</strong> tier. The model is the same engine; the only difference is that very large repos, transcripts, or doc bundles fit in one session. When 1M context is active, the model ID reads <code>claude-opus-4-8[1m]</code>. Switch on automatically when your context starts to approach the standard 200k limit — or proactively when you know you're about to load a full codebase.</p>
+<h3>One-shot override per command</h3>
+<p>For headless / scripted runs, pass the model explicitly:</p>
+<pre><code>claude -p "summarise this PR" --model claude-haiku-4-5
+claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
+<p>This bypasses whatever the interactive default is — perfect for cron jobs and CI hooks that should always run on a specific tier.</p>`,
       },
       {
-        id: 'ch10-l03', title: 'Requesting Human Feedback', xpReward: 105, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Building Feedback Loops into Skills</h2><p>The most self-improving skills actively request feedback after producing output.</p><pre><code>## Feedback Request\nAfter delivering output, ask:\n"Does this meet the brief? If not, what would you change?\nYour answer will help improve this skill for next time."</code></pre><h3>Closing the loop</h3><p>When the user responds — even briefly ("the tone was too formal") — Claude Code can suggest a skill update right there in the session, then apply it to the skill file. A skill that requests feedback after every use and gets updated from that feedback will be dramatically better after 20 uses than after 1.</p>',
+        id: 'ch10-l03', title: 'Cost Economics & Prompt Caching', xpReward: 110, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Where Your Money Actually Goes</h2>
+<p>Priya pulls up last month's bill on a wall display. "This team spent £4,200 on Claude Code. Half of it was avoidable. Let me show you why."</p>
+<h3>The order-of-magnitude rule</h3>
+<p>As a rough mental model, per million tokens:</p>
+<ul>
+  <li><strong>Opus</strong>: ~15× the cost of Haiku</li>
+  <li><strong>Sonnet</strong>: ~3× the cost of Haiku</li>
+  <li><strong>Haiku</strong>: the cheap reference point</li>
+</ul>
+<p>Running Opus on a task Haiku could handle is throwing 15× the money at the same answer.</p>
+<h3>Prompt caching — your biggest lever</h3>
+<p>Claude has automatic <strong>prompt caching</strong>: stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side. Cached tokens cost roughly <strong>10% of the normal input rate</strong>.</p>
+<h3>The 5-minute TTL</h3>
+<p>The cache has a <strong>5-minute lifetime</strong> from last access. While you're actively working, every follow-up prompt reads the cached prefix cheaply. The moment a gap exceeds 5 minutes — a long lunch, an idle background process — the cache evicts and the next prompt pays full freight to repopulate it.</p>
+<h3>Practical consequences</h3>
+<ul>
+  <li>Tight bursts of work are dramatically cheaper than the same work spread across the day.</li>
+  <li>Idle sleeps in scheduled scripts should be either &lt;5 minutes (stay cached) or much longer (commit to the eviction). 300 seconds is the worst-of-both — you pay the cache miss without amortising it.</li>
+  <li>A long-running tmux session that touches the same project repeatedly is cheaper than spawning a fresh <code>claude -p</code> each time.</li>
+</ul>
+<h3>Reading the cost panel</h3>
+<p>Run <code>/cost</code> to see the running total for the current session, broken down by input / cached input / output. If cached input isn't a large chunk of your bill, you have idle time eating cache windows — or you're rotating projects faster than the TTL.</p>`,
+      },
+      {
+        id: 'ch10-l04', title: 'Matching Model to Task', xpReward: 130, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>The Decision Heuristic</h2>
+<p>Priya hands you a laminated card. "Pin this to your monitor. Refer to it for two weeks. After that, it's instinct."</p>
+<h3>Pick Haiku when…</h3>
+<ul>
+  <li>The task is mechanical: rename, regex replace, format a JSON, tally numbers.</li>
+  <li>You need a sub-second answer for a hook or status-line script.</li>
+  <li>You're triaging logs or summarising a single short file.</li>
+  <li>You're running a high-volume batch (1000 PR titles to classify).</li>
+</ul>
+<h3>Pick Sonnet when…</h3>
+<ul>
+  <li>You're writing or refactoring code in a small scope (single file, well-defined function).</li>
+  <li>You're executing a known skill or following a documented runbook.</li>
+  <li>You're reviewing a PR of moderate size.</li>
+  <li>You don't know — this is the safe default for ~80% of work.</li>
+</ul>
+<h3>Pick Opus when…</h3>
+<ul>
+  <li>The problem requires reasoning across many files or unfamiliar territory.</li>
+  <li>You're debugging a subtle bug that doesn't reproduce reliably.</li>
+  <li>You're designing an architecture, not just implementing one.</li>
+  <li>You're running an audit, security review, or compliance check where missing something is expensive.</li>
+  <li>You're orchestrating subagents (the orchestrator benefits most from intelligence).</li>
+</ul>
+<h3>Escalate mid-session</h3>
+<p>Start on Sonnet. The moment you see Sonnet thrashing — repeated wrong guesses, missing the obvious connection, asking you to re-explain — <code>/model opus</code> and re-prompt. Don't burn an hour fighting the wrong tier.</p>
+<h3>De-escalate too</h3>
+<p>If you started on Opus for the architectural part and now you're just typing out boilerplate from the plan, drop back to Sonnet (or Haiku for pure mechanical tail-end edits). The cost difference compounds across a workday.</p>`,
       },
     ],
     practicalTest: {
       id: 'ch10-test',
-      scenarioType: 'slack', scenarioFrom: 'Alex Rivera', scenarioRole: 'Senior Support Agent', scenarioAvatar: '🧑‍💻',
-      scenario: 'The reply skill is too formal — tested it on Maya\'s subscription-downgrade question and it sounded like a 1950s telegram. Patch the skill (add explicit ban on formal phrasing), run the SAME question through the patched skill, and write a 3-line `learnings.md` entry.\n\nPaste four sections: `## v1 response` (too formal), `## v2 response` (fixed), `## Patch` (the skill change), `## Learning`.',
-      task: 'Paste the four sections — v1 response, v2 response, the skill patch, and the 3-line learnings.md entry.',
-      hint: 'v1 should show formal phrases (Dear, Kindly, Pursuant). v2 should NOT. Patch explicitly bans those. Learning = problem / fix / pattern.',
-      minLength: 350, passThreshold: 70, xpReward: 575,
+      scenarioType: 'email', scenarioFrom: 'Dr. Priya Engelhardt', scenarioRole: 'Head of AI Operations', scenarioAvatar: '👩‍🔬',
+      scenario: 'From: priya.engelhardt@kedashcorp.com\nSubject: Model-spend audit — three tasks on your desk\n\nThree tasks landed in your queue this morning:\n\n1. Classify 800 customer-support tickets by topic (one short sentence each).\n2. Refactor the `OrderProcessor` class across 14 files — keep behaviour identical, split into three smaller classes.\n3. Add a `formatCurrency()` helper to `src/utils/format.js`, update the two existing call sites.\n\nPick the right model for each. Justify it on cost + capability grounds (mention prompt caching where it applies). Then SHOW me you actually used `/model` to switch — paste the commands you ran and the status-line / model-banner output proving the switch took effect.\n\nFour sections: `## Task 1`, `## Task 2`, `## Task 3`, `## Proof of switch`.',
+      task: 'Pick a model per task with cost+capability reasoning, then show real /model switches with status-line evidence.',
+      hint: 'Task 1 = high-volume short → Haiku. Task 2 = cross-file reasoning → Opus (mention 1M context if huge). Task 3 = local, well-defined → Sonnet. Proof = `/model <tier>` + status line / banner snippet.',
+      minLength: 400, passThreshold: 70, xpReward: 650,
       criteria: [
-        { type: 'keyword', value: ['## v1', '## v2', '## Patch', '## Learning'], description: 'All four sections marked', weight: 1 },
-        { type: 'regex', value: '(dear|kindly|pursuant|herewith|esteemed)', description: 'v1 contains formal phrases (evidence of real run)', weight: 2 },
-        { type: 'keyword', value: ['avoid', 'don\'t', 'do not', 'never use', 'ban', 'no '], description: 'Patch contains an explicit avoidance rule', weight: 2 },
-        { type: 'keyword', value: ['formal', 'stiff', 'warm', 'casual', 'conversational'], description: 'Diagnoses formality', weight: 2 },
-        { type: 'keyword', value: ['learnings', 'learnings.md'], description: 'References learnings.md', weight: 2 },
-        { type: 'keyword', value: ['problem', 'fix', 'pattern', 'next time', 'lesson'], description: 'Learnings entry framed correctly', weight: 1 },
+        { type: 'keyword', value: ['## Task 1', '## Task 2', '## Task 3', '## Proof'], description: 'All four sections present', weight: 1 },
+        { type: 'keyword', value: ['haiku'], description: 'Haiku chosen for the batch task', weight: 2 },
+        { type: 'keyword', value: ['opus'], description: 'Opus chosen for the cross-file refactor', weight: 2 },
+        { type: 'keyword', value: ['sonnet'], description: 'Sonnet chosen for the small helper', weight: 2 },
+        { type: 'keyword', value: ['/model'], description: 'Shows the actual /model command', weight: 2 },
+        { type: 'keyword', value: ['cache', 'caching', 'cached', 'prompt cache', '5 minute', '5-minute', 'ttl'], description: 'References prompt caching economics', weight: 2 },
+        { type: 'keyword', value: ['cost', 'cheaper', 'expensive', 'per token', 'bill', '/cost'], description: 'Cost reasoning present', weight: 1 },
+        { type: 'keyword', value: ['cross-file', 'multi-file', 'architectural', 'reasoning', '14 files'], description: 'Justifies Opus on scope grounds', weight: 1 },
       ],
-      exemplar: '<p>Strong answer: v1 reply with formal phrasing (Dear / Kindly / Pursuant), v2 reply that\'s warm and conversational, a patch that explicitly bans those phrases, and a 3-line learnings.md entry framing problem / fix / pattern.</p>',
+      exemplar: '<p>Strong answer: Haiku for ticket classification (high volume, mechanical, sub-second per call), Opus for the 14-file refactor (cross-file reasoning, possibly 1M context if total is large), Sonnet for the helper + call sites (small scope, default tier). Proof section shows <code>/model haiku</code>, <code>/model opus</code>, <code>/model sonnet</code> with status-line snippets confirming each switch — and at least one mention of how prompt caching keeps a tight burst cheap.</p>',
     },
   },
 
@@ -316,98 +436,339 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
   // ── Chapter 14 ────────────────────────────────────────────────────────────
   {
     id: 'ch14',
-    title: 'Multi-Goal Command Center',
-    subtitle: 'Week 14 — Supervising Parallel Work',
-    icon: '📊',
-    xpReward: 460,
+    title: 'Subagents & Delegation',
+    subtitle: 'Week 14 — Many Hands, One Orchestrator',
+    icon: '🧑‍🤝‍🧑',
+    xpReward: 480,
     lessons: [
       {
-        id: 'ch14-l01', title: 'Beyond the Single Chat Thread', xpReward: 115, videos: ['<iframe src="https://www.youtube.com/embed/t5dpuXto-AM" title="Claude Code Agent Teams: Install, Build &amp; Run Them in Parallel" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Running Multiple Workstreams</h2><p>A single sequential thread is fine for simple work. But as the scope of AI-assisted work grows, it becomes a bottleneck. A Command Center is a model for supervising multiple parallel Claude Code workflows simultaneously — you\'re the lead, not the executor.</p><p>This unlocks dramatically higher throughput, but requires clear task decomposition and well-defined checkpoints.</p>',
+        id: 'ch14-l01', title: 'Sam Okoye and the Dispatch Board', xpReward: 115, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>"I Don't Type — I Dispatch"</h2>
+<p><em>Sam Okoye runs Engineering at Kedash. He waves you over to a wall-mounted board covered in coloured cards. "This is the Dispatch Board," he says. "Every card is a subagent. I don't type code anymore — I dispatch."</em></p>
+<h3>What a subagent actually is</h3>
+<p>A <strong>subagent</strong> is a separate Claude session that the main session spawns with the <code>Agent</code> (a.k.a. Task) tool. It has its own context window, its own tool set, and runs to completion before reporting back a single summary message.</p>
+<p>That isolation is the point. The main session stays uncluttered; the subagent burns its own context on the messy details and only the result lands in your conversation.</p>
+<h3>Where to use them</h3>
+<ul>
+  <li><strong>Open-ended search.</strong> "Find every call site of <code>OrderProcessor</code>" — would otherwise flood the parent context with file lists and excerpts.</li>
+  <li><strong>Independent parallel work.</strong> Three doc files to refresh, none depending on the others — three subagents in one orchestrator message.</li>
+  <li><strong>Specialist judgment.</strong> A code-review subagent, a security-review subagent — each with its own system prompt encoded in <code>.claude/agents/</code>.</li>
+  <li><strong>Heavy reads.</strong> Anything that would otherwise burn 50k tokens just exploring before doing real work.</li>
+</ul>
+<h3>Where NOT to use them</h3>
+<ul>
+  <li>Single-file edits — just do them in the parent. Spawning a subagent costs latency and adds a hop.</li>
+  <li>Tasks where you need to iterate. Subagents are one-shot: prompt → result. They don't sustain a conversation.</li>
+  <li>Anything trivial. The parent can grep, read, and edit faster than a subagent can boot.</li>
+</ul>`,
       },
       {
-        id: 'ch14-l02', title: 'Designing for Parallel Execution', xpReward: 115, videos: ['<iframe src="https://www.youtube.com/embed/4AArCH1fgQQ" title="The Simplest Way to Run Parallel AI Agents with Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>What Can Run in Parallel?</h2><p>Key question: does task B depend on task A\'s output? If yes — sequential. If no — parallel.</p><pre><code>TODO          IN PROGRESS        AWAITING REVIEW\n─────────     ───────────        ───────────────\nAuth docs     API tests          DB migration\n              (session 1)        (session 2)\n              Feature X docs\n              (session 3)</code></pre><p>You\'re not in any session right now — you\'re looking at the board, deciding where attention is needed. Each session should start with a concise context brief so you can quickly re-orient when you check back in.</p>',
+        id: 'ch14-l02', title: 'Custom Subagent Types in .claude/agents/', xpReward: 115, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Specialist Roles You Can Hire</h2>
+<p>Beyond the built-in <em>general-purpose</em> and <em>Explore</em> subagents, you can define your own specialists in <code>.claude/agents/</code> (per project) or <code>~/.claude/agents/</code> (global).</p>
+<h3>The agent file</h3>
+<pre><code># .claude/agents/code-reviewer.md
+---
+name: code-reviewer
+description: Reviews diffs for correctness, security, and style. Use when asked for a second opinion on a PR.
+model: opus
+tools: [Read, Grep, Bash]
+---
+
+You are a senior code reviewer at Kedash Corp. Read the diff in full,
+then comment on:
+  1. Correctness — does the change do what the PR says?
+  2. Security — any input that reaches the DB or shell unvalidated?
+  3. Style — does it match the surrounding code's conventions?
+
+Be specific. Reference file:line. Don't hedge — give a verdict.</code></pre>
+<h3>Three things to notice</h3>
+<ul>
+  <li><strong>name</strong> + <strong>description</strong> are how Claude Code (or you) picks this agent.</li>
+  <li><strong>model</strong> pins the tier — code review gets Opus because correctness matters. A "doc-formatter" agent might pin Haiku.</li>
+  <li><strong>tools</strong> restricts what this agent can do — a reviewer doesn't need <code>Write</code> or <code>Edit</code>.</li>
+</ul>
+<h3>Listing and invoking</h3>
+<pre><code>/agents                  # opens the picker — shows all available agent types
+                          # (built-in + user + project)
+
+# From the orchestrator, you ask for a specific subagent by name:
+"Use the code-reviewer subagent to review the changes on this branch."</code></pre>
+<h3>Hiring philosophy</h3>
+<p>Sam taps the dispatch board. "I treat each subagent file like a job description. Two paragraphs explaining what the role does, what its working style is, and what it must not do. If you can't write the description, you're not ready to delegate the work."</p>`,
       },
       {
-        id: 'ch14-l03', title: 'Human Checkpoints in Parallel Workflows', xpReward: 115, videos: ['<iframe src="https://www.youtube.com/embed/RpUTF_U4kiw" title="Claude Code Multi-Agent Orchestration with Opus 4.6" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Where You Must Be Present</h2><p>Place a checkpoint wherever: the output feeds another task, a judgment call is needed, the action is irreversible, or a wrong output could compound.</p><pre><code>## Checkpoint: Before Finalising\nStop here. Summarise what you\'ve produced and ask:\n"Does this look correct? Anything to adjust before I continue?"\nWait for explicit approval before proceeding.</code></pre><h3>Review rhythm</h3><p>With 3 parallel sessions: check each every 15–30 minutes (or when it signals it\'s waiting). Make decisions quickly, unblock, move on. You\'re doing spot-check reviews and judgment calls — not reading every line of every change.</p>',
+        id: 'ch14-l03', title: 'Parallel vs Sequential Dispatch', xpReward: 115, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>The Dependency Question</h2>
+<p>Before spawning anything, ask: <strong>does subagent B need subagent A's output?</strong></p>
+<ul>
+  <li><strong>No</strong> → fire both in <em>one</em> orchestrator message. They run concurrently. The parent receives both summaries when both finish.</li>
+  <li><strong>Yes</strong> → run A first, read its result, then prompt B with what you learned. Don't batch dependents.</li>
+</ul>
+<h3>Parallel dispatch — one message, multiple Agent calls</h3>
+<pre><code>Spawn three subagents in parallel:
+  1. Audit translations under i18n/en/* for missing keys.
+  2. Audit translations under i18n/fr/* for missing keys.
+  3. Audit translations under i18n/de/* for missing keys.
+Each is an independent file tree. Wait for all three reports.</code></pre>
+<p>In tool terms, the orchestrator emits three <code>Agent</code> tool calls in a single response. The harness runs them concurrently and the summaries arrive together.</p>
+<h3>Sequential dispatch — one waits on the other</h3>
+<pre><code>1. Dispatch Explore subagent: "find every place we read DATABASE_URL".
+2. [Wait for result list.]
+3. Dispatch general-purpose subagent: "wrap each of those reads
+   with the new SecretsClient.fetch() helper".</code></pre>
+<p>You couldn't have started step 3 without step 1's findings — sequential is the only safe shape.</p>
+<h3>Background vs foreground</h3>
+<p>Subagents can also run in the background (<code>run_in_background: true</code>). Foreground when you need the result to proceed. Background when the work is genuinely independent and you want to keep moving — you'll be notified when it finishes, without having to poll.</p>
+<h3>Diminishing returns</h3>
+<p>More than ~5 parallel subagents on the same project tends to cause merge collisions, duplicated exploration, and a flood of summary text in the parent. Sam's rule: <em>"three on the board at once, max. If you need more, the task isn't decomposed cleanly yet."</em></p>`,
+      },
+      {
+        id: 'ch14-l04', title: 'Multi-Session Command Center', xpReward: 135, videos: ['<iframe src="https://www.youtube.com/embed/t5dpuXto-AM" title="Claude Code Agent Teams: Install, Build &amp; Run Them in Parallel" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>When Subagents Aren't Enough</h2>
+<p>Subagents run inside a single parent session. For long-lived, human-supervised parallel streams — different repos, different goals, different review rhythms — you graduate to a multi-session <strong>Command Center</strong>: several Claude sessions in tmux panes, each independent.</p>
+<pre><code>TODO          IN PROGRESS                AWAITING REVIEW
+─────────     ──────────────────         ───────────────
+Auth docs     API tests (pane 1)         DB migration
+              Feature X docs (pane 2)    (pane 3)
+              Translations (pane 3)</code></pre>
+<h3>Subagents vs sessions — when to use which</h3>
+<ul>
+  <li><strong>Subagent</strong>: bounded task that returns one summary. Lives inside the parent. Cheap to spawn.</li>
+  <li><strong>Session</strong>: long-running, multi-prompt work with its own history. Survives detach via tmux.</li>
+</ul>
+<h3>Human checkpoints across the board</h3>
+<p>With three sessions active, you're not <em>in</em> any one of them — you're scanning the board, deciding where attention is needed. Place a checkpoint wherever:</p>
+<ul>
+  <li>The output feeds another stream.</li>
+  <li>A judgement call is needed.</li>
+  <li>The action is irreversible (a push, a migration, a delete).</li>
+  <li>A wrong output could compound through later work.</li>
+</ul>
+<pre><code>## Checkpoint: Before pushing
+Summarise what changed. Wait for explicit approval before running git push.</code></pre>
+<h3>Review rhythm</h3>
+<p>Sam's number: <em>check each pane every 15–30 minutes, or when it signals it's waiting</em>. Decisions are fast — unblock, redirect, move on. You're not reading every line of every diff; you're doing spot reviews and judgement calls.</p>`,
       },
     ],
     practicalTest: {
       id: 'ch14-test',
-      scenarioType: 'slack', scenarioFrom: 'Jordan Kim', scenarioRole: 'Head of Customer Support', scenarioAvatar: '👩‍💼',
-      scenario: 'Content sprint: 3 streams in parallel — refresh `faqs/`, polish `templates/`, expand `business-brain/glossary.md`. Actually open 3 Claude sessions (3 terminals, or tmux panes). Give each a distinct scope. Run ONE small task in each (e.g., "list the files I should focus on"). Paste evidence of all 3 sessions running with different scopes — including snippets of each session\'s response.',
-      task: 'Paste `## Session 1 (FAQs)`, `## Session 2 (Templates)`, `## Session 3 (Glossary)` — each with the scope/prompt you gave it and a short response excerpt.',
-      hint: 'Three terminals is simplest. Each session\'s scope = a different file/folder. The point is that three lines of work coexist without blocking each other.',
-      minLength: 350, passThreshold: 70, xpReward: 625,
+      scenarioType: 'slack', scenarioFrom: 'Sam Okoye', scenarioRole: 'Engineering Team Lead', scenarioAvatar: '🧑🏾‍💼',
+      scenario: 'New dispatch from the board: I need a `code-reviewer` subagent defined in `.claude/agents/`, AND I need you to actually use it. Then show me a parallel run.\n\nThree sections:\n\n1. `## Agent file` — paste the contents of `.claude/agents/code-reviewer.md` you wrote (with frontmatter: name, description, model, tools).\n2. `## Single dispatch` — paste the orchestrator prompt that invokes that subagent, plus the summary it returned.\n3. `## Parallel dispatch` — show ONE orchestrator message spawning two or three independent subagents at once (audit different folders, summarise different files — pick anything truly independent), and the summaries that came back.\n\nIf you spawn parallel subagents that secretly depend on each other, I will know. Pick genuinely independent work.',
+      task: 'Paste the agent file, a single dispatch, and a parallel dispatch with returned summaries.',
+      hint: 'Agent file needs `name:`, `description:`, ideally `model:` and `tools:`. Single dispatch = one Task/Agent call. Parallel = ≥2 Agent calls in one orchestrator turn. Mention `/agents` if you used the picker.',
+      minLength: 450, passThreshold: 70, xpReward: 675,
       criteria: [
-        { type: 'keyword', value: ['## Session 1', '## Session 2', '## Session 3'], description: 'Three sessions marked', weight: 1 },
-        { type: 'keyword', value: ['faq', 'faqs'], description: 'FAQ stream present', weight: 2 },
-        { type: 'keyword', value: ['template'], description: 'Templates stream present', weight: 2 },
-        { type: 'keyword', value: ['glossary'], description: 'Glossary stream present', weight: 2 },
-        { type: 'keyword', value: ['tmux', 'terminal', 'terminals', 'pane', 'panes', 'window'], description: 'Actual multiplexing used', weight: 2 },
-        { type: 'keyword', value: ['parallel', 'simultaneously', 'concurrent', 'at the same time'], description: 'Notes parallelism', weight: 1 },
-        { type: 'keyword', value: ['checkpoint', 'review', 'gate', 'approve', 'diff'], description: 'Mentions a check / gate', weight: 1 },
+        { type: 'keyword', value: ['## Agent file', '## Single dispatch', '## Parallel dispatch'], description: 'All three sections present', weight: 1 },
+        { type: 'keyword', value: ['name:', 'description:'], description: 'Agent file has frontmatter', weight: 2 },
+        { type: 'keyword', value: ['.claude/agents', 'agents/'], description: 'Stored in the correct directory', weight: 2 },
+        { type: 'keyword', value: ['code-reviewer', 'reviewer'], description: 'Reviewer subagent named', weight: 2 },
+        { type: 'keyword', value: ['parallel', 'concurrently', 'at the same time', 'in one message', 'one turn'], description: 'Shows parallel intent', weight: 2 },
+        { type: 'keyword', value: ['task', 'agent', 'subagent', 'dispatch'], description: 'Names the dispatch mechanism', weight: 1 },
+        { type: 'keyword', value: ['independent', 'no dependency', 'not depend', 'separate'], description: 'Justifies independence for parallel work', weight: 2 },
+        { type: 'keyword', value: ['/agents', 'model:', 'tools:'], description: 'Uses picker or pins model/tools', weight: 1 },
       ],
-      exemplar: '<p>Strong answer: three labelled sessions, each with a distinct scope (faqs/ / templates/ / glossary.md), a one-line prompt, and a short response excerpt — plus a sentence on how you coordinate / gate the work.</p>',
+      exemplar: '<p>Strong answer: a code-reviewer agent file in <code>.claude/agents/</code> with name/description/model:opus/tools restricted to read-only; a single dispatch invoking that reviewer and its terse verdict; and a parallel dispatch with 2–3 Agent calls in one orchestrator turn working on genuinely independent scopes (e.g., three locale folders, or three unrelated docs files) with each summary printed back.</p>',
     },
   },
 
   // ── Chapter 15 ────────────────────────────────────────────────────────────
   {
     id: 'ch15',
-    title: 'Advanced Patterns & Scaling',
-    subtitle: 'Week 15 — Senior Engineer Moves',
-    icon: '🚀',
-    xpReward: 480,
+    title: 'Settings, Permissions & Hooks',
+    subtitle: 'Week 15 — Guardrails for the Platform Team',
+    icon: '🛡️',
+    xpReward: 520,
     lessons: [
       {
-        id: 'ch15-l01', title: 'Start Minimal, Scale Deliberately', xpReward: 120, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>The Complexity Trap</h2><p>A 5-agent system with shallow skills will dramatically underperform a single well-configured agent with deep business context and refined skills. The scaling ladder:</p><ol><li>One agent + core skills — refine 3–5 skills covering frequent tasks</li><li>Business Brain established — context layer complete</li><li>Skills library mature — skills run without manual correction</li><li>Add parallel execution — Command Center model now makes sense</li><li>Sub-agents only when a task genuinely requires specialised context isolation</li></ol><p><strong>Test:</strong> "Does the simpler version fail at this task in a way that complexity would fix?" If no — don\'t add the complexity.</p>',
+        id: 'ch15-l01', title: 'Rena Vasquez and the Three settings.json Files', xpReward: 130, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Where Claude Code Reads its Rules</h2>
+<p><em>Rena Vasquez — Platform Engineering — slides a security badge across the table. "Welcome to the Guardrail Lab. Everything we build in here is about one question: what is Claude Code allowed to do, on which machine, on whose behalf?"</em></p>
+<h3>Three locations, in precedence order</h3>
+<p>Claude Code merges settings from three layers. Later layers <em>override</em> earlier ones on conflict.</p>
+<ol>
+  <li><strong>User</strong> — <code>~/.claude/settings.json</code> — your personal defaults across every project on this machine.</li>
+  <li><strong>Project (shared)</strong> — <code>.claude/settings.json</code> at the repo root — committed to git, applies to everyone who clones.</li>
+  <li><strong>Project (local)</strong> — <code>.claude/settings.local.json</code> at the repo root — gitignored, your personal overrides for this project.</li>
+</ol>
+<p>The local file always wins. The shared project file overrides your user defaults. Your user defaults are the baseline.</p>
+<h3>What lives in settings.json</h3>
+<ul>
+  <li><strong>permissions</strong> — which tools / which commands are auto-allowed, asked, or denied.</li>
+  <li><strong>hooks</strong> — shell commands wired to lifecycle events.</li>
+  <li><strong>env</strong> — environment variables injected into every Bash call.</li>
+  <li><strong>model</strong> — pin a default model for this project (e.g. <code>"claude-opus-4-8"</code>).</li>
+  <li><strong>statusLine</strong> — a custom command that produces the prompt status string.</li>
+  <li><strong>outputStyle</strong> — pick an output style (concise / explanatory / etc).</li>
+</ul>
+<h3>What does NOT live here</h3>
+<p>MCP server configs go in <code>.mcp.json</code>, not <code>settings.json</code>. Skills go in <code>.claude/skills/</code>. Subagents go in <code>.claude/agents/</code>. Don't try to stuff them into settings — they're separate files for a reason.</p>`,
       },
       {
-        id: 'ch15-l02', title: 'Multi-file Refactors', xpReward: 120, videos: ['<iframe src="https://www.youtube.com/embed/Ac0FMtVYKkA" title="Claude Code\'s Secret Weapon: Access Multiple Directories in One Session" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>The Safe Refactor Playbook</h2><ol><li>Scope first — list every file and call site before any changes</li><li>Commit current state</li><li>Use Plan Mode — review the full plan</li><li>Phase the work — types first, then implementations, then callers</li><li>Test at each phase</li><li>Final scan — search for missed references</li></ol><pre><code>Before making any changes, list every file that references `OrderProcessor` and show how each uses it. Don\'t make any changes yet.</code></pre><p>This single step prevents most multi-file refactor disasters.</p>',
+        id: 'ch15-l02', title: 'Permissions: Allow, Ask, Deny', xpReward: 130, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>The Three Permission Verbs</h2>
+<p>Every tool call Claude Code wants to make is matched against your permission rules and resolved into one of three outcomes:</p>
+<ul>
+  <li><strong>allow</strong> — runs immediately, no prompt.</li>
+  <li><strong>ask</strong> — you get a confirmation prompt; default for anything not explicitly listed.</li>
+  <li><strong>deny</strong> — silently blocked, with an explanation in the transcript.</li>
+</ul>
+<h3>Rule syntax — tools and matchers</h3>
+<pre><code>{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Bash(npm test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(curl * | sh:*)",
+      "Read(./.env)",
+      "Read(./secrets/**)"
+    ]
+  }
+}</code></pre>
+<p>Tool-only matchers (<code>"Read"</code>) cover every invocation of that tool. <code>Tool(pattern)</code> matchers restrict by argument — most common with <code>Bash</code> where the pattern is a glob on the command. <code>Read(./.env)</code> and similar restrict file access by path.</p>
+<h3>Sandbox mode</h3>
+<p>Run Claude Code with <code>--permission-mode plan</code> to allow read-only exploration but block all writes. <code>--permission-mode acceptEdits</code> auto-accepts edits but still asks for shell. <code>--permission-mode bypassPermissions</code> disables all gating (dangerous — only inside an isolated container/VM).</p>
+<h3>Managing rules live</h3>
+<pre><code>/permissions             # opens the interactive picker
+/permissions list        # show current resolved rules
+/permissions add deny "Bash(git push --force:*)"</code></pre>
+<p>Rena's lab rule: <em>"Default to <code>ask</code>. Only promote to <code>allow</code> after you've watched the same prompt three times in a row. Only <code>deny</code> the things that can ruin a Friday."</em></p>`,
       },
       {
-        id: 'ch15-l03', title: 'Scheduled Automation with Human Gates', xpReward: 120, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Automating the Repetitive 80%</h2><p>Automate predictable work; keep a human in the loop for judgment calls.</p><pre><code>Weekly Report Workflow:\n1. [Auto]  Collect: git log, open PRs, closed tickets\n2. [Auto]  Draft: run /weekly-status skill\n3. [Human] Review and edit\n4. [Auto]  Send to Slack #team-updates\n5. [Auto]  Archive to .business-brain/reports/</code></pre><p><strong>Gate principle:</strong> Every workflow producing external-facing output needs at least one human gate. A 2-minute skim is often enough — but it must exist.</p>',
+        id: 'ch15-l03', title: 'The 27 Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Wire Shell Commands to Lifecycle Events</h2>
+<p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>27 hook events</strong> covering every phase of a Claude Code session. The most useful clusters:</p>
+<h3>Tool lifecycle</h3>
+<ul>
+  <li><code>PreToolUse</code> — before a tool runs. Can block by exiting non-zero with a message.</li>
+  <li><code>PostToolUse</code> — after a tool completes. Lint, format, type-check.</li>
+</ul>
+<h3>Conversation lifecycle</h3>
+<ul>
+  <li><code>UserPromptSubmit</code> — before each user message is processed.</li>
+  <li><code>Stop</code> — when Claude Code finishes responding.</li>
+  <li><code>Notification</code> — when Claude wants attention (e.g. permission prompt).</li>
+</ul>
+<h3>Session lifecycle</h3>
+<ul>
+  <li><code>SessionStart</code> / <code>SessionEnd</code> — bookend the whole session.</li>
+  <li><code>PreCompact</code> / <code>PostCompact</code> — around <code>/compact</code>.</li>
+</ul>
+<h3>Subagent lifecycle</h3>
+<ul>
+  <li><code>SubagentStart</code> / <code>SubagentStop</code> — when a subagent spawns/finishes.</li>
+</ul>
+<h3>Concrete example — auto-format on save</h3>
+<pre><code>{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "npx prettier --write $CLAUDE_FILE_PATHS" }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<p>Every <code>Edit</code> or <code>Write</code> tool call triggers Prettier on the affected paths. Hooks receive context via environment variables — <code>$CLAUDE_FILE_PATHS</code>, <code>$CLAUDE_TOOL_NAME</code>, <code>$CLAUDE_SESSION_ID</code>, and more.</p>
+<h3>Blocking with PreToolUse</h3>
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/block-prod-db.sh" }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<p>If <code>block-prod-db.sh</code> exits non-zero with output on stderr, the tool call is blocked and the message is shown to Claude — which can re-plan around the block.</p>
+<h3>Hook hygiene</h3>
+<p>Hooks run in your shell with your privileges. Treat them like git pre-commit hooks: keep them fast, idempotent, and clearly named under <code>.claude/hooks/</code> in the repo. A 5-second hook on <code>PostToolUse</code> turns every edit into a 5-second wait.</p>`,
       },
       {
-        id: 'ch15-l04', title: 'Test-driven Prompting', xpReward: 120, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Tests as Specification</h2><p>Write the tests first, then ask Claude Code to implement code that makes them pass. Tests are unambiguous in a way prose descriptions rarely are.</p><pre><code>I\'ve written tests for `formatCurrency()` in `src/utils/format.test.js`.\nImplement `formatCurrency()` in `src/utils/format.js` to pass all of them.\nAfter implementing, run `npm test -- format.test.js` to verify.</code></pre><p>When Claude Code has tests to satisfy, it has an objective success criterion — dramatically reducing "close but not quite right" iterations.</p>',
+        id: 'ch15-l04', title: 'Status Line, Output Styles & Headless Mode', xpReward: 130, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>The Polish Layer</h2>
+<p>Three knobs that turn Claude Code from a tool into <em>your</em> tool: a status line, an output style, and a headless CLI for scripts.</p>
+<h3>Status line</h3>
+<p>The status line is the single line shown above the prompt. By default it shows the model, working directory, and a few stats. You can replace it with the output of any shell command:</p>
+<pre><code>{
+  "statusLine": {
+    "type": "command",
+    "command": ".claude/hooks/statusline.sh"
+  }
+}</code></pre>
+<p>Inside the script you have access to the current model, git branch, session cost so far, and more — via environment variables. Common patterns: show the branch + a "⚠ prod" badge when the repo is the production checkout; show the running spend in £ when you want to feel the meter.</p>
+<h3>Output styles</h3>
+<p>Output styles change how Claude Code formats its replies. Built-in styles include <code>default</code>, <code>concise</code>, and <code>explanatory</code>. You can pick one persistently in settings or per-session via <code>/output-style</code>.</p>
+<pre><code>{ "outputStyle": "concise" }     // settings.json
+/output-style explanatory         // one-off, for the current session</code></pre>
+<p>You can also author custom styles in <code>.claude/output-styles/</code> — each is a markdown file with rules ("never use emoji", "always cite file:line", "end with a one-sentence summary"). Useful for matching house style on PR bodies or report drafts.</p>
+<h3>Headless / CI mode</h3>
+<p><code>claude -p "..."</code> runs Claude Code in non-interactive mode: takes one prompt, returns one response, exits. This is the building block for CI hooks, cron jobs, GitHub Actions, and Synology Task Scheduler invocations.</p>
+<pre><code>claude -p "review the diff between main and HEAD" \\
+       --model claude-opus-4-8 \\
+       --permission-mode plan \\
+       --output-format json \\
+       &gt; review.json</code></pre>
+<ul>
+  <li><code>--permission-mode plan</code> ensures CI can't accidentally mutate anything.</li>
+  <li><code>--output-format json</code> gives a parseable result with cost + duration.</li>
+  <li>Auth comes from <code>ANTHROPIC_API_KEY</code> in the environment — no interactive login.</li>
+</ul>
+<h3>IDE integration</h3>
+<p>Claude Code ships VS Code and JetBrains plugins that bridge the in-IDE chat to the same CLI session — every setting above applies. The plugin reads <code>settings.json</code> from the same paths, so guardrails carry over.</p>`,
       },
     ],
     practicalTest: {
       id: 'ch15-test',
-      scenarioType: 'email', scenarioFrom: 'Maya Kedash', scenarioRole: 'CEO', scenarioAvatar: '👩‍💼',
-      scenario: 'From: maya.kedash@kedashcorp.com\nSubject: That 5-agent support bot proposal\n\nA vendor pitched us a "5-agent customer support bot": intent classifier → knowledge retriever → empathy generator → reply drafter → quality reviewer. Five LLM calls per ticket. $$$.\n\nWe have a Business Brain, a reply skill, and a small support team. Redesign as the SIMPLEST setup that does the same job. Single configured session + human gate. Tell me what we keep and what we drop.',
-      task: 'Redesign the 5-agent system as one configured Claude Code session with a human gate. Justify each drop.',
-      hint: 'Complexity-ladder principle: one agent + skill + Business Brain + human gate beats 5 agents at a fraction of cost.',
-      minLength: 200, passThreshold: 70, xpReward: 650,
+      scenarioType: 'email', scenarioFrom: 'Rena Vasquez', scenarioRole: 'Platform Engineer, InfoSec', scenarioAvatar: '🛡️',
+      scenario: 'From: rena.vasquez@kedashcorp.com\nSubject: Lock down a new project before it goes near prod\n\nNew project landing on your machine. Before anyone runs Claude in it, set up the guardrails. I want to see:\n\n1. `## settings.json` — a real project-level `.claude/settings.json` with: at least 3 `allow` rules, 2 `ask` rules, and 2 `deny` rules covering an obviously dangerous shell pattern and a secrets path.\n2. `## Hook` — a `PostToolUse` hook that runs your linter/formatter on edited files. Show the JSON block AND the script (or one-liner) it points at.\n3. `## Headless run` — the exact `claude -p ...` command you would put into CI for a nightly diff review, with `--permission-mode plan` and explicit model.\n4. `## Status line` — a `statusLine` config that calls a small script, plus the script (3–6 lines is fine) showing what it prints.\n\nReal config, not pseudocode. If the JSON doesn\'t parse, it doesn\'t count.',
+      task: 'Paste settings.json, the PostToolUse hook + script, the headless run command, and the statusLine config + script.',
+      hint: 'permissions has allow/ask/deny arrays. Hooks live under `hooks.PostToolUse[].hooks[].command`. Headless uses `claude -p`. statusLine has `type: command` + `command`.',
+      minLength: 500, passThreshold: 70, xpReward: 725,
       criteria: [
-        { type: 'keyword', value: ['single', 'one agent', 'one session', 'simpler', 'simplify'], description: 'Recommends collapsing to one agent', weight: 2 },
-        { type: 'keyword', value: ['skill', 'skills', 'business brain'], description: 'Uses skill + business brain instead', weight: 2 },
-        { type: 'keyword', value: ['human gate', 'human review', 'approval', 'human in the loop'], description: 'Adds a human gate', weight: 2 },
-        { type: 'keyword', value: ['drop', 'remove', 'unnecessary', 'over-engineer', 'complexity'], description: 'Identifies what to drop', weight: 2 },
-        { type: 'keyword', value: ['cost', 'token', 'cheaper', 'fewer calls'], description: 'Mentions cost saving', weight: 1 },
+        { type: 'keyword', value: ['## settings.json', '## Hook', '## Headless', '## Status'], description: 'All four sections present', weight: 1 },
+        { type: 'keyword', value: ['allow', 'ask', 'deny'], description: 'All three permission buckets shown', weight: 2 },
+        { type: 'keyword', value: ['Bash(', 'Read(', 'Edit('], description: 'Real tool(pattern) matchers used', weight: 2 },
+        { type: 'keyword', value: ['.env', 'secrets', 'rm -rf', '--force', 'curl'], description: 'Deny covers a real dangerous pattern', weight: 2 },
+        { type: 'keyword', value: ['PostToolUse'], description: 'PostToolUse hook present', weight: 2 },
+        { type: 'keyword', value: ['Edit|Write', 'Edit', 'Write'], description: 'Hook matcher targets edits', weight: 1 },
+        { type: 'keyword', value: ['claude -p', 'claude --print', '-p '], description: 'Headless invocation shown', weight: 2 },
+        { type: 'keyword', value: ['--permission-mode plan', 'permission-mode'], description: 'CI uses plan/read-only mode', weight: 2 },
+        { type: 'keyword', value: ['--model'], description: 'CI pins a model explicitly', weight: 1 },
+        { type: 'keyword', value: ['statusLine', 'status line'], description: 'statusLine block present', weight: 1 },
       ],
-      exemplar: '<p>Strong answer: collapse to one configured session reading the Business Brain + reply skill, with a human gate before send; the four "specialist agents" become context layers and an explicit review step rather than separate LLM calls.</p>',
+      exemplar: '<p>Strong answer: a valid <code>.claude/settings.json</code> with permissions buckets (allow Read/Edit/safe bash; ask for git push and rm; deny rm -rf, curl-pipe-sh, and .env reads), a PostToolUse hook matching Edit|Write that calls a project-local format script, a CI command like <code>claude -p &quot;review diff&quot; --model claude-opus-4-8 --permission-mode plan --output-format json</code>, and a 4-line statusline script that prints branch + model + running cost.</p>',
     },
   },
 
@@ -447,7 +808,38 @@ $ARGUMENTS: [what the user passes — e.g., "target branch name"]
         id: 'ch16-l05', title: 'NAS CLAUDE.md and Final Integration', xpReward: 125, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Applying Everything You\'ve Learned</h2><pre><code># ~/.claude/CLAUDE.md on NAS\nRunning on Synology DS925+, DSM 7.x, x86_64.\nNode.js via nvm. Projects in /volume1/projects/.\nNo browser available.\nPersistent sessions via tmux.\n\n## Business Context\nGlobal: /volume1/shared/business-brain/\nPer-project: .business-brain/ in each project root.</code></pre><p>Synology\'s Task Scheduler can run shell scripts that start tmux sessions, invoke Claude Code skills, and deposit output files — fully unattended scheduled automation on always-on hardware.</p><p><strong>Congratulations.</strong> You\'ve completed the Claude Code Quest. From first session to headless NAS automation — you have the full toolkit: Business Brain, lean CLAUDE.md, The Memory Framework, refined skills, token efficiency, Plan Mode, MCP, Command Center, and persistent remote execution.</p>',
+        content: '<h2>Applying Everything You\'ve Learned</h2><pre><code># ~/.claude/CLAUDE.md on NAS\nRunning on Synology DS925+, DSM 7.x, x86_64.\nNode.js via nvm. Projects in /volume1/projects/.\nNo browser available.\nPersistent sessions via tmux.\n\n## Business Context\nGlobal: /volume1/shared/business-brain/\nPer-project: .business-brain/ in each project root.</code></pre><p>Synology\'s Task Scheduler can run shell scripts that start tmux sessions, invoke Claude Code skills, and deposit output files — fully unattended scheduled automation on always-on hardware. (You\'ll wire one up in the next lesson.)</p>',
+      },
+      {
+        id: 'ch16-l06', title: 'Scheduled Automation with Human Gates', xpReward: 125, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Automating the Repetitive 80%</h2>
+<p>The NAS is always on. <code>claude -p</code> runs unattended. Add a cron entry or Synology Task Scheduler job and you have round-the-clock automation. The senior-engineer rule for what to automate:</p>
+<blockquote>Automate the predictable work. Keep a human in the loop for the judgment calls.</blockquote>
+<h3>The weekly report — a complete example</h3>
+<pre><code>Weekly Report Workflow:
+1. [Auto]  Collect: git log, open PRs, closed tickets
+2. [Auto]  Draft: run /weekly-status skill via \`claude -p\` (headless)
+3. [Human] Review and edit the draft in the morning
+4. [Auto]  Send to Slack #team-updates
+5. [Auto]  Archive to .business-brain/reports/</code></pre>
+<h3>Synology Task Scheduler — the launcher script</h3>
+<pre><code>#!/bin/sh
+# /volume1/scripts/weekly-report.sh
+cd /volume1/projects/kedash-support
+export ANTHROPIC_API_KEY="sk-ant-..."
+/usr/local/bin/claude -p "Run the /weekly-status skill. Save the draft to reports/draft.md." \\
+  --model claude-sonnet-4-6 \\
+  --permission-mode plan \\
+  --output-format json &gt; reports/last-run.json
+</code></pre>
+<p>Schedule it from DSM → Control Panel → Task Scheduler → Create → Scheduled Task → User-defined script. Friday 06:00. The draft is waiting when the team logs in.</p>
+<h3>The gate principle</h3>
+<p>Every workflow that produces external-facing output needs at least one human gate. A 2-minute skim before posting to Slack is often enough — but it must exist. The pattern: auto-draft → human approve → auto-distribute. Never auto-distribute something that hasn't been seen.</p>
+<h3>Idle behaviour matters for cost</h3>
+<p>From Chapter 12: the prompt cache evicts after 5 minutes. Scheduled jobs spawning fresh sessions every hour pay the cache miss on every run. That's fine — the alternative (a long-lived idle session) wastes more. Just be aware of the trade-off when you design the cadence.</p>
+<p><strong>Congratulations.</strong> You've completed the Claude Code Quest. From first session to headless NAS automation — you have the full toolkit: Business Brain, lean CLAUDE.md, the Memory Framework, refined skills, token efficiency, Plan Mode, model selection, subagent dispatch, MCP integration, hardened settings, and unattended scheduled automation.</p>`,
       },
     ],
     practicalTest: {

@@ -239,12 +239,12 @@ const ZONE_THEMES_BY_ID = {
   ch07: { floor: 0xce93d8, wall: 0xf3e5f5, accent: '#6a1b9a', title: 'Token Lounge',                metal: 0.20 },
   ch08: { floor: 0xff8a65, wall: 0xffccbc, accent: '#bf360c', title: 'Skill Forge',                 metal: 0.25 },
   ch09: { floor: 0x80cbc4, wall: 0xe0f2f1, accent: '#00695c', title: 'Methodology Lab',             metal: 0.30 },
-  ch10: { floor: 0xffd54f, wall: 0xfff9c4, accent: '#f57c00', title: 'Refinement Loop',             metal: 0.35 },
+  ch10: { floor: 0xffd54f, wall: 0xfff9c4, accent: '#f57c00', title: 'Model Engine Bay',            metal: 0.35 },
   ch11: { floor: 0x9fa8da, wall: 0xeceff1, accent: '#283593', title: 'Slash Command Center',       metal: 0.40 },
   ch12: { floor: 0xb39ddb, wall: 0xede7f6, accent: '#311b92', title: 'Plan War Room',               metal: 0.45 },
   ch13: { floor: 0x4dd0e1, wall: 0xe0f7fa, accent: '#006064', title: 'Integration Bay',             metal: 0.50 },
-  ch14: { floor: 0xff7043, wall: 0xfbe9e7, accent: '#d84315', title: 'Mission Control',             metal: 0.55 },
-  ch15: { floor: 0xb2dfdb, wall: 0xfff8e1, accent: '#00897b', title: 'Architect Studio',            metal: 0.60 },
+  ch14: { floor: 0xff7043, wall: 0xfbe9e7, accent: '#d84315', title: 'Subagent Dispatch Floor',     metal: 0.55 },
+  ch15: { floor: 0xb2dfdb, wall: 0xfff8e1, accent: '#00897b', title: 'Guardrail Lab',               metal: 0.60 },
   ch16: { floor: 0xffd700, wall: 0xfffde7, accent: '#ff6f00', title: 'NAS Server Room — Capstone',  metal: 0.75 },
 };
 const ZONE_THEMES = (window.CURRICULUM || []).map(c => ZONE_THEMES_BY_ID[c.id] || null);
@@ -2978,6 +2978,13 @@ function spawnNPC(npcDef) {
       ...npcDef,
       pos: editorOverride.pos || npcDef.pos,
       face: (typeof editorOverride.face === 'number') ? editorOverride.face : npcDef.face,
+      // Optional identity overrides — let chapter-mentor NPCs adopt a
+      // named persona instead of the procedurally-generated identity.
+      // Used to introduce Dr. Priya Engelhardt (ch10), Sam Okoye (ch14),
+      // and Rena Vasquez (ch15) at their chapters' lesson-1 slot.
+      name: editorOverride.name || npcDef.name,
+      role: editorOverride.role || npcDef.role,
+      portrait: editorOverride.portrait || npcDef.portrait,
     };
   }
   mesh.position.set(npcDef.pos[0], floorBaseY(npcFloor), npcDef.pos[1]);

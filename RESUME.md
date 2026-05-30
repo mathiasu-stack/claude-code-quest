@@ -52,6 +52,38 @@ index.html                          Cache-bust query strings on every script tag
 - `4b89c82` — CEO portrait moved into standard loader path so the editor can select/drag it.
 - Earlier (same session block): Add Item library, Delete, per-axis locks, NPC editing, free-drag, walk-while-editing, removed Director tier tag, Resume Play input restoration.
 
+## Curriculum overhaul (2026-05-30 session)
+
+A full audit + rewrite of all 16 chapters against the current Claude Code feature set (Opus 4.8, /model, /agents, /fast, 1M context, prompt caching 5-min TTL, hooks 27 events, output styles, headless mode, settings.json precedence, @filename import, auto-memory). Net result: 16 chapters, 65 lessons, ~13,810 XP.
+
+**Three chapters fully rewritten** (IDs preserved so the floor mapping doesn't move):
+- `ch10` "Recursive Skill Refinement" → "Choosing Your Model" (Opus/Sonnet/Haiku + /model + Fast Mode + 1M context + prompt-caching economics + match-tier-to-task heuristic). Mentor NPC: **Dr. Priya Engelhardt** (AI Operations).
+- `ch14` "Multi-Goal Command Center" → "Subagents & Delegation" (the Task/Agent tool, custom `.claude/agents/` subagents, parallel vs sequential dispatch, multi-session Command Center). Mentor: **Sam Okoye** (Engineering).
+- `ch15` "Advanced Patterns & Scaling" → "Settings, Permissions & Hooks" (settings.json precedence across 3 paths, permission allow/ask/deny, 27 hook events, status line + output styles + headless `claude -p`). Mentor: **Rena Vasquez** (Platform / InfoSec).
+
+**Content folded into surviving chapters** (old material wasn't lost, just relocated):
+- Old ch10 "Recursive Refinement" → new `ch09-l04` "Closing the Loop with learnings.md".
+- Old ch15 "Multi-file Refactors" → folded into `ch06-l03` as "The Safe Refactor Playbook".
+- Old ch15 "Test-driven Prompting" → new `ch06-l05`.
+- Old ch15 "Scheduled Automation" → new `ch16-l06`.
+
+**Existing chapters lightly updated**:
+- `ch01-l05` version stamp refreshed to v2.1.130.
+- `ch03-l01` added the `@filename` import syntax for CLAUDE.md.
+- `ch04-l01` bumped from "Four Memory Layers" → "Five Memory Layers" adding the auto-memory system as Layer 5; `ch04-l02` decision rule extended.
+- `ch07-l01` added the prompt-caching section (5-min TTL, 10% input rate) + model cost asymmetry note.
+- `ch11-l01` slash command table refreshed: added /model, /fast, /agents, /output-style; removed /rewind; clarified Plan-Mode entry via Shift+Tab.
+- `ch11-l03` rewritten as "/help, /skills and /agents — Discoverability".
+- `ch12-l01` permission modes corrected to default / acceptEdits / plan / bypassPermissions; `ch12-l02` removed defunct `/plan` command, points at Shift+Tab cycle.
+
+**Game-side changes for the new chapters**:
+- `play/play.js` `spawnNPC()` extended: `NPC_OVERRIDES[id]` now optionally accepts `name / role / portrait` (in addition to pos/face/scale) so a chapter's lesson-1 NPC can adopt a named mentor persona.
+- `data/npc_overrides.js` ships three new mentor overrides: `auto-ch10-l01` → Dr. Priya Engelhardt, `auto-ch14-l01` → Sam Okoye, `auto-ch15-l01` → Rena Vasquez.
+- `ZONE_THEMES_BY_ID` in `play.js`: ch10 retitled to "Model Engine Bay", ch14 to "Subagent Dispatch Floor", ch15 to "Guardrail Lab".
+- `index.html` cache-bust bumped: `data/curriculum*.js` → `?v=20260530b`, `play/play.js` → `?v=20260530b`.
+
+**Not done (deferred)**: bespoke 3D interactables for the new chapters (Model Selection Console, Subagent Dispatch Board, Permissions Panel). The new chapters use the default NPC delivery, which is sufficient; building dedicated objects would require new compound builders, a new `uiStyle` per device, and slot positions in the matching room. If you want them later, the pattern is in `data/lessonRegistry.js` (existing `book` / `phone` / `whiteboard` / `server` / `computer` deliveries) and the per-chapter slot would land in the room geometry that hosts that chapter's floor.
+
 ## In-flight (uncommitted, 2026-05-27 session)
 
 - **Interactable objects (phone / computer / book / whiteboard / server / display) are now selectable in the editor.** `registerInteractable()` tags the mesh + glow ring with `_isInteractable / _isInteractableGlow`; the editor recognises both, walks ring-clicks back to the owner mesh, and hides all glow rings during edit mode. Drag/translate writes back into `LESSON_DELIVERY[chapterId].objectLocation.position` (session-only — Export Layout doesn't yet serialise LESSON_DELIVERY). Files touched: `play/world/interactables.js`, `play/editor/roomsEditor.js`, `play/play.js`, `index.html` cache-bust.

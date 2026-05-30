@@ -148,8 +148,8 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
       },
       {
         id: 'ch01-l05', title: 'This training has a shelf life', xpReward: 50, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>AI Tooling Docs Age Fast</h2>
 <p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
 <h3>Why this matters</h3>
@@ -341,9 +341,9 @@ Do not change the function signature or any callers.</code></pre>
 </ul>`,
       },
       {
-        id: 'ch06-l03', title: 'Multi-file Operations', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        id: 'ch06-l03', title: 'Multi-file Operations & The Safe Refactor Playbook', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Working Across Files</h2>
 <p>Claude Code can reason across multiple files simultaneously. It's not just a search-and-replace tool — it understands relationships between files.</p>
 <pre><code>Rename the \`processPayment()\` function to \`chargeCard()\` across all files in \`src/\`. Update all call sites and any JSDoc references.</code></pre>
@@ -353,7 +353,16 @@ Do not change the function signature or any callers.</code></pre>
   <li>Ask Claude Code to confirm the scope before it begins: "How many files will this affect?"</li>
   <li>After the operation, ask it to verify: "Check that no call sites were missed"</li>
 </ul>
-<p>For large operations, switch to Plan Mode first (Chapter 4) so you can review the full scope before any edits are made.</p>`,
+<h3>The safe refactor playbook</h3>
+<p>For anything bigger than a rename, follow this sequence — it prevents 90% of multi-file disasters:</p>
+<ol>
+  <li><strong>Scope first.</strong> Before any change, list every file and call site touched. <pre><code>List every file that references \`OrderProcessor\` and show how each uses it. Don't make any changes yet.</code></pre></li>
+  <li><strong>Commit the current state.</strong> Now your rollback is one command.</li>
+  <li><strong>Use Plan Mode</strong> (Chapter 4) — review the full plan before any execution.</li>
+  <li><strong>Phase the work.</strong> Types and shared modules first, then implementations, then call sites. Don't try to do everything in one turn.</li>
+  <li><strong>Test at each phase.</strong> A broken middle phase is much cheaper to debug than a broken end-state.</li>
+  <li><strong>Final scan.</strong> Search for missed references with grep — Claude can do this in one prompt: "Find any remaining references to the old name."</li>
+</ol>`,
       },
       {
         id: 'ch06-l04', title: 'Reviewing Changes Before Accepting', xpReward: 60, videos: [],
@@ -371,6 +380,30 @@ Do not change the function signature or any callers.</code></pre>
 <h3>Asking Claude Code to explain its changes</h3>
 <pre><code>Before you make any changes, explain your plan and list every file you'll modify.</code></pre>
 <p>A good workflow: commit before every significant Claude Code operation. Then the worst case is always a simple <code>git reset</code>.</p>`,
+      },
+      {
+        id: 'ch06-l05', title: 'Test-driven Prompting', xpReward: 60, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Tests as Specification</h2>
+<p>The most reliable way to get exactly the code you want from Claude Code: write the tests first, then ask for an implementation that passes them. Tests are unambiguous in a way prose descriptions rarely are.</p>
+<pre><code>I've written tests for \`formatCurrency()\` in \`src/utils/format.test.js\`.
+Implement \`formatCurrency()\` in \`src/utils/format.js\` so every test passes.
+After implementing, run \`npm test -- format.test.js\` and report the result.</code></pre>
+<h3>Why this works</h3>
+<ul>
+  <li>The test file <em>is</em> the spec — Claude can read it directly, no interpretation needed.</li>
+  <li>"Passes the tests" is an objective success criterion. No "close but not quite right".</li>
+  <li>Edge cases live in the test file, not in your prose prompt — they don't get forgotten.</li>
+  <li>You can iterate cheaply: failing test → ask Claude to fix → re-run → repeat.</li>
+</ul>
+<h3>The workflow in three turns</h3>
+<ol>
+  <li><em>Turn 1:</em> "Read \`src/utils/format.test.js\`. List the cases it covers — don't write code yet."</li>
+  <li><em>Turn 2:</em> "Implement \`formatCurrency()\` to pass all those cases. Run the tests when done."</li>
+  <li><em>Turn 3 (only if needed):</em> Paste any failing test output. "Fix the failing cases without breaking the passing ones."</li>
+</ol>
+<p>This is also the cheapest place to use Haiku — once tests exist, satisfying them is mechanical enough that the cheapest tier often suffices.</p>`,
       },
     ],
     practicalTest: {
@@ -402,15 +435,37 @@ Do not change the function signature or any callers.</code></pre>
     lessons: [
       {
         id: 'ch12-l01', title: 'What is Plan Mode?', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/QlWyrYuEC84" title="Claude Code\'s Hidden Superpower: Plan Mode for Smart Developers" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Think Before You Act</h2><p><strong>Plan Mode</strong> separates thinking from acting. Claude Code reasons about the task and produces a detailed plan — but makes no file changes, runs no commands, takes no actions until you explicitly switch back to Default mode.</p><h3>The four permission modes</h3><ul><li><strong>Default</strong> — Asks before file edits and shell commands. Recommended for most work.</li><li><strong>Auto-accept edits</strong> — Applies file edits and common filesystem commands without asking; still prompts for other actions.</li><li><strong>Plan</strong> — Read-only tools only. Claude Code thinks and plans, zero execution. Enter with <code>/plan</code> or Shift+Tab.</li><li><strong>Auto</strong> — Evaluates all actions with background safety checks (currently a research preview). Use with care.</li></ul><p>Plan Mode is the answer to "how do I review what Claude Code intends to do before it does it?" — the question every developer asks after their first multi-file surprise.</p>',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Think Before You Act</h2>
+<p><strong>Plan Mode</strong> separates thinking from acting. Claude Code reasons about the task and produces a detailed plan — but makes no file changes, runs no commands, takes no actions until you explicitly switch back to Default mode.</p>
+<h3>The four permission modes</h3>
+<ul>
+  <li><strong>default</strong> — Asks before file edits and shell commands. Recommended for most work.</li>
+  <li><strong>acceptEdits</strong> — Auto-accepts file edits and common filesystem commands; still prompts for other actions.</li>
+  <li><strong>plan</strong> — Read-only tools only. Claude Code thinks and plans, zero execution. Toggle with Shift+Tab.</li>
+  <li><strong>bypassPermissions</strong> — Disables all permission gating. Only safe inside an isolated container / VM.</li>
+</ul>
+<p>Pass any of these on the CLI with <code>--permission-mode &lt;name&gt;</code> — particularly useful for headless / CI runs where <code>--permission-mode plan</code> guarantees a review-only execution.</p>
+<p>Plan Mode is the answer to "how do I review what Claude Code intends to do before it does it?" — the question every developer asks after their first multi-file surprise.</p>`,
       },
       {
         id: 'ch12-l02', title: 'Shift+Tab: Switching Modes', xpReward: 65, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Switching Modes</h2><p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: Default → Auto-accept edits → Plan → Auto → Default. You can also enter Plan Mode directly with the <code>/plan [description]</code> command.</p><h3>Workflow</h3><ol><li>Type <code>/plan</code> or press Shift+Tab until you reach Plan Mode</li><li>Submit your prompt — Claude Code thinks, does not act</li><li>Read the plan, ask questions, request changes</li><li>Press Shift+Tab to return to Default mode</li><li>Claude Code executes the refined plan</li></ol><p>You can iterate on the plan multiple times. The plan is part of the conversation — Claude Code remembers decisions made during planning when it executes.</p>',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Switching Modes</h2>
+<p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: <em>default → acceptEdits → plan → default</em>. The current mode is shown in the status line.</p>
+<h3>Workflow</h3>
+<ol>
+  <li>Press Shift+Tab until you reach <strong>plan</strong></li>
+  <li>Submit your prompt — Claude Code thinks, does not act</li>
+  <li>Read the plan, ask questions, request changes</li>
+  <li>Press Shift+Tab to return to <strong>default</strong> (or <strong>acceptEdits</strong> if you want to skip per-edit confirmations)</li>
+  <li>Claude Code executes the refined plan</li>
+</ol>
+<p>You can iterate on the plan multiple times. The plan is part of the conversation — Claude Code remembers decisions made during planning when it executes.</p>
+<h3>Headless plan mode</h3>
+<p>For CI / automation: <code>claude -p "review this branch" --permission-mode plan</code> runs the whole invocation in read-only mode. Nothing can be mutated even by accident. Covered in depth in Chapter 15.</p>`,
       },
       {
         id: 'ch12-l03', title: 'When to Use Plan Mode', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/7LWl3EbcFTc" title="Claude Code Plan Mode: The Senior Engineer\'s Workflow" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -454,9 +509,33 @@ Do not change the function signature or any callers.</code></pre>
     lessons: [
       {
         id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>The Command Vocabulary</h2><table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/help</code></td><td>Show built-in commands and their descriptions</td></tr><tr><td><code>/skills</code></td><td>List available skills (with token count sort via "t")</td></tr><tr><td><code>/clear</code></td><td>Reset conversation context</td></tr><tr><td><code>/compact</code></td><td>Summarise and compress the session (optional focus hint)</td></tr><tr><td><code>/init</code></td><td>Generate a CLAUDE.md for the project</td></tr><tr><td><code>/plan [description]</code></td><td>Enter Plan Mode (read-only, no execution)</td></tr><tr><td><code>/memory</code></td><td>View and edit Claude Code memory files</td></tr><tr><td><code>/mcp</code></td><td>List connected MCP servers and their tools</td></tr><tr><td><code>/permissions</code></td><td>View and manage tool permissions</td></tr><tr><td><code>/rewind</code></td><td>Step back to a previous turn in the session</td></tr><tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr><tr><td><code>/cost</code></td><td>Show token usage and cost for the current session</td></tr><tr><td><code>/exit</code></td><td>End the session</td></tr></tbody></table><p>Arguments follow the command name. <code>/compact Focus on auth decisions</code> passes a focus hint. <code>/plan Refactor the auth module</code> enters Plan Mode with context.</p>',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>The Command Vocabulary</h2>
+<table>
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>/help</code></td><td>Show built-in commands and their descriptions</td></tr>
+    <tr><td><code>/init</code></td><td>Generate a CLAUDE.md for the project</td></tr>
+    <tr><td><code>/clear</code></td><td>Reset conversation context</td></tr>
+    <tr><td><code>/compact</code></td><td>Summarise and compress the session (optional focus hint)</td></tr>
+    <tr><td><code>/model</code></td><td>Pick the model tier (opus / sonnet / haiku) for this session</td></tr>
+    <tr><td><code>/fast</code></td><td>Toggle Fast Mode while on Opus (faster output, same model)</td></tr>
+    <tr><td><code>/agents</code></td><td>Open the subagent picker — built-in plus everything under <code>.claude/agents/</code></td></tr>
+    <tr><td><code>/skills</code></td><td>List available skills (the progressive-disclosure index)</td></tr>
+    <tr><td><code>/mcp</code></td><td>List connected MCP servers and their tools</td></tr>
+    <tr><td><code>/permissions</code></td><td>View, add, or manage tool permission rules</td></tr>
+    <tr><td><code>/memory</code></td><td>View and edit Claude Code memory files</td></tr>
+    <tr><td><code>/output-style</code></td><td>Switch the output style (default / concise / explanatory / custom)</td></tr>
+    <tr><td><code>/cost</code></td><td>Show token usage and cost for the current session</td></tr>
+    <tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr>
+    <tr><td><code>/review</code></td><td>Built-in code review against the current diff</td></tr>
+    <tr><td><code>/exit</code></td><td>End the session</td></tr>
+  </tbody>
+</table>
+<p>Arguments follow the command name. <code>/compact Focus on auth decisions</code> passes a focus hint. <code>/model opus</code> switches to Opus immediately. <code>/agents</code> with no args opens the picker.</p>
+<h3>Switching into Plan Mode</h3>
+<p>Press <kbd>Shift+Tab</kbd> to cycle permission modes (Default → Auto-accept edits → Plan → back). Plan Mode is read-only — Claude reasons and proposes but cannot execute. Chapter 4 covers this in depth.</p>`,
       },
       {
         id: 'ch11-l02', title: '/init and Project Setup', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/i_OHQH4-M2Y" title="Claude Code Tutorial #2 - CLAUDE.md Files &amp; /init" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -465,10 +544,18 @@ Do not change the function signature or any callers.</code></pre>
         content: '<h2>Bootstrapping a New Project</h2><p><code>/init</code> inspects your project and generates a starter CLAUDE.md — identifying tech stack, test commands, and build tooling automatically.</p><p>Treat it as generating a first draft. After running it: correct inaccuracies, add the Business Brain pointer, apply lean CLAUDE.md principles (Chapter 6), and commit. The generated file is a starting point, not a finished product.</p>',
       },
       {
-        id: 'ch11-l03', title: '/help and Skill Discovery', xpReward: 70, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Always Know What\'s Available</h2><p><code>/help</code> shows built-in commands. For skills specifically, use <code>/skills</code> — it lists all available skills with their names and one-line descriptions (progressive disclosure in action). Run it on any new project to discover what skills the team has set up. You might find a <code>/deploy-staging</code> or <code>/security-review</code> skill that saves significant time. Press <kbd>t</kbd> in the /skills output to sort by token cost.</p>',
+        id: 'ch11-l03', title: '/help, /skills and /agents — Discoverability', xpReward: 70, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Always Know What's Available</h2>
+<p>Three commands form the discovery layer for any new project:</p>
+<ul>
+  <li><code>/help</code> — every built-in slash command, with descriptions.</li>
+  <li><code>/skills</code> — every available skill (built-in + user + project), with their one-line descriptions. This is the progressive-disclosure index from Chapter 10. Run it on any new project to discover team workflows like <code>/deploy-staging</code> or <code>/security-review</code>.</li>
+  <li><code>/agents</code> — every available subagent type, including custom ones in <code>.claude/agents/</code>. Pick from the list to dispatch a specialist (see Chapter 14).</li>
+</ul>
+<h3>Make discovery a habit</h3>
+<p>The first 30 seconds in any unfamiliar project: run <code>/skills</code> and <code>/agents</code>. You'll find existing tools the team has already built rather than reinventing them. The cost is two keypresses; the savings can be hours.</p>`,
       },
       {
         id: 'ch11-l04', title: 'Session Hygiene', xpReward: 70, videos: [],
@@ -505,8 +592,8 @@ Do not change the function signature or any callers.</code></pre>
     lessons: [
       {
         id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 75, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Persistent Memory for Your Project</h2>
 <p>Every time you start a new Claude Code session, the AI starts fresh. <strong>CLAUDE.md</strong> solves this — it's a markdown file you place in your project root that Claude Code reads automatically at the start of every session.</p>
 <h3>Where it lives</h3>
@@ -524,7 +611,15 @@ Do not change the function signature or any callers.</code></pre>
   <li>Pointers to your Business Brain folder</li>
   <li>Architecture notes and folder structure</li>
 </ul>
-<p>The CLAUDE.md is loaded into context on every session — so everything in it costs tokens. This makes <em>what you put in it</em> a critical design decision, not just a convenience.</p>`,
+<p>The CLAUDE.md is loaded into context on every session — so everything in it costs tokens. This makes <em>what you put in it</em> a critical design decision, not just a convenience.</p>
+<h3>The @filename import</h3>
+<p>Inside any CLAUDE.md you can reference another markdown file with an <code>@</code> prefix and Claude will inline its contents at load time:</p>
+<pre><code>## Brand &amp; Voice
+@.business-brain/brand/voice.md
+
+## Architecture
+@docs/architecture.md</code></pre>
+<p>This keeps the top-level CLAUDE.md short and lets the imported files live with the content they describe — owned by whoever maintains that area, not by whoever owns CLAUDE.md. You can chain imports (an imported file can itself <code>@import</code> others), but watch the total — every imported file is loaded on every session, just like the CLAUDE.md itself.</p>`,
       },
       {
         id: 'ch03-l02', title: 'The Context Window and Context Rot', xpReward: 75, videos: [],
@@ -719,12 +814,12 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     xpReward: 340,
     lessons: [
       {
-        id: 'ch04-l01', title: 'The Four Memory Layers', xpReward: 85, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: `<h2>Claude Code Has Four Memory Layers</h2>
+        id: 'ch04-l01', title: 'The Five Memory Layers', xpReward: 85, videos: [],
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: `<h2>Claude Code Has Five Memory Layers</h2>
 <p>By this point you've met three memory tools individually: the <strong>Business Brain</strong> (Chapter 7), <strong>CLAUDE.md</strong> (Chapter 6), and a preview of <strong>skills</strong> (coming in Chapters 10–11). Before you go further, it helps to see how they fit together as a system — because they are a system, not a collection of independent tricks.</p>
-<h3>The four layers, from always-loaded to on-demand</h3>
+<h3>The five layers, from always-loaded to on-demand</h3>
 <table>
   <thead><tr><th>Layer</th><th>Location</th><th>Loaded when?</th><th>What it holds</th></tr></thead>
   <tbody>
@@ -732,11 +827,14 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     <tr><td><strong>2. Project CLAUDE.md</strong></td><td><code>./CLAUDE.md</code> in repo root</td><td>Every session in this project</td><td>Stack, test commands, constraints, folder structure, pointers to other layers</td></tr>
     <tr><td><strong>3. Business Brain</strong></td><td><code>.business-brain/</code></td><td>On demand — when the task needs it</td><td>Brand voice, client profiles, product strategy, domain glossary</td></tr>
     <tr><td><strong>4. Skills + learnings.md</strong></td><td><code>.claude/skills/</code></td><td>Name/description always; full content only when invoked</td><td>Workflow templates and the team's accumulated prompt-engineering knowledge</td></tr>
+    <tr><td><strong>5. Auto-memory (recall)</strong></td><td><code>~/.claude/projects/&lt;project&gt;/memory/</code></td><td>Read on session start; written during work</td><td>What Claude has learned about <em>you</em> across sessions: user preferences, feedback, recurring project facts, references to external systems</td></tr>
   </tbody>
 </table>
 <h3>How the layers stack</h3>
-<p>Layers 1 and 2 are always in context — every token they contain is consumed on every session. Layer 3 is pointed to from Layer 2 and loaded only when a task requires it. Layer 4 exposes only its index at session start; the full skill loads when you invoke it.</p>
+<p>Layers 1 and 2 are always in context — every token they contain is consumed on every session. Layer 3 is pointed to from Layer 2 and loaded only when a task requires it. Layer 4 exposes only its index at session start; the full skill loads when you invoke it. Layer 5 is a per-project memory file Claude maintains itself, growing across sessions — and the <code>MEMORY.md</code> index at the top is what's loaded automatically.</p>
 <p>This progressive loading is the architecture's key insight: you get the right information at the right time, without paying the token cost of everything all the time.</p>
+<h3>Layer 5 vs the others</h3>
+<p>Layers 1–4 are things <em>you</em> write for Claude. Layer 5 is what Claude writes for itself, with your supervision — corrections you've made (<em>"stop summarising at the end of every response"</em>), facts about the project (<em>"merge freeze begins 2026-03-05"</em>), pointers to external systems (<em>"bugs tracked in Linear project INGEST"</em>). Auto-memory is the layer that makes Claude feel like it remembers you, not just your project.</p>
 <h3>Going deeper</h3>
 <ul>
   <li>Business Brain (Layer 3) — Chapter 7 covers building and maintaining it</li>
@@ -747,8 +845,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       },
       {
         id: 'ch04-l02', title: 'What Belongs Where', xpReward: 85, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>The Decision Rule</h2>
 <p>Every piece of context you want to give Claude Code belongs in exactly one layer. The decision rule is straightforward:</p>
 <table>
@@ -759,6 +857,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     <tr><td>Business context — brand, clients, product, strategy</td><td>Business Brain (pointer from CLAUDE.md)</td></tr>
     <tr><td>A repeatable workflow or task-specific prompt</td><td>Skill (<code>.claude/skills/</code>)</td></tr>
     <tr><td>What you've learned about how a skill behaves</td><td>learnings.md (alongside the skill)</td></tr>
+    <tr><td>A correction Claude should not need twice (<em>"don't summarise at the end"</em>)</td><td>Auto-memory (let Claude save it itself, supervise)</td></tr>
+    <tr><td>A project fact with an expiry (<em>"freeze starts 2026-05-30"</em>)</td><td>Auto-memory (it's transient and Claude-owned)</td></tr>
   </tbody>
 </table>
 <h3>Concrete examples</h3>
@@ -805,10 +905,10 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     lessons: [
       {
         id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-05-30',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Every Word Costs</h2>
-<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Max, Team, and Enterprise plans support up to 1 million tokens. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
+<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Opus 4.7+ supports up to 1,000,000 tokens (the "1M-context" tier). That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
   <li>Your full conversation history from session start</li>
@@ -819,8 +919,17 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
 </ul>
 <h3>Why compacting degrades output</h3>
 <p>When a session approaches the limit, Claude Code compresses older context. This compression is lossy — nuance, specific instructions, and edge cases from early in the session can be dropped. You'll notice it as "forgetting" earlier constraints or producing output that ignores decisions you made earlier. This is not a bug; it's physics.</p>
+<h3>Prompt caching — your discount</h3>
+<p>Stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side automatically. Cached tokens cost roughly <strong>10% of the normal input rate</strong>. The cache has a <strong>5-minute TTL</strong> — every follow-up prompt within 5 minutes reads the cached prefix cheaply; longer idle gaps evict it and the next prompt pays full freight.</p>
+<ul>
+  <li>Tight bursts of work are dramatically cheaper than the same work spread across the day.</li>
+  <li>Scheduled scripts: either poll &lt; 5 minutes (stay cached) or commit to a much longer wait (one eviction amortised). 300 seconds is the worst of both — you pay the cache miss without amortising it.</li>
+  <li>Run <code>/cost</code> to see input / cached input / output broken out. If cached input is small, you have idle time eating cache windows.</li>
+</ul>
+<h3>Model cost asymmetry</h3>
+<p>Across tiers, per million tokens: Opus ≈ 15× Haiku; Sonnet ≈ 3× Haiku. Chapter 12 covers picking the right tier per task — the same word costs an order of magnitude more on Opus than on Haiku, so cheap tiers belong on mechanical work.</p>
 <h3>The practical implication</h3>
-<p>Leaner context = better results. Not because Claude Code gets smarter, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
+<p>Leaner context = better results AND cheaper bills. Not because Claude Code gets smarter when lean, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
       {
         id: 'ch07-l02', title: 'When to Use /clear', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
