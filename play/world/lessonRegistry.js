@@ -57,7 +57,44 @@ export const LESSON_DELIVERY = {
     chapterId: 'ch16', lessonId: 'ch16-l01',
   },
 
-  // Chapters 7-15 fall through to NPC delivery (default — see
+  // Chapter 10 — Model Engine Bay (floor 3, NE quadrant — slot index 3
+  // in the floor-3 office grid: cx=13, cz=13, face=π). The console sits
+  // behind/beside the lesson NPC arc so it reads as the chapter's
+  // anchor without colliding with character pathing. Position y is
+  // floor-relative; the spawn loop adds floorBaseY(3) = 9.0.
+  // lookAt = π so the console faces south (toward the player who
+  // approaches it from the room interior).
+  ch10: {
+    delivery: 'modelConsole',
+    objectLocation: { floor: 3, position: [13, 0, 15] },
+    lookAt: Math.PI,
+    uiStyle: 'terminal',
+    chapterId: 'ch10', lessonId: 'ch10-l01',
+  },
+
+  // Chapter 14 — Subagent Dispatch Floor (floor 4, NW quadrant — slot
+  // index 1 in the floor-4 office grid: cx=13, cz=-13, face=0). Board
+  // mounted at the rear wall behind the NPC arc.
+  ch14: {
+    delivery: 'dispatchBoard',
+    objectLocation: { floor: 4, position: [13, 0, -15] },
+    lookAt: 0,
+    uiStyle: 'whiteboard',
+    chapterId: 'ch14', lessonId: 'ch14-l01',
+  },
+
+  // Chapter 15 — Guardrail Lab (floor 4, SE quadrant — slot index 2 in
+  // the floor-4 office grid: cx=-13, cz=13, face=π). Panel on a stand
+  // beside the NPCs.
+  ch15: {
+    delivery: 'permissionsPanel',
+    objectLocation: { floor: 4, position: [-13, 0, 15] },
+    lookAt: Math.PI,
+    uiStyle: 'terminal',
+    chapterId: 'ch15', lessonId: 'ch15-l01',
+  },
+
+  // Chapters 7-9, 11-13 fall through to NPC delivery (default — see
   // generateChapterNPCs in play.js).
 };
 

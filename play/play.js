@@ -50,6 +50,9 @@ import { buildWhiteboardObject } from './world/objectTypes/whiteboard.js';
 import { buildServerRack } from './world/objectTypes/serverRack.js';
 import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
+import { buildModelConsole } from './world/objectTypes/modelConsole.js';
+import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js';
+import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
@@ -1571,12 +1574,15 @@ function buildWorld() {
   clearInteractables();
   interactObjects = [];
   const buildersByKind = {
-    computer:    buildComputer,
-    book:        buildBook,
-    whiteboard:  buildWhiteboardObject,
-    server:      buildServerRack,
-    display:     buildDemoScreenObject,
-    phone:       buildPhone,
+    computer:         buildComputer,
+    book:             buildBook,
+    whiteboard:       buildWhiteboardObject,
+    server:           buildServerRack,
+    display:          buildDemoScreenObject,
+    phone:            buildPhone,
+    modelConsole:     buildModelConsole,
+    dispatchBoard:    buildDispatchBoard,
+    permissionsPanel: buildPermissionsPanel,
   };
   const onObjectInteract = (info) => {
     if (window.LessonOverlay?.open) {
@@ -1601,11 +1607,17 @@ function buildWorld() {
       // Editor-written per-chapter override (data/lesson_delivery_overrides.js).
       // If present, use it for the spawn position; the original loc
       // stays the unedited default that the override layers on top of.
-      const position = (ov?.position && ov.position.length === 3) ? ov.position : loc.position;
+      const rawPosition = (ov?.position && ov.position.length === 3) ? ov.position : loc.position;
+      // Floor-base Y offset: data positions are floor-relative (y is
+      // height above this chapter's floor plate). The spawn loop adds
+      // floorBaseY so a floor-3 ch10 entry at y=0 lands on the floor-3
+      // plate at world Y=9, not at world Y=0 (which would be floor 1).
+      const floorY = floorBaseY(loc.floor || 1);
+      const position = [rawPosition[0], (rawPosition[1] || 0) + floorY, rawPosition[2]];
       const obj = builder({
         scene,
         position,
-        lookAt: 0,
+        lookAt: cfg.lookAt || 0,
         chapterId: cid,
         lessonId: cfg.lessonId,
         onInteract: onObjectInteract,
@@ -1626,6 +1638,12 @@ function buildWorld() {
         if (Array.isArray(ov?.scale) && ov.scale.length === 3) {
           root.scale.set(ov.scale[0], ov.scale[1], ov.scale[2]);
         }
+        // Tag the glow ring with the same floor so floor visibility
+        // hides it on other floors (the ring is parented directly to
+        // the scene, not to the interactable group, so it wouldn't
+        // inherit the group's floor tag automatically).
+        const glow = root.userData._interactable?.glow;
+        if (glow?.userData) glow.userData.floor = loc.floor || 1;
       }
     } catch (e) {
       console.warn(`object build failed for ${chapterId} (${cfg.delivery})`, e);

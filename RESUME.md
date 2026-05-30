@@ -82,7 +82,14 @@ A full audit + rewrite of all 16 chapters against the current Claude Code featur
 - `ZONE_THEMES_BY_ID` in `play.js`: ch10 retitled to "Model Engine Bay", ch14 to "Subagent Dispatch Floor", ch15 to "Guardrail Lab".
 - `index.html` cache-bust bumped: `data/curriculum*.js` → `?v=20260530b`, `play/play.js` → `?v=20260530b`.
 
-**Not done (deferred)**: bespoke 3D interactables for the new chapters (Model Selection Console, Subagent Dispatch Board, Permissions Panel). The new chapters use the default NPC delivery, which is sufficient; building dedicated objects would require new compound builders, a new `uiStyle` per device, and slot positions in the matching room. If you want them later, the pattern is in `data/lessonRegistry.js` (existing `book` / `phone` / `whiteboard` / `server` / `computer` deliveries) and the per-chapter slot would land in the room geometry that hosts that chapter's floor.
+**Bespoke 3D interactables for the new chapters** (2026-05-30 follow-up):
+- `play/world/objectTypes/modelConsole.js` — three glowing engine pillars (Haiku/Sonnet/Opus, sized to tier) on a brushed-metal plinth with a wake-up status screen.
+- `play/world/objectTypes/dispatchBoard.js` — wall-mounted board with three columns (TODO/ACTIVE/DONE), pulsing cards, and a green status-LED heartbeat.
+- `play/world/objectTypes/permissionsPanel.js` — security panel on a stand with stylised lock icon and three Allow/Ask/Deny indicator lights that breathe on idle and lock-on when hovered.
+- Wired in `play.js`'s `buildersByKind` dispatch + new `LESSON_DELIVERY` entries: `ch10` (floor 3, NE quadrant), `ch14` (floor 4, NW quadrant), `ch15` (floor 4, SW quadrant). `lookAt` is now supported on `LESSON_DELIVERY` entries so the object's facing is data-driven.
+- Spawn loop now adds `floorBaseY(loc.floor)` to position Y so floor-2+ interactable entries can keep using floor-relative Y in the data.
+- The glow ring (parented to scene rather than the interactable group) is now tagged with `floor` so it hides on other floors instead of leaking through.
+- Cache-bust: `play/play.js → ?v=20260530c`.
 
 ## In-flight (uncommitted, 2026-05-27 session)
 
