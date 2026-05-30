@@ -180,10 +180,15 @@ const SERVER_ROOM = {
 
 const PRESETS = {
   0: RECEPTION,
-  1: LIBRARY,
+  1: RECEPTION,   // was LIBRARY (dark navy night sky). Zone 1's z-band
+                  // is now exterior since the library moved to the
+                  // west wing — bright daytime sky for outside.
   15: SERVER_ROOM,
 };
 
+// Fallback is RECEPTION (bright daytime) rather than DEFAULT_SKY so
+// every unauthored zone the player wanders into stays bright instead
+// of falling through to a flatter default-blue.
 export function getSkyPresetForZone(idx) {
-  return PRESETS[idx] || DEFAULT_SKY;
+  return PRESETS[idx] || RECEPTION;
 }

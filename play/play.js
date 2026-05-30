@@ -499,58 +499,12 @@ function clampMove(oldX, oldZ, newX, newZ) {
     newZ = Math.max(-17.5, Math.min(17.5, newZ));
   }
 
-  if (currentFloor !== 1) {
-    // skip the floor-1 zone-corridor logic
-  } else if (newX > -10.5) {
-    // Only run the atrium-library Z-corridor check when the player is
-    // in the east half of floor 1 (atrium / library / their shared door
-    // at x∈[-1.7, +1.7]). In the west wing (x<-10.5) the wall colliders
-    // handle boundaries.
-
-  // First, find what zone we're trying to be in
-  // Doorway corridor: at any boundary z, x in [-1.7, 1.7], z within ±0.6 of boundary
-  for (let i = 1; i < ZONE_COUNT; i++) {
-    const bZ = ZONE_BOUNDS[i].startZ;
-    if (Math.abs(newZ - bZ) <= 0.6) {
-      // Near a boundary
-      if (Math.abs(newX) <= 1.7) {
-        // In doorway corridor
-        if (isZoneIdxOpen(i)) {
-          // Allow passage; clamp x to corridor width
-          newX = Math.max(-1.7, Math.min(1.7, newX));
-          return { x: newX, z: newZ };
-        } else {
-          // Locked: bounce back to whichever side player came from
-          const oldIdx = zoneIndexAt(oldZ);
-          if (oldIdx < i) newZ = bZ - 0.61;
-          else newZ = bZ + 0.61;
-          return { x: newX, z: newZ };
-        }
-      } else {
-        // Near boundary but not in corridor: push into the zone we came from
-        const oldIdx = zoneIndexAt(oldZ);
-        if (oldIdx < i) newZ = Math.min(newZ, bZ - 0.61);
-        else newZ = Math.max(newZ, bZ + 0.61);
-        return { x: newX, z: newZ };
-      }
-    }
-  }
-
-  // Otherwise, in a normal zone interior
-  const targetIdx = zoneIndexAt(newZ);
-  if (targetIdx < 0) {
-    // Out of all zones — clamp to entire range
-    newZ = Math.max(ZONE_BOUNDS[0].startZ + 0.4,
-      Math.min(ZONE_BOUNDS[ZONE_COUNT - 1].endZ - 0.4, newZ));
-    return { x: newX, z: newZ };
-  }
-  if (!isZoneIdxOpen(targetIdx)) {
-    // Trying to be inside a locked zone — push to last open zone end
-    let lastOpen = targetIdx - 1;
-    while (lastOpen >= 0 && !isZoneIdxOpen(lastOpen)) lastOpen--;
-    if (lastOpen >= 0) newZ = ZONE_BOUNDS[lastOpen].endZ - 0.61;
-  }
-  } // close the floor===1 branch
+  // (Floor-1 zone-corridor gating was removed in the building
+  // restructure. The legacy logic assumed z=+11 was the locked
+  // entrance to the library zone, but the library moved into the
+  // west wing — z=+11 is now just the building's exterior front
+  // facade. Chapter gating lives on its own physical doors now
+  // (e.g. the Files↔Library registerDoor at z=-11, x=-22).)
 
   // Static furniture AABBs — push out along the shortest axis.
   // Only consider colliders for the player's current floor.
