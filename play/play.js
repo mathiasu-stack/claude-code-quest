@@ -779,8 +779,20 @@ function makeWallSign(text, w = 8, h = 2, bg = '#1a2744', fg = '#c9a44c') {
   const ctx = c.getContext('2d');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height);
   ctx.fillStyle = fg;
-  ctx.font = 'bold 130px serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Auto-fit the font size so long titles ("SUBAGENT DISPATCH FLOOR",
+  // "MODEL ENGINE BAY", "FLOOR 4 — GUARDRAIL LAB") don't get clipped
+  // by the fixed-width canvas. Starts at 130px and shrinks in 6px
+  // steps until the rendered width fits 92% of the canvas, with a
+  // 36px floor so very long signs are tiny but readable rather than
+  // truncated mid-word.
+  const maxWidth = c.width * 0.92;
+  let fontPx = 130;
+  while (fontPx > 36) {
+    ctx.font = `bold ${fontPx}px serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    fontPx -= 6;
+  }
   ctx.fillText(text, c.width / 2, c.height / 2);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
