@@ -32,6 +32,21 @@ window.COMPOUND_OVERRIDES = {
     'marcus_server_tower': { hidden: true },
     'marcus_laptop': { hidden: true },
     'marcus_succulent': { hidden: true },
+    // Kenji's three demo screens were thin emissive PlaneGeometry decals
+    // pasted on top of his existing monitor housings. Those monitors got
+    // removed with the lobby cleanup, so the screens now float as
+    // unshielded bright-white squares on the wall (MeshBasicMaterial
+    // ignores scene lighting and reads as fully blown-out). Hide them.
+    'kenji_screen_0': { hidden: true },
+    'kenji_screen_1': { hidden: true },
+    'kenji_screen_2': { hidden: true },
+    // Aisha's papers + Diana's filing-cabinet labels were anchored to
+    // furniture that's no longer in the lobby — hide them too so they
+    // don't float at the height where the desk/cabinet used to sit.
+    'aisha_papers': { hidden: true },
+    'diana_label_0': { hidden: true },
+    'diana_label_1': { hidden: true },
+    'diana_label_2': { hidden: true },
     'service_elevator': { pos: [11.2866, 0, -7.5032], rotY: 1.5708, scale: [4.7, 5.2, 4.7] },
     'aisha_whiteboard': { pos: [10.1831, 2, -9.6273], rotY: -1.5708, scale: [0.65, 0.65, 0.65] },
     'clock': { hidden: true },
