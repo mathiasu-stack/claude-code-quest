@@ -512,6 +512,25 @@ function clampMove(oldX, oldZ, newX, newZ) {
   // Static furniture AABBs — push out along the shortest axis.
   // Only consider colliders for the player's current floor.
   const R = PLAYER_RADIUS;
+  // Build a transient list of door colliders for any door that's still
+  // locked. Door visual swings shut but the door mesh has no AABB on
+  // its own, so without this loop the player walks straight through a
+  // visibly-closed door. Box dimensions match registerDoor's DOOR_W
+  // (3.5m) at the door's z position (0.2m deep wall).
+  const DOOR_W = 3.5;
+  for (const d of zoneDoors) {
+    if ((d.floor || 1) !== currentFloor) continue;
+    if (isTestDone(`${d.gateChapter}-test`)) continue;
+    // d.atZ + d.centerX cached on the door at registration time.
+    colliders.push({
+      minX: d.centerX - DOOR_W / 2,
+      maxX: d.centerX + DOOR_W / 2,
+      minZ: d.atZ - 0.15,
+      maxZ: d.atZ + 0.15,
+      floor: d.floor || 1,
+      _transient: true,
+    });
+  }
   for (const c of colliders) {
     if (c.floor !== currentFloor) continue;
     if (newX > c.minX - R && newX < c.maxX + R &&
@@ -526,6 +545,11 @@ function clampMove(oldX, oldZ, newX, newZ) {
       else if (minPen === dzNear)  newZ = c.minZ - R - 0.001;
       else                          newZ = c.maxZ + R + 0.001;
     }
+  }
+  // Drop the per-frame transient door colliders we pushed at the top
+  // so the array doesn't grow each frame.
+  while (colliders.length && colliders[colliders.length - 1]._transient) {
+    colliders.pop();
   }
 
   // NPC repulsion — treat each as a small cylinder so the player can't
@@ -2298,6 +2322,18 @@ function registerStaticColliders() {
   addColliderAABB(-33, -23.75, -11.15, -10.85, 1);
   addColliderAABB(-20.25, -11, -11.15, -10.85, 1);
 
+  // West wing OUTER walls — built procedurally by buildFloor1WestRoom
+  // and buildAtrium-adjacent code (visible meshes added via scene.add()
+  // without going through window.ROOMS), so the auto-collider loop
+  // below never sees them. Register them here so the player can't walk
+  // through the visible west / south walls of Files + Plan Mode.
+  // West outer (Files):     x=-33, z=[-11, +11]
+  addColliderAABB(-33.15, -32.85, -11, 11, 1);
+  // West outer (Plan Mode): x=-33, z=[+11, +33]
+  addColliderAABB(-33.15, -32.85,  11, 33, 1);
+  // South outer (Plan Mode): z=+33, x=[-33, -11]  (the "PLAN WAR ROOM" wall)
+  addColliderAABB(-33, -11, 32.85, 33.15, 1);
+
   // Floors 2-4 internal walls now come from window.ROOMS too — each
   // office_floor{N} room declares its own unique partitioning (so
   // floor 2 / 3 / 4 don't all look identical). The wall auto-collide
@@ -2360,6 +2396,11 @@ function registerDoor(targetScene, atZ, gateChId, nextTitle, centerX = 0, openRo
     gateChapter: gateChId, nextTitle,
     lastOpen: passed,
     openRot,
+    // Stashed for clampMove's transient door-collider: when the door is
+    // locked, a 3.5m-wide × 0.3m-deep AABB centred on (centerX, atZ)
+    // is pushed into colliders for this frame so the player can't walk
+    // through the closed door.
+    centerX, atZ, floor: 1,
   });
 }
 
