@@ -1,6 +1,11 @@
-// computer.js — workstation interactable. Sits on a desk, screen wakes
-// up when the player enters range, opens a "terminal" lesson overlay
-// when interacted with.
+// computer.js — interactable visitor info kiosk. Tall brushed-metal
+// pedestal with a screen on top at eye level. Screen wakes up when the
+// player enters range; opens the chapter overlay on E.
+//
+// (Previously this was a tiny desk-mounted PC meant to sit on top of an
+// existing desk in the world. The lobby cleanup removed the host desk,
+// so the builder was restructured to be self-supporting at a natural
+// standing height instead of either floating or lying flat on the floor.)
 
 import * as THREE from 'three';
 import { registerInteractable } from '../interactables.js';
@@ -9,40 +14,60 @@ export function buildComputer({
   scene, position, lookAt = 0, chapterId, lessonId, onInteract,
 }) {
   const g = new THREE.Group();
-  g.position.set(position[0], position[1] ?? 0.78, position[2]);
+  g.position.set(position[0], position[1] ?? 0, position[2]);
   g.rotation.y = lookAt;
   scene.add(g);
 
-  // Desk under the computer (small, just enough to anchor the screen).
-  const desk = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.05, 0.6),
-    new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.7 }),
+  // Pedestal — main column the screen sits on. Brushed-graphite metal
+  // so it reads as a museum / lobby info kiosk rather than a desk.
+  const PED_H = 0.95;
+  const pedestal = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, PED_H, 0.45),
+    new THREE.MeshStandardMaterial({ color: 0x37474f, metalness: 0.55, roughness: 0.45 }),
   );
-  desk.position.y = 0.02;
-  g.add(desk);
+  pedestal.position.y = PED_H / 2;
+  pedestal.castShadow = true; pedestal.receiveShadow = true;
+  g.add(pedestal);
 
-  // Monitor stand
+  // Foot ring — small flare at the base so the pedestal looks anchored
+  // rather than dropped flat on the floor.
+  const foot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.70, 0.06, 0.55),
+    new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.6, roughness: 0.5 }),
+  );
+  foot.position.y = 0.03;
+  g.add(foot);
+
+  // Top plate — darker cap where the monitor mounts.
+  const topPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.65, 0.04, 0.50),
+    new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.70, roughness: 0.40 }),
+  );
+  topPlate.position.y = PED_H + 0.02;
+  g.add(topPlate);
+
+  // Monitor mounted on top of the pedestal. Base offset = PED_H + plate.
+  const baseY = PED_H + 0.04;
+
   const stand = new THREE.Mesh(
     new THREE.CylinderGeometry(0.05, 0.10, 0.18, 12),
     new THREE.MeshStandardMaterial({ color: 0x222, metalness: 0.4, roughness: 0.4 }),
   );
-  stand.position.y = 0.13;
+  stand.position.y = baseY + 0.09;
   g.add(stand);
 
-  // Monitor housing
   const housing = new THREE.Mesh(
     new THREE.BoxGeometry(0.7, 0.45, 0.05),
     new THREE.MeshStandardMaterial({ color: 0x111, metalness: 0.6, roughness: 0.4 }),
   );
-  housing.position.set(0, 0.46, 0);
+  housing.position.set(0, baseY + 0.42, 0);
   g.add(housing);
 
-  // Screen — emissive plane that glows when the player approaches.
-  // Initial state: dim. When in range, emissive ramps up to 0.85.
+  // Screen — emissive plane that glows brighter when the player approaches.
   const screenMat = new THREE.MeshStandardMaterial({
     color: 0x4fc3f7,
     emissive: 0x4fc3f7,
-    emissiveIntensity: 0.25,    // starts dim ("standby")
+    emissiveIntensity: 0.25,
     roughness: 0.4,
     metalness: 0,
   });
@@ -50,26 +75,22 @@ export function buildComputer({
     new THREE.PlaneGeometry(0.66, 0.40),
     screenMat,
   );
-  screen.position.set(0, 0.46, 0.03);
+  screen.position.set(0, baseY + 0.42, 0.03);
   g.add(screen);
 
-  // Keyboard
-  const keyboard = new THREE.Mesh(
-    new THREE.BoxGeometry(0.55, 0.025, 0.18),
-    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.3, roughness: 0.6 }),
+  // Small underlit accent strip below the screen — reads as a status
+  // indicator and helps glue the screen to the pedestal visually.
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: 0x4fc3f7, emissive: 0x4fc3f7, emissiveIntensity: 0.55, roughness: 0.4,
+  });
+  const accent = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.40, 0.025),
+    accentMat,
   );
-  keyboard.position.set(0, 0.06, 0.20);
-  g.add(keyboard);
+  accent.position.set(0, PED_H - 0.10, 0.226);
+  g.add(accent);
 
-  // Mouse
-  const mouse = new THREE.Mesh(
-    new THREE.BoxGeometry(0.07, 0.025, 0.10),
-    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.3, roughness: 0.6 }),
-  );
-  mouse.position.set(0.30, 0.06, 0.20);
-  g.add(mouse);
-
-  // Register as interactable. Glow under the desk.
+  // Register as interactable. Glow under the pedestal.
   const it = registerInteractable({
     mesh: g,
     kind: 'Computer',
@@ -84,18 +105,16 @@ export function buildComputer({
     },
   });
 
-  // Wake-up animation when in range — boost screen emissive intensity.
-  // The interactables system updates `it.isHovered` via the hover state;
-  // we read that each frame via a small ticker. Since interactables
-  // doesn't expose a ticker hook, we attach to play.js's main update
-  // through the returned update() function.
+  // Wake-up animation when in range — boost screen + accent emissive.
   const out = {
     group: g,
     interactable: it,
     update(dt, hovered) {
-      // hovered === true when this object is the nearest interactable.
-      const target = hovered ? 0.95 : 0.25;
-      screenMat.emissiveIntensity += (target - screenMat.emissiveIntensity) * (1 - Math.exp(-dt * 6));
+      const k = 1 - Math.exp(-dt * 6);
+      const sTarget = hovered ? 0.95 : 0.25;
+      screenMat.emissiveIntensity += (sTarget - screenMat.emissiveIntensity) * k;
+      const aTarget = hovered ? 0.95 : 0.55;
+      accentMat.emissiveIntensity += (aTarget - accentMat.emissiveIntensity) * k;
     },
   };
   return out;

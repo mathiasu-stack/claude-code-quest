@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-29T08:10:04.655Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-31T13:13:08.902Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.
@@ -24,25 +24,12 @@ window.COMPOUND_OVERRIDES = {
     'hanging_plant': { hidden: true },
     'ceiling_lamp_3': { hidden: true },
     'ceiling_lamp_0': { hidden: true },
-    // marcus_* compound children sat on / beside Marcus's IT-bench desk
-    // which was removed from the reception lobby (lobby shouldn't house
-    // a workstation). Hidden here so the laptop + succulent don't float
-    // at desk-surface height and the server tower isn't a lone box on
-    // the floor.
     'marcus_server_tower': { hidden: true },
     'marcus_laptop': { hidden: true },
     'marcus_succulent': { hidden: true },
-    // Kenji's three demo screens were thin emissive PlaneGeometry decals
-    // pasted on top of his existing monitor housings. Those monitors got
-    // removed with the lobby cleanup, so the screens now float as
-    // unshielded bright-white squares on the wall (MeshBasicMaterial
-    // ignores scene lighting and reads as fully blown-out). Hide them.
     'kenji_screen_0': { hidden: true },
     'kenji_screen_1': { hidden: true },
     'kenji_screen_2': { hidden: true },
-    // Aisha's papers + Diana's filing-cabinet labels were anchored to
-    // furniture that's no longer in the lobby — hide them too so they
-    // don't float at the height where the desk/cabinet used to sit.
     'aisha_papers': { hidden: true },
     'diana_label_0': { hidden: true },
     'diana_label_1': { hidden: true },
@@ -55,6 +42,8 @@ window.COMPOUND_OVERRIDES = {
     'poster_ship_it': { hidden: true },
     'poster_grow': { hidden: true },
     'poster_stay': { hidden: true },
+    'pillow_R_b': { hidden: true },
+    'pillow_R_a': { hidden: true },
   },
   'atrium': {
     'mullion_h_0': { hidden: true },
