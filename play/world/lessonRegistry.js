@@ -21,10 +21,17 @@ export const LESSON_DELIVERY = {
     chapterId: 'ch03', lessonId: 'ch03-l01',
   },
 
-  // Chapter 4 — Memory Vault. Whiteboard on the Reception east wall.
+  // Chapter 4 — Memory Vault. Whiteboard on the east interior wall of
+  // floor-2's NE quadrant (ch04 slot, cx=13 / cz=13). Position Y is
+  // floor-relative; spawn loop adds floorBaseY(2) = 4.5 at build time.
+  // lookAt = π/2 rotates the whiteboard normal to point west (-X) so
+  // its surface faces into the room from the east wall, which sits at
+  // x=+18; placing the board at x=17.7 keeps the 2.2m frame flush
+  // against the wall without poking through.
   ch04: {
     delivery: 'whiteboard',
-    objectLocation: { floor: 1, position: [-9.5, 0, 0] },
+    objectLocation: { floor: 2, position: [17.7, 0, 13] },
+    lookAt: Math.PI / 2,
     uiStyle: 'whiteboard',
     chapterId: 'ch04', lessonId: 'ch04-l01',
   },

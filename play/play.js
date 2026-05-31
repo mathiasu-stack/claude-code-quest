@@ -2334,6 +2334,26 @@ function registerStaticColliders() {
   // South outer (Plan Mode): z=+33, x=[-33, -11]  (the "PLAN WAR ROOM" wall)
   addColliderAABB(-33, -11, 32.85, 33.15, 1);
 
+  // Elevator shaft walls — built by buildElevator() inside a single
+  // compound shaftGroup added via placeCompoundChild(). Shaft footprint
+  // in world coords: x=[11.1, 13.5], z=[-8.8, -6.4]. The west face
+  // (x=11.1) is the lobby entrance and stays open on floor 1; on
+  // floors 2-4 it's closed (cab is the only way in). The other three
+  // faces are solid glass on every floor. Register colliders for all
+  // four floors the shaft passes through.
+  for (let f = 1; f <= 4; f++) {
+    // East face (outside the building)
+    addColliderAABB(13.40, 13.60, -8.80, -6.40, f);
+    // North face
+    addColliderAABB(11.10, 13.50, -8.90, -8.70, f);
+    // South face
+    addColliderAABB(11.10, 13.50, -6.50, -6.30, f);
+    // West face (lobby entrance) — block only on floors 2-4 where the
+    // shaft is closed. Floor 1 keeps this gap so the player can walk
+    // from the atrium into the cab through the south-facing opening.
+    if (f >= 2) addColliderAABB(11.00, 11.20, -8.80, -6.40, f);
+  }
+
   // Floors 2-4 internal walls now come from window.ROOMS too — each
   // office_floor{N} room declares its own unique partitioning (so
   // floor 2 / 3 / 4 don't all look identical). The wall auto-collide
