@@ -14,9 +14,11 @@
 
 import * as THREE from 'three';
 
-const DEFAULT_COUNT = 80;
-// Smaller volume so motes stay near the player rather than drifting
-// out through doorways and reading as "stars inside the room".
+// Fewer particles + smaller volume so motes stay near the player and
+// don't read as "snowing inside the office". 80 at 0.085m was visually
+// noticeable on every wall; 35 at 0.022m disappears unless you're
+// looking for it (the original intent — catching the key light).
+const DEFAULT_COUNT = 35;
 const VOLUME = { x: 5, y: 3.0, z: 5 };
 
 export class DustMotes {
@@ -48,11 +50,14 @@ export class DustMotes {
 
     const mat = new THREE.PointsMaterial({
       map: tex,
-      size: 0.085,
+      // 0.022m ≈ 2.2cm — reads as a dust mote, not the 8.5cm "snowflake"
+      // it used to be. opacity also dropped from 0.55 → 0.30 so the motes
+      // catch the key light but don't paint freckles on every wall.
+      size: 0.022,
       sizeAttenuation: true,
       transparent: true,
       depthWrite: false,
-      opacity: 0.55,
+      opacity: 0.30,
       color: 0xfff5d4,
     });
 

@@ -15,21 +15,13 @@ import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
 // -5% of player horizontal motion so it appears further away.
 
 function makeWindowFrame(width, height, color = 0x4e342e) {
-  // Meshy frame-only window if the asset preloaded (depth ≤ 0.20 keeps
-  // it flush against the wall plane so the skyline behind still reads).
-  // The GLB origin is at floor-bottom; this function expects the frame
-  // to be centered on its own midline, so we wrap the GLB so its
-  // CENTER lands at the call-site's local (0, 0, 0).
-  const glb = makeDecoration('window', { width, height, depth: 0.20 });
-  if (glb) {
-    // makeDecoration parks the bottom of the AABB at y=0; shift up by
-    // height/2 so the frame's center aligns with the caller's origin
-    // (the call-sites position the wrapper at y = window-center).
-    const wrapper = new THREE.Group();
-    glb.position.y = -height / 2;
-    wrapper.add(glb);
-    return wrapper;
-  }
+  // Procedural frame only. The Meshy "window" GLB shipped with an opaque
+  // glass mesh baked in, which sat in front of the separately-added
+  // transparent makeWindowGlass plane and the exterior skyline — so the
+  // window read as a flat dark/textured rectangle instead of "see-through
+  // glass with city outside". Using the procedural frame (no glass) lets
+  // the transparent glass plane do its job and the exterior skyline +
+  // sky show through cleanly.
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
   const tFrame = new THREE.Mesh(new THREE.BoxGeometry(width, 0.18, 0.12), mat);

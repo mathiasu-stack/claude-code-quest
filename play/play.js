@@ -737,8 +737,18 @@ function makeLabelSprite(text, fg = '#fff', bg = 'rgba(26,39,68,0.92)') {
   ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
   ctx.closePath(); ctx.fill();
   ctx.fillStyle = fg;
-  ctx.font = 'bold 50px sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Auto-fit font like makeWallSign — longer door labels such as
+  // "Knowledge Library — Locked" were running off both edges of the
+  // 512px canvas at fixed 50px bold sans-serif. Shrinks in 4px steps
+  // down to 20px so even "— Locked" suffixed titles fit cleanly.
+  const maxWidth = c.width * 0.90;
+  let fontPx = 50;
+  while (fontPx > 20) {
+    ctx.font = `bold ${fontPx}px sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    fontPx -= 4;
+  }
   ctx.fillText(text, w / 2, h / 2);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -756,8 +766,16 @@ function makeNpcNameTag(text) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 96;
   const ctx = c.getContext('2d');
-  ctx.font = '600 36px sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Auto-fit font so longer mentor names ("Dr. Priya Engelhardt") fit
+  // alongside their emoji prefix without overflowing the canvas.
+  const maxWidth = c.width * 0.92;
+  let fontPx = 36;
+  while (fontPx > 16) {
+    ctx.font = `600 ${fontPx}px sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    fontPx -= 2;
+  }
   // Subtle dark stroke first, then white fill — looks like a soft
   // outline rather than a hard border, but keeps the name readable
   // against the cream walls and dark floors.
@@ -846,7 +864,15 @@ function buildChair(x, z, ry = 0, color = 0x37474f) {
 }
 
 function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
-  const glb = makeDecoration('desk', { width: w, depth: d, height: 0.78 });
+  // stretch:true honours width/depth/height EXACTLY (non-uniform scale),
+  // instead of the uniform-fit default which picks the SMALLEST scale
+  // ratio across axes. The desk GLB's natural proportions are taller
+  // than the requested 0.78m, so uniform fit was shrinking the desk
+  // down to ~50% of the requested width/depth — the "tiny desk vs
+  // character" symptom. Stretching slightly distorts the model but
+  // gives a desk that visibly matches a 1.85m character at the right
+  // height (top at 0.78, surface at waist-ish).
+  const glb = makeDecoration('desk', { width: w, depth: d, height: 0.78, stretch: true });
   if (glb) {
     glb.position.set(x, 0, z); glb.rotation.y = ry;
     glb.userData.surface = 'floor';
@@ -855,13 +881,13 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
   const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), mat);
-  top.position.y = 0.75; top.castShadow = true; top.receiveShadow = true; g.add(top);
-  const legGeom = new THREE.BoxGeometry(0.08, 0.75, 0.08);
+  top.position.y = 0.78; top.castShadow = true; top.receiveShadow = true; g.add(top);
+  const legGeom = new THREE.BoxGeometry(0.08, 0.78, 0.08);
   const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
   const dx = w / 2 - 0.1, dz = d / 2 - 0.1;
   [[-dx,-dz],[dx,-dz],[-dx,dz],[dx,dz]].forEach(([lx,lz]) => {
     const l = new THREE.Mesh(legGeom, legMat);
-    l.position.set(lx, 0.375, lz); g.add(l);
+    l.position.set(lx, 0.39, lz); g.add(l);
   });
   g.position.set(x, 0, z); g.rotation.y = ry;
   g.userData.surface = 'floor';
