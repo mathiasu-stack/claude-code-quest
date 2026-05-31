@@ -13,10 +13,16 @@ export const LESSON_DELIVERY = {
   ch01: { delivery: 'npc',        npcId: 'linda'  },
   ch02: { delivery: 'npc',        npcId: 'noor'   },
 
-  // Chapter 3 — CLAUDE.md Atrium. Computer on Aisha's desk in Reception.
+  // Chapter 3 — CLAUDE.md Atrium. Computer kiosk beside the reception
+  // counter — Aisha's desk (the previous host at y=1.0) was removed
+  // with the lobby cleanup, so the computer is now grounded at y=0
+  // (its builder includes a self-contained mini-desk) and relocated
+  // to x=3, z=-8.5 — just east of the reception counter at
+  // [-0.04, 0, -9.04], so it reads as a visitor info terminal rather
+  // than a floating computer in the middle of the lobby.
   ch03: {
     delivery: 'computer',
-    objectLocation: { floor: 1, position: [7.5, 1.0, -3] },
+    objectLocation: { floor: 1, position: [3, 0, -8.5] },
     uiStyle: 'terminal',
     chapterId: 'ch03', lessonId: 'ch03-l01',
   },
