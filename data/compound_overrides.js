@@ -24,9 +24,14 @@ window.COMPOUND_OVERRIDES = {
     'hanging_plant': { hidden: true },
     'ceiling_lamp_3': { hidden: true },
     'ceiling_lamp_0': { hidden: true },
-    'marcus_server_tower': { pos: [-7.7563, 0, -4.3688], rotY: 0 },
-    'marcus_laptop': { pos: [-7.362, 0.755, -2.308], rotY: 1.9199 },
-    'marcus_succulent': { pos: [-7.554, 0.8, -3.489], rotY: 0 },
+    // marcus_* compound children sat on / beside Marcus's IT-bench desk
+    // which was removed from the reception lobby (lobby shouldn't house
+    // a workstation). Hidden here so the laptop + succulent don't float
+    // at desk-surface height and the server tower isn't a lone box on
+    // the floor.
+    'marcus_server_tower': { hidden: true },
+    'marcus_laptop': { hidden: true },
+    'marcus_succulent': { hidden: true },
     'service_elevator': { pos: [11.2866, 0, -7.5032], rotY: 1.5708, scale: [4.7, 5.2, 4.7] },
     'aisha_whiteboard': { pos: [10.1831, 2, -9.6273], rotY: -1.5708, scale: [0.65, 0.65, 0.65] },
     'clock': { hidden: true },

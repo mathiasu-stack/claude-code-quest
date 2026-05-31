@@ -119,18 +119,12 @@ window.ROOMS = [
       { type: 'builder', fn: 'water_cooler', pos: [-9.5, 0, -2] },
       { type: 'builder', fn: 'couch', pos: [-8.5, 0, 5], rotY: 1.5708 },
       { type: 'builder', fn: 'couch', pos: [8.5, 0, 5], rotY: -1.5708 },
-      { type: 'builder', fn: 'desk', pos: [-7.5, 0, -3], rotY: 1.5708, args: { w: 1.6, d: 0.8 }, scale: [1.55, 1.55, 1.55] },
-      { type: 'builder', fn: 'chair', pos: [-6.4, 0, -3] },
-      { type: 'builder', fn: 'desk', pos: [7.5, 0, -3], rotY: -1.5708, args: { w: 1.6, d: 0.8 }, scale: [1.55, 1.55, 1.55] },
-      { type: 'builder', fn: 'chair', pos: [6.4, 0, -3], rotY: 3.1416 },
-      { type: 'builder', fn: 'desk', pos: [-7.5, 0, 3], rotY: 1.5708, args: { w: 2.2, d: 0.8 } },
-      { type: 'builder', fn: 'monitor', pos: [-7.5, 0, 2], rotY: 1.5708, args: { screenColor: 11225020 } },
-      { type: 'builder', fn: 'monitor', pos: [-7.5, 0, 4], rotY: 1.5708, args: { screenColor: 16763432 } },
-      { type: 'builder', fn: 'chair', pos: [-6.4, 0, 3] },
-      { type: 'builder', fn: 'filing_cabinet', pos: [7.6, 0, 2] },
-      { type: 'builder', fn: 'filing_cabinet', pos: [7.6, 0, 3] },
-      { type: 'builder', fn: 'filing_cabinet', pos: [7.6, 0, 4] },
-      { type: 'builder', fn: 'chair', pos: [6.2, 0, 3], rotY: 3.1416 },
+      // Worker desks, monitors, filing cabinets, and their chairs were
+      // removed from the reception lobby — a welcome lobby should be
+      // a clean greeting area (reception counter, seating, plants,
+      // water cooler) not an open-plan workstation. NPCs (Marcus, Aisha,
+      // Kenji, Diana) still live in this room but now stand in the
+      // open lobby instead of being seated at desks.
       { type: 'builder', fn: 'reception_windows' },
       { type: 'builder', fn: 'decorate_reception' },
       { type: 'builder', fn: 'reception_centerpiece' },
