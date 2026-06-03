@@ -1987,6 +1987,7 @@ body.in-play #mobile-header { display: none !important; }
   font-weight: 600;
 }
 .dlg-status.dlg-done { background: var(--green-bg, #e8f5e9); color: #16a34a; }
+.dlg-status.dlg-gate { background: #fff4e0; color: #b86e00; }
 .dlg-body {
   font-size: 14px;
   line-height: 1.55;

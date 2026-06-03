@@ -3545,21 +3545,140 @@ function tryInteract() {
   openDialogue(npc);
 }
 
+// ─── "You're ahead of yourself" gating ───────────────────────────────────────
+// When the player approaches an NPC/assessor whose lesson or test sits AFTER
+// their current objective in the lesson order (and they haven't done it yet),
+// the NPC defers and points them back to the right instructor first — keeping
+// the curriculum order intact narratively, in sync with the objective compass.
+function _stepIndexOf(kind, lessonId, testId) {
+  const curriculum = window.CURRICULUM || [];
+  let idx = 0;
+  for (const ch of curriculum) {
+    for (const l of (ch.lessons || [])) {
+      if (kind === 'lesson' && lessonId === l.id) return idx;
+      idx++;
+    }
+    if (ch.practicalTest) {
+      if (kind === 'test' && testId === ch.practicalTest.id) return idx;
+      idx++;
+    }
+  }
+  return -1;
+}
+
+function _stepTitle(ref) {
+  const ch = window.CURRICULUM?.find(c => c.id === ref.chapterId);
+  if (!ch) return '';
+  if (ref.kind === 'test') return ch.practicalTest?.title || `${ch.title} practical`;
+  return (ch.lessons?.find(x => x.id === ref.lessonId)?.title) || '';
+}
+
+// Friendly name of whoever delivers the objective step. Prefers the spawned
+// mesh (carries editor name overrides), falls back to the roster / generated
+// def so it resolves even when that NPC's floor isn't loaded, finally the
+// delivery-device label. Returns { name, isDevice } or null.
+function _stepDeliverer(ref) {
+  for (const m of npcMeshes) {
+    const n = m.userData?.npc;
+    if (!n) continue;
+    if ((ref.kind === 'lesson' && n.lessonId === ref.lessonId)
+     || (ref.kind === 'test'   && n.testId   === ref.testId)) {
+      return { name: n.name.split(' ')[0], isDevice: false };
+    }
+  }
+  const matchDef = (n) =>
+    (ref.kind === 'lesson' && n.lessonId === ref.lessonId)
+ || (ref.kind === 'test'   && n.testId   === ref.testId);
+  for (const n of NPCS) {
+    if (matchDef(n)) {
+      const ov = window.NPC_OVERRIDES?.[n.id];
+      return { name: (ov?.name || n.name).split(' ')[0], isDevice: false };
+    }
+  }
+  const curriculum = window.CURRICULUM || [];
+  for (let i = 0; i < curriculum.length; i++) {
+    const ch = curriculum[i];
+    if (!ch || ch.id !== ref.chapterId || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+    const n = generateChapterNPCs(i).find(matchDef);
+    if (n) {
+      const ov = window.NPC_OVERRIDES?.[n.id];
+      return { name: (ov?.name || n.name).split(' ')[0], isDevice: false };
+    }
+  }
+  if (ref.kind === 'lesson') {
+    const cfg = LESSON_DELIVERY[ref.chapterId];
+    if (cfg && cfg.delivery && cfg.delivery !== 'npc' && cfg.lessonId === ref.lessonId) {
+      const labels = {
+        computer: 'the lobby computer', book: 'the handbook',
+        whiteboard: 'the whiteboard', server: 'the server rack',
+        display: 'the demo screen', phone: 'the desk phone',
+        modelConsole: 'the model console', dispatchBoard: 'the dispatch board',
+        permissionsPanel: 'the permissions panel',
+      };
+      return { name: labels[cfg.delivery] || ('the ' + cfg.delivery), isDevice: true };
+    }
+  }
+  return null;
+}
+
+// If `npc` is ahead of the current objective, returns redirect copy; else null.
+function computeAheadGate(npc) {
+  if (!npc || npc.kind === 'flavor') return null;
+  const ref = getObjectiveRef();
+  if (!ref) return null; // everything done
+  const myIdx  = _stepIndexOf(npc.kind, npc.lessonId, npc.testId);
+  const objIdx = _stepIndexOf(ref.kind, ref.lessonId, ref.testId);
+  if (myIdx < 0 || objIdx < 0 || myIdx <= objIdx) return null; // objective or behind
+
+  const who = _stepDeliverer(ref);
+  const whoName = who?.name || 'the right instructor';
+  const goVerb = who?.isDevice ? 'check out' : 'go talk to';
+  const goVerbCap = goVerb[0].toUpperCase() + goVerb.slice(1);
+  const prereqTitle = _stepTitle(ref);
+  const thisTitle = (npc.kind === 'test')
+    ? (_stepTitle({ chapterId: npc.chapterId, kind: 'test', testId: npc.testId }) || 'the practical')
+    : (getLessonTitle(npc) || 'that');
+  const askVerb = ref.kind === 'test' ? 'cleared' : 'up to speed on';
+  const teach = npc.kind === 'test' ? 'run you through' : 'teach you';
+
+  const variants = [
+    `Whoa, slow down — are you ${askVerb} ${prereqTitle}? No?! I suggest you ${goVerb} ${whoName} first. I'll ${teach} ${thisTitle} later.`,
+    `Hold on a sec — have you got ${prereqTitle} down yet? Not quite, right? ${goVerbCap} ${whoName} first, then come back and I'll ${teach} ${thisTitle}.`,
+    `Eager — I like that! But ${thisTitle} builds on ${prereqTitle}. Catch up with ${whoName} first, then I'll ${teach} ${thisTitle}.`,
+  ];
+  let h = 0;
+  const s = npc.id || '';
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return { text: variants[Math.abs(h) % variants.length], whoName };
+}
+
 function openDialogue(npc) {
   inputLocked = true;
   const d = dialogueEl;
   const isFlavor = npc.kind === 'flavor';
   const done = isFlavor ? false : (npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId));
+  // Soft-gate: this NPC teaches a lesson the player isn't ready for yet.
+  const gate = done ? null : computeAheadGate(npc);
+  const introText = gate ? gate.text : npc.intro;
 
   // Determine status & next-step pointer
   let statusLine = '';
   if (done) {
     statusLine = `<div class="dlg-status dlg-done">✓ You've already completed this with ${npc.name.split(' ')[0]}.</div>`;
+  } else if (gate) {
+    statusLine = `<div class="dlg-status dlg-gate">↪ One step at a time — let's keep the lessons in order.</div>`;
   }
-  let nextHint = done ? `<div class="dlg-next">${npc.nextHint}</div>` : '';
+  let nextHint = '';
+  if (gate) {
+    nextHint = `<div class="dlg-next">Follow the gold marker — it'll lead you to ${gate.whoName}.</div>`;
+  } else if (done) {
+    nextHint = `<div class="dlg-next">${npc.nextHint}</div>`;
+  }
 
   const actionsHtml = isFlavor
     ? `<div class="dlg-actions"><button class="btn-primary dlg-cancel">Bye!</button></div>`
+    : gate
+    ? `<div class="dlg-actions"><button class="btn-primary dlg-cancel">Got it →</button></div>`
     : `<div class="dlg-actions">
         <button class="btn-primary dlg-go">${
           npc.kind === 'test'
@@ -3589,11 +3708,11 @@ function openDialogue(npc) {
   // Open chime
   playUi('confirm');
   // Typewriter the intro line — plays a blip per character (rate-limited).
-  startTypewriter(d.querySelector('[data-typewriter]'), npc.intro, blipPitchForNpc(npc.id));
+  startTypewriter(d.querySelector('[data-typewriter]'), introText, blipPitchForNpc(npc.id));
   // Pulse the speaking NPC's mouth while the intro reveals.
   const speakingMesh = npcMeshes.find(m => m.userData?.npc?.id === npc.id);
   if (speakingMesh?.userData?.face && speakingMesh.userData.faceKind === 'flat') {
-    const charCount = npc.intro?.length || 60;
+    const charCount = introText?.length || 60;
     const talkMs = Math.min(8000, charCount * 22);
     talkPulse(speakingMesh.userData.face, true, talkMs);
   }
