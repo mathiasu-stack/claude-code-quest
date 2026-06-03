@@ -1223,6 +1223,53 @@ body.in-play #mobile-header { display: none !important; }
 .play-badge-hud .badge-icon { font-size: 16px; }
 .play-badge-hud .badge-label { color: #ffd54f; }
 
+/* Objective compass — always points to the next lesson's NPC/device. */
+.play-compass {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.play-compass.visible { opacity: 1; }
+.play-compass-dial {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(40, 54, 92, 0.95), rgba(16, 22, 40, 0.95));
+  border: 2px solid rgba(255, 193, 7, 0.55);
+  box-shadow: 0 0 14px rgba(255, 193, 7, 0.45), inset 0 0 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-compass-arrow {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(180deg, #ffe082, #ffab00);
+  clip-path: polygon(50% 0%, 100% 100%, 50% 76%, 0% 100%);
+  filter: drop-shadow(0 0 4px rgba(255, 193, 7, 0.95));
+  transition: transform 0.1s linear;
+}
+.play-compass-label {
+  background: rgba(16, 22, 40, 0.9);
+  color: #ffd54f;
+  border: 1px solid rgba(255, 213, 79, 0.4);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .play-elevator-modal {
   position: absolute;
   inset: 0;

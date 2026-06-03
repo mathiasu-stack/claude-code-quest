@@ -102,6 +102,12 @@ const App = {
           <span class="badge-icon">🪪</span>
           <span class="badge-label">F<span id="play-badge-level">1</span></span>
         </div>
+        <div class="play-compass" id="play-compass">
+          <div class="play-compass-dial">
+            <div class="play-compass-arrow" id="play-compass-arrow"></div>
+          </div>
+          <div class="play-compass-label" id="play-compass-label"></div>
+        </div>
         <div class="play-elevator-modal" id="play-elevator-modal">
           <div class="elev-panel">
             <div class="elev-title">Elevator</div>

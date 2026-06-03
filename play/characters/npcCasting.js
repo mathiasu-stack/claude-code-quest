@@ -9,26 +9,36 @@
 // faceConfigs.js / npcLooks.js uses).
 
 export const NPC_CASTING = {
-  player:  { gltfAssetId: 'hero',               fallbackAssetId: 'hoodie_male_01' },
-  linda:   { gltfAssetId: 'business_female_01', fallbackAssetId: 'casual_female_01' },
-  marcus:  { gltfAssetId: 'executive_male_01',  fallbackAssetId: 'casual_male_02' },
-  aisha:   { gltfAssetId: 'glasses_female_01',  fallbackAssetId: 'casual_female_01' },
-  kenji:   { gltfAssetId: 'casual_male_03',     fallbackAssetId: 'casual_male_01' },
-  diana:   { gltfAssetId: 'business_female_02', fallbackAssetId: 'casual_female_01' },
-  sarah:   { gltfAssetId: 'casual_female_02',   fallbackAssetId: 'casual_female_01' },
-  elena:   { gltfAssetId: 'business_female_03', fallbackAssetId: 'casual_female_02' },
-  raj:     { gltfAssetId: 'beard_male_01',      fallbackAssetId: 'casual_male_02' },
-  mei:     { gltfAssetId: 'casual_female_03',   fallbackAssetId: 'casual_female_01' },
-  noor:    { gltfAssetId: 'hijab_female_01',    fallbackAssetId: null }, // procedural-only fallback
+  player:  { gltfAssetId: 'hero',               fallbackAssetId: 'western_male' },
+  linda:   { gltfAssetId: 'business_female_01', fallbackAssetId: 'western_female' },
+  marcus:  { gltfAssetId: 'executive_male_01',  fallbackAssetId: 'western_male' },
+  // Re-cast the formerly procedural NPCs onto the 10 ethnicity rigs.
+  // Gender-matched to the established names/looks; ethnicity matched
+  // where the name implies it. western_female is reused for diana +
+  // elena (both European/light) — gltfCharacter applies a per-NPC
+  // stature variation (manifest statureVary) so they read distinctly.
+  aisha:   { gltfAssetId: 'sasian_female',      fallbackAssetId: 'western_female' },
+  kenji:   { gltfAssetId: 'easian_male',        fallbackAssetId: 'western_male' },
+  diana:   { gltfAssetId: 'western_female',     fallbackAssetId: 'easian_female' },
+  sarah:   { gltfAssetId: 'african_female',     fallbackAssetId: 'western_female' },
+  elena:   { gltfAssetId: 'western_female',     fallbackAssetId: 'easian_female' },
+  raj:     { gltfAssetId: 'sasian_male',        fallbackAssetId: 'western_male' },
+  mei:     { gltfAssetId: 'easian_female',      fallbackAssetId: 'western_female' },
+  noor:    { gltfAssetId: 'hijab_female',       fallbackAssetId: 'sasian_female' },
   ines:    { gltfAssetId: 'ines',               fallbackAssetId: null }, // child visitor — static Meshy mesh
 };
 
 // Auto-generated chapter NPCs (ch03..ch16) — round-robin through the
-// available casual variants based on a hash of the id, so each gets a
-// stable variant across reloads but variety is preserved.
+// full ethnicity roster based on a hash of the id, so each gets a
+// stable model across reloads but variety is preserved. Per-NPC stature
+// variation (gltfCharacter, manifest statureVary) distinguishes NPCs
+// that hash to the same model.
 const AUTO_POOL = [
-  'casual_male_01', 'casual_male_02', 'casual_male_03',
-  'casual_female_01', 'casual_female_02', 'casual_female_03',
+  'western_male', 'western_female',
+  'african_male', 'african_female',
+  'easian_male', 'easian_female',
+  'sasian_male', 'sasian_female',
+  'arab_male', 'hijab_female',
 ];
 
 function hashStr(s) {

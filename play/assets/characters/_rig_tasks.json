@@ -1,0 +1,15 @@
+{
+  "_doc": "Meshy rigging task IDs for the 10 new ethnicity character models. Submitted 2026-06-03. task_type=rigging. Download rigged GLB (with walk/run) once SUCCEEDED.",
+  "tasks": [
+    { "model": "Western male",        "asset": "western_male",   "file": "western_male.glb",   "task_id": "019e8d35-e689-7be3-b9bd-9954dce9fd96" },
+    { "model": "Western female",      "asset": "western_female", "file": "western_female.glb", "task_id": "019e8d37-694c-7787-bef8-6d116ed9b5a5" },
+    { "model": "African male",        "asset": "african_male",   "file": "african_male.glb",   "task_id": "019e8d37-dd5a-703b-b4fa-5640613fa63b" },
+    { "model": "African female",      "asset": "african_female", "file": "african_female.glb", "task_id": "019e8d38-6c5a-77c0-8481-6f06e6fedd58" },
+    { "model": "East Asian male",     "asset": "easian_male",    "file": "easian_male.glb",    "task_id": "019e8d38-e8b9-72b4-b082-7f782d9fbe73" },
+    { "model": "East Asian female",   "asset": "easian_female",  "file": "easian_female.glb",  "task_id": "019e8d39-7ca1-77fa-9947-17b94f408cca" },
+    { "model": "South Asian male",    "asset": "sasian_male",    "file": "sasian_male.glb",    "task_id": "019e8d39-e0dd-7805-9c36-335084ecedd9" },
+    { "model": "South Asian female",  "asset": "sasian_female",  "file": "sasian_female.glb",  "task_id": "019e8d3a-4f5a-7cce-83bd-01d8c09d7ac8" },
+    { "model": "Hijabi Arab female",  "asset": "hijab_female",   "file": "hijab_female.glb",   "task_id": "019e8d3a-cf05-72ff-ad7d-053f06c09cba" },
+    { "model": "Arab male",           "asset": "arab_male",      "file": "arab_male.glb",      "task_id": "019e8d3b-a1c6-730a-b53b-88bb075908ea" }
+  ]
+}

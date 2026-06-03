@@ -109,6 +109,20 @@ export function makeGltfCharacter(look, assetLoader) {
   if (entry?.scale && entry.scale !== 1.0) root.scale.setScalar(entry.scale);
   if (entry?.yOffset) root.position.y = entry.yOffset;
 
+  // Per-NPC stature variation — when a model is shared by multiple NPCs
+  // (the ethnicity rigs are reused across named + auto NPCs), give each a
+  // stable, slightly different build (~0.95–1.06× height) so they read as
+  // distinct people rather than clones. Deterministic from the NPC id, so
+  // it's stable across reloads. Gated on the manifest `statureVary` flag
+  // so the established unique characters (hero/linda/marcus/ines) keep
+  // their authored proportions.
+  if (entry?.statureVary && look._id) {
+    let h = 0;
+    for (let i = 0; i < look._id.length; i++) h = (h * 31 + look._id.charCodeAt(i)) | 0;
+    const t = (Math.abs(h) % 1000) / 1000;
+    root.scale.multiplyScalar(0.95 + t * 0.11);
+  }
+
   // Find the SkinnedMesh skeleton + ensure shadow flags.
   // Three.js does frustum-culling by default per Mesh; explicit reaffirm
   // here so a future asset-conversion step can't silently disable it.

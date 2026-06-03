@@ -180,6 +180,18 @@ export class LiveAgents {
     for (const a of this.ambient) {
       if (!a) continue;
       this._stepAgent(a, dt);
+      // Drive GLTF animation. Ambient meshes live outside `npcMeshes`, so
+      // play.js's NPC loop never ticks their AnimationMixer — without this
+      // they sit frozen in bind-pose (T-pose). Mirror that loop: pick
+      // walk vs idle from frame-to-frame position deltas, then tick.
+      const gc = a.mesh.userData?.gltfChar;
+      if (gc) {
+        const last = a._lastPos || { x: a.mesh.position.x, z: a.mesh.position.z };
+        const moved = Math.hypot(a.mesh.position.x - last.x, a.mesh.position.z - last.z);
+        a._lastPos = { x: a.mesh.position.x, z: a.mesh.position.z };
+        if (gc.setMotion) gc.setMotion(moved > 0.0005 ? 'walk' : 'idle');
+        if (gc.update) gc.update(dt);
+      }
     }
   }
 

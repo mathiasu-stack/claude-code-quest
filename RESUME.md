@@ -52,6 +52,84 @@ index.html                          Cache-bust query strings on every script tag
 - `4b89c82` — CEO portrait moved into standard loader path so the editor can select/drag it.
 - Earlier (same session block): Add Item library, Delete, per-axis locks, NPC editing, free-drag, walk-while-editing, removed Director tier tag, Resume Play input restoration.
 
+## Character roster overhaul — 10 ethnicity rigs (2026-06-03 session, UNCOMMITTED)
+
+Replaced the formerly procedural-shape NPCs with 10 new ethnicity character
+models the user dropped into `play/assets/characters/` (original uploads have
+spaces in the names, e.g. `Western male.glb` — still present but now unused).
+Each was auto-rigged through **Meshy** (`meshy_rig`, 5 credits each = 50 total,
+walk + run animations included). Task IDs recorded in
+`play/assets/characters/_rig_tasks.json`.
+
+- **Downloaded** (via signed URLs from `meshy_download_model`, curl'd to disk):
+  for each of the 10 assets — `<asset>.glb` (rigged character, skin),
+  `<asset>_walk.glb` + `<asset>_run.glb` (armature-only animation clips, ~60 KB
+  each). Asset ids: `western_male/female`, `african_male/female`,
+  `easian_male/female`, `sasian_male/female`, `hijab_female`, `arab_male`.
+- **Validated**: every rig has 1 skin, 24 plain-name Meshy bones (Hips,
+  LeftShoulder, Head, neck, …) — identical convention to linda/marcus, so the
+  existing stance/tuck/retarget logic in `gltfCharacter.js` already handles
+  them. Walk clip = `Armature|walking_man|baselayer`, run = `…running…`
+  (matched by `CLIP_MATCH` substrings 'walk'/'run').
+- **manifest.json**: 10 new `available:true` entries, each with
+  `stanceFactor:0.65`, `extraAnimations:[walk,run]`, and a new
+  `statureVary:true` flag.
+- **npcCasting.js**: recast aisha→sasian_female, kenji→easian_male,
+  diana→western_female, sarah→african_female, elena→western_female (reuse),
+  raj→sasian_male, mei→easian_female, noor→hijab_female. `player/linda/marcus/
+  ines` kept on their existing rigs. `AUTO_POOL` is now all 10 ethnicity models.
+- **Reuse distinction** (user OK'd reusing a model if visibly distinguished):
+  `gltfCharacter.js` applies a deterministic per-NPC stature multiplier
+  (0.95–1.06×, hashed from `look._id`) gated on the manifest `statureVary`
+  flag — so diana vs elena (both western_female) and same-model AUTO_POOL NPCs
+  read as different builds. The 4 established uniques have no `statureVary`, so
+  their authored proportions are untouched.
+- **warmCache** (`play.js _preloadGltfAssets`): all 10 preloaded up front
+  (~150 MB) so both named + AUTO_POOL NPCs get the sync GLTF build instead of
+  falling back to procedural.
+- **Cache-bust**: `gltfCharacter.js` + `npcCasting.js` imports bumped to
+  `?v=20260603a`; `play/play.js` in `index.html` → `?v=20260603a`. manifest is
+  auto-busted (`?v=Date.now()` in assetLoader).
+
+Status: live on Web Station (:8888) for testing; **not yet committed/pushed**.
+Not visually verified in-browser by me — user should hard-reload and check the
+NPCs render + walk. Open question: whether to delete the unused space-named
+original uploads (~140 MB) — left in place for now.
+
+### T-pose fix + objective compass/beacon (same 2026-06-03 session, UNCOMMITTED)
+
+- **T-pose bug** ("characters outside don't seem to be rigged"): root cause was
+  `play/world/liveAgents.js` ambient agents — they're added straight to the
+  scene (NOT into `npcMeshes`), so play.js's NPC loop never ticked their
+  AnimationMixer, leaving them frozen at bind-pose (T-pose). Fix: in
+  `liveAgents.update()` ambient loop, drive `gltfChar.setMotion('walk'/'idle')`
+  by frame-to-frame position delta and call `gltfChar.update(dt)` — mirrors
+  play.js lines ~4096-4108. Named-routine NPCs (marcus/aisha/linda) are already
+  in `npcMeshes` so they're ticked there — deliberately NOT ticked again in
+  liveAgents to avoid double-speed mixers. New rigs ship only walk+run (no idle
+  clip); the ARM_CHAIN override in `gltfCharacter.js update()` pulls arms to the
+  walk-first-frame pose during idle, so ticked-but-idle NPCs look natural (arms
+  down), not T-pose.
+- **Objective compass + ground beacon** (new feature): persistent HUD arrow
+  (top-center) that points compass-style toward the NPC/device giving the next
+  incomplete lesson — or the chapter's final test once all its lessons are done
+  — plus a vibrant pulsing gold ring + glow disc + light beam on the ground
+  under that target. Implementation all in `play/play.js`: `getObjectiveRef()`
+  (first incomplete lesson across CURRICULUM in order, else the chapter test),
+  `resolveObjectiveTarget()` (scans `npcMeshes` by `npc.lessonId`/`npc.testId`,
+  then `interactObjects` by `_interactableChapterId` for device-delivered
+  lessons), `_ensureObjectiveRing()` (builds the beacon, additive blending),
+  and `updateObjective(dt)` (called at end of `update()`; rotates the DOM arrow
+  via `camBearing - targetBearing`, repositions the beacon to track wandering
+  NPCs). Cross-floor target → arrow steers to the elevator call button with an
+  "↑/↓ Floor N" label. `_objRing` is reset to null in `stop()` so it rebuilds in
+  a fresh scene on re-entry. DOM `#play-compass` added in `app.js`; styles
+  `.play-compass*` in `style.css`.
+- **Cache-bust this round**: `index.html` → `style.css?v=20260603b`,
+  `play/play.js?v=20260603b`, `app.js?v=20260603b`; liveAgents import in
+  play.js → `./world/liveAgents.js?v=20260603b`. (gltfCharacter/npcCasting stay
+  at `?v=20260603a` — unchanged this round.)
+
 ## Curriculum overhaul (2026-05-30 session)
 
 A full audit + rewrite of all 16 chapters against the current Claude Code feature set (Opus 4.8, /model, /agents, /fast, 1M context, prompt caching 5-min TTL, hooks 27 events, output styles, headless mode, settings.json precedence, @filename import, auto-memory). Net result: 16 chapters, 65 lessons, ~13,810 XP.

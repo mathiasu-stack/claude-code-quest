@@ -21,8 +21,8 @@ import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
-import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260526i';
-import { resolveAssetForCharacter } from './characters/npcCasting.js';
+import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260603a';
+import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260603a';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260528g';
 import { decorateLibrary } from './decorations/library.js?v=20260528g';
@@ -57,7 +57,7 @@ import { LESSON_DELIVERY } from './world/lessonRegistry.js';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
 import { TimeOfDay } from './world/timeOfDay.js';
-import { LiveAgents } from './world/liveAgents.js';
+import { LiveAgents } from './world/liveAgents.js?v=20260603b';
 import { NameTagSystem } from './ui/nameTags.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
@@ -3680,6 +3680,142 @@ function applyDance(t) {
   p.rightLeg.rotation.x = -Math.sin(t * 10) * 0.5;
 }
 
+// ─── Objective guidance: compass arrow + ground beacon ───────────────────────
+// A persistent HUD arrow that always points (compass-style) toward the NPC or
+// device that delivers the *next* lesson to do — or the chapter test once all
+// its lessons are done — plus a vibrant pulsing ring/beam on the ground under
+// that target. Both update live as lessons are completed and as NPCs wander.
+let _objRing = null;                 // THREE.Group (ring + disc + beam)
+const _OBJ_COLOR = 0xffd24a;
+
+function _ensureObjectiveRing() {
+  if (_objRing || !scene) return;
+  const grp = new THREE.Group();
+  const mat = (opacity) => new THREE.MeshBasicMaterial({
+    color: _OBJ_COLOR, transparent: true, opacity,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.64, 48), mat(0.9));
+  ring.rotation.x = -Math.PI / 2;
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.46, 48), mat(0.18));
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.002;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.0, 10, 1, true), mat(0.12));
+  beam.position.y = 1.5;
+  grp.add(ring); grp.add(disc); grp.add(beam);
+  grp.userData = { _ring: ring, _disc: disc, _beam: beam };
+  grp.renderOrder = 999;
+  grp.visible = false;
+  scene.add(grp);
+  _objRing = grp;
+}
+
+// The earliest incomplete lesson across all chapters in order, or the chapter
+// test if a chapter's lessons are all done but its test isn't passed yet.
+function getObjectiveRef() {
+  const curriculum = window.CURRICULUM || [];
+  if (!getProgress()) return null;
+  for (const ch of curriculum) {
+    if (!ch) continue;
+    for (const l of (ch.lessons || [])) {
+      if (!isLessonDone(l.id)) return { chapterId: ch.id, lessonId: l.id, kind: 'lesson' };
+    }
+    if (ch.practicalTest && !isTestDone(ch.practicalTest.id)) {
+      return { chapterId: ch.id, testId: ch.practicalTest.id, kind: 'test' };
+    }
+  }
+  return null; // all done
+}
+
+// Resolve the ref to a live scene position. found=false means the entity isn't
+// spawned yet (its floor hasn't been loaded) — caller routes to the elevator.
+function resolveObjectiveTarget(ref) {
+  if (!ref) return null;
+  const floor = floorForChapterId(ref.chapterId) || 1;
+  for (const m of npcMeshes) {
+    const npc = m.userData?.npc;
+    if (!npc) continue;
+    const hit = (ref.kind === 'lesson' && npc.lessonId === ref.lessonId)
+             || (ref.kind === 'test'   && npc.testId   === ref.testId);
+    if (hit) {
+      return { x: m.position.x, z: m.position.z, floor: m.userData.floor || floor, found: true };
+    }
+  }
+  if (ref.kind === 'lesson') {
+    const cfg = LESSON_DELIVERY[ref.chapterId];
+    if (cfg && cfg.delivery && cfg.delivery !== 'npc' && cfg.lessonId === ref.lessonId) {
+      for (const obj of (interactObjects || [])) {
+        if (obj?.group?.userData?._interactableChapterId === ref.chapterId) {
+          const p = obj.interactable?.position || [0, 0];
+          return { x: p[0], z: p[1], floor: obj.group.userData.floor || floor, found: true };
+        }
+      }
+    }
+  }
+  return { x: 0, z: 0, floor, found: false };
+}
+
+function updateObjective(dt) {
+  const wrap = document.getElementById('play-compass');
+  if (!wrap || !player || !camera) return;
+  _ensureObjectiveRing();
+
+  const ref = getObjectiveRef();
+  if (!ref) {
+    wrap.classList.remove('visible');
+    if (_objRing) _objRing.visible = false;
+    return;
+  }
+  const tgt = resolveObjectiveTarget(ref);
+
+  let aimX, aimZ, label;
+  let ringX, ringZ, ringFloor, showRing = false;
+  if (tgt.floor !== currentFloor) {
+    // Target lives on another floor — steer the player to the elevator.
+    const cb = elevatorRef?.callButtonPos;
+    if (cb) { aimX = cb.x; aimZ = cb.z; ringX = cb.x; ringZ = cb.z; ringFloor = currentFloor; showRing = true; }
+    else { aimX = player.position.x; aimZ = player.position.z; }
+    label = (tgt.floor > currentFloor ? '↑' : '↓') + ' Floor ' + tgt.floor;
+  } else if (tgt.found) {
+    aimX = tgt.x; aimZ = tgt.z; ringX = tgt.x; ringZ = tgt.z; ringFloor = tgt.floor; showRing = true;
+    const dist = Math.round(Math.hypot(player.position.x - tgt.x, player.position.z - tgt.z));
+    label = (ref.kind === 'test' ? 'Final test' : 'Next lesson') + ' · ' + dist + 'm';
+  } else {
+    wrap.classList.remove('visible');
+    if (_objRing) _objRing.visible = false;
+    return;
+  }
+
+  // Compass arrow rotation: 0° = target straight ahead (arrow up). Positive
+  // (clockwise) when the target is to the camera's right.
+  const cf = new THREE.Vector3();
+  camera.getWorldDirection(cf);
+  const camBearing = Math.atan2(cf.x, cf.z);
+  const tgtBearing = Math.atan2(aimX - player.position.x, aimZ - player.position.z);
+  let a = camBearing - tgtBearing;
+  a = Math.atan2(Math.sin(a), Math.cos(a)); // normalize to [-π, π]
+  wrap.classList.add('visible');
+  const arrow = document.getElementById('play-compass-arrow');
+  if (arrow) arrow.style.transform = `rotate(${a * 180 / Math.PI}deg)`;
+  const lab = document.getElementById('play-compass-label');
+  if (lab) lab.textContent = label;
+
+  if (_objRing) {
+    _objRing.visible = showRing;
+    if (showRing) {
+      _objRing.position.set(ringX, floorBaseY(ringFloor) + 0.02, ringZ);
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.003);
+      const s = 1 + 0.14 * pulse;
+      _objRing.scale.set(s, 1, s);
+      _objRing.rotation.y += dt * 0.5;
+      const { _ring, _disc, _beam } = _objRing.userData;
+      _ring.material.opacity = 0.55 + 0.45 * pulse;
+      _disc.material.opacity = 0.10 + 0.14 * pulse;
+      _beam.material.opacity = 0.06 + 0.10 * pulse;
+    }
+  }
+}
+
 function update(dt) {
   // Dance animation
   if (performance.now() < danceUntil) {
@@ -4204,6 +4340,9 @@ function update(dt) {
     promptEl.classList.remove('visible');
     document.getElementById('play-interact-btn').classList.remove('visible');
   }
+
+  // Objective guidance — compass arrow + ground beacon to the next lesson.
+  updateObjective(dt);
 }
 
 function loop() {
@@ -4270,12 +4409,15 @@ async function _preloadGltfAssets() {
   // ambient agents pick up the cache as they're constructed.
   const ids = [
     'hero', 'ines',
-    'casual_male_01', 'casual_male_02', 'casual_male_03',
-    'casual_female_01', 'casual_female_02', 'casual_female_03',
-    'business_female_01', 'business_female_02', 'business_female_03',
-    'glasses_female_01', 'beard_male_01', 'hijab_female_01',
-    'hoodie_male_01',
-    'executive_male_01',
+    'business_female_01', 'executive_male_01',
+    // 10 ethnicity rigs — warmed up front so both named NPCs and the
+    // AUTO_POOL background NPCs render the GLTF (sync builder needs the
+    // cache hot at construction or it falls back to procedural).
+    'western_male', 'western_female',
+    'african_male', 'african_female',
+    'easian_male', 'easian_female',
+    'sasian_male', 'sasian_female',
+    'arab_male', 'hijab_female',
   ];
   await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
   await loader.loadAnimations();   // optional shared anim pack
@@ -4678,6 +4820,7 @@ export function stop() {
   footstepAccum = 0;
   decoTickers = [];
   renderer = null; scene = null; camera = null;
+  _objRing = null; // disposed with the scene above; rebuilt on next start()
   clearInteractables();
   interactObjects = [];
   player = null; npcMeshes = []; interactionTarget = null;

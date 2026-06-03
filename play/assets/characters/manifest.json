@@ -40,6 +40,86 @@
       ]
     },
     {
+      "id": "western_male",
+      "file": "western_male.glb",
+      "available": true,
+      "tags": ["male", "western", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["western_male_walk.glb", "western_male_run.glb"]
+    },
+    {
+      "id": "western_female",
+      "file": "western_female.glb",
+      "available": true,
+      "tags": ["female", "western", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["western_female_walk.glb", "western_female_run.glb"]
+    },
+    {
+      "id": "african_male",
+      "file": "african_male.glb",
+      "available": true,
+      "tags": ["male", "african", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["african_male_walk.glb", "african_male_run.glb"]
+    },
+    {
+      "id": "african_female",
+      "file": "african_female.glb",
+      "available": true,
+      "tags": ["female", "african", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["african_female_walk.glb", "african_female_run.glb"]
+    },
+    {
+      "id": "easian_male",
+      "file": "easian_male.glb",
+      "available": true,
+      "tags": ["male", "east-asian", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["easian_male_walk.glb", "easian_male_run.glb"]
+    },
+    {
+      "id": "easian_female",
+      "file": "easian_female.glb",
+      "available": true,
+      "tags": ["female", "east-asian", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["easian_female_walk.glb", "easian_female_run.glb"]
+    },
+    {
+      "id": "sasian_male",
+      "file": "sasian_male.glb",
+      "available": true,
+      "tags": ["male", "south-asian", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["sasian_male_walk.glb", "sasian_male_run.glb"]
+    },
+    {
+      "id": "sasian_female",
+      "file": "sasian_female.glb",
+      "available": true,
+      "tags": ["female", "south-asian", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["sasian_female_walk.glb", "sasian_female_run.glb"]
+    },
+    {
+      "id": "hijab_female",
+      "file": "hijab_female.glb",
+      "available": true,
+      "tags": ["female", "arab", "hijab", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["hijab_female_walk.glb", "hijab_female_run.glb"]
+    },
+    {
+      "id": "arab_male",
+      "file": "arab_male.glb",
+      "available": true,
+      "tags": ["male", "arab", "ethnic", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": true,
+      "extraAnimations": ["arab_male_walk.glb", "arab_male_run.glb"]
+    },
+    {
       "id": "casual_male_01",
       "file": "Character_Casual_01.glb",
       "available": false,
