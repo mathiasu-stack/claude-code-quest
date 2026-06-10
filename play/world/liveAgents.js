@@ -137,8 +137,10 @@ export class LiveAgents {
       beard:      (seed % 7) === 0 ? 'stubble' : null,
     };
     const mesh = this.makeCharacter(look);
-    // Spawn in Library so they don't crowd Reception.
-    mesh.position.set(-7 + (seed % 3) * 2, 0, 18 + (seed % 2) * 6);
+    // Spawn in the Library's south reading band (the library moved to
+    // the west wing at center (-22,-22); the old coords pointed at its
+    // former home south of reception and left agents wandering outside).
+    mesh.position.set(-27 + (seed % 3) * 4, 0, -16);
     mesh.rotation.y = Math.random() * Math.PI * 2;
     // Ambient library agents belong to floor 1 — hide them when the
     // player rides up to upper floors.
@@ -181,13 +183,16 @@ export class LiveAgents {
 
   _randomWaypoints(seed) {
     const wp = [];
-    const baseX = -6 + (seed % 3) * 4;
-    const baseZ = 14 + (seed % 4) * 4;
+    // Loop inside the library's open south band (z -16.5..-14.5),
+    // between the shelf grid (south face ~z -17.8) and the reception
+    // desk (z -13.6..-12.4, x -23.8..-20.2).
+    const baseX = -27 + (seed % 3) * 4;
+    const baseZ = -16.5;
     for (let i = 0; i < 4; i++) {
       wp.push({
         pos: [
           baseX + (i % 2) * 6 - 3,
-          baseZ + (i < 2 ? 0 : 6) + Math.random() * 2,
+          baseZ + (i < 2 ? 0 : 1.5) + Math.random() * 0.5,
         ],
         face: (i % 4) * (Math.PI / 2),
         dwell: 5 + (seed * 3 + i) % 4,

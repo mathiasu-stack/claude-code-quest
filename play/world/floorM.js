@@ -590,8 +590,8 @@ export function buildFloorM({ baseY, floorIndex = 5 }) {
   // (the photo side) must point at the wall at Z_MAX → no Y rotation;
   // a slight backward lean rests the top edge on the wall.
   const portrait = makeReversedPortrait();
-  portrait.position.set(-1.4, 1.32, Z_MAX - 0.36);
-  portrait.rotation.x = -0.12;
+  portrait.position.set(-1.4, 1.32, Z_MAX - 0.45);
+  portrait.rotation.x = 0.12;
   group.add(portrait);
 
   // ── Lighting — warm pools, dim hidden-loft feel ────────────────────
@@ -695,10 +695,10 @@ export function buildCableTrays() {
   }
 
   // Four runs along the ceiling edges, all draining toward the shaft.
-  addRun(-17.0, -17.2, HUB.x, -17.2);          // north edge, west→east
-  addRun(HUB.x, -17.2, HUB.x, HUB.z);          // east side, north edge → shaft
-  addRun(-17.2, 12.0, -17.2, HUB.z);           // west edge, south→north
-  addRun(-17.2, HUB.z, HUB.x, HUB.z);          // straight west→shaft feeder
+  addRun(-17.0, -17.6, HUB.x, -17.6);          // north edge, west→east
+  addRun(HUB.x, -17.6, HUB.x, HUB.z);          // east side, north edge → shaft
+  addRun(-17.6, 12.0, -17.6, HUB.z);           // west edge, south→north
+  addRun(-17.6, HUB.z, HUB.x, HUB.z);          // straight west→shaft feeder
   addRun(HUB.x, 16.8, HUB.x, HUB.z);           // east side, south edge → shaft
 
   // Vertical run: the bundle turns 90° at the shaft and climbs past the

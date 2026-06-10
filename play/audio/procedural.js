@@ -341,6 +341,115 @@ export function playClearanceChime() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Anomaly sting (Kedash Protocol, AUDIO-01) — a soft room-tone swell for
+// the handful of "wait, what did she just say?" dialogue lines. NOT a
+// horror sting: low sine bed + a faint filtered-noise breath that rises
+// and settles over ~2 s, quiet enough to register subliminally.
+// ─────────────────────────────────────────────────────────────────────────────
+export function playAnomalySting() {
+  audio.play('voice', (ctx, output) => {
+    const t0 = ctx.currentTime;
+    const dur = 2.2;
+    // Low bed — A2 sine with a slightly detuned partner for slow beating.
+    const o1 = makeOsc(ctx, 'sine', 110);
+    const o2 = makeOsc(ctx, 'sine', 110, 8);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.10, t0 + 0.9);
+    g.gain.linearRampToValueAtTime(0.07, t0 + 1.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o1.connect(g); o2.connect(g); g.connect(output);
+    o1.start(t0); o2.start(t0);
+    safeStop(o1, t0 + dur); safeStop(o2, t0 + dur);
+    // Air — narrow bandpass noise swell, barely above the noise floor.
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 2.5;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0, t0);
+    ng.gain.linearRampToValueAtTime(0.045, t0 + 1.1);
+    ng.gain.linearRampToValueAtTime(0, t0 + dur);
+    src.connect(bp).connect(ng).connect(output);
+    src.start(t0);
+    safeStop(src, t0 + dur);
+    scheduleStop(ctx, [o1, o2, g, src, bp, ng], dur + 0.1);
+    return { stop: () => { safeStop(o1, ctx.currentTime); safeStop(o2, ctx.currentTime); safeStop(src, ctx.currentTime); } };
+  }, { expectedDuration: 2.4 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Floor-M arrival chime (Kedash Protocol, AUDIO-02) — deliberately the
+// inverse of playClearanceChime: lower register (A3 → E4), slower note
+// gap, longer release. The slot below '1' shouldn't sound like a promotion.
+// ─────────────────────────────────────────────────────────────────────────────
+export function playFloorMChime() {
+  const notes = [220.0, 329.63]; // A3 → E4
+  audio.play('voice', (ctx, output) => {
+    const cleanup = [];
+    notes.forEach((freq, i) => {
+      const t0 = ctx.currentTime + i * 0.42;
+      const a = makeOsc(ctx, 'sine', freq);
+      const b = makeOsc(ctx, 'triangle', freq * 2);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(0.26, t0 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.5);
+      a.connect(g); b.connect(g); g.connect(output);
+      a.start(t0); b.start(t0);
+      a.stop(t0 + 1.55); b.stop(t0 + 1.55);
+      cleanup.push(a, b, g);
+    });
+    scheduleStop(ctx, cleanup, 2.1);
+    return { stop: () => cleanup.forEach(n => safeStop(n, ctx.currentTime)) };
+  }, { expectedDuration: 2.1 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Server hum bed (Kedash Protocol, AUDIO-03 / A21) — sustained low drone
+// near the ch16 rack. play.js calls updateServerHum(active, lowered) every
+// frame from its proximity check; state is managed here so a stolen voice
+// (mobile voice cap) simply restarts on the next frame. `lowered` drops
+// every partial one semitone (×2^(-1/12)) once the capstone is passed.
+// ─────────────────────────────────────────────────────────────────────────────
+let _hum = null; // { handle, lowered }
+export function updateServerHum(active, lowered = false) {
+  if (!active || (_hum && _hum.lowered !== lowered)) {
+    if (_hum) { try { _hum.handle.stop?.(); } catch {} _hum = null; }
+    if (!active) return;
+  }
+  if (_hum) return;
+  const ratio = lowered ? Math.pow(2, -1 / 12) : 1;
+  const entry = { handle: null, lowered };
+  const handle = audio.play('sfx', (ctx, output) => {
+    const t0 = ctx.currentTime;
+    const o1 = makeOsc(ctx, 'sine', 55 * ratio);
+    const o2 = makeOsc(ctx, 'triangle', 110 * ratio, 6);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 260; lp.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.07, t0 + 1.4);
+    // Slow ±15% wobble so it reads as machinery, not a test tone.
+    const lfo = makeOsc(ctx, 'sine', 0.4);
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 0.01;
+    lfo.connect(lfoG).connect(g.gain);
+    o1.connect(lp); o2.connect(lp); lp.connect(g).connect(output);
+    o1.start(t0); o2.start(t0); lfo.start(t0);
+    return {
+      stop: () => {
+        if (_hum === entry) _hum = null;
+        const t = ctx.currentTime;
+        try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.2); } catch {}
+        scheduleStop(ctx, [o1, o2, lfo, lfoG, lp, g], 0.8);
+      },
+    };
+  });
+  if (handle) { entry.handle = handle; _hum = entry; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Crowd cheer — wide-band noise with an envelope crescendo. Used during
 // the post-test celebration dance alongside the celebration music track
 // (if music file is present).

@@ -9,7 +9,11 @@ import * as THREE from 'three';
 
 const REACT_RADIUS = 12;     // metres — NPCs within this distance react
 const MAX_CLAPPERS = 3;       // cap to keep perf predictable
-const CLAP_DURATION_MS = 5500;
+// Kedash Protocol canon: the standard ceremony loop is EXACTLY eight
+// claps ("They always clap eight times" — Ines, T2). One clap = one full
+// swing cycle; synced clappers freeze their swing after 8 cycles. The
+// finale's desync claps are deliberately ragged and exempt.
+const CLAP_COUNT = 8;
 
 // `desync` (finale, FIN-06): each clapper gets a random phase offset and
 // slightly different clap rate — ragged, human, unsynced for the first
@@ -80,7 +84,10 @@ export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, i
       // Clap arms — both arms come up and oscillate quickly
       const parts = m.userData?.parts;
       if (parts?.leftArm && parts?.rightArm) {
-        const phase = elapsed * s.rate + s.phaseOffset;
+        // Clamp at CLAP_COUNT cycles for synced clappers — sin() lands on
+        // 0 at the clamp so the arms settle smoothly into the held pose.
+        let phase = elapsed * s.rate + s.phaseOffset;
+        if (!desync) phase = Math.min(phase, CLAP_COUNT * Math.PI * 2);
         const swing = Math.sin(phase) * 0.4;
         // Lift arms to clap pose
         const liftAmount = -2.0 * tFade;  // up & forward

@@ -23,6 +23,15 @@ window.STORY_DOCS = {
     },
   },
 
+  // PROP-08 / ASK-A9 — the open drawer in the File Workshop. The tab is
+  // the whole text: six consecutive case files, no names, no context.
+  cx_folder: {
+    title: 'Filing Cabinet — Open Drawer',
+    byTier: {
+      T0: 'CX-13 — CX-18',
+    },
+  },
+
   // ——— Doc-viewer documents (COPY-06, read via SYS-05) ———————————————
   // Shape differs from inspect cards: { title, unlockTier, body }.
   // unlockTier gates the SYS-06 collectible props (visible-but-locked

@@ -14,6 +14,21 @@ import { placeCompoundChild } from '../world/compoundChildren.js?v=20260528g';
 
 const OWNER = 'decorate_library';
 
+// PROP-10 (Kedash Protocol): every clock in the library reads 9:41 —
+// the time the hands stopped mattering. Hands are pinned, pendulum may
+// keep swinging (alive, but no longer keeping time).
+// Rx(-π/2) stands the hand's long axis up (tip at 12); Rz(-θ) sweeps it
+// clockwise as seen from the front. 'ZYX' order so Rx applies first.
+function pinClockHandsAt941(gClock) {
+  const minA = (41 / 60) * Math.PI * 2;
+  const hourA = ((9 + 41 / 60) / 12) * Math.PI * 2;
+  for (const [hand, a] of [[gClock.userData.minHand, minA], [gClock.userData.hourHand, hourA]]) {
+    if (!hand) continue;
+    hand.rotation.order = 'ZYX';
+    hand.rotation.set(-Math.PI / 2, 0, -a);
+  }
+}
+
 export function decorateLibrary(scene, decoTickers) {
   // Open books on the two reading tables (existing tables at z=16 & z=22)
   let tableIdx = 0;
@@ -64,11 +79,10 @@ export function decorateLibrary(scene, decoTickers) {
   const gClock = buildGrandfatherClock();
   gClock.position.set(-9.5, 0, 31);
   placeCompoundChild(scene, gClock, OWNER, 'grandfather_clock');
+  pinClockHandsAt941(gClock);
   decoTickers.push((dt, now) => {
     const t = now * 0.001;
     if (gClock.userData.pendulum) gClock.userData.pendulum.rotation.z = Math.sin(t * 1.6) * 0.18;
-    if (gClock.userData.minHand)  gClock.userData.minHand.rotation.y  = t * 0.5;
-    if (gClock.userData.hourHand) gClock.userData.hourHand.rotation.y = t * 0.04;
   });
 
   // Librarian's cart with returned books, parked next to a shelf
@@ -105,4 +119,53 @@ export function decorateLibrary(scene, decoTickers) {
   skirting(8.5,  6.75, 32.95, 0);
   skirting(22, -10.95, 22, Math.PI / 2);
   skirting(22,  10.95, 22, Math.PI / 2);
+}
+
+// PROP-10 — Kedash Protocol dressing for the CURRENT west-wing library
+// (data/rooms.js id 'library', center [-22, -22]). decorateLibrary()
+// above targets the legacy layout and is no longer wired into rooms
+// data, so the anomaly props live in their own builder:
+//   (a) a uniform row of identical BLANK spines on top of every shelf
+//       unit — the archive above reach has no titles;
+//   (b) a grandfather clock with its hands pinned at 9:41.
+export function decorateLibraryAnomalies(scene, decoTickers) {
+  // (a) Blank spines. Shelf-unit positions mirror the 18 'bookshelf'
+  // entries in data/rooms.js (library) — the GLB unit, height-scaled to
+  // 2.6 m, has a ~0.81 m-wide top, so the row is kept narrower than
+  // that; it sits on the 2.6 m top so it never intersects the shelf.
+  const COLS = [-28, -22, -16];
+  const ROWS = [-28, -26, -24, -22, -20, -18];
+  const w = 0.07, gapX = 0.013, h = 0.42, d = 0.26, rowWidth = 0.7;
+  const perRow = Math.floor((rowWidth + gapX) / (w + gapX));
+  const count = COLS.length * ROWS.length * perRow;
+  const inst = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(w, h, d),
+    // One flat colour, zero jitter — uniformity IS the anomaly.
+    new THREE.MeshStandardMaterial({ color: 0xcfc6b4, roughness: 0.85 }),
+    count,
+  );
+  const m4 = new THREE.Matrix4();
+  let i = 0;
+  for (const cx of COLS) {
+    for (const cz of ROWS) {
+      for (let k = 0; k < perRow; k++) {
+        m4.setPosition(cx - rowWidth / 2 + k * (w + gapX) + w / 2, 2.6 + h / 2, cz);
+        inst.setMatrixAt(i++, m4);
+      }
+    }
+  }
+  inst.instanceMatrix.needsUpdate = true;
+  placeCompoundChild(scene, inst, OWNER, 'blank_spines');
+
+  // (b) Grandfather clock against the north wall, pinned at 9:41.
+  // Pendulum still swings — the clock is alive, it just stopped counting.
+  const gClock = buildGrandfatherClock();
+  gClock.position.set(-29.2, 0, -32.4);
+  placeCompoundChild(scene, gClock, OWNER, 'kedash_clock');
+  pinClockHandsAt941(gClock);
+  decoTickers.push((dt, now) => {
+    if (gClock.userData.pendulum) {
+      gClock.userData.pendulum.rotation.z = Math.sin(now * 0.0016) * 0.18;
+    }
+  });
 }

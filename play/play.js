@@ -9,8 +9,8 @@ import {
   playUi, playDialogueBlip, blipPitchForNpc,
   playAchievementChime, playLevelUpFanfare, playPpPing,
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
-  playClearanceChime,
-} from './audio/procedural.js?v=20260610d';
+  playClearanceChime, playAnomalySting, playFloorMChime, updateServerHum,
+} from './audio/procedural.js?v=20260610g';
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
@@ -26,7 +26,7 @@ import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260610e';
 import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260528g';
-import { decorateLibrary } from './decorations/library.js?v=20260528g';
+import { decorateLibrary, decorateLibraryAnomalies } from './decorations/library.js?v=20260610i';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528n';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260528j';
@@ -40,9 +40,9 @@ import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
-import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260610e';
+import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260610h';
 import { showTitleCard } from './ui/titleCard.js?v=20260610e';
-import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610e';
+import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610g';
 import {
   registerInteractable, clearInteractables,
   updateInteractables, listInteractables,
@@ -57,11 +57,15 @@ import { buildModelConsole } from './world/objectTypes/modelConsole.js';
 import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
 import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
 import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
+import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js?v=20260610h';
+import { buildSeatsDashboard } from './world/objectTypes/seatsDashboard.js?v=20260610g';
+import { buildTokenCounter, resetTokenCounter } from './world/objectTypes/tokenCounter.js?v=20260610g';
+import { buildRecMirror } from './world/objectTypes/recMirror.js?v=20260610g';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js?v=20260610a';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
 import { TimeOfDay } from './world/timeOfDay.js';
-import { LiveAgents } from './world/liveAgents.js?v=20260610b';
+import { LiveAgents } from './world/liveAgents.js?v=20260610i';
 import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
 import Story from './story/storyState.js?v=20260610a';
 import {
@@ -1123,7 +1127,12 @@ function buildFilingCabinet(x, z, ry = 0) {
 }
 
 function buildBookshelf(x, z, ry = 0, w = 2.2) {
-  const glb = makeDecoration('bookshelf', { width: w, height: 2.6, depth: 0.45 });
+  // Height-only scale. The GLB's natural footprint (~0.63 × 0.85 m) is
+  // much deeper than the old procedural 0.45 m — passing depth:0.45 let
+  // it win makeDecoration's uniform min() and shrank the whole unit to
+  // ~1.06 m (waist-high shelves, with the blank-spine anomaly rows
+  // floating at the assumed 2.6 m top).
+  const glb = makeDecoration('bookshelf', { height: 2.6 });
   if (glb) {
     glb.position.set(x, 0, z); glb.rotation.y = ry;
     glb.userData.surface = 'floor';
@@ -1152,6 +1161,64 @@ function buildBookshelf(x, z, ry = 0, w = 2.2) {
       bx += bw + 0.005;
     }
   }
+  g.position.set(x, 0, z); g.rotation.y = ry;
+  g.userData.surface = 'floor';
+  return g;
+}
+
+// Library checkout counter — deliberately NOT the reception_desk GLB
+// (the library should read as its own space): dark walnut body with
+// inset panels, a card-catalog drawer bank, brass desk bell and a
+// stack of returned books. Front face is +z (faces the entrance door).
+function buildLibraryCounter(x, z, ry = 0) {
+  const g = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 });
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.85 });
+  const topMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.55 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.35 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.95, 0.65), wood);
+  base.position.y = 0.475; base.castShadow = true; g.add(base);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.06, 0.85), topMat);
+  top.position.y = 0.98; top.castShadow = true; g.add(top);
+
+  // Two inset front panels (left + center); the right section is a
+  // card-catalog drawer bank.
+  for (let i = -1; i <= 0; i++) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.6, 0.03), panelMat);
+    p.position.set(i * 0.95, 0.5, 0.33);
+    g.add(p);
+  }
+  const drawerMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.75 });
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const d = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.26, 0.04), drawerMat);
+      d.position.set(0.74 + c * 0.42, 0.36 + r * 0.3, 0.33);
+      g.add(d);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), brass);
+      knob.position.set(0.74 + c * 0.42, 0.36 + r * 0.3, 0.36);
+      g.add(knob);
+    }
+  }
+
+  // Brass desk bell on the counter top.
+  const bellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.02, 16), brass);
+  bellBase.position.set(1.2, 1.02, 0.15); g.add(bellBase);
+  const bellDome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.065, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), brass);
+  bellDome.position.set(1.2, 1.03, 0.15); g.add(bellDome);
+
+  // Small stack of returned books.
+  const bookCols = [0xb71c1c, 0x1a237e, 0x33691e];
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Mesh(
+      new THREE.BoxGeometry(0.34 - i * 0.03, 0.05, 0.24),
+      new THREE.MeshStandardMaterial({ color: bookCols[i], roughness: 0.7 }));
+    b.position.set(-1.1, 1.04 + i * 0.05, -0.1);
+    b.rotation.y = (i % 2) * 0.18;
+    g.add(b);
+  }
+
   g.position.set(x, 0, z); g.rotation.y = ry;
   g.userData.surface = 'floor';
   return g;
@@ -1221,6 +1288,7 @@ let ceoPortraitGroup = null;
 let ceoPlaque = null;          // live-swappable plaque (setPortraitCelebration)
 let badgePrinterGroup = null;
 let houseRulesGroup = null;
+let cxFolderGroup = null;      // PROP-08: CX-13–18 drawer in the File Workshop
 // Floor M module handle (FIN-02): { group, colliders, fragmentSpot,
 // update } from buildFloorM. Kept so registerStaticColliders can re-push
 // the loft AABBs on every editor-triggered rebuild.
@@ -1590,6 +1658,37 @@ function setPortraitCelebration(on) {
   }
 }
 
+// AUDIO-04 / A24 — a single ~150ms glint at the portrait's eyes when a
+// promotion lands while it's on the current floor and roughly in view.
+// Blink and you miss it; that's the point.
+function flashPortraitEyeGlint() {
+  if (!ceoPortraitGroup?.parent || currentFloor !== 1 || !camera) return;
+  const wp = new THREE.Vector3();
+  ceoPortraitGroup.getWorldPosition(wp);
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  if (fwd.dot(wp.clone().sub(camera.position).normalize()) < 0.35) return;
+  const sprites = [];
+  for (const ex of [-0.148, 0.148]) {
+    // Eye positions mirror drawCeoPortrait's normalized X(0.42)/X(0.58),
+    // Y(0.43) mapped onto the 1.85×2.25 photo plane.
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({
+      color: 0xffffff, blending: THREE.AdditiveBlending,
+      depthWrite: false, transparent: true, opacity: 0.95,
+    }));
+    s.scale.set(0.07, 0.07, 1);
+    s.position.set(ex, 0.1575, 0.1);
+    ceoPortraitGroup.add(s);
+    sprites.push(s);
+  }
+  setTimeout(() => {
+    for (const s of sprites) {
+      ceoPortraitGroup?.remove(s);
+      s.material.dispose();
+    }
+  }, 150);
+}
+
 // ─── Badge printer (PROP-06) ─────────────────────────────────────────────────
 // Small desk prop behind Linda's reception spot. Inspect registration is
 // deferred to registerStoryInspectables() — clearInteractables() runs after
@@ -1705,6 +1804,47 @@ function buildHouseRulesFrame(x, z, rotY) {
   return group;
 }
 
+// PROP-08 / ASK-A9 — filing cabinet with its top drawer left open, a single
+// manila folder propped inside. The inspect card (story_docs cx_folder) is
+// the folder tab and nothing else. Inspect registration deferred to
+// registerStoryInspectables(), same as the badge printer.
+function buildCxFolder() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, metalness: 0.6, roughness: 0.45 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x37474f });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.5), mat);
+  body.position.y = 0.7; body.castShadow = true; group.add(body);
+  // Closed lower drawers (fronts + handles), open slot where the top was.
+  for (let i = 0; i < 2; i++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.01), dark);
+    line.position.set(0, 0.3 + i * 0.4, 0.255); group.add(line);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), dark);
+    handle.position.set(0, 0.25 + i * 0.4, 0.27); group.add(handle);
+  }
+  // The open top drawer — a shallow tray protruding from the body.
+  const tray = new THREE.Group();
+  const trayMat = new THREE.MeshStandardMaterial({ color: 0x78909c, metalness: 0.5, roughness: 0.5 });
+  const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.02, 0.4), trayMat);
+  bottom.position.set(0, -0.1, 0); tray.add(bottom);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.24, 0.03), mat);
+  front.position.set(0, 0, 0.2); tray.add(front);
+  const fHandle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), dark);
+  fHandle.position.set(0, 0, 0.23); tray.add(fHandle);
+  for (const sx of [-0.26, 0.26]) {
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.2, 0.4), trayMat);
+    side.position.set(sx, -0.02, 0); tray.add(side);
+  }
+  tray.position.set(0, 1.22, 0.42);
+  group.add(tray);
+  // The folder, standing in the tray, leaning back against the body.
+  const folder = buildReadableNote({ variant: 'folder', label: 'CX-13 — CX-18' });
+  folder.rotation.x = -Math.PI / 2 + 0.22;
+  folder.position.set(0, 1.16, 0.36);
+  group.add(folder);
+  cxFolderGroup = group;
+  return group;
+}
+
 // ─── Room builder registry (Phase 1 data-driven scene assembly) ─────────────
 // Maps the `fn` strings in data/rooms.js to existing builders. Wrappers
 // translate the loader's (pos, rotY, args, ctx) signature into the
@@ -1740,6 +1880,8 @@ function registerRoomBuilders() {
     buildFilingCabinet(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('bookshelf', (pos, rotY, args) =>
     buildBookshelf(pos[0], pos[2], rotY || 0, args.w));
+  registerRoomBuilder('library_counter', (pos, rotY) =>
+    buildLibraryCounter(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('table', (pos, rotY, args) =>
     buildTable(pos[0], pos[2], rotY || 0, args.w));
   registerRoomBuilder('lamp', (pos) => buildLamp(pos[0], pos[2]));
@@ -1757,6 +1899,51 @@ function registerRoomBuilders() {
   // PROP-05 — floor-4 ceiling cable trays converging on the elevator
   // shaft (the physical hint that everything routes up to floor M).
   registerRoomBuilder('cable_trays', () => buildCableTrays());
+
+  // ── Kedash Protocol ambient props (Phase 5b) ──────────────────────
+  // PROP-07 — six identical team photos, library wall.
+  registerRoomBuilder('team_photos', (pos, rotY) => {
+    const group = buildTeamPhotosWall();
+    group.position.set(pos[0], pos[1] || 0, pos[2]);
+    group.rotation.y = rotY || 0;
+    return group;
+  });
+  // PROP-09 / PROP-11 / PROP-13 — animated wall screens; their update(dt)
+  // rides the existing decoTickers path.
+  for (const [kind, build] of [
+    ['seats_dashboard', buildSeatsDashboard],
+    ['token_counter', buildTokenCounter],
+    ['rec_mirror', buildRecMirror],
+  ]) {
+    registerRoomBuilder(kind, (pos, rotY, args, ctx) => {
+      const h = build();
+      h.group.position.set(pos[0], pos[1] || 0, pos[2]);
+      h.group.rotation.y = rotY || 0;
+      if (h.update) ctx.decoTickers.push((dt) => h.update(dt));
+      return h.group;
+    });
+  }
+  // PROP-12 — Employee-of-the-Month corkboard, every month the same face.
+  // drawCeoPortrait paints a whole canvas; the corkboard wants a
+  // (ctx2d, pw, ph) painter — render once offscreen, blit per card.
+  registerRoomBuilder('eotm_corkboard', (pos, rotY) => {
+    const off = document.createElement('canvas');
+    off.width = 192; off.height = 224;
+    drawCeoPortrait(off);
+    const group = buildEotmCorkboard({
+      drawPortrait: (x, pw, ph) => x.drawImage(off, 0, 0, pw, ph),
+    });
+    group.position.set(pos[0], pos[1] || 0, pos[2]);
+    group.rotation.y = rotY || 0;
+    return group;
+  });
+  // PROP-08 — open filing-cabinet drawer, CX-13 — CX-18.
+  registerRoomBuilder('cx_folder', (pos, rotY) => {
+    const group = buildCxFolder();
+    group.position.set(pos[0], pos[1] || 0, pos[2]);
+    group.rotation.y = rotY || 0;
+    return group;
+  });
 
   // ── Compound builders (each owns its own multi-mesh placement) ───
   // Each returns null because the underlying builder already calls
@@ -1784,6 +1971,12 @@ function registerRoomBuilders() {
   registerRoomBuilder('decorate_library', (pos, rotY, args, ctx) => {
     try { decorateLibrary(ctx.scene, ctx.decoTickers); }
     catch (e) { console.warn('library deco failed', e); }
+    return null;
+  });
+  // PROP-10 — blank spines + 9:41 clock for the live west-wing library.
+  registerRoomBuilder('library_dressing', (pos, rotY, args, ctx) => {
+    try { decorateLibraryAnomalies(ctx.scene, ctx.decoTickers); }
+    catch (e) { console.warn('library dressing failed', e); }
     return null;
   });
   registerRoomBuilder('reception_centerpiece', (pos, rotY, args, ctx) => {
@@ -1823,6 +2016,9 @@ function registerStoryInspectables() {
     // PROP-01: framed yellowed house rules near the ch03 kiosk.
     { group: houseRulesGroup,   docId: 'house_rules',   radius: 2.6,
       prompt: 'Read the framed page — press E', glowColor: 0xc9a44c },
+    // PROP-08: the open CX-13–18 drawer in the File Workshop.
+    { group: cxFolderGroup,     docId: 'cx_folder',     radius: 2.4,
+      prompt: 'Inspect folder — press E',        glowColor: 0xc9a44c },
   ];
   for (const { group, docId, prompt, glowColor, radius } of entries) {
     if (!group || !group.parent) continue;
@@ -1943,8 +2139,6 @@ function buildWorld() {
   // doorway is now the building's outside entrance (no gating, the
   // door decoration in data/rooms.js fills the gap).
   registerDoor(scene, -11, 'ch01', 'Knowledge Library', -22, Math.PI / 2);
-
-  loadRoom(scene, window.ROOM_BY_ID('library'), ctx);
 
   // (The old zone-2 → zone-3 door at z=33 was removed when the
   // library moved out of the south-of-reception slot. Files / Plan
@@ -2299,13 +2493,13 @@ function buildFloorOffice(floorIdx) {
 
   // Floor title sign on north wall
   const sign = makeWallSign(`FLOOR ${floorIdx} — ${(theme.title || '').toUpperCase()}`, 9, 1.4, '#1a2744', theme.accent || '#ffd54f');
-  sign.position.set(0, y0 + 2.6, 11 - 0.16);
+  sign.position.set(0, y0 + 2.6, H - 0.16);
   sign.rotation.y = Math.PI;
   sign.userData.floor = floorIdx;
   scene.add(sign);
 
   // ── Chapter-cluster desks from data (data/rooms.js → office_floor<N>) ──
-  // Each desk lives at the same {±5.5, 0, ±5.5} slot per floor; the
+  // Each desk lives at the same {±13, 0, ±13} slot per floor; the
   // loader translates Y by floorBaseY(floorIdx) so the data can stay
   // floor-relative.
   const room = window.ROOM_BY_ID && window.ROOM_BY_ID(`office_floor${floorIdx}`);
@@ -2317,10 +2511,10 @@ function buildFloorOffice(floorIdx) {
   // accent colour + title pulled from ZONE_THEMES and CURRICULUM), so
   // these stay in code rather than data.
   const slots = [
-    { x: -5.5, z: -5.5, face: 0 },
-    { x:  5.5, z: -5.5, face: 0 },
-    { x: -5.5, z:  5.5, face: Math.PI },
-    { x:  5.5, z:  5.5, face: Math.PI },
+    { x: -13, z: -13, face: 0 },
+    { x:  13, z: -13, face: 0 },
+    { x: -13, z:  13, face: Math.PI },
+    { x:  13, z:  13, face: Math.PI },
   ];
   for (let s = 0; s < CHAPTERS_PER_FLOOR; s++) {
     const slot = slots[s];
@@ -2356,7 +2550,10 @@ function floor1WestWingPositionForNPC(npcDef) {
   if (npcDef.kind === 'test') {
     // Test NPC stands at the south end of the room (toward the doorway
     // for library/Files; toward the back for Plan Mode).
-    const tz = idx === 3 ? centerZ + 8.5 : centerZ - 8.5;
+    // Library (idx 1): -8.5 would put the test NPC at z -30.5, flush
+    // against the lounge couch front (couch at -31, depth 0.9) — pull
+    // in to -29 for clearance.
+    const tz = idx === 3 ? centerZ + 8.5 : (idx === 1 ? centerZ - 7 : centerZ - 8.5);
     const face = idx === 3 ? Math.PI : 0;
     return { pos: [centerX, tz], face };
   }
@@ -2364,14 +2561,21 @@ function floor1WestWingPositionForNPC(npcDef) {
   const m = (npcDef.lessonId || '').match(/-l(\d+)$/);
   const li = m ? Math.max(0, parseInt(m[1], 10) - 1) : 0;
   // Library's lesson-1 NPC (Elena) is the librarian — stand her behind
-  // the reception counter near the south entrance, facing the door.
+  // the checkout counter (library_counter at [-18.8, -13.8], placed
+  // east of the door swing: the 3.5 m leaf hinged at x=-23.75 sweeps
+  // z -11..-14.5 when open), facing the entrance.
   if (idx === 1 && li === 0) {
-    return { pos: [-22, -14], face: 0 };
+    return { pos: [-18.8, -14.9], face: 0 };
   }
   const xSign = (li % 2 === 0) ? -1 : 1;
   const zOff = [-4, 0, 4][(li >> 1) % 3];
+  // Library: ±6 would land exactly on the bookshelf grid columns
+  // (x -28/-16, z -26/-22/-18) and embed NPCs inside the shelves.
+  // ±3 puts them in the 3.8 m clear aisles between shelf columns
+  // (x -25/-19), reading as "browsing the stacks".
+  const xOff = idx === 1 ? 3 : 6;
   return {
-    pos: [centerX + xSign * 6, centerZ + zOff],
+    pos: [centerX + xSign * xOff, centerZ + zOff],
     face: xSign < 0 ? Math.PI / 2 : -Math.PI / 2,
   };
 }
@@ -4308,6 +4512,8 @@ function openDialogue(npc) {
   const sceneId = pendingSceneFor(npc);
   if (sceneId && startStoryScene(sceneId, npc)) return;
   inputLocked = true;
+  // PROP-11: any floor-3 conversation visibly spikes the token counter.
+  if (currentFloor === 3) resetTokenCounter();
   const d = dialogueEl;
   const isFlavor = npc.kind === 'flavor';
   const done = isFlavor ? false : (npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId));
@@ -4318,11 +4524,21 @@ function openDialogue(npc) {
   let introText = gate ? gate.text : npc.intro;
   let speaker = npc;   // postPass relays may borrow this NPC's card
   let postPassActive = false;
+  // AUDIO-01: story lines may be { text, sting: true } — the sting flags
+  // the line for a one-shot anomaly swell when it renders.
+  let stingArmed = false;
+  const normLine = (v) => {
+    if (v && typeof v === 'object') { if (v.sting) stingArmed = true; return v.text; }
+    return v;
+  };
   if (!gate) {
     const introOv = resolveByTier(story?.introByTier, tier);
-    if (introOv) introText = introOv.value;
+    if (introOv) introText = normLine(introOv.value);
     const append = resolveByTier(story?.introAppendByTier, tier);
-    if (append) introText = introText ? `${introText} ${append.value}` : append.value;
+    if (append) {
+      const appendText = normLine(append.value);
+      introText = introText ? `${introText} ${appendText}` : appendText;
+    }
     // One-shot post-pass beat: shown the first time the player talks to a
     // test NPC after newly passing its test (shown-state lives in ccq_story).
     if (done && npc.kind === 'test') {
@@ -4398,6 +4614,7 @@ function openDialogue(npc) {
   playUi('confirm');
   // Typewriter the intro line — plays a blip per character (rate-limited).
   startTypewriter(d.querySelector('[data-typewriter]'), introText, blipPitchForNpc(npc.id));
+  if (stingArmed) playAnomalySting();
   // Pulse the speaking NPC's mouth while the intro reveals.
   const speakingMesh = npcMeshes.find(m => m.userData?.npc?.id === npc.id);
   if (speakingMesh?.userData?.face && speakingMesh.userData.faceKind === 'flat') {
@@ -4990,8 +5207,11 @@ function update(dt) {
       }
       // Time-of-day baseline scales the preset values, so re-apply on transition.
       if (timeOfDay) timeOfDay.reapply();
-      // Crossfade zone music. fail-silent inside AudioManager.
-      try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
+      // Crossfade zone music. fail-silent inside AudioManager. Floor M
+      // stays music-free (AUDIO-02) — only the arrival chime plays there.
+      if (currentFloor !== FLOOR_M_INDEX) {
+        try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
+      }
     }
   }
   // Skydome anchors to camera each frame so the player never reaches it.
@@ -5033,6 +5253,14 @@ function update(dt) {
   if (decoTickers.length) {
     const _now = performance.now();
     for (let i = 0; i < decoTickers.length; i++) decoTickers[i](dt, _now);
+  }
+  // AUDIO-03: sustained hum near the ch16 server rack (floor 4). The hum
+  // sits a semitone lower once the capstone is passed — the rack relaxes.
+  if (player) {
+    updateServerHum(
+      currentFloor === 4 && Math.hypot(player.position.x - 16.2, player.position.z - 16.2) < 6,
+      isTestDone('ch16-test'),
+    );
   }
   // Update audio listener position so PannerNode sources track the camera.
   if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
@@ -5532,6 +5760,8 @@ export async function start(host) {
     } else if (promotionFor) {
       // Pause briefly so the scene is on screen before the spotlight.
       setTimeout(() => ceremony.maybeStartFromFlag(), 400);
+      // AUDIO-04 / A24: if the portrait is in view, her eyes glint once.
+      setTimeout(() => { try { flashPortraitEyeGlint(); } catch {} }, 700);
       // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
       // and the dance via setDanceUntil internally.
       try {
@@ -5686,6 +5916,14 @@ async function requestFloorChange(targetFloor) {
     Story.setFlag('floor4_chime');
     playClearanceChime();
   }
+  // AUDIO-02: the ride down to Floor M is silent — fade the zone music
+  // out for the descent and mark arrival with a lower, slower chime.
+  // Leaving M re-arms the zone-music detector so it restarts on arrival.
+  if (targetFloor === FLOOR_M_INDEX) {
+    try { audio.stopMusic(600); } catch {}
+    playFloorMChime();
+  }
+  const leavingFloorM = currentFloor === FLOOR_M_INDEX;
   // CURTAIN-01: on the very first ride up to Floor 2, the lobby breaks
   // character for two seconds — every visible NPC turns to watch the
   // player board. Marked seen up front so a mid-beat exit can't replay
@@ -5712,6 +5950,9 @@ async function requestFloorChange(targetFloor) {
   setTimeout(() => {
     currentFloor = targetFloor;
     try { window.__playCurrentFloor = currentFloor; } catch {}
+    // Re-arm the zone-music detector after a silent Floor-M stay — the
+    // update() block restarts the music once currentFloor is normal again.
+    if (leavingFloorM) lastZoneIdx = -1;
     applyFloorVisibility();
     spawnPlayerOnFloor(targetFloor);
     updateBadgeHud();
@@ -5780,6 +6021,7 @@ export function stop() {
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
   try { audio.stopMusic(800); } catch {}
+  try { updateServerHum(false); } catch {}
   try { unmountAudioSettings(); } catch {}
   try { unmountLessonOverlay(); } catch {}
   try { unmountCustomization(); } catch {}
@@ -5805,6 +6047,7 @@ export function stop() {
   currentFloor = 1;
   badgePrinterGroup = null;
   houseRulesGroup = null;
+  cxFolderGroup = null;
   readableNotes = [];
   curtainUntil = 0;
   keys = {}; touchVec = { x: 0, y: 0 };

@@ -6,6 +6,8 @@
 //   promptLabel        — replaces the proximity prompt label text
 //   introByTier        — replaces npc.intro (must still lead into lesson/test)
 //   introAppendByTier  — appended (space-separated) to the resolved intro
+//   Both accept a plain string or { text, sting: true } — sting marks the
+//   line for the AUDIO-01 anomaly swell (max 3 lines game-wide; keep rare)
 //   nextHintByTier     — replaces npc.nextHint in the done state
 //   postPassOnceByTier — shown once as dialogue body after the NPC's test is
 //                        newly passed; string, or { text, speakerName,
@@ -43,7 +45,7 @@ window.STORY_LINES = {
       // Pre-TWIST 1 (T2): plants the clap count. Once ch04-test passes,
       // talking to her runs STORY_SCENES.twist1 instead of this intro;
       // after the scene the tier is 3 and the idle line below wins.
-      T2: '"Did you see your clapping party when you got promoted? I\'ve seen ten of those. They always clap eight times. Count next time. It\'s so weird."',
+      T2: { text: '"Did you see your clapping party when you got promoted? I\'ve seen ten of those. They always clap eight times. Count next time. It\'s so weird."', sting: true },
       T3: '"Conversation Bingo. Wanna play? You always win now, it\'s less fun. It\'s still pretty fun."',
       // Post-pass idle swaps (COPY-04): the trial-of-trust pass (T6) and
       // the epilogue (T7, verbatim §5.5).
@@ -55,7 +57,7 @@ window.STORY_LINES = {
   aisha: {
     introAppendByTier: {
       // COPY-04: her one story duty — "the last person who sat here."
-      T2: '"Oh — and ignore the keybindings if they feel pre-worn. The last person who sat here had… preferences. Anyway! Not a thing. Forget I said it."',
+      T2: { text: '"Oh — and ignore the keybindings if they feel pre-worn. The last person who sat here had… preferences. Anyway! Not a thing. Forget I said it."', sting: true },
     },
   },
 
@@ -73,7 +75,7 @@ window.STORY_LINES = {
     introByTier: {
       // THE mentor glitch — she calls the player a predecessor's name,
       // then corrects without blinking. Lesson lead-in preserved.
-      T2: '"Welcome to the Knowledge Library, Dana— " (a full beat; she doesn\'t blink) "—kid. Welcome to the Knowledge Library, kid. Elena. Doctor, technically." Forget prompt-engineering tricks — the real lever is centralised context. That\'s what a Business Brain is.',
+      T2: { text: '"Welcome to the Knowledge Library, Dana— " (a full beat; she doesn\'t blink) "—kid. Welcome to the Knowledge Library, kid. Elena. Doctor, technically." Forget prompt-engineering tricks — the real lever is centralised context. That\'s what a Business Brain is.', sting: true },
     },
     nextHintByTier: {
       T2: '"Did I call you something? I teach the same chapter to a lot of bright young people. The names compost. The *material* keeps."',

@@ -26,7 +26,7 @@
 import * as THREE from 'three';
 import { unveilForTier } from './accessoryUnveil.js';
 import { animateTitleTransition } from './titleTransition.js';
-import { spawnNpcReactions, clearNpcReactions } from './npcReactions.js?v=20260610e';
+import { spawnNpcReactions, clearNpcReactions } from './npcReactions.js?v=20260610g';
 
 const PROMOTION_KEY = 'ccq_promotion_fired';
 const TIER_TITLES = [
