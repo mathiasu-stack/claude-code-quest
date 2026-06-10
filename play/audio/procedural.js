@@ -314,6 +314,33 @@ export function playKcIncorrectTone() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Floor-4 clearance chime (Kedash Protocol, TWIST2-01) — two rising
+// notes, sine + octave triangle, longer release than UI confirm so it
+// reads as "the building acknowledged you" rather than a button press.
+// ─────────────────────────────────────────────────────────────────────────────
+export function playClearanceChime() {
+  const notes = [659.25, 987.77]; // E5 → B5
+  audio.play('voice', (ctx, output) => {
+    const cleanup = [];
+    notes.forEach((freq, i) => {
+      const t0 = ctx.currentTime + i * 0.16;
+      const a = makeOsc(ctx, 'sine', freq);
+      const b = makeOsc(ctx, 'triangle', freq * 2);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(0.30, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+      a.connect(g); b.connect(g); g.connect(output);
+      a.start(t0); b.start(t0);
+      a.stop(t0 + 0.75); b.stop(t0 + 0.75);
+      cleanup.push(a, b, g);
+    });
+    scheduleStop(ctx, cleanup, 1.1);
+    return { stop: () => cleanup.forEach(n => safeStop(n, ctx.currentTime)) };
+  }, { expectedDuration: 1.1 });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Crowd cheer — wide-band noise with an envelope crescendo. Used during
 // the post-test celebration dance alongside the celebration music track
 // (if music file is present).

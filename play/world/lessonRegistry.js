@@ -60,12 +60,15 @@ export const LESSON_DELIVERY = {
     chapterId: 'ch06', lessonId: 'ch06-l01',
   },
 
-  // Chapter 16 — NAS Capstone. Server rack in the new library back
-  // (north end). Was at [3, 0, 30] in the old library — that area is
-  // now exterior, so the server got relocated.
+  // Chapter 16 — NAS Capstone. Server rack moved to floor 4's NE back
+  // corner (Kedash Protocol R-3a: the capstone server belongs upstairs,
+  // near the ch16 cluster at (13,13), away from the elevator spawn).
+  // Position y is floor-relative; the spawn loop adds floorBaseY(4).
+  // lookAt faces the room interior from the corner.
   ch16: {
     delivery: 'server',
-    objectLocation: { floor: 1, position: [-12, 0, -31] },
+    objectLocation: { floor: 4, position: [16.2, 0, 16.2] },
+    lookAt: -Math.PI * 0.75,
     uiStyle: 'terminal',
     chapterId: 'ch16', lessonId: 'ch16-l01',
   },

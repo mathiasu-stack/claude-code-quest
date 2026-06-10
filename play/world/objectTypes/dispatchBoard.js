@@ -7,6 +7,22 @@
 import * as THREE from 'three';
 import { registerInteractable } from '../interactables.js';
 
+function cardLabelTexture(text, fg = '#e8f5e9', bg = '#1b2430') {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 56;
+  const x = c.getContext('2d');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, 128, 56);
+  x.fillStyle = fg;
+  x.font = '700 20px monospace';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillText(text, 64, 30);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function buildDispatchBoard({
   scene, position, lookAt = 0, chapterId, lessonId, onInteract,
 }) {
@@ -91,6 +107,36 @@ export function buildDispatchBoard({
       cardMats.push({ mat: cardMat, base: 0.30, hot: 0.85 });
     }
   }
+
+  // PROP-02 (Kedash Protocol): cycle ghosts. Three faded CYCLE cards
+  // peeking from behind the DONE stack — work that was "completed"
+  // long before this trainee arrived — plus one bright CYCLE 07 card
+  // pinned over the ACTIVE stack: the current cycle is the player.
+  for (let i = 0; i < 3; i++) {
+    const ghost = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.70, 0.30),
+      new THREE.MeshBasicMaterial({
+        map: cardLabelTexture(`CYCLE 0${i + 1}`, '#9ccc9c'),
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false,
+      }),
+    );
+    ghost.position.set(0.80 - 0.05, 1.85 - i * 0.36 + 0.05, 0.043);
+    ghost.rotation.z = (i % 2 === 0 ? 1 : -1) * 0.05;
+    g.add(ghost);
+  }
+  const cycle07Mat = new THREE.MeshStandardMaterial({
+    map: cardLabelTexture('CYCLE 07', '#e1f5fe', '#10202c'),
+    emissive: 0x4fc3f7,
+    emissiveIntensity: 0.5,
+    roughness: 0.4,
+  });
+  const cycle07 = new THREE.Mesh(new THREE.PlaneGeometry(0.70, 0.30), cycle07Mat);
+  cycle07.position.set(0.02, 1.85, 0.058);
+  cycle07.rotation.z = 0.06;
+  g.add(cycle07);
+  cardMats.push({ mat: cycle07Mat, base: 0.50, hot: 1.0 });
 
   // Tiny status LED on the frame — green pulse to read as "online".
   const ledMat = new THREE.MeshStandardMaterial({

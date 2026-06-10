@@ -2019,3 +2019,85 @@ body.in-play #mobile-header { display: none !important; }
   .dlg-actions button { width: 100%; }
 }
 
+/* Document viewer (Kedash Protocol, SYS-05) — full-screen monospace
+   reader styled like an internal memo / terminal `cat`. Sits ABOVE the
+   dialogue card (z-index 25) so TWIST 2 can open it mid-scene. */
+.doc-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(6, 10, 20, 0.74);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.doc-viewer.visible { display: flex; }
+.doc-viewer-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: #0d1420;
+  border: 1px solid #2e4057;
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  animation: dlgIn 0.18s ease-out;
+}
+.doc-viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #111c2c;
+  border-bottom: 1px solid #2e4057;
+  flex-shrink: 0;
+}
+.doc-viewer-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-viewer-close {
+  background: none;
+  border: none;
+  color: #8aa0b8;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+.doc-viewer-close:hover { color: #fff; }
+.doc-viewer-body {
+  margin: 0;
+  padding: 18px 20px 22px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #c8d6e5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.doc-viewer-hint {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: #5c7894;
+  border-top: 1px solid #1d2a3d;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .doc-viewer { padding: 12px; }
+  .doc-viewer-body { font-size: 12px; padding: 14px 14px 18px; }
+}
+

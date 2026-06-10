@@ -8,6 +8,7 @@ import { registerInteractable } from '../interactables.js';
 
 export function buildPermissionsPanel({
   scene, position, lookAt = 0, chapterId, lessonId, onInteract,
+  locked = false,   // PROP-03: ch15-test passed → panel settles all-green
 }) {
   const g = new THREE.Group();
   g.position.set(position[0], 0, position[2]);
@@ -115,6 +116,16 @@ export function buildPermissionsPanel({
     lightMats.push({ mat: bulbMat, label: l.label });
   }
 
+  // PROP-03: once the player has passed the guardrails test the panel
+  // stops auditioning — every light goes steady green. "Configured."
+  if (locked) {
+    for (const l of lightMats) {
+      l.mat.color.setHex(0x66bb6a);
+      l.mat.emissive.setHex(0x66bb6a);
+      l.mat.emissiveIntensity = 1.0;
+    }
+  }
+
   // Tiny status text strip at the bottom — reads as a console line.
   const statusBar = new THREE.Mesh(
     new THREE.PlaneGeometry(0.70, 0.06),
@@ -149,7 +160,11 @@ export function buildPermissionsPanel({
       // Lights cycle gently on idle (Allow → Ask → Deny in rotation),
       // lock to steady high glow when player is hovering — reads as
       // "panel is paying attention to you."
-      if (hovered) {
+      if (locked) {
+        for (const l of lightMats) {
+          l.mat.emissiveIntensity += (1.0 - l.mat.emissiveIntensity) * k;
+        }
+      } else if (hovered) {
         for (const l of lightMats) {
           l.mat.emissiveIntensity += (1.0 - l.mat.emissiveIntensity) * k;
         }

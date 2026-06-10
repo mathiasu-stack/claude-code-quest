@@ -111,6 +111,11 @@ window.ROOMS = [
       { type: 'wall', pos: [0, 3.2, 11], size: { w: 3.5, h: 1.2, d: 0.3 } },
       { type: 'decoration', id: 'door', pos: [-1.65, 0, 11.55], rotY: -1.5708, size: { width: 1.5, height: 2.6, depth: 0.1, stretch: true } },
       { type: 'decoration', id: 'reception_desk', pos: [-0.039, 0, -9.035], rotY: 0, size: { width: 5.5, height: 2.9, depth: 2, stretch: true } },
+      { type: 'ceo_portrait', pos: [0, 2.0, -10.86], rotY: 0 },
+      { type: 'builder', fn: 'badge_printer', pos: [-3.4, 0, -10.3], rotY: 0 },
+      { type: 'builder', fn: 'house_rules', pos: [5.2, 0, -10.8], rotY: 0 },
+      { type: 'builder', fn: 'readable_note', pos: [7.6, 0, 2.2], rotY: 0.4, args: { doc: 'cycle_report_01', label: 'CYCLE 01', variant: 'folder' } },
+      { type: 'builder', fn: 'readable_note', pos: [1.5, 0, -10.3], rotY: -0.3, args: { doc: 'cycle_report_06', label: 'CYCLE 06', variant: 'paper' } },
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, -10.2] },
       { type: 'builder', fn: 'plant', pos: [10.2, 0, -10.2] },
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, 9.5] },
@@ -165,7 +170,8 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [-31.8, 0, -31.8] },
       { type: 'builder', fn: 'plant', pos: [-12.2, 0, -31.8] },
       { type: 'builder', fn: 'plant', pos: [-31.8, 0, -16] },
-      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -16] }
+      { type: 'builder', fn: 'plant', pos: [-12.2, 0, -16] },
+      { type: 'builder', fn: 'readable_note', pos: [-19, 0, -27.2], rotY: 0.2, args: { doc: 'cycle_report_02', label: 'CYCLE 02', variant: 'paper' } }
     ],
   },
   {
@@ -321,7 +327,10 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [-17, 0, 17] },
       { type: 'builder', fn: 'plant', pos: [17, 0, 17] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 0] },
-      { type: 'builder', fn: 'plant', pos: [13, 0, 0] }
+      { type: 'builder', fn: 'plant', pos: [13, 0, 0] },
+      { type: 'builder', fn: 'readable_note', pos: [-11.6, 0, -14.2], rotY: 0.5, args: { doc: 'cycle_report_03', label: 'CYCLE 03', variant: 'folder' } },
+      { type: 'builder', fn: 'readable_note', pos: [-12.2, 0, 12.0], rotY: -0.4, args: { doc: 'learnings_fragment_1', label: 'learnings.md', variant: 'paper' } },
+      { type: 'builder', fn: 'readable_note', pos: [12.0, 0, 14.0], rotY: 0.7, args: { doc: 'client_profiles', label: 'CLIENTS', variant: 'folder' } }
     ],
   },
   {
@@ -371,7 +380,9 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [-17, 0, 17] },
       { type: 'builder', fn: 'plant', pos: [17, 0, 17] },
       { type: 'builder', fn: 'plant', pos: [0, 0, -8] },
-      { type: 'builder', fn: 'plant', pos: [0, 0, 8] }
+      { type: 'builder', fn: 'plant', pos: [0, 0, 8] },
+      { type: 'builder', fn: 'readable_note', pos: [-11.8, 0, 14.0], rotY: 0.3, args: { doc: 'cycle_report_04', label: 'CYCLE 04', variant: 'folder' } },
+      { type: 'builder', fn: 'readable_note', pos: [11.8, 0, -14.2], rotY: -0.5, args: { doc: 'cycle_report_05', label: 'CYCLE 05', variant: 'paper' } }
     ],
   }
 ];

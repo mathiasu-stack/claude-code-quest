@@ -1,6 +1,8 @@
 // nameTags.js — per-frame fade + (desktop) occlusion for character labels.
 // Linear distance falloff between FULL_RANGE and FADE_RANGE.
 // Closest NPC to the camera gets a slight emphasis bump (alpha +0.15).
+// Also exports showSpeechBubble — a transient overhead text sprite used
+// by story scenes (TWIST 1 staged exchange).
 
 import * as THREE from 'three';
 
@@ -76,10 +78,87 @@ export class NameTagSystem {
     if (!group?.children) return null;
     for (let i = group.children.length - 1; i >= 0; i--) {
       const c = group.children[i];
-      if (c.isSprite) return c;
+      if (c.isSprite && !c.userData._isSpeechBubble) return c;
     }
     return null;
   }
 
   setWalls(arr) { this.walls = arr; }
+}
+
+// ─── Transient speech bubble (Kedash Protocol, TWIST1-01 staging) ────────────
+// Attaches a self-disposing text sprite above a character group. The
+// sprite holds for `holdMs`, fades over `fadeMs`, then removes itself
+// and disposes its GPU resources — no caller-side update loop needed.
+export function showSpeechBubble(mesh, text, { holdMs = 3000, fadeMs = 1000, y = 2.85 } = {}) {
+  if (!mesh || !text) return null;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const font = '600 26px "Segoe UI", system-ui, sans-serif';
+
+  // Word-wrap to ~360px lines.
+  ctx.font = font;
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const probe = line ? `${line} ${w}` : w;
+    if (ctx.measureText(probe).width > 360 && line) { lines.push(line); line = w; }
+    else line = probe;
+  }
+  if (line) lines.push(line);
+
+  const lineH = 34;
+  const padX = 22, padY = 16;
+  const textW = Math.max(...lines.map(l => ctx.measureText(l).width));
+  const w = Math.ceil(textW + padX * 2);
+  const h = Math.ceil(lines.length * lineH + padY * 2);
+  canvas.width = w; canvas.height = h;
+
+  // Rounded bubble.
+  const c2 = canvas.getContext('2d');
+  const r = 14;
+  c2.fillStyle = 'rgba(16, 24, 36, 0.88)';
+  c2.beginPath();
+  c2.moveTo(r, 0);
+  c2.arcTo(w, 0, w, h, r);
+  c2.arcTo(w, h, 0, h, r);
+  c2.arcTo(0, h, 0, 0, r);
+  c2.arcTo(0, 0, w, 0, r);
+  c2.closePath();
+  c2.fill();
+  c2.font = font;
+  c2.fillStyle = '#f5f1e6';
+  c2.textAlign = 'center';
+  c2.textBaseline = 'middle';
+  lines.forEach((l, i) => c2.fillText(l, w / 2, padY + lineH * i + lineH / 2));
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: 1 });
+  const sprite = new THREE.Sprite(mat);
+  const worldScale = 0.0048;
+  sprite.scale.set(w * worldScale, h * worldScale, 1);
+  sprite.position.set(0, y, 0);
+  sprite.renderOrder = 999;
+  // Flagged so NameTagSystem._findTagOnGroup skips it — a bubble must
+  // never hijack the name-tag distance fade.
+  sprite.userData._isSpeechBubble = true;
+  mesh.add(sprite);
+
+  const t0 = performance.now();
+  function tick() {
+    const t = performance.now() - t0;
+    if (t >= holdMs + fadeMs || !sprite.parent) {
+      if (sprite.parent) sprite.parent.remove(sprite);
+      mat.dispose();
+      tex.dispose();
+      return;
+    }
+    if (t > holdMs) mat.opacity = 1 - (t - holdMs) / fadeMs;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  return sprite;
 }

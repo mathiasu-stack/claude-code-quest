@@ -105,8 +105,15 @@ export function mountToolbar({ container, onEnter, onExit, onExport, onSavePerma
     pointer-events: auto;
     font-family: system-ui, sans-serif;
   `;
+  const chapterOptions = (window.CURRICULUM || [])
+    .map((ch, i) => `<option value="${ch.id}">${i + 1}. ${ch.title}</option>`)
+    .join('');
   el.innerHTML = `
     <button class="ccq-ed-btn ccq-ed-toggle">✏️ Edit Rooms</button>
+    <select class="ccq-ed-btn ccq-ed-skip" title="Rebuild save as a fresh player who just reached this chapter, then reload">
+      <option value="" selected>⏩ Skip to…</option>
+      ${chapterOptions}
+    </select>
     <button class="ccq-ed-btn ccq-ed-add"      style="display:none;">➕ Add Item</button>
     <button class="ccq-ed-btn ccq-ed-savefs"   style="display:none;" title="Write all edits straight to disk (Chrome/Edge desktop) and reload">💾 Save Permanently</button>
     <button class="ccq-ed-btn ccq-ed-export"   style="display:none;" title="Download files for manual replacement">📋 Export Layout</button>
@@ -126,6 +133,21 @@ export function mountToolbar({ container, onEnter, onExit, onExport, onSavePerma
     if (isActive) onExit?.();
     else onEnter?.();
   });
+  const skipSel = el.querySelector('.ccq-ed-skip');
+  skipSel.addEventListener('change', () => {
+    const id = skipSel.value;
+    skipSel.selectedIndex = 0;   // snap back to placeholder either way
+    if (!id) return;
+    const ch = (window.CURRICULUM || []).find(c => c.id === id);
+    if (confirm(
+      `Skip to "${ch?.title || id}"?\n\n` +
+      'This REPLACES your current save: all earlier chapters become ' +
+      'completed (tests passed), story flags are cleared so scenes ' +
+      're-trigger, and the page reloads.'
+    )) {
+      skipToChapter(id);
+    }
+  });
   addBtn.addEventListener('click', () => showLibraryModal());
   saveFsBtn.addEventListener('click', () => onSavePermanently?.());
   exportBtn.addEventListener('click', () => onExport?.());
@@ -135,6 +157,44 @@ export function mountToolbar({ container, onEnter, onExit, onExport, onSavePerma
     }
   });
   return el;
+}
+
+// ── Admin chapter skip (testing aid) ─────────────────────────────────
+// Rebuilds the save as "a fresh player who just reached this chapter":
+// every chapter BEFORE it in CURRICULUM display order is fully completed
+// (lessons + practical test + chapter bonus, mirroring app.js's
+// unlockEverything), the target chapter is unlocked, the badge floor is
+// recomputed, and ccq_story is cleared so tier-gated scenes re-trigger
+// naturally (e.g. skip past ch04 → TWIST 1 re-offers at Ines, skip past
+// floor 1 → the elevator curtain replays on the first ride up).
+function skipToChapter(chapterId) {
+  const P = window.Progress;
+  const cur = window.CURRICULUM || [];
+  const idx = cur.findIndex(c => c.id === chapterId);
+  if (!P || idx < 0) return;
+  const oldName = P.load().playerName || '';
+  try {
+    localStorage.removeItem('ccq_progress');
+    localStorage.removeItem('ccq_story');
+  } catch {}
+  let p = { ...P.load(), playerName: oldName };
+  for (let i = 0; i < idx; i++) {
+    const ch = cur[i];
+    p = P.unlockChapter(p, ch.id);
+    for (const l of ch.lessons || []) {
+      p = P.markLessonComplete(p, l.id, l.xpReward || 0);
+    }
+    if (ch.practicalTest) {
+      p = P.recordTestResult(p, ch.practicalTest.id,
+        { passed: true, score: 100 }, ch.practicalTest.xpReward || 0);
+      p = P.recordTestResult(p, ch.id + '_chapter_bonus',
+        { passed: true, score: 100 }, ch.xpReward || 0);
+    }
+  }
+  p = P.unlockChapter(p, chapterId);
+  p = P.applyBadgeBumpsIfDue(p);
+  P.save(p);
+  window.location.reload();
 }
 
 function setToolbarMode(editing) {

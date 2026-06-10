@@ -52,6 +52,183 @@ index.html                          Cache-bust query strings on every script tag
 - `4b89c82` — CEO portrait moved into standard loader path so the editor can select/drag it.
 - Earlier (same session block): Add Item library, Delete, per-axis locks, NPC editing, free-drag, walk-while-editing, removed Director tier tag, Resume Play input restoration.
 
+## Kedash Protocol — Phase 1 narrative layer (2026-06-10 session, UNCOMMITTED, do not deploy)
+
+Story design lives in `design/story/kedash_protocol_scenario.md` (copy source) +
+`kedash_protocol_production_plan.md` (WBS, risks). Phase 1 implemented:
+
+- **`play/story/storyState.js`** (new ES module, `window.Story`): tier T0–T7
+  derived from `Progress.isTestPassed` (`ch01→T1, ch12→T2, ch04+twist1→T3,
+  ch09→T4, ch10+twist2→T5, ch15→T6, ch16+finale→T7`), never stored. Scene-seen /
+  collectible / epilogue / one-shot flags persist in localStorage `ccq_story`.
+  `engine/progress.js resetProgress()` also clears `ccq_story`. Twist scenes
+  don't exist yet, so tier caps at T2 in Phase 1 (by design, spoiler-safe).
+- **`data/story_lines.js`** (`window.STORY_LINES`): per-NPC tier-keyed dialogue
+  overrides — `promptLabel / introByTier / introAppendByTier / nextHintByTier /
+  postPassOnceByTier` (highest TN ≤ current tier wins). Resolved in
+  `openDialogue()` + the proximity prompt writer in play.js. Gate text
+  (computeAheadGate) always beats story overrides. `postPassOnceByTier` shows
+  once per `postpass:${npcId}:${tierKey}` flag; object form can relay another
+  speaker (used for Sarah Chen via auto-ch12-test). Act I copy in place: Linda,
+  Kenji, Sarah, ch05/ch06/ch12 mentors.
+- **`data/story_docs.js`** (`window.STORY_DOCS`): tier-keyed inspect texts
+  (CEO portrait ×5 tiers, badge printer). New `openInspectCard()` in play.js
+  reuses the dialogue card read-only; Esc/E now also closes any open dialogue.
+- **Props**: `buildCeoPortrait` gained a warm PointLight; new `badge_printer`
+  room builder (data/rooms.js reception entry at `[-3.4, 0, -10.3]`). Both are
+  registered via `registerStoryInspectables()` AFTER `clearInteractables()` in
+  buildWorld (room builders run before the wipe — can't self-register).
+  NOTE: the `{ type: 'ceo_portrait' }` entry was MISSING from data/rooms.js
+  (likely dropped by an editor save) — restored at `[0, 2.0, -10.86]`.
+- **SYS-07**: per-chapter story framing sentences appended to all
+  `practicalTest.scenario` strings EXCEPT ch14. Criteria/XP untouched.
+- **ch16 server relocated** to floor 4 NE corner (`lessonRegistry.js`:
+  `{ floor: 4, position: [16.2, 0, 16.2], lookAt: -3π/4 }`); `serverRack.js`
+  now honors `position[1]` (floor-base Y) + lifts its glow ring to match.
+- Cache-bust `?v=20260610a`: index.html (progress.js, curriculum*.js, new
+  story_lines/story_docs tags after the dynamic `?t=` block, play/play.js) +
+  play.js imports of storyState/lessonRegistry/serverRack. Do NOT version the
+  `interactables.js` imports — split specifiers would fork its module state.
+- R-9 status: `data/npc_overrides.js` currently holds only linda/ines — the
+  three mentor personas (Engelhardt/Okoye/Vasquez) are NOT present there
+  (they're listed in the curriculum-overhaul notes below but the file was
+  since rewritten by editor exports). Left untouched (editor-owned).
+
+### Kedash Protocol — Phase 2 (same 2026-06-10 session, UNCOMMITTED, do not deploy)
+
+Scene runner + ambient NPC system + TWIST 1 + Act II copy. Cache-bust round
+is `?v=20260610b` (play.js tag in index.html, sceneRunner/liveAgents/nameTags
+imports, new story_scenes/story_ambient tags, story_lines/story_docs bumps).
+
+- **`play/story/sceneRunner.js`** (new, SYS-03): `initSceneRunner(ctx)` gets
+  `{getDialogueEl, startTypewriter, skipTypewriter, playUi, setInputLocked}`
+  injected from play.js; `runScene(def, {pitch, onComplete, onAbort})` plays
+  linear beats in the dlg-card chrome. `choices` render buttons (any click →
+  same next beat), `action` is a string resolved via `registerSceneActions()`.
+  E/Enter = skip-typewriter-then-advance (multi-choice beats need a click);
+  Esc/× aborts WITHOUT marking seen — scene re-offers. `onComplete` fires only
+  past the final beat; play.js marks `Story.markSceneSeen` there. No camera
+  moves, no branching (risk R-2).
+- **`data/story_scenes.js`** (new): `window.STORY_SCENES.twist1` — the full
+  §4.1 "Six Conversations" script, 8 beats, verbatim, with `promptLabel`
+  "Talk — Ines has been counting" + actions `twist1_point` / `twist1_exchange`.
+- **TWIST1-01 wiring** (play.js): `pendingSceneFor(npc)` (ines + ch04-test
+  passed + !sceneSeen('twist1')) intercepts at the top of `openDialogue` and
+  in the proximity prompt writer. Actions (registered in `start()`): point →
+  Ines faces the cooler + `liveAgents.sendTo('folderman', [-8.2,-3.0], …, 75s)`;
+  exchange → three `showSpeechBubble` timeouts (3.8/6.4/8.6 s) on folderman/
+  partner/tania. All actor lookups guarded — scene plays dialogue-only if
+  staging actors are missing. Keydown scene branch sits BEFORE the generic
+  dialogue-close branch in `setupInput`.
+- **SYS-04 / COPY-05**: new `data/story_ambient.js` (`window.STORY_AMBIENT`)
+  with the five verbatim §6.1 six-line sets + `setForTier(tier)`. play.js
+  `ambientLineForSlot(slot)`: slot 0 = loop anchor (line 1), others cycle
+  lines 2-6. liveAgents ambient workers are now E-to-talk flavor NPCs: they
+  get `userData.npc` (neutral identities), a name tag (`makeNameTag` opt),
+  and register INTO `npcMeshes` — their GLTF tick moved to play.js's NPC loop
+  (liveAgents no longer ticks them; double-tick = double-speed anim). Slots
+  3+ for library ambients; lines resolve at spawn (refresh on reload only).
+- **TWIST1-02**: three roster NPCs (zone 1, kind flavor, ambientSlots 0/2/1):
+  `folderman` (Stan Vesely, procedural blue folder via `folderProp` flag in
+  spawnNPC, slow lobby ROUTINE in liveAgents), `tania` + `partner` (Arno Beck)
+  holding the reception water cooler at [-9.5,-2.8]. `liveAgents.sendTo(id,
+  to, face, holdSec)` override: go → hold → walk back to waypoint 0 → resume
+  loop (no position snap).
+- **CURTAIN-01** (play.js): first F1→F2 `requestFloorChange` only
+  (`Story.sceneSeen('curtain1')`, marked up-front), `curtainUntil = now+2s`;
+  update() lerps visible floor-1 npcMeshes to face the elevator (11,-7.6)
+  and pauses `liveAgents.update` while active. Pure timeout — no stuck state.
+- **PROP-01**: `buildHouseRulesFrame` (play.js) — framed yellowed canvas
+  "HOUSE RULES — M.K., year 1" with the three ch03-test conventions verbatim;
+  `house_rules` room builder + rooms.js reception entry at `[5.2, 0, -10.8]`
+  (back wall, east of the portrait, near the ch03 kiosk at [3,0,-8.5]);
+  STORY_DOCS `house_rules` (T0/T2/T5) + registerStoryInspectables entry.
+  `houseRulesGroup` reset in stop().
+- **COPY-02** (story_lines.js): Act II verbatim — auto-ch11-l01/l04,
+  auto-ch03-l02/l04, auto-ch04-l01 (introAppend T2); elena glitch intro +
+  "names compost" nextHint (T2); raj append (T2); noor postPassOnce (T3);
+  ines introByTier T2 (clap count) / T3 (post-scene Bingo idle);
+  auto-ch04-test postPassOnce keyed **T2 deliberately** (at pass time the
+  tier is still 2 — twist1 unseen — so a T3 key would never fire at the
+  handoff moment).
+- **`play/ui/nameTags.js`**: new export `showSpeechBubble(mesh, text, opts)` —
+  self-disposing overhead text sprite (hold 3 s, fade 1 s); flagged
+  `_isSpeechBubble` and skipped by `_findTagOnGroup` so it can't hijack the
+  name-tag fade.
+- **VERIFICATION GAP**: the Bash safety classifier was down for the whole
+  Phase 2 write — `node --check` and `scripts/audit/run-all.sh` could NOT be
+  run on the touched files (story_scenes/story_ambient/story_lines/story_docs/
+  rooms.js + sceneRunner/nameTags/liveAgents/play.js). Code was visually
+  reviewed only. FIRST THING next session: run those checks before anything
+  else, then playtest TWIST 1 (pass ch04-test → talk to Ines) + the F1→F2
+  curtain beat + the house-rules frame.
+
+### Kedash Protocol — Phase 3 (same 2026-06-10 session, UNCOMMITTED, do not deploy)
+
+Doc viewer + collectibles + Act III copy + TWIST 2 + props. Cache-bust round
+is `?v=20260610d` (style.css / play.js / story_lines / story_docs /
+story_scenes tags in index.html; play.js imports of procedural, dispatchBoard,
+permissionsPanel, plus new readableNote + docViewer imports; story_ambient
+stays `?v=20260610b`).
+
+- **`play/story/docViewer.js`** (new, SYS-05): full-screen monospace memo
+  reader, `initDocViewer({playUi, setInputLocked, isSceneActive})` injected
+  from play.js; `openDocument({title, body, onClose})`. Esc/E/click-outside
+  closes; a capture-phase keydown listener swallows ALL keys while open (so E
+  can't advance a scene underneath); on close, input unlocks ONLY if no scene
+  is active (the scene owns the lock). CSS `.doc-viewer*` appended to
+  style.css, z-index 80 (above dlg-card).
+- **`play/world/objectTypes/readableNote.js`** (new, SYS-06): paper / folder /
+  framed variants with canvas label textures. Registered as rooms-builder kind
+  `readable_note` in play.js; 8 placements in data/rooms.js (CR-01 + CR-06 in
+  reception, CR-02 library, CR-03 + learnings-frag-1 + client-profiles on
+  floor 3, CR-04 + CR-05 on floor 4 per §6.2). `registerReadableNotes()` runs
+  after `registerStoryInspectables()` in buildWorld AND after each lazy
+  `loadFloor` build (`_noteRegistered` dedupe); glow rings lifted to
+  `floorBaseY(floor)+0.02` + tagged with floor; `currentFloor` guards stop
+  cross-floor XZ prompt leaks. Locked notes (tier < `unlockTier`) prompt
+  "Locked — internal" and play 'cancel'. Read → openDocument +
+  `Story.markCollectibleRead(id)`.
+- **`data/story_docs.js`** (COPY-06): 6 authored Cycle Reports (M.K.'s voice,
+  unlockTier 5), `learnings_fragment_1` (T4, verbatim),
+  `learnings_fragment_2` (T7 — written now, placed on Floor M in Phase 4, NOT
+  placed yet), `client_profiles` ledger (T5, verbatim §4.2).
+- **`data/story_scenes.js`** (TWIST2-01): `twist2` — Engelhardt's "Customer
+  Ledger" scene, 5 beats verbatim §4.2, `action: 'twist2_ledger'` opens the
+  client-profiles doc mid-scene (1.1 s delay after "Mm. Open the file.").
+  Trigger in `pendingSceneFor`: npc `auto-ch10-l01` + ch10-test passed +
+  !sceneSeen('twist2').
+- **`data/story_lines.js`** (COPY-03): Act III verbatim — ch07/ch08/ch09/ch10
+  lesson + test NPC lines. `auto-ch09-test` postPassOnce keyed **T4
+  deliberately** (tier flips instantly at ch09 pass — no scene gate);
+  test-email "framing additions" from the scenario delivered as NPC intro
+  relays instead of editing test bodies (Educational Integrity Rule).
+- **Clearance chime** (`playClearanceChime` in procedural.js, E5→B5 bell):
+  fires once on first Floor-4 `requestFloorChange` at tier ≥ 5
+  (`Story.getFlag('floor4_chime')` one-shot).
+- **PROP-02** dispatchBoard.js: 3 ghost "CYCLE 01/02/03" cards (opacity 0.16)
+  behind the DONE column + bright emissive "CYCLE 07" card pinned over ACTIVE
+  (pulses with the hover group).
+- **PROP-03** permissionsPanel.js: new `locked` param — all three lights
+  steady green (emissive 1.0, idle cycling off) when ch15-test is passed;
+  play.js passes the flag at build time in the LESSON_DELIVERY spawn loop.
+- **Deviations**: learnings fragment 1 is visible-but-locked below T4 (not
+  hidden — build-time visibility would fight `applyFloorVisibility`); CR-02
+  placed in the physical floor-1 library (scenario says "Floor 2" but the
+  library room is on floor 1 in this build).
+- **VERIFICATION GAP**: Bash classifier was down again — `node --check` was
+  NOT run on: docViewer.js, readableNote.js, procedural.js, dispatchBoard.js,
+  permissionsPanel.js, play.js, story_lines.js, story_docs.js,
+  story_scenes.js, rooms.js. Visually reviewed only. FIRST THING next
+  session: run those checks + `scripts/audit/run-all.sh`, then playtest:
+  (1) TWIST 2 at Engelhardt after ch10-test — ledger opens mid-scene, closing
+  it does NOT unlock input, scene finishes, Esc-abort re-offers;
+  (2) locked vs unlocked note prompts across tiers + glow rings on floors 3/4;
+  (3) clearance chime on first T5+ Floor-4 elevator ride (once);
+  (4) dispatch-board ghosts + CYCLE 07 card; (5) permissions panel steady
+  green after ch15-test; (6) doc viewer standalone open/close re-locks
+  nothing weird in normal play.
+
 ## Character roster overhaul — 10 ethnicity rigs (2026-06-03 session, UNCOMMITTED)
 
 Replaced the formerly procedural-shape NPCs with 10 new ethnicity character

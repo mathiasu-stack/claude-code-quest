@@ -39,15 +39,46 @@ const ROUTINES = {
     ],
     speed: 1.4,
   },
+  // The man with the blue folder (Kedash Protocol, TWIST1-02) — a slow
+  // lobby loop that keeps him visible from Ines's spot at (2, -4). Ines
+  // claims he "does the loop nine times before lunch"; the scene's
+  // sendTo() override routes him to the water cooler on cue.
+  folderman: {
+    // Loops AROUND the reception centerpiece at (0, 0, 1) — the south
+    // waypoint keeps the return leg clear of it.
+    waypoints: [
+      { pos: [7, -1],  face: Math.PI,      dwell: 6 },
+      { pos: [6.5, 6], face: -Math.PI / 2, dwell: 4 },
+      { pos: [-3, 7],  face: 0,            dwell: 7 },
+      { pos: [-6, 1],  face: Math.PI / 2,  dwell: 5 },
+      { pos: [-2, -4], face: Math.PI / 2,  dwell: 3 },
+    ],
+    speed: 0.9,
+  },
   // Linda is special — she greets the door instead of pathing.
+  // Tania + partner (water-cooler pair) deliberately have NO routine —
+  // they hold their cooler spots so TWIST 1's staging always finds them.
 };
 
+// Neutral identities for the procedural library ambients — they become
+// E-to-talk flavor NPCs (SYS-04), so they need names and a portrait.
+const AMBIENT_IDENTITIES = [
+  { name: 'Dev Kapoor',      portrait: '🧑‍💼' },
+  { name: 'Marta Lindqvist', portrait: '👩‍💼' },
+  { name: 'Theo Brandt',     portrait: '👨‍💼' },
+  { name: 'Suki Tanabe',     portrait: '👩‍💻' },
+];
+
 export class LiveAgents {
-  constructor({ scene, npcMeshes, makeCharacter, isMobile }) {
+  constructor({ scene, npcMeshes, makeCharacter, isMobile, makeNameTag, ambientLineForSlot }) {
     this.scene = scene;
     this.npcMeshes = npcMeshes;
     this.makeCharacter = makeCharacter;
     this.mobile = isMobile;
+    this.makeNameTag = makeNameTag || null;
+    this.ambientLineForSlot = ambientLineForSlot || null;
+    // sendTo() overrides, keyed by npc id (Kedash Protocol staging).
+    this.overrides = {};
 
     // Index hand-named NPCs by id.
     this.named = {};
@@ -112,7 +143,31 @@ export class LiveAgents {
     // Ambient library agents belong to floor 1 — hide them when the
     // player rides up to upper floors.
     mesh.userData.floor = 1;
+    // SYS-04: ambient agents are E-to-talk flavor NPCs carrying the
+    // act-gated six-line set (data/story_ambient.js). Slots 0-2 belong
+    // to the dedicated lobby actors (folderman/partner/tania in the
+    // NPCS roster); library ambients take slots 3+ and cycle lines 2-6.
+    const ident = AMBIENT_IDENTITIES[seed % AMBIENT_IDENTITIES.length];
+    const slot = 3 + seed;
+    mesh.userData.npc = {
+      id: `ambient-${seed}`,
+      kind: 'flavor',
+      name: ident.name,
+      role: 'Kedash Staff',
+      portrait: ident.portrait,
+      intro: this.ambientLineForSlot ? this.ambientLineForSlot(slot) : 'Busy week.',
+      nextHint: '',
+    };
+    if (this.makeNameTag) {
+      const tag = this.makeNameTag(`${ident.portrait} ${ident.name}`);
+      tag.position.set(0, 2.30, 0);
+      mesh.add(tag);
+    }
     this.scene.add(mesh);
+    // Registering into npcMeshes makes the proximity loop, dialogue and
+    // name-tag systems pick them up — AND means play.js's NPC loop now
+    // ticks their GLTF mixer, so update() below must NOT double-tick.
+    this.npcMeshes.push(mesh);
     return {
       mesh,
       // Random rectangular waypoint loop within the library.
@@ -142,10 +197,14 @@ export class LiveAgents {
   }
 
   update(dt, now, playerPos) {
-    // Run routines for named NPCs
+    // Run routines for named NPCs (sendTo overrides take precedence)
     for (const [id, routine] of Object.entries(ROUTINES)) {
       const npc = this.named[id];
       if (!npc) continue;
+      if (this.overrides[id]) {
+        this._stepOverride(id, npc, routine, dt);
+        continue;
+      }
       this._stepRoutine(npc, routine, this.routineState[id], dt);
     }
 
@@ -176,23 +235,62 @@ export class LiveAgents {
       }
     }
 
-    // Ambient agents
+    // Ambient agents. NOTE: their GLTF mixers are NOT ticked here —
+    // ambients are registered in npcMeshes now (SYS-04), so play.js's
+    // NPC loop handles walk/idle detection + mixer.update. Ticking
+    // here too would double-speed the animation.
     for (const a of this.ambient) {
       if (!a) continue;
       this._stepAgent(a, dt);
-      // Drive GLTF animation. Ambient meshes live outside `npcMeshes`, so
-      // play.js's NPC loop never ticks their AnimationMixer — without this
-      // they sit frozen in bind-pose (T-pose). Mirror that loop: pick
-      // walk vs idle from frame-to-frame position deltas, then tick.
-      const gc = a.mesh.userData?.gltfChar;
-      if (gc) {
-        const last = a._lastPos || { x: a.mesh.position.x, z: a.mesh.position.z };
-        const moved = Math.hypot(a.mesh.position.x - last.x, a.mesh.position.z - last.z);
-        a._lastPos = { x: a.mesh.position.x, z: a.mesh.position.z };
-        if (gc.setMotion) gc.setMotion(moved > 0.0005 ? 'walk' : 'idle');
-        if (gc.update) gc.update(dt);
-      }
     }
+  }
+
+  // Kedash Protocol staging (TWIST1-01): route a routine NPC to an
+  // absolute [x, z], hold there facing `face` for `holdSec`, then walk
+  // back to waypoint 0 and resume the loop (avoids a position snap).
+  sendTo(id, to, face = 0, holdSec = 60) {
+    const npc = this.named[id];
+    if (!npc || !ROUTINES[id]) return false;
+    this.overrides[id] = { phase: 'go', to, face, holdLeft: holdSec };
+    return true;
+  }
+
+  _stepOverride(id, npc, routine, dt) {
+    const ov = this.overrides[id];
+    const speed = routine.speed || 1.2;
+    if (ov.phase === 'go' || ov.phase === 'return') {
+      const tx = ov.phase === 'go' ? ov.to[0] : routine.waypoints[0].pos[0];
+      const tz = ov.phase === 'go' ? ov.to[1] : routine.waypoints[0].pos[1];
+      const dx = tx - npc.position.x;
+      const dz = tz - npc.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.08) {
+        if (ov.phase === 'go') {
+          ov.phase = 'hold';
+        } else {
+          // Back home — resume the normal loop from waypoint 0.
+          delete this.overrides[id];
+          const st = this.routineState[id];
+          if (st) { st.idx = 0; st.progress = 0; st.dwellLeft = routine.waypoints[0].dwell; }
+          npc.rotation.y = routine.waypoints[0].face;
+        }
+        return;
+      }
+      const step = Math.min(dist, speed * dt);
+      npc.position.x += (dx / dist) * step;
+      npc.position.z += (dz / dist) * step;
+      const targetRot = Math.atan2(dx, dz);
+      let r = ((targetRot - npc.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (r < -Math.PI) r += Math.PI * 2;
+      npc.rotation.y += r * (1 - Math.exp(-dt * 4));
+      return;
+    }
+    // phase === 'hold' — face the assigned direction, run down the timer.
+    let r = ((ov.face - npc.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (r < -Math.PI) r += Math.PI * 2;
+    npc.rotation.y += r * (1 - Math.exp(-dt * 3));
+    ov.holdLeft -= dt;
+    if (ov.holdLeft <= 0) ov.phase = 'return';
   }
 
   _stepRoutine(npc, routine, state, dt) {
@@ -270,11 +368,16 @@ export class LiveAgents {
   dispose() {
     for (const a of this.ambient) {
       if (a?.mesh) {
+        // Ambients were registered into npcMeshes (SYS-04) — unregister
+        // them so a disposed agent can't linger in the proximity loop.
+        const idx = this.npcMeshes.indexOf(a.mesh);
+        if (idx >= 0) this.npcMeshes.splice(idx, 1);
         this.scene.remove(a.mesh);
       }
     }
     this.ambient = [];
     this.named = {};
     this.routineState = {};
+    this.overrides = {};
   }
 }

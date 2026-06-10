@@ -9,7 +9,8 @@ import {
   playUi, playDialogueBlip, blipPitchForNpc,
   playAchievementChime, playLevelUpFanfare, playPpPing,
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
-} from './audio/procedural.js';
+  playClearanceChime,
+} from './audio/procedural.js?v=20260610d';
 import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
 import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
@@ -34,7 +35,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260529b';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260610c';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
@@ -47,18 +48,25 @@ import {
 import { buildComputer } from './world/objectTypes/computer.js';
 import { buildBook } from './world/objectTypes/book.js';
 import { buildWhiteboardObject } from './world/objectTypes/whiteboard.js';
-import { buildServerRack } from './world/objectTypes/serverRack.js';
+import { buildServerRack } from './world/objectTypes/serverRack.js?v=20260610a';
 import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { buildModelConsole } from './world/objectTypes/modelConsole.js';
-import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js';
-import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js';
-import { LESSON_DELIVERY } from './world/lessonRegistry.js';
+import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
+import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
+import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
+import { LESSON_DELIVERY } from './world/lessonRegistry.js?v=20260610a';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
 import { TimeOfDay } from './world/timeOfDay.js';
-import { LiveAgents } from './world/liveAgents.js?v=20260603b';
-import { NameTagSystem } from './ui/nameTags.js';
+import { LiveAgents } from './world/liveAgents.js?v=20260610b';
+import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
+import Story from './story/storyState.js?v=20260610a';
+import {
+  initSceneRunner, registerSceneActions, runScene,
+  isSceneActive, advanceScene, abortScene,
+} from './story/sceneRunner.js?v=20260610b';
+import { initDocViewer, openDocument, isDocumentOpen } from './story/docViewer.js?v=20260610d';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [
@@ -123,6 +131,37 @@ const NPCS = [
     intro: "Hi! I'm Ines. I'm 9. My dad works here on the third floor — he said I have to wait until his big meeting is done. The chairs spin really fast if you push hard! Are you a real engineer?",
     nextHint: "",
   },
+
+  // ── Kedash Protocol lobby actors (TWIST1-02) ────
+  // Guaranteed carriers of the six-line ambient set (data/story_ambient.js,
+  // intro resolved at spawn via ambientSlot) AND the staging cast for the
+  // TWIST 1 scene. Folderman walks a slow lobby loop (liveAgents ROUTINES);
+  // Tania + partner hold the reception water cooler at [-9.5, -2.8].
+  {
+    id: 'folderman', zone: 1, pos: [7, -1], face: Math.PI, kind: 'flavor',
+    name: 'Stan Vesely', role: 'Kedash Staff', portrait: '🧑‍💼',
+    ambientSlot: 0, folderProp: true,
+    look: { skin: 0xfdd9b5, hair: 0x2c1810, hairStyle: 'side-part', shirt: 0x90a4ae, pants: 0x37474f, glasses: false, prop: null, face: 'round', expression: 'neutral' },
+    intro: "Busy week. They say the new cohort starts soon.",
+    nextHint: "",
+  },
+  {
+    id: 'tania', zone: 1, pos: [-8.6, -2.1], face: -2.2, kind: 'flavor',
+    name: 'Tania', role: 'Kedash Staff', portrait: '👩‍🦰',
+    ambientSlot: 2,
+    look: { skin: 0xf1c27d, hair: 0xb87333, hairStyle: 'ponytail', shirt: 0xffcc80, pants: 0x37474f, glasses: false, prop: 'mug', face: 'round', expression: 'happy' },
+    intro: "Coffee on three is better. Don't ask me why.",
+    nextHint: "",
+  },
+  {
+    id: 'partner', zone: 1, pos: [-8.8, -3.8], face: -0.6, kind: 'flavor',
+    name: 'Arno Beck', role: 'Kedash Staff', portrait: '👨‍💼',
+    ambientSlot: 1,
+    look: { skin: 0x8d5524, hair: 0x1a1a1a, hairStyle: 'short', shirt: 0x80cbc4, pants: 0x263238, glasses: true, prop: null, face: 'sharp', expression: 'neutral' },
+    intro: "Did you see the Q3 numbers? …Me neither, ha.",
+    nextHint: "",
+  },
+
   {
     id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
     name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
@@ -410,6 +449,9 @@ let libraryWindow = null;
 let receptionHallway = null;
 let timeOfDay = null;
 let liveAgents = null;
+// CURTAIN-01: while performance.now() < curtainUntil, visible floor-1
+// NPCs turn to face the elevator (first F1→F2 ride only).
+let curtainUntil = 0;
 let nameTags = null;
 let occluderWalls = [];
 // Wall meshes collected after build, used by the camera to clamp distance
@@ -1144,6 +1186,15 @@ function buildLamp(x, z) {
 
 // ─── CEO portrait ────────────────────────────────────────────────────────────
 let ceoHearts = null;
+// Story-inspectable prop groups (Kedash Protocol). Built during loadRoom()
+// but registered as interactables AFTER clearInteractables() in buildWorld.
+let ceoPortraitGroup = null;
+let badgePrinterGroup = null;
+let houseRulesGroup = null;
+// Readable collectible notes (SYS-06): { group, docId } pushed by the
+// 'readable_note' room builder; registered by registerReadableNotes()
+// after buildWorld's clearInteractables() / at the end of loadFloor().
+let readableNotes = [];
 
 // Refined executive headshot — soft gradient shading, defined features,
 // reads as a corporate oil-painting portrait at gameplay distance.
@@ -1445,6 +1496,12 @@ function buildCeoPortrait(targetScene) {
   plaque.position.set(0, -1.55, 0.12);
   group.add(plaque);
 
+  // Warm accent light so the portrait reads as "lit with care" — a small
+  // story beat (PROP-04): someone keeps this corner of reception warm.
+  const warmLight = new THREE.PointLight(0xffd9a0, 0.6, 4);
+  warmLight.position.set(0, 0.4, 0.9);
+  group.add(warmLight);
+
   // Floating hearts when all chapters complete (CEO has fallen for the player)
   if (allDone) {
     ceoHearts = new THREE.Group();
@@ -1462,6 +1519,122 @@ function buildCeoPortrait(targetScene) {
   // _roomEntryIndex and the editor can select / drag the portrait
   // like any other room object). The default back-wall slot is set
   // via the data entry in data/rooms.js → pos: [0, 2.0, -10.86].
+  ceoPortraitGroup = group;
+  return group;
+}
+
+// ─── Badge printer (PROP-06) ─────────────────────────────────────────────────
+// Small desk prop behind Linda's reception spot. Inspect registration is
+// deferred to registerStoryInspectables() — clearInteractables() runs after
+// the reception room loads and would wipe anything registered here.
+function buildBadgePrinter(x, z, rotY) {
+  const group = new THREE.Group();
+
+  const pedestal = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.85, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.7 })
+  );
+  pedestal.position.y = 0.425;
+  group.add(pedestal);
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.28, 0.42),
+    new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.3, roughness: 0.45 })
+  );
+  body.position.y = 0.99;
+  group.add(body);
+
+  // Badge output slot
+  const slot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.26, 0.025, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x111111 })
+  );
+  slot.position.set(0, 0.95, 0.215);
+  group.add(slot);
+
+  // Status screen — one idle line, drawn once (no ticker needed).
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const cctx = c.getContext('2d');
+  cctx.fillStyle = '#0a1622';
+  cctx.fillRect(0, 0, 256, 64);
+  cctx.fillStyle = '#7fd4a0';
+  cctx.font = '600 17px monospace';
+  cctx.textAlign = 'center';
+  cctx.fillText('LAST JOB: 1 BADGE', 128, 27);
+  cctx.fillText('— 6 DAYS AGO', 128, 50);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.4, 0.1),
+    new THREE.MeshBasicMaterial({ map: tex })
+  );
+  screen.position.set(0, 1.06, 0.212);
+  group.add(screen);
+
+  group.position.set(x, 0, z);
+  group.rotation.y = rotY || 0;
+  badgePrinterGroup = group;
+  return group;
+}
+
+// ─── House rules frame (Kedash Protocol, PROP-01) ────────────────────────────
+// A framed, yellowing printout — "HOUSE RULES — M.K., year 1" — hung on
+// the reception back wall near the ch03 kiosk. Its three faded rules
+// mirror the ch03-test conventions word-for-word: the player's first
+// physical Maya artifact. Inspect registration happens in
+// registerStoryInspectables() (same deferral as the badge printer).
+function buildHouseRulesFrame(x, z, rotY) {
+  const group = new THREE.Group();
+
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 1.3, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.65 })
+  );
+  group.add(frame);
+
+  // Yellowed paper with faded typewritten rules.
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 340;
+  const cctx = c.getContext('2d');
+  cctx.fillStyle = '#e8dcb4';
+  cctx.fillRect(0, 0, 256, 340);
+  // Aging blotches.
+  cctx.fillStyle = 'rgba(160, 130, 70, 0.12)';
+  cctx.beginPath(); cctx.arc(40, 60, 36, 0, Math.PI * 2); cctx.fill();
+  cctx.beginPath(); cctx.arc(210, 280, 48, 0, Math.PI * 2); cctx.fill();
+  cctx.fillStyle = '#4a3c24';
+  cctx.textAlign = 'center';
+  cctx.font = '700 22px Georgia, serif';
+  cctx.fillText('HOUSE RULES', 128, 48);
+  cctx.font = 'italic 600 15px Georgia, serif';
+  cctx.fillText('— M.K., year 1', 128, 76);
+  // Faded ink for the rules themselves.
+  cctx.fillStyle = 'rgba(74, 60, 36, 0.72)';
+  cctx.font = '500 14px Georgia, serif';
+  cctx.textAlign = 'left';
+  const rules = [
+    ['1. Replies follow', '    templates/.'],
+    ['2. Cancellations escalate', '    to #cx-escalations.'],
+    ['3. Never mention', '    internal-notes/ in', '    customer text.'],
+  ];
+  let yy = 122;
+  for (const rule of rules) {
+    for (const line of rule) { cctx.fillText(line, 26, yy); yy += 22; }
+    yy += 12;
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const paper = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.86, 1.16),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 })
+  );
+  paper.position.z = 0.028;
+  group.add(paper);
+
+  group.position.set(x, 1.65, z);
+  group.rotation.y = rotY || 0;
+  houseRulesGroup = group;
   return group;
 }
 
@@ -1503,6 +1676,17 @@ function registerRoomBuilders() {
   registerRoomBuilder('table', (pos, rotY, args) =>
     buildTable(pos[0], pos[2], rotY || 0, args.w));
   registerRoomBuilder('lamp', (pos) => buildLamp(pos[0], pos[2]));
+  registerRoomBuilder('badge_printer', (pos, rotY) =>
+    buildBadgePrinter(pos[0], pos[2], rotY || 0));
+  registerRoomBuilder('house_rules', (pos, rotY) =>
+    buildHouseRulesFrame(pos[0], pos[2], rotY || 0));
+  registerRoomBuilder('readable_note', (pos, rotY, args) => {
+    const group = buildReadableNote({ label: args.label, variant: args.variant });
+    group.position.set(pos[0], pos[1] || 0, pos[2]);
+    group.rotation.y = rotY || 0;
+    if (args.doc) readableNotes.push({ group, docId: args.doc });
+    return group;
+  });
 
   // ── Compound builders (each owns its own multi-mesh placement) ───
   // Each returns null because the underlying builder already calls
@@ -1554,6 +1738,97 @@ function registerRoomBuilders() {
   });
 }
 
+// ─── Story-inspectable props (PROP-04 / PROP-06) ─────────────────────────────
+// Runs in buildWorld AFTER clearInteractables() — the prop groups are created
+// by room builders during loadRoom(), which executes before the wipe, so they
+// can't self-register at build time.
+function registerStoryInspectables() {
+  const entries = [
+    // Portrait hangs on the back wall behind the reception desk — the
+    // desk keeps the player ~3m away, so its radius is more generous.
+    { group: ceoPortraitGroup,  docId: 'portrait',      radius: 3.4,
+      prompt: 'Inspect portrait — press E',      glowColor: 0xc9a44c },
+    { group: badgePrinterGroup, docId: 'badge_printer', radius: 2.4,
+      prompt: 'Inspect badge printer — press E', glowColor: 0x7fd4a0 },
+    // PROP-01: framed yellowed house rules near the ch03 kiosk.
+    { group: houseRulesGroup,   docId: 'house_rules',   radius: 2.6,
+      prompt: 'Read the framed page — press E', glowColor: 0xc9a44c },
+  ];
+  for (const { group, docId, prompt, glowColor, radius } of entries) {
+    if (!group || !group.parent) continue;
+    const wp = new THREE.Vector3();
+    group.getWorldPosition(wp);
+    registerInteractable({
+      mesh: group,
+      kind: 'story-inspect',
+      position: [wp.x, wp.z],
+      radius,
+      glowSize: 0.9,
+      glowColor,
+      parent: scene,
+      onInteract: () => openInspectCard(docId),
+      getPromptText: () => prompt,
+    });
+    // These props are ROOM entries (data/rooms.js) — the editor must keep
+    // treating them as such. registerInteractable's _isInteractable tag
+    // would win in the editor's tagKind() and route drags to the (absent)
+    // LESSON_DELIVERY override path, so drop it. Interaction still works:
+    // the proximity loop re-attaches _interactable on hover.
+    delete group.userData._isInteractable;
+  }
+}
+
+// ─── Readable collectible notes (SYS-06) ─────────────────────────────────────
+// Registers any built-but-unregistered note as an interactable. Called
+// from buildWorld (floor-1 notes are built by loadRoom BEFORE the
+// clearInteractables() wipe) and from loadFloor (floor-3/4 notes are
+// lazy-built AFTER the wipe, so they register immediately). Tier gating
+// is evaluated at prompt/interact time so a mid-session tier change
+// (e.g. TWIST 2 completing two metres from the client-profiles folder)
+// unlocks without a rebuild.
+function registerReadableNotes() {
+  for (const note of readableNotes) {
+    const { group, docId } = note;
+    if (!group || !group.parent || group.userData._noteRegistered) continue;
+    group.userData._noteRegistered = true;
+    const doc = window.STORY_DOCS?.[docId] || {};
+    const noteFloor = group.userData.floor || 1;
+    const unlocked = () => Story.getTier() >= (doc.unlockTier || 0);
+    const wp = new THREE.Vector3();
+    group.getWorldPosition(wp);
+    const it = registerInteractable({
+      mesh: group,
+      kind: 'readable-note',
+      position: [wp.x, wp.z],
+      radius: 1.8,
+      glowSize: 0.7,
+      glowColor: 0xc9a44c,
+      parent: scene,
+      getPromptText: () => {
+        if (currentFloor !== noteFloor) return '';
+        if (!unlocked()) return 'Locked — internal';
+        const read = Story.collectibleRead?.(docId);
+        return `${read ? 'Re-read' : 'Read'} — ${doc.title || 'document'} — press E`;
+      },
+      onInteract: () => {
+        if (currentFloor !== noteFloor) return;
+        if (!unlocked()) { playUi('cancel'); return; }
+        openDocument({ title: doc.title || 'Document', body: doc.body || '' });
+        Story.markCollectibleRead?.(docId);
+      },
+    });
+    if (it?.glow) {
+      // The ring is parented to the scene at y=0.02 — lift it onto the
+      // note's floor plate and tag it so floor culling hides it.
+      it.glow.userData.floor = noteFloor;
+      it.glow.position.y = floorBaseY(noteFloor) + 0.02;
+    }
+    // Same editor-compat trick as registerStoryInspectables: these are
+    // ROOM entries; keep the editor routing drags to rooms.js.
+    delete group.userData._isInteractable;
+  }
+}
+
 // ─── World construction ──────────────────────────────────────────────────────
 function buildWorld() {
   scene = new THREE.Scene();
@@ -1585,6 +1860,7 @@ function buildWorld() {
   // data/rooms.js under either the `reception` or `library` room.
   registerRoomBuilders();
   decoTickers = [];
+  readableNotes = [];
   const ctx = { scene, decoTickers };
 
   loadRoom(scene, window.ROOM_BY_ID('reception'), ctx);
@@ -1683,6 +1959,12 @@ function buildWorld() {
         chapterId: cid,
         lessonId: cfg.lessonId,
         onInteract: onObjectInteract,
+        // PROP-03: the permissions panel settles all-green once the
+        // guardrails test is passed. Evaluated at build time — the play
+        // view fully restarts on return from the test view.
+        locked: cfg.delivery === 'permissionsPanel'
+          ? !!window.Progress?.isTestPassed?.(getProgress(), 'ch15-test')
+          : undefined,
       });
       interactObjects.push(obj);
       // Tag the returned group so the in-game editor can resolve a
@@ -1711,6 +1993,12 @@ function buildWorld() {
       console.warn(`object build failed for ${chapterId} (${cfg.delivery})`, e);
     }
   }
+
+  // Story-inspectable props (Kedash Protocol). Their groups were built
+  // during loadRoom() above, but clearInteractables() just wiped the
+  // registry — so registration is deferred to here.
+  registerStoryInspectables();
+  registerReadableNotes();
 
   // Atrium + elevator now load via the reception room's `atrium` and
   // `elevator` builder entries in data/rooms.js (run by loadRoom above).
@@ -3104,6 +3392,25 @@ function spawnNPC(npcDef) {
       portrait: editorOverride.portrait || npcDef.portrait,
     };
   }
+  // Kedash Protocol ambient-line carriers (SYS-04): resolve the intro
+  // from the act-gated six-line set at spawn time. Slot 0 is the loop
+  // anchor (line 1); other slots cycle lines 2-6. Lines refresh on
+  // floor reload only — never mid-session.
+  if (typeof npcDef.ambientSlot === 'number' && window.STORY_AMBIENT) {
+    npcDef = { ...npcDef, intro: ambientLineForSlot(npcDef.ambientSlot) };
+  }
+  // Blue-folder man's signature prop (TWIST1-02) — a small folder held
+  // at hip height. Attached to the group root so it works for both
+  // procedural and GLTF character bodies.
+  if (npcDef.folderProp) {
+    const folder = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.22, 0.035),
+      new THREE.MeshStandardMaterial({ color: 0x1565c0, roughness: 0.6 })
+    );
+    folder.position.set(0.3, 0.95, 0.14);
+    folder.rotation.z = -0.18;
+    mesh.add(folder);
+  }
   mesh.position.set(npcDef.pos[0], floorBaseY(npcFloor), npcDef.pos[1]);
   mesh.rotation.y = npcDef.face;
   // Editor-set per-NPC scale override (NPC_OVERRIDES[id].scale).
@@ -3196,6 +3503,10 @@ async function loadFloor(f) {
   try {
     buildFloorOffice(f);
     spawnNPCsForFloor(f);
+    // Collectible notes on this floor were just built by loadRoom —
+    // the interactable wipe already happened (buildWorld), so they
+    // can register immediately.
+    registerReadableNotes();
     // Rebuild the cameraWalls list — the new floor added wall meshes
     // that the camera-occlusion path needs to know about.
     refreshCameraWalls();
@@ -3262,6 +3573,26 @@ function resize() {
 // ─── Input ───────────────────────────────────────────────────────────────────
 function setupInput() {
   keyDownListener = (e) => {
+    // Scripted scene (SYS-03): E/Enter advances (skip-then-advance),
+    // Esc aborts without marking the scene seen. This branch MUST come
+    // before the generic dialogue-close branch below — a scene uses the
+    // same dialogue element and would otherwise be closed by it.
+    if (!e.repeat && isSceneActive()) {
+      if (e.key === 'Escape') {
+        abortScene();
+      } else if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
+        advanceScene();
+      }
+      return;
+    }
+    // Esc / E closes an open dialogue or inspect card (key repeat ignored
+    // so holding E to open doesn't immediately close it again).
+    if (inputLocked && !e.repeat && dialogueEl?.classList.contains('visible') &&
+        (e.key === 'Escape' || e.key === 'e' || e.key === 'E')) {
+      playUi('cancel');
+      closeDialogue();
+      return;
+    }
     if (inputLocked) return;
     keys[e.key.toLowerCase()] = true;
     // Editor mode lets the user move + rotate camera (so `keys[...]`
@@ -3652,18 +3983,130 @@ function computeAheadGate(npc) {
   return { text: variants[Math.abs(h) % variants.length], whoName };
 }
 
+// ─── Story dialogue overrides (Kedash Protocol, SYS-02) ──────────────────────
+// data/story_lines.js declares tier-keyed override maps per NPC id. For each
+// map, the highest tier key (T0, T1, …) <= the current story tier wins.
+// Gate text (computeAheadGate) always beats story overrides — curriculum
+// ordering stays authoritative.
+function resolveByTier(map, tier) {
+  if (!map) return null;
+  let bestN = -1, bestVal = null;
+  for (const key of Object.keys(map)) {
+    const n = parseInt(String(key).slice(1), 10);
+    if (Number.isFinite(n) && n <= tier && n > bestN) { bestN = n; bestVal = map[key]; }
+  }
+  return bestN >= 0 ? { key: `T${bestN}`, value: bestVal } : null;
+}
+
+function storyLinesFor(npcId) {
+  return (window.STORY_LINES && window.STORY_LINES[npcId]) || null;
+}
+
+// ─── Story ambient lines (SYS-04 / COPY-05) ──────────────────────────────────
+// Resolve one line from the act-gated six-line set (data/story_ambient.js)
+// for an ambient-carrier slot. Slot 0 ALWAYS gets line 1 — the loop
+// anchor Ines predicts in TWIST 1; other slots cycle lines 2-6.
+function ambientLineForSlot(slot) {
+  const SA = window.STORY_AMBIENT;
+  if (!SA?.setForTier) return 'Busy week.';
+  const set = SA.setForTier(Story.getTier());
+  if (slot === 0) return set[0];
+  return set[1 + ((slot - 1) % (set.length - 1))];
+}
+
+// ─── Story scenes (SYS-03 / TWIST1-01) ───────────────────────────────────────
+// State-based trigger check: returns a scene id when talking to this NPC
+// should play a scripted scene INSTEAD of the regular dialogue. Aborting
+// the scene leaves the trigger true, so it re-offers on the next talk.
+function pendingSceneFor(npc) {
+  if (!npc || !window.STORY_SCENES) return null;
+  if (npc.id === 'ines' && !Story.sceneSeen('twist1')) {
+    const progress = getProgress();
+    if (window.Progress?.isTestPassed?.(progress, 'ch04-test')) return 'twist1';
+  }
+  // TWIST 2 plays at Engelhardt (the ch10 lesson mentor, not the
+  // assessor) once the model-spend audit is passed.
+  if (npc.id === 'auto-ch10-l01' && !Story.sceneSeen('twist2')) {
+    const progress = getProgress();
+    if (window.Progress?.isTestPassed?.(progress, 'ch10-test')) return 'twist2';
+  }
+  return null;
+}
+
+function startStoryScene(sceneId, npc) {
+  const def = window.STORY_SCENES?.[sceneId];
+  if (!def) return false;
+  return runScene(def, {
+    pitch: blipPitchForNpc(npc?.id || sceneId),
+    onComplete: () => {
+      // sceneSeen flips the derived tier (twist1 → T3) — ambient lines
+      // pick the new act set on the next floor reload (SYS-04 rule).
+      Story.markSceneSeen(sceneId);
+    },
+  });
+}
+
+// Cancel a running typewriter (revealing its full text). Returns true
+// if one was running — the scene runner uses this for skip-then-advance.
+function skipTypewriter() {
+  if (currentTypewriter) {
+    currentTypewriter.cancel();
+    currentTypewriter = null;
+    return true;
+  }
+  return false;
+}
+
 function openDialogue(npc) {
+  // Scripted scene takes over the talk action when its trigger is armed
+  // (e.g. TWIST 1: ch04-test passed, scene not yet seen).
+  const sceneId = pendingSceneFor(npc);
+  if (sceneId && startStoryScene(sceneId, npc)) return;
   inputLocked = true;
   const d = dialogueEl;
   const isFlavor = npc.kind === 'flavor';
   const done = isFlavor ? false : (npc.kind === 'lesson' ? isLessonDone(npc.lessonId) : isTestDone(npc.testId));
   // Soft-gate: this NPC teaches a lesson the player isn't ready for yet.
   const gate = done ? null : computeAheadGate(npc);
-  const introText = gate ? gate.text : npc.intro;
+  const story = storyLinesFor(npc.id);
+  const tier = Story.getTier();
+  let introText = gate ? gate.text : npc.intro;
+  let speaker = npc;   // postPass relays may borrow this NPC's card
+  let postPassActive = false;
+  if (!gate) {
+    const introOv = resolveByTier(story?.introByTier, tier);
+    if (introOv) introText = introOv.value;
+    const append = resolveByTier(story?.introAppendByTier, tier);
+    if (append) introText = introText ? `${introText} ${append.value}` : append.value;
+    // One-shot post-pass beat: shown the first time the player talks to a
+    // test NPC after newly passing its test (shown-state lives in ccq_story).
+    if (done && npc.kind === 'test') {
+      const pp = resolveByTier(story?.postPassOnceByTier, tier);
+      if (pp) {
+        const flagKey = `postpass:${npc.id}:${pp.key}`;
+        if (!Story.getFlag(flagKey)) {
+          Story.setFlag(flagKey);
+          postPassActive = true;
+          const v = pp.value;
+          if (typeof v === 'string') {
+            introText = v;
+          } else {
+            introText = v.text;
+            speaker = {
+              ...npc,
+              name: v.speakerName || npc.name,
+              role: v.speakerRole || npc.role,
+              portrait: v.speakerPortrait || npc.portrait,
+            };
+          }
+        }
+      }
+    }
+  }
 
   // Determine status & next-step pointer
   let statusLine = '';
-  if (done) {
+  if (done && !postPassActive) {
     statusLine = `<div class="dlg-status dlg-done">✓ You've already completed this with ${npc.name.split(' ')[0]}.</div>`;
   } else if (gate) {
     statusLine = `<div class="dlg-status dlg-gate">↪ One step at a time — let's keep the lessons in order.</div>`;
@@ -3671,8 +4114,9 @@ function openDialogue(npc) {
   let nextHint = '';
   if (gate) {
     nextHint = `<div class="dlg-next">Follow the gold marker — it'll lead you to ${gate.whoName}.</div>`;
-  } else if (done) {
-    nextHint = `<div class="dlg-next">${npc.nextHint}</div>`;
+  } else if (done && !postPassActive) {
+    const hintOv = resolveByTier(story?.nextHintByTier, tier);
+    nextHint = `<div class="dlg-next">${hintOv ? hintOv.value : npc.nextHint}</div>`;
   }
 
   const actionsHtml = isFlavor
@@ -3692,10 +4136,10 @@ function openDialogue(npc) {
     <div class="dlg-card">
       <button class="dlg-close" aria-label="Close">×</button>
       <div class="dlg-header">
-        <div class="dlg-portrait">${npc.portrait}</div>
+        <div class="dlg-portrait">${speaker.portrait}</div>
         <div class="dlg-who">
-          <div class="dlg-name">${npc.name}</div>
-          <div class="dlg-role">${npc.role}</div>
+          <div class="dlg-name">${speaker.name}</div>
+          <div class="dlg-role">${speaker.role}</div>
         </div>
       </div>
       ${statusLine}
@@ -3782,6 +4226,37 @@ function startTypewriter(el, text, pitch = 1.0) {
 
 function escapeHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Story inspect card (PROP-04 / PROP-06) ──────────────────────────────────
+// Read-only reuse of the dialogue card for inspectable props. Text comes from
+// data/story_docs.js, resolved by the current story tier. Shares closeDialogue
+// for input unlock so it can never desync the NPC dialogue state.
+function openInspectCard(docId) {
+  const doc = window.STORY_DOCS?.[docId];
+  const resolved = resolveByTier(doc?.byTier, Story.getTier());
+  if (!resolved) return;
+  inputLocked = true;
+  const d = dialogueEl;
+  d.innerHTML = `
+    <div class="dlg-card">
+      <button class="dlg-close" aria-label="Close">×</button>
+      <div class="dlg-header">
+        <div class="dlg-portrait">🔍</div>
+        <div class="dlg-who">
+          <div class="dlg-name">${escapeHtml(doc.title || 'Inspect')}</div>
+          <div class="dlg-role">You take a closer look.</div>
+        </div>
+      </div>
+      <div class="dlg-body" data-typewriter></div>
+      <div class="dlg-actions"><button class="btn-primary dlg-cancel">Close</button></div>
+    </div>
+  `;
+  d.classList.add('visible');
+  playUi('confirm');
+  startTypewriter(d.querySelector('[data-typewriter]'), resolved.value, 1.15);
+  d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
+  d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
 }
 
 // ─── Update loop ─────────────────────────────────────────────────────────────
@@ -4286,7 +4761,19 @@ function update(dt) {
   if (timeOfDay) timeOfDay.tick(performance.now());
 
   // Live agent routines (named NPC pathing + ambient workers).
-  if (liveAgents && player) {
+  // CURTAIN-01: during the first F1→F2 elevator beat, routines pause
+  // and every visible floor-1 NPC turns to face the elevator door
+  // (11, -7.6). Purely timeout-based — when curtainUntil passes, the
+  // routines resume and walk everyone back to normal.
+  if (performance.now() < curtainUntil) {
+    for (const m of npcMeshes) {
+      if ((m.userData.floor || 1) !== 1 || !m.visible) continue;
+      const target = Math.atan2(11 - m.position.x, -7.6 - m.position.z);
+      let d = ((target - m.rotation.y + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (d < -Math.PI) d += Math.PI * 2;
+      m.rotation.y += d * (1 - Math.exp(-dt * 5));
+    }
+  } else if (liveAgents && player) {
     liveAgents.update(dt, performance.now(), player.position);
   }
   // Name tag fade pass (distance + closest-NPC emphasis).
@@ -4445,7 +4932,17 @@ function update(dt) {
       promptEl.classList.add('visible');
       if (nearestKind === 'npc') {
         const npc = nearest.userData.npc;
-        promptEl.textContent = `Talk to ${npc.name.split(' ')[0]} — press E or tap`;
+        // A pending scripted scene's label wins (TWIST1-01: "Talk — Ines
+        // has been counting"), then the story override channel
+        // (data/story_lines.js), then the default talk prompt.
+        const pendingScene = pendingSceneFor(npc);
+        const scenePrompt = pendingScene ? window.STORY_SCENES?.[pendingScene]?.promptLabel : null;
+        const storyPrompt = storyLinesFor(npc.id)?.promptLabel;
+        promptEl.textContent = (typeof scenePrompt === 'string' && scenePrompt)
+          ? scenePrompt
+          : (typeof storyPrompt === 'string' && storyPrompt)
+          ? storyPrompt
+          : `Talk to ${npc.name.split(' ')[0]} — press E or tap`;
       } else if (nearestKind === 'object') {
         const it = nearest.userData._interactable;
         promptEl.textContent = it.getPromptText();
@@ -4620,8 +5117,65 @@ export async function start(host) {
   timeOfDay = new TimeOfDay({ lighting, skyDome, renderer, receptionWindows });
   timeOfDay.tick(performance.now());
   // Live world: routines for Marcus/Aisha/Linda + a few ambient workers.
+  // The ambient workers double as E-to-talk flavor NPCs (SYS-04) — they
+  // get name tags + act-gated lines and register into npcMeshes.
   liveAgents = new LiveAgents({
     scene, npcMeshes, makeCharacter, isMobile: isMobile(),
+    makeNameTag: makeNpcNameTag,
+    ambientLineForSlot,
+  });
+  // Scripted scene runner (SYS-03) — shares the dialogue card chrome.
+  initSceneRunner({
+    getDialogueEl: () => dialogueEl,
+    startTypewriter,
+    skipTypewriter,
+    playUi,
+    setInputLocked: (v) => { inputLocked = !!v; },
+  });
+  // Document viewer (SYS-05) — overlays ABOVE the dialogue card. While
+  // a scene is active it must not release the scene's input lock on
+  // close, hence isSceneActive is injected.
+  initDocViewer({
+    playUi,
+    setInputLocked: (v) => { inputLocked = !!v; },
+    isSceneActive,
+  });
+  registerSceneActions({
+    // TWIST 1 staging — every actor lookup is guarded: the scene plays
+    // fine (dialogue only) if any stage actor is missing.
+    twist1_point: () => {
+      const ines = npcMeshes.find(m => m.userData?.npc?.id === 'ines');
+      if (ines) {
+        // Face the water cooler she's pointing at.
+        ines.rotation.y = Math.atan2(-9.5 - ines.position.x, -2.8 - ines.position.z);
+      }
+      // Route blue-folder guy toward the cooler pair; he holds there
+      // facing the pair long past the scene, then resumes his loop.
+      try {
+        liveAgents?.sendTo?.('folderman', [-8.2, -3.0], Math.atan2(-9.5 - (-8.2), -2.8 - (-3.0)), 75);
+      } catch {}
+    },
+    twist1_exchange: () => {
+      const find = (id) => npcMeshes.find(m => m.userData?.npc?.id === id);
+      const fm = find('folderman'), tn = find('tania'), pr = find('partner');
+      // Delays let Ines's prediction line finish typing first; the
+      // exchange then lands while the player watches ("Waaaatch.").
+      setTimeout(() => { if (fm) showSpeechBubble(fm, 'Busy week. They say the new cohort starts soon.'); }, 3800);
+      setTimeout(() => { if (pr) showSpeechBubble(pr, 'Did you see the Q3 numbers?'); }, 6400);
+      setTimeout(() => { if (tn) showSpeechBubble(tn, 'Ha! Ha ha. Haaaa.'); }, 8600);
+    },
+    // TWIST 2 (TWIST2-01): "Mm. Open the file." — the annotated
+    // client-profiles.md slides over the dialogue card. The delay lets
+    // the line land first; the doc viewer never touches scene state.
+    twist2_ledger: () => {
+      setTimeout(() => {
+        const doc = window.STORY_DOCS?.client_profiles;
+        if (doc) {
+          openDocument({ title: doc.title, body: doc.body || '' });
+          Story.markCollectibleRead?.('client_profiles');
+        }
+      }, 1100);
+    },
   });
   // Re-apply floor visibility now that NPCs (incl. liveAgents extras)
   // have been added to the scene — buildWorld's initial pass ran before
@@ -4850,6 +5404,22 @@ async function requestFloorChange(targetFloor) {
   if (targetFloor === currentFloor) { closeElevatorModal(); return; }
   closeElevatorModal();
   inputLocked = true;
+  // TWIST2-01: the first Floor-4 ride after the truth (T5+) gets a
+  // clearance chime — the building acknowledging the new tier. One-shot
+  // via a persisted Story flag, marked up front like CURTAIN-01.
+  if (targetFloor === 4 && Story.getTier() >= 5 && !Story.getFlag('floor4_chime')) {
+    Story.setFlag('floor4_chime');
+    playClearanceChime();
+  }
+  // CURTAIN-01: on the very first ride up to Floor 2, the lobby breaks
+  // character for two seconds — every visible NPC turns to watch the
+  // player board. Marked seen up front so a mid-beat exit can't replay
+  // it; timeout-based so there's no stuck state.
+  if (targetFloor === 2 && currentFloor === 1 && !Story.sceneSeen('curtain1')) {
+    Story.markSceneSeen('curtain1');
+    curtainUntil = performance.now() + 2000;
+    await new Promise(res => setTimeout(res, 2100));
+  }
   const fade = document.getElementById('play-fade');
   if (fade) fade.classList.add('opaque');
   // Snap the cab to the target floor so the camera reveal lands on it.
@@ -4945,6 +5515,11 @@ export function stop() {
   player = null; npcMeshes = []; interactionTarget = null;
   zoneDoors = [];
   ceoHearts = null;
+  ceoPortraitGroup = null;
+  badgePrinterGroup = null;
+  houseRulesGroup = null;
+  readableNotes = [];
+  curtainUntil = 0;
   keys = {}; touchVec = { x: 0, y: 0 };
   inputLocked = false;
   jumpRequested = false;

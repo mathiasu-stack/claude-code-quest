@@ -8,7 +8,9 @@ export function buildServerRack({
   scene, position, lookAt = 0, chapterId, lessonId, onInteract,
 }) {
   const g = new THREE.Group();
-  g.position.set(position[0], 0, position[2]);
+  // position[1] carries the floor-base Y offset (added by the spawn loop
+  // in play.js) — dropping it would land upper-floor racks on floor 1.
+  g.position.set(position[0], position[1] ?? 0, position[2]);
   g.rotation.y = lookAt;
   scene.add(g);
 
@@ -43,7 +45,7 @@ export function buildServerRack({
     leds.push(led);
   }
 
-  registerInteractable({
+  const it = registerInteractable({
     mesh: g,
     kind: 'Server',
     position: [position[0], position[2]],
@@ -56,6 +58,8 @@ export function buildServerRack({
       if (onInteract) onInteract({ kind: 'server', chapterId, lessonId });
     },
   });
+  // Glow ring defaults to y=0.02 (floor 1) — lift it to this rack's floor.
+  it.glow.position.y = (position[1] ?? 0) + 0.02;
 
   return {
     group: g,

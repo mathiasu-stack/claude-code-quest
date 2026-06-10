@@ -33,6 +33,10 @@ function saveProgress(progress) {
 
 function resetProgress() {
   localStorage.removeItem(STORAGE_KEY);
+  // Story flags (Kedash Protocol) derive from progress — a fresh start
+  // must also clear scene-seen / collectible / post-pass state.
+  localStorage.removeItem('ccq_story');
+  if (window.Story) window.Story.reset();
 }
 
 function todayStr() {
