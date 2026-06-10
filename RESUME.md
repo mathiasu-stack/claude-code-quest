@@ -48,9 +48,11 @@ index.html                          Cache-bust query strings on every script tag
 
 ## Recently shipped (last few commits)
 
+- `8fcb02e` — Kedash Protocol Phase 5 + art-pass fixes (props, audio stings, library rework). **Everything below marked "UNCOMMITTED" is now committed** — Phases 1–3 in `3b54729`, Phase 4 in `4c22fcb`, Phase 5 + fixes in `8fcb02e`.
+- `4c22fcb` — Phase 4: finale chain + Maya bespoke skin via manifest textureOverride.
+- `3b54729` — Phases 1–3: tier engine, scene runner, TWIST 1+2, doc viewer, collectibles, Floor M module, title card, admin chapter skip.
 - `5b4b29f` — Camera vertical range expansion (pitch -69° to +83°, Y clamp).
 - `4b89c82` — CEO portrait moved into standard loader path so the editor can select/drag it.
-- Earlier (same session block): Add Item library, Delete, per-axis locks, NPC editing, free-drag, walk-while-editing, removed Director tier tag, Resume Play input restoration.
 
 ## Kedash Protocol — Phase 1 narrative layer (2026-06-10 session, UNCOMMITTED, do not deploy)
 
@@ -394,6 +396,49 @@ ch16-test passed → talking to Marcus plays `marcusDoor` (2 beats) → elevator
 **Other notables**: `floorForNpcDef()` routes Maya (M ↔ F1 post-finale) and respects explicit `def.floor`; `spawnNPCsForFloor` skips `epilogueOnly` defs pre-finale; `stop()` now also resets `loadedFloors`/`currentFloor` (latent re-entry bug fix); PROP-05 cable trays = `buildCableTrays()` in floorM.js, registered as rooms builder `cable_trays`, data entry appended to `office_floor4` in data/rooms.js; COPY-04 Act IV lines live in data/story_lines.js (Act IV block + ines T6/T7, new `aisha`/`maya` entries); finale/epilogue copy in data/story_scenes.js (`marcusDoor`/`mayaScene`/`epilogueArrival` + `window.STORY_FINALE`). All touched JS passes `node --check`; manifest.json parses.
 
 **Fastest playtest path**: admin chapter-skip dropdown in the play-mode toolbar → complete ch16 → talk to Marcus (lobby IT bench) → elevator → M → Maya → ride down auto-plays ceremony → talk to New Arrival at the lobby doors.
+
+## Kedash Protocol — Phase 5 + art pass (committed `8fcb02e`, 2026-06-10)
+
+Phase 5 (final polish: PROP-07..13, AUDIO-01..04) shipped, plus a full art/scale
+audit and a library rework driven by user mobile-playtest screenshots.
+Current cache-bust generation: **`?v=20260610k`** on play.js in index.html.
+
+**Phase 5 new modules** (all in `play/world/objectTypes/`): `wallDocument.js`
+(team photos wall + EOTM corkboard), `seatsDashboard.js`, `tokenCounter.js`
+(module-level count + `resetTokenCounter()` on floor-3 entry), `recMirror.js`.
+Wired via `registerRoomBuilder` entries in play.js + data/rooms.js placements
+(library team_photos; floor2 seats_dashboard; floor3 token_counter /
+eotm_corkboard / rec_mirror). Audio (`play/audio/procedural.js`):
+`playAnomalySting()` (fired by `sting: true` story lines — ines/aisha/elena T2),
+`playFloorMChime()` (elevator → Floor M, music stops), `updateServerHum()`
+(floor-4 NE proximity, lowered post-ch16). Portrait eye glint on promotion;
+ceremony claps pinned to exactly 8 (`CLAP_COUNT` in npcReactions.js).
+
+**Art-pass fixes** (root causes worth remembering):
+- `makeDecoration()` uniform-scales by the MOST RESTRICTIVE axis of
+  width/height/depth vs the GLB's natural bbox. The bookshelf GLB is
+  ~0.63×2.0×0.85 m, so the old `depth: 0.45` target shrank shelves to ~1.06 m
+  (waist height) — and the blank-spine anomaly rows (library.js, hardcoded at
+  y=2.6) floated in mid-air. Fix: height-only scale `{ height: 2.6 }`.
+  **Check natural GLB proportions before adding size targets** (GLBs are
+  meshopt-quantized; parse accessor min/max × node scale).
+- Library lesson NPCs were landing exactly on the 18-bookshelf grid
+  (`floor1WestWingPositionForNPC`: library uses xOff ±3 = aisles, other
+  west-wing rooms ±6). Elena now at [-18.8, -14.9] behind the new counter.
+- Library checkout counter is now a bespoke procedural builder
+  (`buildLibraryCounter` in play.js, rooms builder kind `library_counter`,
+  at [-18.8, 0, -13.8]) — replaced the cloned reception_desk, which also sat
+  inside the door swing (door leaf is 3.5 m, hinged x=-23.75, sweeps
+  z -11..-14.5 into the library when open).
+- liveAgents ambient workers had stale spawn/waypoints at the library's OLD
+  pre-move location; now in the library's south reading band (z -16.5..-14.5).
+- Double `loadRoom(library)` removed; FLOOR N + chapter signs grounded to the
+  36 m office envelope (signs at ±13); Floor M portrait lean +0.12 / cable
+  runs at -17.6.
+
+**Known cosmetic debt (user hasn't asked yet)**: the library is dark — only
+two lamps in the north lounge; shelf grid + south band have no light source.
+Offered to add aisle lamps; no answer yet.
 
 ## How to start
 
