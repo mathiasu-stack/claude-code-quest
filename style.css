@@ -1334,6 +1334,26 @@ body.in-play #mobile-header { display: none !important; }
   outline: 2px solid rgba(255, 213, 79, 0.85);
   outline-offset: 2px;
 }
+/* FIN-01 — the blank slot below F1: present from day one, unlabeled,
+   deliberately easy to overlook. */
+.play-elevator-modal .elev-floor-btn.elev-floor-blank {
+  opacity: 0.22;
+  cursor: default;
+  background: rgba(140, 140, 140, 0.06);
+  border-color: rgba(140, 140, 140, 0.22);
+  color: #6e6e6e;
+}
+/* …and the same slot lit as M after Marcus's word at the door. */
+.play-elevator-modal .elev-floor-btn.elev-floor-m {
+  background: rgba(255, 213, 79, 0.20);
+  border-color: rgba(255, 213, 79, 0.85);
+  color: #ffe082;
+  text-shadow: 0 0 8px rgba(255, 213, 79, 0.7);
+  box-shadow: 0 0 12px rgba(255, 213, 79, 0.35), inset 0 0 8px rgba(255, 213, 79, 0.12);
+}
+.play-elevator-modal .elev-floor-btn.elev-floor-m:hover {
+  background: rgba(255, 213, 79, 0.30);
+}
 
 .play-fade {
   position: absolute;

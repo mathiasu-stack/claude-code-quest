@@ -382,7 +382,8 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [0, 0, -8] },
       { type: 'builder', fn: 'plant', pos: [0, 0, 8] },
       { type: 'builder', fn: 'readable_note', pos: [-11.8, 0, 14.0], rotY: 0.3, args: { doc: 'cycle_report_04', label: 'CYCLE 04', variant: 'folder' } },
-      { type: 'builder', fn: 'readable_note', pos: [11.8, 0, -14.2], rotY: -0.5, args: { doc: 'cycle_report_05', label: 'CYCLE 05', variant: 'paper' } }
+      { type: 'builder', fn: 'readable_note', pos: [11.8, 0, -14.2], rotY: -0.5, args: { doc: 'cycle_report_05', label: 'CYCLE 05', variant: 'paper' } },
+      { type: 'builder', fn: 'cable_trays', pos: [0, 0, 0] }
     ],
   }
 ];

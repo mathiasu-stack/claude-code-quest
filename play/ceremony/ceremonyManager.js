@@ -26,7 +26,7 @@
 import * as THREE from 'three';
 import { unveilForTier } from './accessoryUnveil.js';
 import { animateTitleTransition } from './titleTransition.js';
-import { spawnNpcReactions, clearNpcReactions } from './npcReactions.js';
+import { spawnNpcReactions, clearNpcReactions } from './npcReactions.js?v=20260610e';
 
 const PROMOTION_KEY = 'ccq_promotion_fired';
 const TIER_TITLES = [
@@ -144,6 +144,72 @@ export class CeremonyManager {
     // ── Resume after total ceremony length ────────────────────────────
     const totalLen = 6500 + (isMilestone ? 800 : 0) + (isCapstone ? 2500 : 0);
     setTimeout(() => this._end(), totalLen);
+  }
+
+  // FIN-06 — the VP-of-AI finale ceremony (§5.4). A separate, later event
+  // from the per-chapter promotion path: triggered by the Maya scene
+  // completing (FIN-05), never by ccq_promotion_for, so there is no
+  // firedSet entry to collide with. opts:
+  //   showBubbleFor(npcId, text)  — pops a speech bubble over a named NPC
+  //   setPortraitCelebration(on)  — live hearts + plaque flip (R-7)
+  //   script                      — window.STORY_FINALE ({ lines, inesLine })
+  //   onDone()                    — fired after the ceremony fully ends
+  startFinale({ showBubbleFor, setPortraitCelebration, script, onDone } = {}) {
+    if (this.active) return;
+    this.active = true;
+    this.t0 = performance.now();
+    this.api.setInputLocked(true);
+
+    const player = this.api.getPlayer();
+    const scene = this.api.getScene();
+    this._spawnSpotlight(scene, player.position);
+    unveilForTier(9, player, this.api.audio);
+    animateTitleTransition(player, TIER_TITLES[9], 1.2);
+
+    // Ragged, human, unsynced claps — the first uncued applause (§5.4).
+    this.npcReactionState = spawnNpcReactions({
+      scene, npcMeshes: this.api.getNpcMeshes(), playerPos: player.position,
+      announceWith: null, isCapstone: true, desync: true, maxClappers: 9,
+    });
+
+    try {
+      this.api.audio.playFanfare();
+      setTimeout(() => this.api.audio.playCheer(8), 600);
+    } catch {}
+    this._showPromotionToast(TIER_TITLES[9], true);
+
+    setTimeout(() => this.api.setDanceUntil(performance.now() + 8000), 1800);
+    // Unlock early so the player can walk the crowd while the scripted
+    // lines land; the ceremony stays "active" for update() ticks.
+    setTimeout(() => { if (this.active) this.api.setInputLocked(false); }, 5200);
+
+    // Portrait hearts ON CEREMONY TRIGGER, not at completion-state load.
+    if (setPortraitCelebration) {
+      setTimeout(() => { try { setPortraitCelebration(true); } catch {} }, 2600);
+    }
+
+    // Scripted crowd moments on a timeline. The last line is Maya's
+    // "Two users on the box." echo — it lands tight on Marcus's.
+    const lines = script?.lines || [];
+    const firstAt = 3200, spacing = 3400;
+    lines.forEach((ln, i) => {
+      const at = firstAt + i * spacing - (i === lines.length - 1 ? 1700 : 0);
+      setTimeout(() => {
+        if (this.active && showBubbleFor) showBubbleFor(ln.npc, ln.text);
+      }, at);
+    });
+    const inesAt = firstAt + lines.length * spacing + 600;
+    if (script?.inesLine) {
+      setTimeout(() => {
+        if (this.active && showBubbleFor) showBubbleFor(script.inesLine.npc, script.inesLine.text);
+      }, inesAt);
+    }
+
+    setTimeout(() => {
+      if (!this.active) return;
+      this._end();
+      if (onDone) { try { onDone(); } catch (e) { console.warn('[finale] onDone failed', e); } }
+    }, inesAt + 4800);
   }
 
   _end() {

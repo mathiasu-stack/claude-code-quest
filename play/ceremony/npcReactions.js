@@ -11,7 +11,10 @@ const REACT_RADIUS = 12;     // metres — NPCs within this distance react
 const MAX_CLAPPERS = 3;       // cap to keep perf predictable
 const CLAP_DURATION_MS = 5500;
 
-export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, isCapstone }) {
+// `desync` (finale, FIN-06): each clapper gets a random phase offset and
+// slightly different clap rate — ragged, human, unsynced for the first
+// time. `maxClappers` lets the finale raise the cap beyond the default.
+export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, isCapstone, desync = false, maxClappers = MAX_CLAPPERS }) {
   if (!npcMeshes?.length) return null;
   // Find the closest N NPCs.
   const nearby = [];
@@ -22,7 +25,7 @@ export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, i
     if (d <= REACT_RADIUS) nearby.push({ m, d });
   }
   nearby.sort((a, b) => a.d - b.d);
-  const clappers = nearby.slice(0, MAX_CLAPPERS);
+  const clappers = nearby.slice(0, maxClappers);
 
   // Each NPC: stash original arm/leg/head rotations so we can restore
   // them after the clap loop ends. Also stash original group rotation
@@ -31,6 +34,8 @@ export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, i
     const parts = m.userData?.parts;
     return {
       mesh: m,
+      phaseOffset: desync ? Math.random() * Math.PI * 2 : 0,
+      rate: desync ? 0.0095 + Math.random() * 0.005 : 0.012,
       orig: {
         rotY: m.rotation.y,
         leftArmX: parts?.leftArm?.rotation?.x ?? 0,
@@ -75,7 +80,7 @@ export function spawnNpcReactions({ scene, npcMeshes, playerPos, announceWith, i
       // Clap arms — both arms come up and oscillate quickly
       const parts = m.userData?.parts;
       if (parts?.leftArm && parts?.rightArm) {
-        const phase = elapsed * 0.012;
+        const phase = elapsed * s.rate + s.phaseOffset;
         const swing = Math.sin(phase) * 0.4;
         // Lift arms to clap pose
         const liftAmount = -2.0 * tFade;  // up & forward

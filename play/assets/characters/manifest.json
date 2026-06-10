@@ -56,6 +56,15 @@
       "extraAnimations": ["western_female_walk.glb", "western_female_run.glb"]
     },
     {
+      "id": "maya",
+      "file": "western_female.glb",
+      "textureOverride": "maya_skin.jpg",
+      "available": true,
+      "tags": ["female", "ceo", "rigged"],
+      "scale": 1.0, "yOffset": 0.0, "stanceFactor": 0.65, "statureVary": false,
+      "extraAnimations": ["western_female_walk.glb", "western_female_run.glb"]
+    },
+    {
       "id": "african_male",
       "file": "african_male.glb",
       "available": true,

@@ -45,6 +45,25 @@ window.STORY_LINES = {
       // after the scene the tier is 3 and the idle line below wins.
       T2: '"Did you see your clapping party when you got promoted? I\'ve seen ten of those. They always clap eight times. Count next time. It\'s so weird."',
       T3: '"Conversation Bingo. Wanna play? You always win now, it\'s less fun. It\'s still pretty fun."',
+      // Post-pass idle swaps (COPY-04): the trial-of-trust pass (T6) and
+      // the epilogue (T7, verbatim §5.5).
+      T6: '"You keep going up and you keep coming back down. That\'s new. Nobody else came back down this many times." (she spins the chair, once) "I think you\'re almost done. Don\'t mess it up."',
+      T7: '"Mom\'s downstairs now. We\'re getting a real fish tank. With REAL fish, I checked."',
+    },
+  },
+
+  aisha: {
+    introAppendByTier: {
+      // COPY-04: her one story duty — "the last person who sat here."
+      T2: '"Oh — and ignore the keybindings if they feel pre-worn. The last person who sat here had… preferences. Anyway! Not a thing. Forget I said it."',
+    },
+  },
+
+  // Maya only exists as an NPC from the finale onward; this is her
+  // §5.5 epilogue re-talk line at reception.
+  maya: {
+    introByTier: {
+      T7: '"Inbox is at zero. I don\'t know what to do with my hands."',
     },
   },
 
@@ -230,6 +249,74 @@ window.STORY_LINES = {
   'auto-ch10-test': {
     introAppendByTier: {
       T4: '"Engelhardt\'s note on the email, in pen: \'Score honestly. I have read six of these audits before yours, and I remember every one.\'"',
+    },
+  },
+
+  // ——— Act IV generated chapter mentors (COPY-04) ———
+
+  'auto-ch13-l01': {
+    introByTier: {
+      // Marcus-persona mentor — Floor 4, MCP. Verbatim §3 ch13.
+      T5: '"MCP is how Claude touches the world. Files, tickets, databases. Now — building trivia: every connector in this building terminates at one box. One. I dust it weekly. You\'ll meet it in week sixteen."',
+    },
+  },
+
+  'auto-ch13-l04': {
+    introByTier: {
+      T5: '"Cycle 02 got this far. Tomás. Good engineer — wired an MCP straight into prod on day two of the floor, no allowlist, no ask-rules. Rena still does the breathing exercise when his name comes up. *Allowlists*, kid."',
+    },
+  },
+
+  'auto-ch14-l01': {
+    introByTier: {
+      // Sam Okoye, the thesis chapter. Verbatim §3 ch14.
+      T5: '"See the board? TODO, ACTIVE, DONE. Forty people used to live on this board. Then the founder discovered she could be all forty if she just *wrote everything down well enough.* She was right. That\'s the tragedy. Most failures come from being wrong. Hers came from being right."',
+    },
+  },
+
+  'auto-ch14-l03': {
+    introByTier: {
+      T5: '"Parallel dispatch only works when the tasks are truly independent. Hidden dependencies will burn you. This company WAS a hidden dependency — forty parallel teams, all secretly blocked on one woman\'s review. So yes: if you spawn subagents that secretly depend on each other, I will know. I\'ve seen it at scale."',
+    },
+  },
+
+  'auto-ch15-l01': {
+    introByTier: {
+      // Rena Vasquez. Verbatim §3 ch15.
+      T5: '"Vasquez. No relation to the library Vasquez — the casting budget ran out of surnames, yes, hilarious, moving on. Three settings files, strict precedence. Learn the precedence. Everything that has ever gone wrong in this building was a precedence problem: what she allowed, what she should have asked about, what she never denied herself."',
+    },
+  },
+
+  'auto-ch15-l02': {
+    introByTier: {
+      T5: '"Allow, ask, deny. People think it\'s about restricting the agent. It\'s not. It\'s a liturgy. You\'re writing down, in advance, exactly how far your trust goes — so that trust survives contact with 2am. She wrote six of these for six candidates. Yours is the seventh. Make it the last."',
+    },
+  },
+
+  'auto-ch15-test': {
+    postPassOnceByTier: {
+      // THE T6 card line. Keyed T6 deliberately: ch15-test passing flips
+      // the derived tier to 6 instantly, so T6 is live at the post-pass
+      // talk (same mechanism as the auto-ch09-test T4 reveal).
+      T6: {
+        text: '"Your settings parse. Your deny rules would have stopped Cycle 04 cold. So — formal notification, I\'m required to phrase it exactly like this:" (reads from a card) "\'Your permission tier has been updated by the building owner. The building owner thanks you for your patience.\'" (lowers card) "She\'s upstairs. She\'s been upstairs the whole time. One chapter left. Don\'t make me regret the allowlist."',
+        speakerName: 'Rena Vasquez',
+        speakerRole: 'Platform Engineer, InfoSec',
+        speakerPortrait: '👩‍🔧',
+      },
+    },
+  },
+
+  'auto-ch16-l01': {
+    introByTier: {
+      // Marcus-persona mentor, capstone chapter. Verbatim §3 ch16.
+      T6: '"Why run Claude Code on a NAS? Because laptops sleep and people leave, and some work has to outlive both. She understood that before any of us. It\'s the only thing she over-understood."',
+    },
+  },
+
+  'auto-ch16-l05': {
+    introByTier: {
+      T6: '"Last lesson I\'ve got. When you write the CLAUDE.md for a machine nobody watches, write it like a letter to a stranger who\'ll find it in three years. Because that is *exactly* what it is. Trust me on this one. I found hers."',
     },
   },
 

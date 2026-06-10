@@ -22,8 +22,8 @@ import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
-import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260603a';
-import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260603a';
+import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260610e';
+import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260528g';
 import { decorateLibrary } from './decorations/library.js?v=20260528g';
@@ -40,7 +40,9 @@ import { SkyDome, getSkyPresetForZone } from './world/sky.js';
 import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
-import { CeremonyManager } from './ceremony/ceremonyManager.js';
+import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260610e';
+import { showTitleCard } from './ui/titleCard.js?v=20260610e';
+import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610e';
 import {
   registerInteractable, clearInteractables,
   updateInteractables, listInteractables,
@@ -162,6 +164,29 @@ const NPCS = [
     nextHint: "",
   },
 
+  // ── Kedash Protocol finale cast (FIN-03 / FIN-07) ────
+  // Maya lives on Floor M until the finale ceremony has been seen, then
+  // permanently near reception (floorForNpcDef resolves this). Rig is
+  // western_female for now — a bespoke maya.glb swaps in later by
+  // changing ONLY the manifest entry's `file` field.
+  {
+    id: 'maya', zone: 1, pos: [4.0, -7.6], face: Math.PI / 2, kind: 'flavor',
+    name: 'Maya Kedash', role: 'CEO', portrait: '👩‍💼',
+    look: { skin: 0xfdd9b5, hair: 0x3a2a1a, hairStyle: 'bun', shirt: 0x8d6e63, pants: 0x263238, glasses: false, prop: 'mug', face: 'sharp', expression: 'kind', accent: 0xc9a44c },
+    intro: "Downstairs. They're waiting — I'm right behind you.",
+    nextHint: "",
+  },
+  // The §5.5 NEW ARRIVAL at the lobby doors — epilogue only
+  // (spawnNPCsForFloor skips this def until the finale is seen).
+  {
+    id: 'newhire', zone: 1, pos: [9.2, 3.5], face: Math.PI, kind: 'flavor',
+    epilogueOnly: true,
+    name: 'New Arrival', role: 'Visitor', portrait: '🧑‍💼',
+    look: { skin: 0xc68642, hair: 0x1a1a1a, hairStyle: 'short', shirt: 0x37474f, pants: 0x263238, glasses: false, prop: null, face: 'round', expression: 'neutral' },
+    intro: "Sorry — is this the Kedash Corp orientation? I'm supposed to—",
+    nextHint: "",
+  },
+
   {
     id: 'sarah',  zone: 1, pos: [0, 8.5], face: Math.PI,
     name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼',
@@ -213,10 +238,14 @@ const NPCS = [
 // the elevator shaft passes through all four. Only ONE floor is visible
 // at a time — non-current floors get hidden via userData.floor tagging.
 const FLOORS_TOTAL = 4;
+// Floor M (FIN-01/02) — Maya's hidden loft above F4. Story-gated, never
+// part of badge/curriculum math: chapter→floor mapping still caps at
+// FLOORS_TOTAL; only the Y/clamp helpers know about index 5.
+const FLOOR_M_INDEX = 5;
 const CHAPTERS_PER_FLOOR = 4;
 const FLOOR_HEIGHT_Y = 4.5;          // matches elevator.js FLOOR_HEIGHT
 function floorBaseY(n) {
-  return (Math.max(1, Math.min(FLOORS_TOTAL, n)) - 1) * FLOOR_HEIGHT_Y;
+  return (Math.max(1, Math.min(FLOOR_M_INDEX, n)) - 1) * FLOOR_HEIGHT_Y;
 }
 // Floor is determined by the chapter's POSITION in window.CURRICULUM,
 // not by parsing the numeric suffix from its id. After the curriculum
@@ -1189,8 +1218,13 @@ let ceoHearts = null;
 // Story-inspectable prop groups (Kedash Protocol). Built during loadRoom()
 // but registered as interactables AFTER clearInteractables() in buildWorld.
 let ceoPortraitGroup = null;
+let ceoPlaque = null;          // live-swappable plaque (setPortraitCelebration)
 let badgePrinterGroup = null;
 let houseRulesGroup = null;
+// Floor M module handle (FIN-02): { group, colliders, fragmentSpot,
+// update } from buildFloorM. Kept so registerStaticColliders can re-push
+// the loft AABBs on every editor-triggered rebuild.
+let floorMState = null;
 // Readable collectible notes (SYS-06): { group, docId } pushed by the
 // 'readable_note' room builder; registered by registerReadableNotes()
 // after buildWorld's clearInteractables() / at the end of loadFloor().
@@ -1450,9 +1484,10 @@ function drawCeoEye(ctx, cx, cy) {
 }
 
 function buildCeoPortrait(targetScene) {
-  const allDone = window.CURRICULUM?.every(ch =>
-    window.Progress.isTestPassed(getProgress(), ch.practicalTest.id)
-  );
+  // R-7: hearts + plaque flip are gated on the FINALE being seen (not on
+  // raw all-tests-passed) so the reveal lands inside the ceremony via
+  // setPortraitCelebration(true).
+  const allDone = Story.sceneSeen('finale');
 
   const group = new THREE.Group();
 
@@ -1495,6 +1530,7 @@ function buildCeoPortrait(targetScene) {
   plaque.scale.set(2.6, 0.55, 1);
   plaque.position.set(0, -1.55, 0.12);
   group.add(plaque);
+  ceoPlaque = plaque;
 
   // Warm accent light so the portrait reads as "lit with care" — a small
   // story beat (PROP-04): someone keeps this corner of reception warm.
@@ -1502,16 +1538,10 @@ function buildCeoPortrait(targetScene) {
   warmLight.position.set(0, 0.4, 0.9);
   group.add(warmLight);
 
-  // Floating hearts when all chapters complete (CEO has fallen for the player)
+  // Floating hearts once the finale has been seen (the building's owner
+  // finally at ease — relief, welcome, family).
   if (allDone) {
-    ceoHearts = new THREE.Group();
-    for (let i = 0; i < 8; i++) {
-      const h = makeLabelSprite('♥', '#ff3366', 'rgba(255,255,255,0)');
-      h.scale.set(0.5, 0.5, 1);
-      h.userData.phase = i / 8;
-      ceoHearts.add(h);
-    }
-    group.add(ceoHearts);
+    group.add(_buildCeoHearts());
   }
 
   // Position + scene.add deliberately handled by the caller (the
@@ -1521,6 +1551,43 @@ function buildCeoPortrait(targetScene) {
   // via the data entry in data/rooms.js → pos: [0, 2.0, -10.86].
   ceoPortraitGroup = group;
   return group;
+}
+
+function _buildCeoHearts() {
+  ceoHearts = new THREE.Group();
+  for (let i = 0; i < 8; i++) {
+    const h = makeLabelSprite('♥', '#ff3366', 'rgba(255,255,255,0)');
+    h.scale.set(0.5, 0.5, 1);
+    h.userData.phase = i / 8;
+    ceoHearts.add(h);
+  }
+  return ceoHearts;
+}
+
+// Live hearts + plaque flip (FIN-06 / R-7): the §5.4 ceremony beat where
+// the portrait "sprouts its floating hearts ON CEREMONY TRIGGER". Safe to
+// call any time after the reception room is built; idempotent.
+function setPortraitCelebration(on) {
+  if (!ceoPortraitGroup) return;
+  if (ceoPlaque) {
+    ceoPortraitGroup.remove(ceoPlaque);
+    ceoPlaque.material?.map?.dispose?.();
+    ceoPlaque.material?.dispose?.();
+  }
+  ceoPlaque = makeLabelSprite(
+    on ? '♥  Maya Kedash · CEO  ♥' : 'Maya Kedash — CEO',
+    '#fff',
+    on ? 'rgba(180,30,80,0.95)' : 'rgba(26,39,68,0.95)'
+  );
+  ceoPlaque.scale.set(2.6, 0.55, 1);
+  ceoPlaque.position.set(0, -1.55, 0.12);
+  ceoPortraitGroup.add(ceoPlaque);
+  if (on && !ceoHearts) {
+    ceoPortraitGroup.add(_buildCeoHearts());
+  } else if (!on && ceoHearts) {
+    ceoPortraitGroup.remove(ceoHearts);
+    ceoHearts = null;
+  }
 }
 
 // ─── Badge printer (PROP-06) ─────────────────────────────────────────────────
@@ -1687,6 +1754,9 @@ function registerRoomBuilders() {
     if (args.doc) readableNotes.push({ group, docId: args.doc });
     return group;
   });
+  // PROP-05 — floor-4 ceiling cable trays converging on the elevator
+  // shaft (the physical hint that everything routes up to floor M).
+  registerRoomBuilder('cable_trays', () => buildCableTrays());
 
   // ── Compound builders (each owns its own multi-mesh placement) ───
   // Each returns null because the underlying builder already calls
@@ -2629,7 +2699,7 @@ function registerStaticColliders() {
   // floors 2-4 it's closed (cab is the only way in). The other three
   // faces are solid glass on every floor. Register colliders for all
   // four floors the shaft passes through.
-  for (let f = 1; f <= 4; f++) {
+  for (let f = 1; f <= FLOOR_M_INDEX; f++) {
     // East face (outside the building)
     addColliderAABB(13.40, 13.60, -8.80, -6.40, f);
     // North face
@@ -2638,9 +2708,14 @@ function registerStaticColliders() {
     addColliderAABB(11.10, 13.50, -6.50, -6.30, f);
     // West face (lobby entrance) — block only on floors 2-4 where the
     // shaft is closed. Floor 1 keeps this gap so the player can walk
-    // from the atrium into the cab through the south-facing opening.
-    if (f >= 2) addColliderAABB(11.00, 11.20, -8.80, -6.40, f);
+    // from the atrium into the cab through the south-facing opening;
+    // floor M keeps it open so the cab spills into the loft vestibule.
+    if (f >= 2 && f !== FLOOR_M_INDEX) addColliderAABB(11.00, 11.20, -8.80, -6.40, f);
   }
+
+  // Floor M (mezzanine loft) — bespoke geometry, colliders supplied by
+  // buildFloorM and re-pushed on every rebuild once the floor exists.
+  if (floorMState) colliders.push(...floorMState.colliders);
 
   // Floors 2-4 internal walls now come from window.ROOMS too — each
   // office_floor{N} room declares its own unique partitioning (so
@@ -3337,6 +3412,15 @@ function applyInesBehavior(mesh, nowMs, dt) {
   // automatically inside gc.update() after mixer.update.
 }
 
+// Resolve which floor an NPC def belongs to. Explicit `floor` wins
+// (ceremony cast / editor), then the Maya special case (Floor M until
+// the finale, reception after — FIN-03/FIN-07), then the chapter map.
+function floorForNpcDef(d) {
+  if (Number.isFinite(d.floor)) return d.floor;
+  if (d.id === 'maya') return Story.sceneSeen('finale') ? 1 : FLOOR_M_INDEX;
+  return floorForChapterId(d.chapterId) || 1;
+}
+
 function spawnNPC(npcDef) {
   // Merge per-NPC face config (npcLooks.js) into the roster's look.
   // The roster's `look` defines the body/outfit; npcLooks adds face
@@ -3361,8 +3445,13 @@ function spawnNPC(npcDef) {
   // the new west wing (their generated positions assumed a 1×4 corridor
   // northward; the 2×2 layout puts those rooms WEST of the atrium /
   // library instead).
-  const npcFloor = floorForChapterId(npcDef.chapterId) || 1;
-  if (npcFloor > 1) {
+  const npcFloor = floorForNpcDef(npcDef);
+  // Post-finale Maya idles near reception (FIN-07) — her roster pos is
+  // her Floor M spot, so relocate when the epilogue state is live.
+  if (npcDef.id === 'maya' && npcFloor === 1) {
+    npcDef = { ...npcDef, pos: [-2.2, -6.6], face: 0.8 };
+  }
+  if (npcFloor > 1 && npcFloor <= FLOORS_TOTAL) {
     const override = floorOfficePositionForNPC(npcDef);
     if (override) {
       npcDef = { ...npcDef, pos: override.pos, face: override.face };
@@ -3462,8 +3551,9 @@ function buildNPCs() {
 // rosters by floorForChapterId. Idempotent per floor — caller is
 // expected to guard against double-calling via the loadedFloors set.
 function spawnNPCsForFloor(f) {
-  const onThisFloor = (npcDef) => (floorForChapterId(npcDef.chapterId) || 1) === f;
+  const onThisFloor = (npcDef) => floorForNpcDef(npcDef) === f;
   for (const n of NPCS) {
+    if (n.epilogueOnly && !Story.sceneSeen('finale')) continue;
     if (onThisFloor(n)) spawnNPC(n);
   }
   const curriculum = window.CURRICULUM || [];
@@ -3488,7 +3578,7 @@ async function _restoreSavedFloor() {
     const saved = JSON.parse(sessionStorage.getItem('ccq_play_pos') || 'null');
     if (saved && Number.isFinite(saved.floor)) savedFloor = saved.floor;
   } catch {}
-  savedFloor = Math.max(1, Math.min(FLOORS_TOTAL, savedFloor | 0));
+  savedFloor = Math.max(1, Math.min(FLOOR_M_INDEX, savedFloor | 0));
   if (savedFloor === currentFloor) return;
   if (savedFloor > 1) await loadFloor(savedFloor);
   currentFloor = savedFloor;
@@ -3501,7 +3591,24 @@ async function loadFloor(f) {
   const overlay = createLoadingOverlay();
   overlay.show(`Building floor ${f}...`);
   try {
-    buildFloorOffice(f);
+    if (f === FLOOR_M_INDEX) {
+      // FIN-02 — the mezzanine loft is a bespoke prebuilt module, not a
+      // templated office floor. Its colliders live on floorMState and
+      // get re-pushed by registerStaticColliders on every rebuild.
+      const fm = buildFloorM({ baseY: floorBaseY(FLOOR_M_INDEX), floorIndex: FLOOR_M_INDEX });
+      scene.add(fm.group);
+      floorMState = fm;
+      if (fm.update) decoTickers.push((dt) => fm.update(dt));
+      // learnings.md fragment 2 — readable at the loft desk.
+      const frag = buildReadableNote({ label: 'learnings.md', variant: 'paper' });
+      frag.position.copy(fm.fragmentSpot);
+      frag.userData.floor = FLOOR_M_INDEX;
+      scene.add(frag);
+      readableNotes.push({ group: frag, docId: 'learnings_fragment_2' });
+      rebuildColliders();
+    } else {
+      buildFloorOffice(f);
+    }
     spawnNPCsForFloor(f);
     // Collectible notes on this floor were just built by loadRoom —
     // the interactable wipe already happened (buildWorld), so they
@@ -4030,6 +4137,19 @@ function pendingSceneFor(npc) {
     const progress = getProgress();
     if (window.Progress?.isTestPassed?.(progress, 'ch10-test')) return 'twist2';
   }
+  // FINALE chain (§5): Marcus at the elevator once the capstone is
+  // passed → lights the M button; Maya on floor M; the new arrival in
+  // the post-finale lobby closes the loop.
+  if (npc.id === 'marcus' && !Story.sceneSeen('marcusDoor')) {
+    const progress = getProgress();
+    if (window.Progress?.isTestPassed?.(progress, 'ch16-test')) return 'marcusDoor';
+  }
+  if (npc.id === 'maya' && !Story.sceneSeen('mayaScene') && !Story.sceneSeen('finale')) {
+    return 'mayaScene';
+  }
+  if (npc.id === 'newhire' && Story.sceneSeen('finale') && !Story.sceneSeen('epilogueArrival')) {
+    return 'epilogueArrival';
+  }
   return null;
 }
 
@@ -4042,8 +4162,133 @@ function startStoryScene(sceneId, npc) {
       // sceneSeen flips the derived tier (twist1 → T3) — ambient lines
       // pick the new act set on the next floor reload (SYS-04 rule).
       Story.markSceneSeen(sceneId);
+      // FIN-05 → FIN-06: Maya's "let's go downstairs" rides the player
+      // to floor 1 and chains straight into the finale ceremony.
+      if (sceneId === 'mayaScene') _startFinaleChain();
+      // FIN-08: the closing exchange ends in the title card.
+      if (sceneId === 'epilogueArrival') _playEpilogueTitleCard();
     },
   });
+}
+
+// ─── Finale chain (FIN-05 → FIN-08) ──────────────────────────────────────────
+function _findNpcMesh(id) {
+  return npcMeshes.find(m => m.userData?.npc?.id === id);
+}
+
+// STORY_FINALE npc keys → spawned NPC ids. Elena's real spot is the
+// library (too far for the lobby crowd shot) and Rena/Maya live on
+// other floors, so temp 'fin-' stand-ins join the ceremony and the
+// alias prefers them; the real meshes are fallbacks.
+const FINALE_BUBBLE_ALIAS = {
+  elena: ['fin-elena', 'elena'],
+  rena:  ['fin-rena', 'auto-ch15-l01'],
+  maya:  ['fin-maya', 'maya'],
+};
+function showBubbleFor(npcId, text) {
+  const candidates = FINALE_BUBBLE_ALIAS[npcId] || [npcId];
+  for (const id of candidates) {
+    const m = _findNpcMesh(id);
+    if (m && m.visible) { showSpeechBubble(m, text, { holdMs: 3400 }); return; }
+  }
+}
+
+function _spawnFinaleCast() {
+  if (_findNpcMesh('fin-maya')) return;
+  const temps = [
+    { id: 'fin-elena', floor: 1, pos: [-3.4, -4.6], face: 1.0, kind: 'flavor',
+      name: 'Dr. Elena Vasquez', role: 'Chief Strategist', portrait: '👩‍🏫',
+      look: { skin: 0xfdd9b5, hair: 0xc0c0c0, hairStyle: 'long', shirt: 0xdba9e0, pants: 0x1a237e, glasses: true, prop: 'book', face: 'sharp', expression: 'smug', accent: 0x6a1b9a },
+      intro: 'Came down for this. Obviously.', nextHint: '' },
+    { id: 'fin-rena', floor: 1, pos: [-1.6, -2.4], face: 1.5, kind: 'flavor',
+      name: 'Rena Vasquez', role: 'Platform Engineer, InfoSec', portrait: '👩‍🔧',
+      look: { skin: 0xf1c27d, hair: 0x1a1a1a, hairStyle: 'ponytail', shirt: 0x455a64, pants: 0x263238, glasses: true, prop: 'tablet', face: 'sharp', expression: 'focused', accent: 0x00897b },
+      intro: 'I left the dashboards unattended for this. Enjoy it.', nextHint: '' },
+    { id: 'fin-maya', floor: 1, pos: [6.6, -7.2], face: Math.PI / 2, kind: 'flavor',
+      name: 'Maya Kedash', role: 'CEO', portrait: '👩‍💼',
+      look: { skin: 0xfdd9b5, hair: 0x3a2a1a, hairStyle: 'bun', shirt: 0x8d6e63, pants: 0x263238, glasses: false, prop: 'mug', face: 'sharp', expression: 'kind', accent: 0xc9a44c },
+      intro: 'Told you I was right behind you.', nextHint: '' },
+  ];
+  for (const t of temps) spawnNPC(t);
+}
+
+function _removeFinaleCast() {
+  for (const id of ['fin-elena', 'fin-rena', 'fin-maya']) {
+    const m = _findNpcMesh(id);
+    if (!m) continue;
+    scene.remove(m);
+    const idx = npcMeshes.indexOf(m);
+    if (idx >= 0) npcMeshes.splice(idx, 1);
+  }
+}
+
+// Maya's scene ends on Floor M; ride the player down under the fade and
+// chain straight into the scripted ceremony (FIN-06) in the lobby.
+// requestFloorChange resolves before its inner ride timeout (1600ms for
+// M-rides) flips the floor, so the ceremony is staged on a padded delay.
+async function _startFinaleChain() {
+  await requestFloorChange(1);
+  setTimeout(() => {
+    _spawnFinaleCast();
+    if (!ceremony) return;
+    ceremony.startFinale({
+      showBubbleFor,
+      setPortraitCelebration,
+      script: window.STORY_FINALE,
+      onDone: () => {
+        Story.markSceneSeen('finale');   // → tier T7
+        applyEpilogueState();
+      },
+    });
+    try { audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600); } catch {}
+  }, 2800);
+}
+
+// FIN-07 — the permanent post-finale world. Idempotent; also called at
+// startup (buildNPCs path handles maya/newhire via floorForNpcDef +
+// epilogueOnly, so this only does the live in-place transition).
+let epilogueChairAdded = false;
+function applyEpilogueState() {
+  _removeFinaleCast();
+  // Maya resolves to floor 1 now (finale seen) — respawn near reception.
+  const oldMaya = _findNpcMesh('maya');
+  if (oldMaya) {
+    scene.remove(oldMaya);
+    const idx = npcMeshes.indexOf(oldMaya);
+    if (idx >= 0) npcMeshes.splice(idx, 1);
+  }
+  const mayaDef = NPCS.find(n => n.id === 'maya');
+  if (mayaDef) spawnNPC(mayaDef);
+  if (!_findNpcMesh('newhire')) {
+    const nhDef = NPCS.find(n => n.id === 'newhire');
+    if (nhDef) spawnNPC(nhDef);
+  }
+  // Second child chair beside Ines's — Maya's, now that the big meeting
+  // is done. Cosmetic only (no collider; matches the spinny chair scale).
+  if (!epilogueChairAdded) {
+    epilogueChairAdded = true;
+    const chair = buildChair(3.1, -4.6, -0.6, 0x8d6e63);
+    chair.scale.setScalar(0.85);
+    chair.position.y = floorBaseY(1);
+    chair.userData.floor = 1;
+    scene.add(chair);
+  }
+}
+
+// FIN-08 — closing exchange ends in a fade to the title card.
+function _playEpilogueTitleCard() {
+  const fade = document.getElementById('play-fade');
+  inputLocked = true;
+  if (fade) fade.classList.add('opaque');
+  setTimeout(() => {
+    showTitleCard({
+      text: 'THE KEDASH PROTOCOL',
+      onDone: () => {
+        if (fade) fade.classList.remove('opaque');
+        inputLocked = false;
+      },
+    });
+  }, 650);
 }
 
 // Cancel a running typewriter (revealing its full text). Returns true
@@ -5026,6 +5271,10 @@ async function _preloadGltfAssets() {
   const ids = [
     'hero', 'ines',
     'business_female_01', 'executive_male_01',
+    // 'maya' reuses western_female.glb but is its own manifest id (with
+    // textureOverride) — the sync builder needs HER id in the cache,
+    // not just western_female's, or she falls back to procedural.
+    'maya',
     // 10 ethnicity rigs — warmed up front so both named NPCs and the
     // AUTO_POOL background NPCs render the GLTF (sync builder needs the
     // cache hot at construction or it falls back to procedural).
@@ -5078,6 +5327,10 @@ export async function start(host) {
   await _preloadGltfAssets();
   buildPlayer();
   buildNPCs();
+  // FIN-07: post-finale sessions get the epilogue lobby (Maya's chair
+  // beside Ines's). Maya + the new arrival already spawned correctly via
+  // floorForNpcDef / epilogueOnly; this only adds the cosmetic chair.
+  if (Story.sceneSeen('finale')) applyEpilogueState();
   // Expose a tiny NPC mutation API for the in-game editor (Phase 2).
   // Editor uses these to spawn / despawn / list characters without a
   // circular import.
@@ -5271,7 +5524,12 @@ export async function start(host) {
   // (compatibility with older flag).
   try {
     const promotionFor = sessionStorage.getItem('ccq_promotion_for');
-    if (promotionFor) {
+    // R-6: the ch16 capstone does NOT get the generic auto-ceremony —
+    // FIN-06 (the scripted finale after Maya's scene) IS the VP-of-AI
+    // moment. Consume the flag silently so it can't fire later either.
+    if (promotionFor === 'ch16' && !Story.sceneSeen('finale')) {
+      sessionStorage.removeItem('ccq_promotion_for');
+    } else if (promotionFor) {
       // Pause briefly so the scene is on screen before the spotlight.
       setTimeout(() => ceremony.maybeStartFromFlag(), 400);
       // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
@@ -5385,6 +5643,23 @@ function openElevatorModal() {
       }
       list.appendChild(btn);
     }
+    // FIN-01 — the blank slot below F1. Present (unlabeled, disabled)
+    // from day one; lights up as 'M' once the capstone is passed AND
+    // Marcus has had his word at the door. Story-gated, not badge-gated.
+    const mUnlocked = isTestDone('ch16-test') && Story.sceneSeen('marcusDoor');
+    const mBtn = document.createElement('button');
+    if (mUnlocked) {
+      const here = currentFloor === FLOOR_M_INDEX;
+      mBtn.className = 'elev-floor-btn elev-floor-m' + (here ? ' current' : '');
+      mBtn.textContent = `M${here ? '  (here)' : ''}`;
+      if (here) mBtn.disabled = true;
+      else mBtn.addEventListener('click', () => requestFloorChange(FLOOR_M_INDEX));
+    } else {
+      mBtn.className = 'elev-floor-btn elev-floor-blank';
+      mBtn.textContent = '·';
+      mBtn.disabled = true;
+    }
+    list.appendChild(mBtn);
   }
   modal.classList.add('visible');
   inputLocked = true;
@@ -5431,6 +5706,9 @@ async function requestFloorChange(targetFloor) {
   if (!loadedFloors.has(targetFloor)) {
     await loadFloor(targetFloor);
   }
+  // Rides to/from the mezzanine hold the black a beat longer — the slot
+  // below '1' going somewhere should feel like leaving the map.
+  const rideMs = (targetFloor === FLOOR_M_INDEX || currentFloor === FLOOR_M_INDEX) ? 1600 : 450;
   setTimeout(() => {
     currentFloor = targetFloor;
     try { window.__playCurrentFloor = currentFloor; } catch {}
@@ -5439,7 +5717,7 @@ async function requestFloorChange(targetFloor) {
     updateBadgeHud();
     if (fade) fade.classList.remove('opaque');
     setTimeout(() => { inputLocked = false; }, 450);
-  }, 450);
+  }, rideMs);
 }
 
 // Move the player to a sensible spawn point on a given floor. The
@@ -5516,6 +5794,15 @@ export function stop() {
   zoneDoors = [];
   ceoHearts = null;
   ceoPortraitGroup = null;
+  ceoPlaque = null;
+  floorMState = null;
+  epilogueChairAdded = false;
+  // Floors are rebuilt from scratch on the next start() — without this,
+  // loadFloor() would no-op for previously-visited floors against the
+  // fresh (empty) scene. Floor 1 is always built by buildWorld().
+  loadedFloors.clear();
+  loadedFloors.add(1);
+  currentFloor = 1;
   badgePrinterGroup = null;
   houseRulesGroup = null;
   readableNotes = [];

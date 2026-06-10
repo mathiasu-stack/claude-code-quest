@@ -657,3 +657,64 @@ export function buildFloorM({ baseY, floorIndex = 5 }) {
 
   return { group, colliders, fragmentSpot, update };
 }
+
+// ─── PROP-05 — Floor 4 cable trays (ASK-A18) ─────────────────────────────────
+// Set dressing for the Integration Bay: dark wall-tray boxes + cable-tube
+// bundles running along the Floor 4 ceiling edges, converging on the
+// elevator shaft (world x≈12.3, z≈-7.6), plus a vertical run continuing
+// ABOVE the F4 ceiling line inside the shaft — it points at Floor M
+// before the player knows Floor M exists. Registered as the 'cable_trays'
+// room builder (data/rooms.js → office_floor4); positions are relative to
+// the floor base (roomsLoader applies yOffset).
+export function buildCableTrays() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x23282e, roughness: 0.85, metalness: 0.25 });
+  const TRAY_Y = 3.55;                 // just under the 3.8 wall top
+  const HUB = { x: 12.3, z: -7.6 };    // elevator shaft centerline
+
+  // One tray run = a long flat box + 3 cable tubes resting in it.
+  function addRun(x0, z0, x1, z1) {
+    const dx = x1 - x0, dz = z1 - z0;
+    const len = Math.hypot(dx, dz);
+    const yaw = Math.atan2(dx, dz);
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, len), mat);
+    tray.position.set(cx, TRAY_Y, cz);
+    tray.rotation.y = yaw;
+    group.add(tray);
+    for (let i = 0; i < 3; i++) {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, len - 0.1, 6), mat);
+      tube.rotation.x = Math.PI / 2;                  // along local Z
+      const holder = new THREE.Group();
+      holder.add(tube);
+      holder.position.set(cx, TRAY_Y + 0.09, cz);
+      holder.rotation.y = yaw;
+      tube.position.x = (i - 1) * 0.12;
+      group.add(holder);
+    }
+  }
+
+  // Four runs along the ceiling edges, all draining toward the shaft.
+  addRun(-17.0, -17.2, HUB.x, -17.2);          // north edge, west→east
+  addRun(HUB.x, -17.2, HUB.x, HUB.z);          // east side, north edge → shaft
+  addRun(-17.2, 12.0, -17.2, HUB.z);           // west edge, south→north
+  addRun(-17.2, HUB.z, HUB.x, HUB.z);          // straight west→shaft feeder
+  addRun(HUB.x, 16.8, HUB.x, HUB.z);           // east side, south edge → shaft
+
+  // Vertical run: the bundle turns 90° at the shaft and climbs past the
+  // F4 ceiling line (wall top 3.8, ceiling ~4.0) — visible through the
+  // shaft glass, terminating out of sight above.
+  for (let i = 0; i < 5; i++) {
+    const rise = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 4.6, 6), mat);
+    rise.position.set(HUB.x - 0.3 + i * 0.15, TRAY_Y + 2.3, HUB.z + 0.55);
+    group.add(rise);
+  }
+  const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.16, 0.22), mat);
+  clamp.position.set(HUB.x, TRAY_Y + 1.6, HUB.z + 0.55);
+  group.add(clamp);
+  const clamp2 = clamp.clone();
+  clamp2.position.y = TRAY_Y + 3.4;
+  group.add(clamp2);
+
+  return group;
+}

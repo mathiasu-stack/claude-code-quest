@@ -95,6 +95,21 @@ if (!window.__gltfCharVersionLogged) {
   window.__gltfCharVersionLogged = true;
 }
 
+// Manifest `textureOverride`: a base-color image applied over a shared
+// rig's original UVs (e.g. maya = western_female rig + bespoke Meshy
+// skin). Loaded once per URL; materials are cloned per instance because
+// SkeletonUtils.clone shares material refs across clones.
+const _overrideTexCache = {};
+function _overrideTexture(file) {
+  if (!_overrideTexCache[file]) {
+    const tex = new THREE.TextureLoader().load('play/assets/characters/' + file);
+    tex.flipY = false;              // GLTF UV convention
+    tex.colorSpace = THREE.SRGBColorSpace;
+    _overrideTexCache[file] = tex;
+  }
+  return _overrideTexCache[file];
+}
+
 export function makeGltfCharacter(look, assetLoader) {
   const assetId = look._gltfAsset;
   if (!assetId) return null;
@@ -133,6 +148,11 @@ export function makeGltfCharacter(look, assetLoader) {
       obj.castShadow = true;
       obj.receiveShadow = true;
       obj.frustumCulled = true;
+      if (entry?.textureOverride && obj.material) {
+        obj.material = obj.material.clone();
+        obj.material.map = _overrideTexture(entry.textureOverride);
+        obj.material.needsUpdate = true;
+      }
     }
   });
   const inst = { root, skeleton, animations: gltf.animations || [] };

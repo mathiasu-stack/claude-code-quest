@@ -26,6 +26,14 @@ export const NPC_CASTING = {
   mei:     { gltfAssetId: 'easian_female',      fallbackAssetId: 'western_female' },
   noor:    { gltfAssetId: 'hijab_female',       fallbackAssetId: 'sasian_female' },
   ines:    { gltfAssetId: 'ines',               fallbackAssetId: null }, // child visitor — static Meshy mesh
+  // FIN-03 — Maya rides the western_female rig via her own manifest id;
+  // a bespoke maya.glb swaps in later by editing ONLY the manifest
+  // entry's `file` field (no code change).
+  maya:    { gltfAssetId: 'maya',               fallbackAssetId: 'western_female' },
+  // Ceremony stand-ins (FIN-06) — must visually match the originals.
+  'fin-maya':  { gltfAssetId: 'maya',            fallbackAssetId: 'western_female' },
+  'fin-elena': { gltfAssetId: 'western_female',  fallbackAssetId: 'easian_female' },
+  'fin-rena':  { gltfAssetId: 'western_female',  fallbackAssetId: 'easian_female' },
 };
 
 // Auto-generated chapter NPCs (ch03..ch16) — round-robin through the

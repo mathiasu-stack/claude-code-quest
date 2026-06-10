@@ -382,6 +382,19 @@ A full audit + rewrite of all 16 chapters against the current Claude Code featur
 - For UI/feature work, the user verifies in-browser themselves on `ds925-urlacher:8888`. You don't have access to that browser; report changes + cache-bust value so the user can hard-reload.
 - The user prefers compound deploys: ship a feature + its docs + its cache-bust in one `nas-deploy` rather than a chain of micro-commits.
 
+## Kedash Protocol — Phase 4 handoff (finale, uncommitted 2026-06-10)
+
+Phase 4 (FIN-01…FIN-08, COPY-04, PROP-05, R-6) is implemented and uncommitted. Cache-bust generation: `?v=20260610e` (play.js, story_lines.js, story_scenes.js, style.css in index.html; same value on play.js's imports of floorM/titleCard/ceremonyManager/npcReactions/npcCasting).
+
+**Trigger chain** (all flags in `ccq_story` via `Story.markSceneSeen`):
+ch16-test passed → talking to Marcus plays `marcusDoor` (2 beats) → elevator's blank slot below F1 (present from day one, class `elev-floor-blank`) lights as gold `M` (`elev-floor-m`) → `requestFloorChange(5)` (1600 ms ride) → `loadFloor(5)` builds `play/world/floorM.js` `buildFloorM()` (loft; colliders re-pushed by `registerStaticColliders` via `floorMState`; `learnings_fragment_2` readable at `fragmentSpot`) → Maya NPC there (roster id `maya`, rig `maya` manifest entry → `western_female.glb`; bespoke `maya.glb` later = edit ONLY the manifest `file` field) → `mayaScene` (6 beats, §5.3 verbatim) → onComplete chains `_startFinaleChain()`: ride to F1, +2800 ms, spawn temp cast (`fin-elena`/`fin-rena`/`fin-maya`), `ceremony.startFinale()` (gold VP-of-AI flip, desynced claps ×9, `window.STORY_FINALE` bubble timeline, `setPortraitCelebration(true)` = live hearts + ♥-plaque) → onDone marks `finale` (tier T7) + `applyEpilogueState()` (Maya idles at reception, `newhire` NPC spawns, second child chair by Ines) → talking to the new arrival plays `epilogueArrival` → fade + `showTitleCard('THE KEDASH PROTOCOL')`.
+
+**R-6**: in `start()`'s promotion block, `promotionFor === 'ch16' && !Story.sceneSeen('finale')` consumes `ccq_promotion_for` WITHOUT calling `maybeStartFromFlag()` — the scripted finale is the only VP-of-AI ceremony; other chapters unaffected.
+
+**Other notables**: `floorForNpcDef()` routes Maya (M ↔ F1 post-finale) and respects explicit `def.floor`; `spawnNPCsForFloor` skips `epilogueOnly` defs pre-finale; `stop()` now also resets `loadedFloors`/`currentFloor` (latent re-entry bug fix); PROP-05 cable trays = `buildCableTrays()` in floorM.js, registered as rooms builder `cable_trays`, data entry appended to `office_floor4` in data/rooms.js; COPY-04 Act IV lines live in data/story_lines.js (Act IV block + ines T6/T7, new `aisha`/`maya` entries); finale/epilogue copy in data/story_scenes.js (`marcusDoor`/`mayaScene`/`epilogueArrival` + `window.STORY_FINALE`). All touched JS passes `node --check`; manifest.json parses.
+
+**Fastest playtest path**: admin chapter-skip dropdown in the play-mode toolbar → complete ch16 → talk to Marcus (lobby IT bench) → elevator → M → Maya → ride down auto-plays ceremony → talk to New Arrival at the lobby doors.
+
 ## How to start
 
 Begin by running `git log -10 --oneline` and `git status` to confirm the working tree matches what's described here, then wait for the user's next ask. If the working tree has changes you don't recognize, **don't discard them** — surface them to the user.
