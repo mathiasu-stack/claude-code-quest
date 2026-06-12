@@ -4,9 +4,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Code Quest — Kedash Corp Training</title>
-  <link rel="stylesheet" href="style.css?v=20260610e">
+  <link rel="stylesheet" href="style.css?v=20260612c">
 </head>
 <body>
+
+  <!-- Error telemetry — must load before everything else so early
+       script failures (e.g. a cache-bust miss breaking a module) are
+       reported. POSTs to save_server.py's /errlog; capped at 5
+       reports per page load. -->
+  <script>
+    (function () {
+      var sent = 0;
+      function report(kind, msg, src, line, col, stack) {
+        if (sent >= 5) return;
+        sent++;
+        try {
+          var body = JSON.stringify({
+            kind: kind, msg: String(msg).slice(0, 500),
+            src: String(src || '').slice(0, 200),
+            line: line || 0, col: col || 0,
+            stack: String(stack || '').slice(0, 1500),
+            url: location.pathname + location.hash,
+            ua: navigator.userAgent.slice(0, 120),
+          });
+          if (navigator.sendBeacon) navigator.sendBeacon('/errlog', body);
+          else fetch('/errlog', { method: 'POST', body: body, keepalive: true }).catch(function () {});
+        } catch (e) { /* never let the reporter throw */ }
+      }
+      window.addEventListener('error', function (e) {
+        report('error', e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack);
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e.reason || {};
+        report('unhandledrejection', r.message || String(e.reason), '', 0, 0, r.stack);
+      });
+    })();
+  </script>
 
   <header id="mobile-header" class="mobile-header">
     <div class="mobile-header-brand">
@@ -21,13 +54,13 @@
   <main id="main-content"></main>
 
   <!-- Engine -->
-  <script src="engine/progress.js?v=20260610a"></script>
-  <script src="engine/evaluator.js?v=20260524d"></script>
+  <script src="engine/progress.js?v=20260612c"></script>
+  <script src="engine/evaluator.js?v=20260612c"></script>
   <script src="engine/scoring.js?v=20260524d"></script>
 
   <!-- Data -->
-  <script src="data/curriculum.js?v=20260610a"></script>
-  <script src="data/curriculum2.js?v=20260610a"></script>
+  <script src="data/curriculum.js?v=20260612c"></script>
+  <script src="data/curriculum2.js?v=20260612c"></script>
   <!--
     Editor-writable data files — loaded with a per-page-load timestamp
     cache-bust so the in-game editor's "Save Permanently" can drop a
@@ -52,8 +85,8 @@
   <!-- Story layer (Kedash Protocol) — narrative copy, hand-authored (not
        editor-writable), so normal ?v= cache-busting applies. Must load
        after curriculum2.js and before app.js / play.js consume them. -->
-  <script src="data/story_lines.js?v=20260610g"></script>
-  <script src="data/story_docs.js?v=20260610g"></script>
+  <script src="data/story_lines.js?v=20260612b"></script>
+  <script src="data/story_docs.js?v=20260612b"></script>
   <script src="data/story_scenes.js?v=20260610e"></script>
   <script src="data/story_ambient.js?v=20260610b"></script>
 
@@ -62,8 +95,8 @@
 
   <!-- UI -->
   <script src="ui/dashboard.js?v=20260524d"></script>
-  <script src="ui/lesson.js?v=20260524d"></script>
-  <script src="ui/test.js?v=20260524d"></script>
+  <script src="ui/lesson.js?v=20260612c"></script>
+  <script src="ui/test.js?v=20260612c"></script>
 
   <!-- 3D Play Mode (Three.js, ES module via importmap) -->
   <script type="importmap">
@@ -74,7 +107,7 @@
     }
   }
   </script>
-  <script type="module" src="play/play.js?v=20260610k"></script>
+  <script type="module" src="play/play.js?v=20260612d"></script>
 
   <!-- App Bootstrap -->
   <script src="app.js?v=20260603b"></script>

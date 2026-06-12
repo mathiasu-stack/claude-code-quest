@@ -2,6 +2,10 @@
 //
 // Tier-keyed inspect texts, same resolution rule as STORY_LINES: the
 // highest tier key <= the player's current story tier wins.
+//
+// HERO-01 (docs): an inspect-card doc may also carry heroThoughtByTier —
+// tier-keyed like byTier — rendered as an italic trailing line that fades
+// in once the doc text finishes typing. Keep it one short sentence.
 
 window.STORY_DOCS = {
 
@@ -21,6 +25,9 @@ window.STORY_DOCS = {
     byTier: {
       T0: 'LAST JOB: 1 BADGE — 6 DAYS AGO',
     },
+    heroThoughtByTier: {
+      T0: 'How is it possible they printed my badge before we even had our interview?',
+    },
   },
 
   // PROP-08 / ASK-A9 — the open drawer in the File Workshop. The tab is
@@ -29,6 +36,9 @@ window.STORY_DOCS = {
     title: 'Filing Cabinet — Open Drawer',
     byTier: {
       T0: 'CX-13 — CX-18',
+    },
+    heroThoughtByTier: {
+      T4: 'Six consecutive files, no names. That number keeps coming up.',
     },
   },
 

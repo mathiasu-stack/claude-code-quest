@@ -91,7 +91,7 @@ function retargetMixamoPrefix(clip, skeleton) {
 // Version banner: when the user reports caching issues, this lets us
 // confirm in DevTools console that the latest code is running.
 if (!window.__gltfCharVersionLogged) {
-  console.log('[gltfCharacter] v20260524d — Linda Meshy character');
+  console.log('[gltfCharacter] v20260611a — averaged idle pose on all rigs');
   window.__gltfCharVersionLogged = true;
 }
 
@@ -100,9 +100,11 @@ if (!window.__gltfCharVersionLogged) {
 // skin). Loaded once per URL; materials are cloned per instance because
 // SkeletonUtils.clone shares material refs across clones.
 const _overrideTexCache = {};
+// Bump when regenerating variant jpgs in place (same filenames).
+const _TEX_VER = '20260612a';
 function _overrideTexture(file) {
   if (!_overrideTexCache[file]) {
-    const tex = new THREE.TextureLoader().load('play/assets/characters/' + file);
+    const tex = new THREE.TextureLoader().load('play/assets/characters/' + file + '?v=' + _TEX_VER);
     tex.flipY = false;              // GLTF UV convention
     tex.colorSpace = THREE.SRGBColorSpace;
     _overrideTexCache[file] = tex;
@@ -138,6 +140,22 @@ export function makeGltfCharacter(look, assetLoader) {
     root.scale.multiplyScalar(0.95 + t * 0.11);
   }
 
+  // Clothing-recolor variants: shared rigs carry `textureVariants` in the
+  // manifest — recolored copies of the baked atlas (shirt pixels only).
+  // Hash the NPC id into variants.length + 1 outcomes so the original
+  // texture stays in rotation and an NPC keeps its outfit across reloads.
+  // Salted so the pick doesn't correlate with the stature hash above.
+  // 'fin-' ceremony stand-ins must dress like the NPCs they mirror; the
+  // player keeps their customized look even on a fallback rig.
+  let texFile = entry?.textureOverride || null;
+  if (!texFile && entry?.textureVariants?.length && look._id && look._id !== 'player') {
+    const vid = look._id.replace(/^fin-/, '') + ':shirt';
+    let vh = 0;
+    for (let i = 0; i < vid.length; i++) vh = (vh * 31 + vid.charCodeAt(i)) | 0;
+    const pick = Math.abs(vh) % (entry.textureVariants.length + 1);
+    if (pick > 0) texFile = entry.textureVariants[pick - 1];
+  }
+
   // Find the SkinnedMesh skeleton + ensure shadow flags.
   // Three.js does frustum-culling by default per Mesh; explicit reaffirm
   // here so a future asset-conversion step can't silently disable it.
@@ -148,9 +166,9 @@ export function makeGltfCharacter(look, assetLoader) {
       obj.castShadow = true;
       obj.receiveShadow = true;
       obj.frustumCulled = true;
-      if (entry?.textureOverride && obj.material) {
+      if (texFile && obj.material) {
         obj.material = obj.material.clone();
-        obj.material.map = _overrideTexture(entry.textureOverride);
+        obj.material.map = _overrideTexture(texFile);
         obj.material.needsUpdate = true;
       }
     }
@@ -324,26 +342,17 @@ export function makeGltfCharacter(look, assetLoader) {
     }
   }
 
-  // Capture idle's first-frame upper-body quaternions (shoulder + arm
-  // chain). Meshy's idle clip puts the arms in a relaxed-at-sides pose;
-  // we force these values onto the bones during idle/walk/run. This is
-  // body-relative (the values are in each bone's parent-local frame, so
-  // they rotate naturally with the character) and replaces the previous
-  // armTuck rotation math which was world-space and broke at non-zero
-  // yaws (arms swung into A-pose or cross-body when the player turned).
+  // Capture first-frame upper-body quaternions (shoulder + arm chain) —
+  // used as the locomotion blend target in update(). Body-relative (the
+  // values are in each bone's parent-local frame, so they rotate
+  // naturally with the character at any yaw).
   const ARM_CHAIN = ['LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
                      'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand'];
-  // Rest-pose quaternions for the arm chain. Used by update() to reset
-  // each bone before the unconditional TUCK/TILT multiplies — without
-  // this reset the tuck rotation accumulates on bones the current clip
-  // doesn't animate, producing the helicopter-arm bug.
-  //
   // Priority: idle clip first frame → walk clip first frame → bone bind
-  // pose. Characters without an idle clip (e.g. the post-rig Crimson
-  // Linda which only ships walk + run) fall through to the walk-first
-  // frame, which is a neutral mid-step pose — better than the bind pose
-  // (which on Meshy rigs is arms-pinned-to-sides and kills the walking
-  // arm swing entirely after the BLEND).
+  // pose. NOTE: on these Meshy rigs the bind pose is a T-pose, so the
+  // bind fallback only matters for rigs with no clips at all. The STATIC
+  // idle pose is composed separately below (idlePose) — the walk first
+  // frame is a mid-swing pose and must not be frozen as "idle".
   const idleArmQuat = {};
   function copyArmTrackToRest(clip) {
     for (const boneName of ARM_CHAIN) {
@@ -356,69 +365,183 @@ export function makeGltfCharacter(look, assetLoader) {
       }
     }
   }
+  const bindQuat = {};
   if (inst.skeleton) {
     if (actions.idle) copyArmTrackToRest(actions.idle.getClip());
     if (actions.walk) copyArmTrackToRest(actions.walk.getClip());
-    // Final fallback — current bone quaternion at instantiation time IS
-    // the bind-pose value (no mixer.update has run yet).
+    // Bone quaternions at instantiation time ARE the bind-pose values
+    // (no mixer.update has run yet). Kept both as the final idleArmQuat
+    // fallback and as the neutral-wrist / straight-elbow reference for
+    // the composed idle pose below.
     for (const boneName of ARM_CHAIN) {
-      if (idleArmQuat[boneName]) continue;
       const b = inst.skeleton.getBoneByName(boneName);
-      if (b) idleArmQuat[boneName] = b.quaternion.clone();
+      if (b) bindQuat[boneName] = b.quaternion.clone();
+      if (!idleArmQuat[boneName] && bindQuat[boneName]) {
+        idleArmQuat[boneName] = bindQuat[boneName].clone();
+      }
     }
   }
+
+  // Shoulder tuck + forward tilt corrections, in bone-LOCAL axes.
+  // Empirically swept (see /tmp/tuckmatrix): shoulder +X (NOT mirrored
+  // per side — the shoulder bind frames are aligned so +X tucks both
+  // sides inward), arm/shoulder -Z swings the chain forward (Z is the
+  // sagittal axis in these bones' idle-clip frames).
+  const tuckQ    = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.20);
+  const armTiltQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.18);
+  const shTiltQ  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.09);
+
+  const hasIdleClip = !!actions.idle;
+
+  // Mean of a quaternion track's keyframes (sign-aligned component sum,
+  // renormalized — fine for the clustered rotations of a walk cycle).
+  function averageQuatTrack(track) {
+    const v = track.values;
+    let x = 0, y = 0, z = 0, w = 0;
+    const sx = v[0], sy = v[1], sz = v[2], sw = v[3];
+    for (let i = 0; i < v.length; i += 4) {
+      let qx = v[i], qy = v[i + 1], qz = v[i + 2], qw = v[i + 3];
+      if (qx * sx + qy * sy + qz * sz + qw * sw < 0) { qx = -qx; qy = -qy; qz = -qz; qw = -qw; }
+      x += qx; y += qy; z += qz; w += qw;
+    }
+    const len = Math.hypot(x, y, z, w) || 1;
+    return new THREE.Quaternion(x / len, y / len, z / len, w / len);
+  }
+
+  // Static idle target pose for the arm chain, composed from the WALK
+  // clip for every rig (including those with a real idle clip — the
+  // legacy idle-first-frame + tuck path made hero/ines/marcus read
+  // broken next to the averaged pose, so all rigs now share it):
+  // the walk clip's FIRST frame is a mid-swing pose, and freezing it
+  // reads as broken (hyper-extended elbows, splayed wrists). Instead,
+  // average each arm bone's quaternion track across the whole walk
+  // cycle — the swing oscillation cancels and the mean is "arms hanging
+  // relaxed at the sides" expressed in the rig's own local-frame
+  // convention, with no axis-sign guessing. Elbows are then relaxed
+  // toward the straight-arm bind pose (leaving a slight natural bend)
+  // and wrists are set to bind (straight continuation of the forearm —
+  // no splay, no flex).
+  const idlePose = {};
+  if (actions.walk && inst.skeleton) {
+    const walkClip = actions.walk.getClip();
+    for (const boneName of ARM_CHAIN) {
+      const trk = walkClip.tracks.find(t => t.name === boneName + '.quaternion');
+      if (trk && trk.values.length >= 4) idlePose[boneName] = averageQuatTrack(trk);
+    }
+    for (const side of ['Left', 'Right']) {
+      const fore = idlePose[side + 'ForeArm'];
+      const foreBind = bindQuat[side + 'ForeArm'];
+      if (fore && foreBind) fore.slerp(foreBind, 0.55);
+      if (bindQuat[side + 'Hand']) idlePose[side + 'Hand'] = bindQuat[side + 'Hand'].clone();
+    }
+    // The walk average keeps natural shoulder posture, arm twist and
+    // elbow hinge, but its upper-arm DIRECTION still hangs ~35° outward
+    // and behind the body (Meshy walks barely swing the upper arm — the
+    // motion is mostly forearm). Solve the direction exactly instead of
+    // hand-tuning local-axis corrections: compute the averaged arm's
+    // root-space direction through the quaternion chain (bones are
+    // still at bind here, matching the idle-time spine state), then
+    // apply the minimal rotation taking it to "nearly straight down,
+    // slightly outward + forward". setFromUnitVectors preserves the
+    // averaged twist and assumes nothing about per-rig axis signs.
+    // (Character forward is +Z; left side is +X — verified from the
+    // toe-bone direction in the rig data.)
+    const yUp = new THREE.Vector3(0, 1, 0);
+    const chainQuatAbove = (bone) => {
+      const stack = [];
+      for (let b = bone.parent; b && b.isBone; b = b.parent) stack.push(b);
+      const q = new THREE.Quaternion();
+      for (let i = stack.length - 1; i >= 0; i--) q.multiply(stack[i].quaternion);
+      return q;
+    };
+    for (const side of ['Left', 'Right']) {
+      const sh = inst.skeleton.getBoneByName(side + 'Shoulder');
+      const arm = inst.skeleton.getBoneByName(side + 'Arm');
+      const qArm = idlePose[side + 'Arm'];
+      if (!sh || !arm || !qArm) continue;
+      const P = chainQuatAbove(sh).multiply(idlePose[side + 'Shoulder'] || sh.quaternion);
+      const d0 = yUp.clone().applyQuaternion(P.clone().multiply(qArm));
+      const dT = new THREE.Vector3(side === 'Left' ? 0.12 : -0.12, -0.99, 0.04).normalize();
+      const qFix = new THREE.Quaternion().setFromUnitVectors(d0, dT);
+      idlePose[side + 'Arm'] = P.clone().invert().multiply(qFix).multiply(P).multiply(qArm);
+    }
+  }
+  for (const boneName of ARM_CHAIN) {
+    if (idlePose[boneName] || !idleArmQuat[boneName]) continue;
+    idlePose[boneName] = idleArmQuat[boneName].clone();
+    if (hasIdleClip) {
+      if (boneName === 'LeftShoulder' || boneName === 'RightShoulder') {
+        idlePose[boneName].multiply(tuckQ).multiply(shTiltQ);
+      } else if (boneName === 'LeftArm' || boneName === 'RightArm') {
+        idlePose[boneName].multiply(armTiltQ);
+      }
+    }
+  }
+
+  // Subtle breathing during idle (no-idle-clip rigs only — rigs with a
+  // real idle clip animate the spine themselves). Random phase so a
+  // crowd doesn't breathe in lockstep.
+  let spineBone = null;
+  let spineBindQ = null;
+  if (!hasIdleClip && inst.skeleton) {
+    spineBone = inst.skeleton.getBoneByName('Spine02')
+             || inst.skeleton.getBoneByName('Spine01')
+             || inst.skeleton.getBoneByName('Spine');
+    if (spineBone) spineBindQ = spineBone.quaternion.clone();
+  }
+  let breatheT = Math.random() * Math.PI * 2;
+  const breatheAxis = new THREE.Vector3(1, 0, 0);
+  const tmpQ = new THREE.Quaternion();
+
+  // Smoothed weight of the static idle pose (0 = clip drives the arms,
+  // 1 = idle pose fully applied). Ramped over ~0.22 s so walk→idle and
+  // idle→walk transitions never snap.
+  let idleW = 0;
 
   // Per-frame update. Pass dt seconds.
   function update(dt /*, now */) {
     mixer.update(dt);
-    // Force arm-chain bones to idle's first-frame pose during idle AND
-    // walk/run. The captured quaternions are in each bone's parent-local
-    // frame, so they're body-relative and stay correct at any yaw.
-    if ((currentMotion === 'idle' || currentMotion === 'walk' || currentMotion === 'run')
-        && inst.skeleton) {
-      // Idle: copy idle's first-frame pose verbatim. Walk/run: blend the
-      // arm chain toward idle's pose by SLERP — keeps the rest pose but
-      // lets the walk clip's natural arm swing show through at reduced
-      // amplitude (the Meshy walk clip is too exaggerated raw).
-      const isLocomotion = (currentMotion === 'walk' || currentMotion === 'run');
-      const BLEND = isLocomotion ? 0.7 : 1.0; // 0=clip, 1=idle pose
-      for (const boneName of ARM_CHAIN) {
-        const b = inst.skeleton.getBoneByName(boneName);
-        if (!b || !idleArmQuat[boneName]) continue;
-        if (BLEND >= 1.0) b.quaternion.copy(idleArmQuat[boneName]);
-        else b.quaternion.slerp(idleArmQuat[boneName], BLEND);
+    const isLocomotion = (currentMotion === 'walk' || currentMotion === 'run');
+    const isIdle = (currentMotion === 'idle');
+    const step = dt / 0.22;
+    const wTarget = isIdle ? 1 : 0;
+    idleW += Math.max(-step, Math.min(step, wTarget - idleW));
+    if ((isIdle || isLocomotion) && inst.skeleton) {
+      if (isLocomotion) {
+        // Blend the arm chain toward the captured rest quaternions by
+        // SLERP — keeps the rest pose but lets the walk clip's natural
+        // arm swing show through at reduced amplitude (the Meshy walk
+        // clip is too exaggerated raw). The captured quaternions are in
+        // each bone's parent-local frame, so they're body-relative and
+        // stay correct at any yaw.
+        const BLEND = 0.7;
+        for (const boneName of ARM_CHAIN) {
+          const b = inst.skeleton.getBoneByName(boneName);
+          if (!b || !idleArmQuat[boneName]) continue;
+          b.quaternion.slerp(idleArmQuat[boneName], BLEND);
+        }
+        const lSh = inst.skeleton.getBoneByName('LeftShoulder');
+        const rSh = inst.skeleton.getBoneByName('RightShoulder');
+        if (lSh) lSh.quaternion.multiply(tuckQ).multiply(shTiltQ);
+        if (rSh) rSh.quaternion.multiply(tuckQ).multiply(shTiltQ);
+        const lArm = inst.skeleton.getBoneByName('LeftArm');
+        const rArm = inst.skeleton.getBoneByName('RightArm');
+        if (lArm) lArm.quaternion.multiply(armTiltQ);
+        if (rArm) rArm.quaternion.multiply(armTiltQ);
       }
-      // Extra shoulder tuck — pulls the arms tighter against the body so
-      // the hands hang near the hips instead of the slight A-shape that
-      // Meshy's idle clip authors. Empirically swept (see
-      // /tmp/tuckmatrix): bone-LOCAL X axis, +ve on both sides, mag=0.20
-      // gives a natural relaxed pose at every yaw. The shoulder bind
-      // frames are aligned such that +X tucks both sides inward (NOT
-      // mirrored — the previous "flip sign per side" attempt pushed the
-      // right arm outward).
-      const TUCK_MAG = 0.20;
-      const localX = new THREE.Vector3(1, 0, 0);
-      const tuck = new THREE.Quaternion().setFromAxisAngle(localX, TUCK_MAG);
-      const lSh = inst.skeleton.getBoneByName('LeftShoulder');
-      const rSh = inst.skeleton.getBoneByName('RightShoulder');
-      if (lSh) lSh.quaternion.multiply(tuck);
-      if (rSh) rSh.quaternion.multiply(tuck);
-      // Arm-bone forward tilt — Meshy's idle clip puts the arms slightly
-      // BEHIND the body's vertical line. A -Z rotation in the arm bone's
-      // local frame swings them forward (Z is the sagittal axis for this
-      // rig — found via /tmp/tuckmatrix arm-axis sweep). Apply BOTH to
-      // shoulder and arm bones so the whole chain tilts forward, not just
-      // the upper arm — that prevents the elbow-back/hand-forward bent look.
-      const ARM_FWD = -0.18;
-      const localZ = new THREE.Vector3(0, 0, 1);
-      const armTilt = new THREE.Quaternion().setFromAxisAngle(localZ, ARM_FWD);
-      const shTilt = new THREE.Quaternion().setFromAxisAngle(localZ, ARM_FWD * 0.5);
-      if (lSh) lSh.quaternion.multiply(shTilt);
-      if (rSh) rSh.quaternion.multiply(shTilt);
-      const lArm = inst.skeleton.getBoneByName('LeftArm');
-      const rArm = inst.skeleton.getBoneByName('RightArm');
-      if (lArm) lArm.quaternion.multiply(armTilt);
-      if (rArm) rArm.quaternion.multiply(armTilt);
+      if (idleW > 0.001) {
+        for (const boneName of ARM_CHAIN) {
+          const b = inst.skeleton.getBoneByName(boneName);
+          if (!b || !idlePose[boneName]) continue;
+          b.quaternion.slerp(idlePose[boneName], idleW);
+        }
+        if (spineBone && spineBindQ) {
+          breatheT += dt;
+          tmpQ.setFromAxisAngle(breatheAxis, Math.sin(breatheT * 1.5) * 0.02);
+          tmpQ.premultiply(spineBindQ);
+          spineBone.quaternion.slerp(tmpQ, idleW);
+        }
+      }
     }
     if (stanceBindData && inst.skeleton) {
       for (const name in stanceBindData) {
@@ -428,10 +551,6 @@ export function makeGltfCharacter(look, assetLoader) {
         b.position[axis] = value * stanceFactor;
       }
     }
-    // armTuck rotation removed — the idle-arm-chain override above already
-    // forces shoulders to idle's relaxed pose (in each bone's parent-local
-    // frame), which is body-relative by construction. The old armTuck did
-    // a world-axis rotation that broke when the player turned.
   }
 
   // Stash the look so existing systems (idleAnimations, dialogue,

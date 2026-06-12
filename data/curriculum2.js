@@ -106,7 +106,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
       scenario: 'OK we need a SKILL for this. Every agent writes replies differently — some forget the greeting, some skip the "next step", some over-explain. Write a Claude Code skill (`.claude/skills/support-reply.md`) that enforces our 4-part format every time:\n\n1. Greeting (their first name, warm but professional)\n2. Direct answer\n3. Next step (link, button, dashboard location)\n4. Sign-off (`— Kedash Support`)\n\nDrop it in Claude, then run a sample question through it ("How do I add a teammate?"). Paste BOTH the skill file content AND the reply Claude produced — `## Skill` and `## Sample reply` markers.\n\nAnd before you ask around the floor for me — I\'m remote. Very remote. Focus on the skill.',
       task: 'Paste your skill file content AND a sample reply Claude generated using it.',
       hint: 'Skill needs `name:` / `description:` frontmatter + body describing each part. Sample reply should hit the 4 sections explicitly.',
-      minLength: 300, passThreshold: 70, xpReward: 525,
+      minLength: 300, passThreshold: 75, xpReward: 525,
       criteria: [
         { type: 'keyword', value: ['## Skill', '## Sample reply'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['name:', 'description:'], description: 'Skill has frontmatter', weight: 2 },
@@ -115,6 +115,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
         { type: 'keyword', value: ['next step', 'next-step', 'dashboard', 'link', 'button'], description: 'Skill names the next-step part', weight: 2 },
         { type: 'keyword', value: ['kedash support', '— Kedash', 'sign-off', 'signoff'], description: 'Sample reply has the sign-off', weight: 2 },
         { type: 'keyword', value: ['hi ', 'hello', 'hey '], description: 'Sample reply opens with a greeting', weight: 1 },
+        { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 5 },
       ],
       exemplar: '<p>Strong answer: skill file with frontmatter (name, description) and a body listing the 4 parts; sample reply visibly hits greeting → answer → next-step → sign-off.</p>',
     },
@@ -237,7 +238,7 @@ Your answer becomes the next learnings.md entry."</code></pre>
       scenario: 'Anthropic\'s methodology: observe yourself first, then write the skill from that real session. Pick a "billing question" ticket. Walk Claude Code through what YOU actually do — open the ticket, check the account, look up the billing FAQ, draft a reply using the template, escalate if amount > $500, log the resolution. Capture the real session.\n\nThen write the skill that automates the consistent parts. Paste both — `## Observation run` and `## Skill`.\n\nPS: whoever taught you to observe-then-codify — that methodology has a body count of one company. Use it better than she did.',
       task: 'Paste the manual observation run (real session transcript) AND the resulting skill.',
       hint: 'Observation = the step-by-step you actually walked through; Skill = the consistent parts factored into frontmatter + instructions.',
-      minLength: 400, passThreshold: 70, xpReward: 550,
+      minLength: 400, passThreshold: 80, xpReward: 550,
       criteria: [
         { type: 'keyword', value: ['## Observation', '## Skill'], description: 'Both sections marked', weight: 1 },
         { type: 'keyword', value: ['billing', 'ticket'], description: 'Right ticket type', weight: 2 },
@@ -365,7 +366,7 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
       scenario: 'From: priya.engelhardt@kedashcorp.com\nSubject: Model-spend audit — three tasks on your desk\n\nThree tasks landed in your queue this morning:\n\n1. Classify 800 customer-support tickets by topic (one short sentence each).\n2. Refactor the `OrderProcessor` class across 14 files — keep behaviour identical, split into three smaller classes.\n3. Add a `formatCurrency()` helper to `src/utils/format.js`, update the two existing call sites.\n\nPick the right model for each. Justify it on cost + capability grounds (mention prompt caching where it applies). Then SHOW me you actually used `/model` to switch — paste the commands you ran and the status-line / model-banner output proving the switch took effect.\n\nFour sections: `## Task 1`, `## Task 2`, `## Task 3`, `## Proof of switch`.\n\nScore honestly. I have read six of these audits before yours, and I remember every one.',
       task: 'Pick a model per task with cost+capability reasoning, then show real /model switches with status-line evidence.',
       hint: 'Task 1 = high-volume short → Haiku. Task 2 = cross-file reasoning → Opus (mention 1M context if huge). Task 3 = local, well-defined → Sonnet. Proof = `/model <tier>` + status line / banner snippet.',
-      minLength: 400, passThreshold: 70, xpReward: 650,
+      minLength: 400, passThreshold: 80, xpReward: 650,
       criteria: [
         { type: 'keyword', value: ['## Task 1', '## Task 2', '## Task 3', '## Proof'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['haiku'], description: 'Haiku chosen for the batch task', weight: 2 },
@@ -419,7 +420,7 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
       scenario: 'From: marcus.webb@kedashcorp.com\nSubject: Wire up an MCP server\n\nTime to extend Claude Code with a real MCP server. You don\'t need Zendesk for this — pick the simplest one: the official filesystem MCP server. Install it, add it to your Claude config under `mcpServers`, restart Claude, then USE it — ask Claude to do something the MCP enables (e.g., list files in the allowed path, or read a specific file via the tool).\n\nPaste: the install command, the config snippet, AND a snippet from Claude showing the MCP tool actually being invoked.\n\nAllowed path note: scope it tight. The LAST person to configure an MCP in this building scoped it to \'/\'. We do not speak of it. (Rena speaks of it constantly.)',
       task: 'Paste `## Install`, `## Config`, `## Claude using the MCP` — full evidence the setup works end-to-end.',
       hint: 'Try `npx -y @modelcontextprotocol/server-filesystem <path>` as the server command. Config goes under `mcpServers` in your Claude config. **Restart Claude after editing config**, then ask Claude to use the filesystem tool.',
-      minLength: 250, passThreshold: 70, xpReward: 600,
+      minLength: 250, passThreshold: 85, xpReward: 600,
       criteria: [
         { type: 'keyword', value: ['## Install', '## Config', '## Claude using'], description: 'Three sections present', weight: 1 },
         { type: 'keyword', value: ['npm install', 'npx', '@modelcontextprotocol', 'mcp-server', 'pip install'], description: 'Install command shown', weight: 2 },
@@ -565,7 +566,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       scenario: 'New dispatch from the board: I need a `code-reviewer` subagent defined in `.claude/agents/`, AND I need you to actually use it. Then show me a parallel run.\n\nThree sections:\n\n1. `## Agent file` — paste the contents of `.claude/agents/code-reviewer.md` you wrote (with frontmatter: name, description, model, tools).\n2. `## Single dispatch` — paste the orchestrator prompt that invokes that subagent, plus the summary it returned.\n3. `## Parallel dispatch` — show ONE orchestrator message spawning two or three independent subagents at once (audit different folders, summarise different files — pick anything truly independent), and the summaries that came back.\n\nIf you spawn parallel subagents that secretly depend on each other, I will know. Pick genuinely independent work.',
       task: 'Paste the agent file, a single dispatch, and a parallel dispatch with returned summaries.',
       hint: 'Agent file needs `name:`, `description:`, ideally `model:` and `tools:`. Single dispatch = one Task/Agent call. Parallel = ≥2 Agent calls in one orchestrator turn. Mention `/agents` if you used the picker.',
-      minLength: 450, passThreshold: 70, xpReward: 675,
+      minLength: 450, passThreshold: 85, xpReward: 675,
       criteria: [
         { type: 'keyword', value: ['## Agent file', '## Single dispatch', '## Parallel dispatch'], description: 'All three sections present', weight: 1 },
         { type: 'keyword', value: ['name:', 'description:'], description: 'Agent file has frontmatter', weight: 2 },
@@ -755,7 +756,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       scenario: 'From: rena.vasquez@kedashcorp.com\nSubject: Lock down a new project before it goes near prod\n\nNew project landing on your machine. Before anyone runs Claude in it, set up the guardrails. I want to see:\n\n1. `## settings.json` — a real project-level `.claude/settings.json` with: at least 3 `allow` rules, 2 `ask` rules, and 2 `deny` rules covering an obviously dangerous shell pattern and a secrets path.\n2. `## Hook` — a `PostToolUse` hook that runs your linter/formatter on edited files. Show the JSON block AND the script (or one-liner) it points at.\n3. `## Headless run` — the exact `claude -p ...` command you would put into CI for a nightly diff review, with `--permission-mode plan` and explicit model.\n4. `## Status line` — a `statusLine` config that calls a small script, plus the script (3–6 lines is fine) showing what it prints.\n\nReal config, not pseudocode. If the JSON doesn\'t parse, it doesn\'t count.\n\nThis is the part of the program where I decide whether you ever see floor M— whether you ever see a production credential. Same thing. Real config. No pseudocode.',
       task: 'Paste settings.json, the PostToolUse hook + script, the headless run command, and the statusLine config + script.',
       hint: 'permissions has allow/ask/deny arrays. Hooks live under `hooks.PostToolUse[].hooks[].command`. Headless uses `claude -p`. statusLine has `type: command` + `command`.',
-      minLength: 500, passThreshold: 70, xpReward: 725,
+      minLength: 500, passThreshold: 85, xpReward: 725,
       criteria: [
         { type: 'keyword', value: ['## settings.json', '## Hook', '## Headless', '## Status'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['allow', 'ask', 'deny'], description: 'All three permission buckets shown', weight: 2 },
@@ -767,6 +768,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         { type: 'keyword', value: ['--permission-mode plan', 'permission-mode'], description: 'CI uses plan/read-only mode', weight: 2 },
         { type: 'keyword', value: ['--model'], description: 'CI pins a model explicitly', weight: 1 },
         { type: 'keyword', value: ['statusLine', 'status line'], description: 'statusLine block present', weight: 1 },
+        { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 3 },
       ],
       exemplar: '<p>Strong answer: a valid <code>.claude/settings.json</code> with permissions buckets (allow Read/Edit/safe bash; ask for git push and rm; deny rm -rf, curl-pipe-sh, and .env reads), a PostToolUse hook matching Edit|Write that calls a project-local format script, a CI command like <code>claude -p &quot;review diff&quot; --model claude-opus-4-8 --permission-mode plan --output-format json</code>, and a 4-line statusline script that prints branch + model + running cost.</p>',
     },
@@ -848,7 +850,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
       scenario: 'KEDASH-CX-99 · Capstone deploy\n\nDeploy `kedash-support/` onto a remote environment so the support team can use Claude Code without tying up their laptops. NAS is ideal but anything counts: a Synology NAS, a cloud VM, a Raspberry Pi, even WSL on Windows treated as headless. SSH in, install/verify Node, install Claude Code, set your API key, transfer `kedash-support/`, set up a persistent session, run a smoke test (open `claude` in the project).\n\nPaste the actual command sequence you ran AND a snippet from the remote Claude session that PROVES it\'s running there (different hostname in the prompt, different file paths, etc.).\n\nWhen your remote session is live, come find me at the server room door. Bring your badge. There\'s a button that isn\'t on the panel.',
       task: 'Paste `## Commands` (the actual sequence you ran) and `## Remote session` (evidence the session is running on the remote box).',
       hint: 'ssh → install Node via nvm → `npm install -g @anthropic-ai/claude-code` → set `ANTHROPIC_API_KEY` → rsync/scp/git the folder → tmux or screen for persistence → `claude` inside the project. Remote evidence: hostname, paths, banner from the remote box.',
-      minLength: 250, passThreshold: 70, xpReward: 675,
+      minLength: 250, passThreshold: 85, xpReward: 675,
       criteria: [
         { type: 'keyword', value: ['## Commands', '## Remote session'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['ssh'], description: 'Includes SSH', weight: 2 },
@@ -858,6 +860,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
         { type: 'keyword', value: ['rsync', 'scp', 'git clone', 'transfer', 'kedash-support'], description: 'Transfers the project', weight: 2 },
         { type: 'keyword', value: ['tmux', 'screen', 'persistent', 'detach', 'nohup'], description: 'Persistent session', weight: 2 },
         { type: 'keyword', value: ['/home/', '/opt/', '/volume', '~/', '@', ':'], description: 'Remote-session evidence (paths/hostname)', weight: 1 },
+        { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 3 },
       ],
       exemplar: '<p>Strong answer: a numbered command sequence (ssh → nvm → npm install Claude Code → API key → rsync the folder → tmux → <code>claude</code>), then a snippet of the remote Claude banner or prompt showing it\'s clearly on the remote box (different hostname, /home/ or /volume paths).</p>',
     },

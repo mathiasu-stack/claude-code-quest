@@ -6,7 +6,9 @@ function renderLesson(chapterId, lessonId, targetEl = null) {
 
   const progress = window.App.progress;
   const alreadyDone = Progress.isLessonComplete(progress, lessonId);
-  const checkResolved = !lesson.check || Progress.isKnowledgeCheckPassed(progress, lessonId) || (progress.knowledgeChecks?.[lessonId]?.attempts > 0);
+  // The knowledge check gates "Mark as Complete": only a CORRECT answer
+  // resolves it (unlimited retries — wrong answers invite another try).
+  const checkResolved = !lesson.check || Progress.isKnowledgeCheckPassed(progress, lessonId);
   const lessonIdx = ch.lessons.findIndex(l => l.id === lessonId);
   const fromPlay = !!window.App._currentParams?.fromPlay;
   // Allow the lesson to render into a custom container (e.g. the in-world
@@ -158,14 +160,16 @@ function buildKnowledgeCheck(lesson, progress, lessonAlreadyDone) {
   const record = progress.knowledgeChecks?.[lesson.id];
   const passed = !!record?.correct;
   const attempted = !!record;
-  const locked = lessonAlreadyDone || attempted;
+  // Only a correct answer (or an already-completed lesson) locks the check.
+  // A wrong attempt leaves it interactive so the player can retry.
+  const locked = lessonAlreadyDone || passed;
 
   return `
     <div class="knowledge-check ${locked ? 'kc-locked' : ''}" id="kc-block">
       <div class="kc-header">
         <span class="kc-icon">🎯</span>
         <span class="kc-label">Knowledge Check</span>
-        ${passed ? '<span class="kc-badge correct">✓ Correct</span>' : (attempted ? '<span class="kc-badge resolved">Answered</span>' : '')}
+        ${passed ? '<span class="kc-badge correct">✓ Correct</span>' : (attempted ? '<span class="kc-badge resolved">Try again</span>' : '')}
       </div>
       <div class="kc-question">${c.question}</div>
       <div class="kc-options">
@@ -184,7 +188,9 @@ function buildKnowledgeCheck(lesson, progress, lessonAlreadyDone) {
           `;
         }).join('')}
       </div>
-      <div class="kc-feedback" id="kc-feedback">${locked ? `<div class="kc-result ${passed ? 'correct' : 'wrong'}">${c.explanation}</div>` : ''}</div>
+      <div class="kc-feedback" id="kc-feedback">${locked
+        ? `<div class="kc-result ${passed ? 'correct' : 'wrong'}">${c.explanation}</div>`
+        : (attempted ? '<div class="kc-result wrong">Not quite last time — pick the right answer to unlock "Mark as Complete".</div>' : '')}</div>
     </div>
   `;
 }
@@ -230,27 +236,42 @@ function handleCheckAnswer(ch, lesson, chosenIdx) {
   window.App.refreshSidebar();
 
   const block = document.getElementById('kc-block');
-  block.classList.add('kc-locked');
-  block.querySelectorAll('.kc-option').forEach(btn => {
-    btn.disabled = true;
-    const i = Number(btn.dataset.idx);
-    if (i === c.correctIndex) btn.classList.add('kc-correct');
-    if (i === chosenIdx && !correct) btn.classList.add('kc-wrong');
-  });
-
-  const header = block.querySelector('.kc-header');
-  if (!header.querySelector('.kc-badge')) {
-    const badge = document.createElement('span');
-    badge.className = `kc-badge ${correct ? 'correct' : 'resolved'}`;
-    badge.textContent = correct ? '✓ Correct' : 'Answered';
-    header.appendChild(badge);
+  if (correct) {
+    // Lock the check and reveal the answer.
+    block.classList.add('kc-locked');
+    block.querySelectorAll('.kc-option').forEach(btn => {
+      btn.disabled = true;
+      const i = Number(btn.dataset.idx);
+      if (i === c.correctIndex) btn.classList.add('kc-correct');
+    });
+  } else {
+    // Wrong answer: highlight the miss but keep all options live for a retry.
+    // Don't reveal the correct option or the explanation.
+    block.querySelectorAll('.kc-option').forEach(btn => {
+      btn.classList.remove('kc-wrong');
+      if (Number(btn.dataset.idx) === chosenIdx) btn.classList.add('kc-wrong');
+    });
   }
 
+  const header = block.querySelector('.kc-header');
+  const existingBadge = header.querySelector('.kc-badge');
+  if (existingBadge) existingBadge.remove();
+  const badge = document.createElement('span');
+  badge.className = `kc-badge ${correct ? 'correct' : 'resolved'}`;
+  badge.textContent = correct ? '✓ Correct' : 'Try again';
+  header.appendChild(badge);
+
   const fb = document.getElementById('kc-feedback');
-  fb.innerHTML = `
-    <div class="kc-result ${correct ? 'correct' : 'wrong'}">
-      <strong>${correct ? '✓ Correct!' : '✗ Not quite.'}</strong> ${c.explanation}
+  fb.innerHTML = correct
+    ? `
+    <div class="kc-result correct">
+      <strong>✓ Correct!</strong> ${c.explanation}
       ${bonus ? `<div class="kc-bonus">+${bonus} PP bonus for getting it on the first try</div>` : ''}
+    </div>
+  `
+    : `
+    <div class="kc-result wrong">
+      <strong>✗ Not quite.</strong> Take another look at the lesson and try again — the right answer unlocks "Mark as Complete".
     </div>
   `;
 
@@ -260,7 +281,7 @@ function handleCheckAnswer(ch, lesson, chosenIdx) {
   }
 
   const completeBtn = document.getElementById('mark-complete');
-  if (completeBtn && !completeBtn.dataset.unlocked) {
+  if (correct && completeBtn && !completeBtn.dataset.unlocked) {
     completeBtn.disabled = false;
     completeBtn.classList.remove('is-locked');
     completeBtn.textContent = `Mark as Complete — Earn ${lesson.xpReward} PP →`;

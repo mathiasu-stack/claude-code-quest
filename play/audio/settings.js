@@ -4,7 +4,8 @@
 // Mounts on demand via mountAudioSettings(parent). Idempotent (safe to
 // call repeatedly — re-uses existing DOM if already present).
 
-import { audio } from './AudioManager.js';
+import { audio } from './AudioManager.js?v=20260612c';
+import { stopAmbience } from './ambience.js?v=20260612c';
 
 const PANEL_ID = 'play-audio-panel';
 const BUTTON_ID = 'play-audio-gear';
@@ -70,7 +71,7 @@ export function mountAudioSettings(parent) {
       v => audio.setMasterVolume(v),
       m => audio.setMasterMute(m),
     ));
-    for (const channel of ['music', 'sfx', 'ui', 'voice']) {
+    for (const channel of ['music', 'sfx', 'ui', 'voice', 'ambience']) {
       const c = p.channels[channel];
       panel.appendChild(row(
         cap(channel), c.volume, c.mute,
@@ -103,6 +104,11 @@ export function mountAudioSettings(parent) {
 export function unmountAudioSettings() {
   document.getElementById(BUTTON_ID)?.remove();
   document.getElementById(PANEL_ID)?.remove();
+  // The ambience bed's lifecycle is tied to play mode. play.js stop()
+  // calls this unmount in its audio-teardown cluster (right after
+  // stopMusic / updateServerHum(false)), so this is the one hook that
+  // guarantees the roomtone never outlives the 3D view.
+  try { stopAmbience(800); } catch {}
 }
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }

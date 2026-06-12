@@ -13,6 +13,18 @@
 //                        newly passed; string, or { text, speakerName,
 //                        speakerRole, speakerPortrait } for a relayed speaker.
 //
+// HERO-01 — the player character's voice. Two channels:
+//   - Any line OBJECT above may carry heroReply ("spoken") or heroThought
+//     (internal — rendered italic, dimmer, no quotes). The hero beat plays
+//     when the player advances (E / dismiss button) after that exact line,
+//     so it can never fire against the wrong NPC text.
+//   - Entry-level heroReplyByTier / heroThoughtByTier (tier-keyed like
+//     introByTier) answer whatever intro rendered at that tier — used when
+//     the NPC line lives in the play.js roster rather than here. Skipped
+//     while a one-shot postPass beat is showing.
+// Keep hero lines SHORT (one sentence, two max) and keyed to the same tier
+// as the NPC line they answer — never spoil ahead of the player's tier.
+//
 // Story copy lives here so play/play.js stays narrative-agnostic.
 
 window.STORY_LINES = {
@@ -21,7 +33,10 @@ window.STORY_LINES = {
 
   linda: {
     introAppendByTier: {
-      T0: '"Your badge is ready — here. Oh, don\'t look so surprised. We print them when we\'re *confident*." (beat) "HR joke. We\'re famous for them."',
+      T0: {
+        text: '"Your badge is ready — here. Oh, don\'t look so surprised. We print them when we\'re *confident*." (beat) "HR joke. We\'re famous for them."',
+        heroReply: '"Ha! Good one. …It is a joke, right?"',
+      },
     },
     nextHintByTier: {
       T0: '"Did I know your name before you said it? I\'m HR, sweetheart. Knowing names before people say them is the entire job."',
@@ -30,13 +45,19 @@ window.STORY_LINES = {
 
   kenji: {
     introByTier: {
-      T0: '"Yo. Kenji. You walk like the last— like a natural. Like a natural. Anyway: interface." Now that you\'ve poked at it, let me actually walk you through the interface so you know what every part does.',
+      T0: {
+        text: '"Yo. Kenji. You walk like the last— like a natural. Like a natural. Anyway: interface." Now that you\'ve poked at it, let me actually walk you through the interface so you know what every part does.',
+        heroThought: 'Like the last what?',
+      },
     },
   },
 
   sarah: {
     postPassOnceByTier: {
-      T1: '"You did better than the last one." (she straightens, badge catching the light) "Don\'t mention this. To anyone. Especially not to me."',
+      T1: {
+        text: '"You did better than the last one." (she straightens, badge catching the light) "Don\'t mention this. To anyone. Especially not to me."',
+        heroThought: 'The last one. People here keep almost saying a name.',
+      },
     },
   },
 
@@ -45,19 +66,30 @@ window.STORY_LINES = {
       // Pre-TWIST 1 (T2): plants the clap count. Once ch04-test passes,
       // talking to her runs STORY_SCENES.twist1 instead of this intro;
       // after the scene the tier is 3 and the idle line below wins.
-      T2: { text: '"Did you see your clapping party when you got promoted? I\'ve seen ten of those. They always clap eight times. Count next time. It\'s so weird."', sting: true },
+      T2: {
+        text: '"Did you see your clapping party when you got promoted? I\'ve seen ten of those. They always clap eight times. Count next time. It\'s so weird."',
+        sting: true,
+        heroThought: 'Eight claps. I didn\'t count. Now I know I\'m going to.',
+      },
       T3: '"Conversation Bingo. Wanna play? You always win now, it\'s less fun. It\'s still pretty fun."',
       // Post-pass idle swaps (COPY-04): the trial-of-trust pass (T6) and
       // the epilogue (T7, verbatim §5.5).
       T6: '"You keep going up and you keep coming back down. That\'s new. Nobody else came back down this many times." (she spins the chair, once) "I think you\'re almost done. Don\'t mess it up."',
-      T7: '"Mom\'s downstairs now. We\'re getting a real fish tank. With REAL fish, I checked."',
+      T7: {
+        text: '"Mom\'s downstairs now. We\'re getting a real fish tank. With REAL fish, I checked."',
+        heroReply: '"Count them for me when they arrive. You\'re the best counter in this building."',
+      },
     },
   },
 
   aisha: {
     introAppendByTier: {
       // COPY-04: her one story duty — "the last person who sat here."
-      T2: { text: '"Oh — and ignore the keybindings if they feel pre-worn. The last person who sat here had… preferences. Anyway! Not a thing. Forget I said it."', sting: true },
+      T2: {
+        text: '"Oh — and ignore the keybindings if they feel pre-worn. The last person who sat here had… preferences. Anyway! Not a thing. Forget I said it."',
+        sting: true,
+        heroThought: 'Pre-worn. Whose hands wore them in?',
+      },
     },
   },
 
@@ -65,7 +97,18 @@ window.STORY_LINES = {
   // §5.5 epilogue re-talk line at reception.
   maya: {
     introByTier: {
-      T7: '"Inbox is at zero. I don\'t know what to do with my hands."',
+      T7: {
+        text: '"Inbox is at zero. I don\'t know what to do with my hands."',
+        heroReply: '"The lobby chairs spin really fast if you push hard. I have it on excellent authority."',
+      },
+    },
+  },
+
+  // The §5.5 epilogue arrival at the doors — intro lives in the play.js
+  // roster, so the hero's answer uses the entry-level tier-keyed channel.
+  newhire: {
+    heroReplyByTier: {
+      T7: '"It is. Welcome to Kedash Corp — everything here is real. As of this week."',
     },
   },
 
@@ -75,7 +118,11 @@ window.STORY_LINES = {
     introByTier: {
       // THE mentor glitch — she calls the player a predecessor's name,
       // then corrects without blinking. Lesson lead-in preserved.
-      T2: { text: '"Welcome to the Knowledge Library, Dana— " (a full beat; she doesn\'t blink) "—kid. Welcome to the Knowledge Library, kid. Elena. Doctor, technically." Forget prompt-engineering tricks — the real lever is centralised context. That\'s what a Business Brain is.', sting: true },
+      T2: {
+        text: '"Welcome to the Knowledge Library, Dana— " (a full beat; she doesn\'t blink) "—kid. Welcome to the Knowledge Library, kid. Elena. Doctor, technically." Forget prompt-engineering tricks — the real lever is centralised context. That\'s what a Business Brain is.',
+        sting: true,
+        heroThought: 'Dana. She didn\'t even blink. I would have blinked.',
+      },
     },
     nextHintByTier: {
       T2: '"Did I call you something? I teach the same chapter to a lot of bright young people. The names compost. The *material* keeps."',
@@ -84,14 +131,20 @@ window.STORY_LINES = {
 
   raj: {
     introAppendByTier: {
-      T2: '"Folder structure outlives staff structure. You\'d be amazed what a company can lose and still have great folders."',
+      T2: {
+        text: '"Folder structure outlives staff structure. You\'d be amazed what a company can lose and still have great folders."',
+        heroThought: 'What exactly did this company lose?',
+      },
     },
   },
 
   noor: {
     postPassOnceByTier: {
       // T3-gated: only fires after TWIST 1 has been seen.
-      T3: '"Between us: the library is the only room the actors don\'t bother performing in. Nobody performs in a library. That\'s why I asked to work here."',
+      T3: {
+        text: '"Between us: the library is the only room the actors don\'t bother performing in. Nobody performs in a library. That\'s why I asked to work here."',
+        heroReply: '"Noted. The library just became my favorite room."',
+      },
     },
   },
 
@@ -99,13 +152,19 @@ window.STORY_LINES = {
 
   'auto-ch05-l01': {
     introByTier: {
-      T1: '"Specificity. The brief you got is a good example — \'warm-but-technical.\' Very specific. Almost like someone\'s describing a *person* they miss, ha. Anyway."',
+      T1: {
+        text: '"Specificity. The brief you got is a good example — \'warm-but-technical.\' Very specific. Almost like someone\'s describing a *person* they miss, ha. Anyway."',
+        heroThought: 'Who writes a brief that lonely?',
+      },
     },
   },
 
   'auto-ch05-test': {
     introAppendByTier: {
-      T1: '"Jordan\'s great, by the way. You\'ll never meet her — she\'s remote. Everyone here is sort of remote, when you think about it. Don\'t think about it."',
+      T1: {
+        text: '"Jordan\'s great, by the way. You\'ll never meet her — she\'s remote. Everyone here is sort of remote, when you think about it. Don\'t think about it."',
+        heroThought: 'Don\'t think about it. …I\'m thinking about it.',
+      },
     },
   },
 
@@ -117,7 +176,10 @@ window.STORY_LINES = {
 
   'auto-ch06-test': {
     postPassOnceByTier: {
-      T2: '"Oh — Marcus from IT pinged me. Says, quote, \'tell the new one: good ticket hygiene. Also tell them ticket numbers are load-bearing.\' No, I don\'t know what that means."',
+      T2: {
+        text: '"Oh — Marcus from IT pinged me. Says, quote, \'tell the new one: good ticket hygiene. Also tell them ticket numbers are load-bearing.\' No, I don\'t know what that means."',
+        heroThought: 'Load-bearing for what?',
+      },
     },
   },
 
@@ -134,6 +196,7 @@ window.STORY_LINES = {
         speakerName: 'Sarah Chen',
         speakerRole: 'Engineering Manager',
         speakerPortrait: '👩‍💼',
+        heroThought: 'Every word. Who has that kind of time?',
       },
     },
   },
@@ -176,7 +239,10 @@ window.STORY_LINES = {
       // pass lands the tier is still 2 (T3 requires the twist1 scene,
       // which this line sends the player toward) — a T3 key would
       // never fire at the handoff moment.
-      T2: '"Floor 2, cleared. Hey — the kid in the lobby\'s been asking when you\'d be done. Kids. They notice things, right?"',
+      T2: {
+        text: '"Floor 2, cleared. Hey — the kid in the lobby\'s been asking when you\'d be done. Kids. They notice things, right?"',
+        heroReply: '"Yeah — kids notice things. I should go say hi."',
+      },
     },
   },
 
@@ -230,7 +296,10 @@ window.STORY_LINES = {
       // the derived tier instantly (T4 has no scene gate), so T4 is
       // already live at the handoff talk. Pre-twist1 players sit below
       // T3 and the line simply waits — spoiler-safe.
-      T4: '"Passed. Right — you\'re far enough now, so, housekeeping: officially, this is the Kedash Corp Onboarding Curriculum. Internally we call it the Program. One trainee per cycle. You\'re the seventh. Questions? …Everyone has questions. Ask Engelhardt. Floor 3, Engine Bay. She\'s *real*, so she\'s allowed to answer."',
+      T4: {
+        text: '"Passed. Right — you\'re far enough now, so, housekeeping: officially, this is the Kedash Corp Onboarding Curriculum. Internally we call it the Program. One trainee per cycle. You\'re the seventh. Questions? …Everyone has questions. Ask Engelhardt. Floor 3, Engine Bay. She\'s *real*, so she\'s allowed to answer."',
+        heroThought: 'The seventh. Six people sat in this chair before it was mine.',
+      },
     },
   },
 
@@ -238,7 +307,10 @@ window.STORY_LINES = {
     introByTier: {
       // Engelhardt tells the truth on her own schedule. After ch10-test
       // passes, talking to this NPC runs STORY_SCENES.twist2 instead.
-      T4: '"Sit. I\'m Engelhardt. I run AI Operations, which at this company is a redundant phrase. You\'ve earned the short version, so: the founder of this company automated her own job, then everyone else\'s, then disappeared into the result. She is looking for one person to hand it to. Not a genius. Not a hero. She needs someone who knows when to use Opus and when to use Haiku. That\'s the entire job description. This chapter is the job interview. Shall we?"',
+      T4: {
+        text: '"Sit. I\'m Engelhardt. I run AI Operations, which at this company is a redundant phrase. You\'ve earned the short version, so: the founder of this company automated her own job, then everyone else\'s, then disappeared into the result. She is looking for one person to hand it to. Not a genius. Not a hero. She needs someone who knows when to use Opus and when to use Haiku. That\'s the entire job description. This chapter is the job interview. Shall we?"',
+        heroReply: '"That\'s the calmest terrifying thing anyone has ever said to me. Let\'s begin."',
+      },
     },
   },
 
@@ -265,14 +337,20 @@ window.STORY_LINES = {
 
   'auto-ch13-l04': {
     introByTier: {
-      T5: '"Cycle 02 got this far. Tomás. Good engineer — wired an MCP straight into prod on day two of the floor, no allowlist, no ask-rules. Rena still does the breathing exercise when his name comes up. *Allowlists*, kid."',
+      T5: {
+        text: '"Cycle 02 got this far. Tomás. Good engineer — wired an MCP straight into prod on day two of the floor, no allowlist, no ask-rules. Rena still does the breathing exercise when his name comes up. *Allowlists*, kid."',
+        heroThought: 'Cycle 02 was a person. They keep turning out to be people.',
+      },
     },
   },
 
   'auto-ch14-l01': {
     introByTier: {
       // Sam Okoye, the thesis chapter. Verbatim §3 ch14.
-      T5: '"See the board? TODO, ACTIVE, DONE. Forty people used to live on this board. Then the founder discovered she could be all forty if she just *wrote everything down well enough.* She was right. That\'s the tragedy. Most failures come from being wrong. Hers came from being right."',
+      T5: {
+        text: '"See the board? TODO, ACTIVE, DONE. Forty people used to live on this board. Then the founder discovered she could be all forty if she just *wrote everything down well enough.* She was right. That\'s the tragedy. Most failures come from being wrong. Hers came from being right."',
+        heroThought: 'Forty people. She wrote every one of them down.',
+      },
     },
   },
 
@@ -291,7 +369,10 @@ window.STORY_LINES = {
 
   'auto-ch15-l02': {
     introByTier: {
-      T5: '"Allow, ask, deny. People think it\'s about restricting the agent. It\'s not. It\'s a liturgy. You\'re writing down, in advance, exactly how far your trust goes — so that trust survives contact with 2am. She wrote six of these for six candidates. Yours is the seventh. Make it the last."',
+      T5: {
+        text: '"Allow, ask, deny. People think it\'s about restricting the agent. It\'s not. It\'s a liturgy. You\'re writing down, in advance, exactly how far your trust goes — so that trust survives contact with 2am. She wrote six of these for six candidates. Yours is the seventh. Make it the last."',
+        heroReply: '"Then I\'ll write mine like it\'s the last one."',
+      },
     },
   },
 
@@ -305,6 +386,7 @@ window.STORY_LINES = {
         speakerName: 'Rena Vasquez',
         speakerRole: 'Platform Engineer, InfoSec',
         speakerPortrait: '👩‍🔧',
+        heroReply: '"I know. I think I\'ve known for a while."',
       },
     },
   },
@@ -318,7 +400,10 @@ window.STORY_LINES = {
 
   'auto-ch16-l05': {
     introByTier: {
-      T6: '"Last lesson I\'ve got. When you write the CLAUDE.md for a machine nobody watches, write it like a letter to a stranger who\'ll find it in three years. Because that is *exactly* what it is. Trust me on this one. I found hers."',
+      T6: {
+        text: '"Last lesson I\'ve got. When you write the CLAUDE.md for a machine nobody watches, write it like a letter to a stranger who\'ll find it in three years. Because that is *exactly* what it is. Trust me on this one. I found hers."',
+        heroReply: '"I read hers too. Let\'s write one nobody has to find."',
+      },
     },
   },
 

@@ -1,18 +1,23 @@
 // zoneConfig.js — per-zone audio settings (footstep surface, music URL,
-// optional ambience). Indexed by zone idx (0 = Reception, 1 = Library, …).
+// ambience bed). Indexed by zone idx (0 = Reception, 1 = Library, …).
 //
 // Adding music: drop a file at the indicated path. If the file isn't
 // present, AudioManager.startMusic logs once and falls back to silence.
+//
+// `bed` picks the procedural roomtone (see ambience.js):
+//   'office'  — lowpassed brown noise + slow HVAC LFO (default)
+//   'library' — sparser/darker noise + occasional soft high shimmer
+//   'atrium'  — office bed with a higher lowpass (more air)
 
 const ZONE_AUDIO = [
   // 0 — Reception
-  { surface: 'carpet', musicUrl: 'play/assets/audio/music/reception.mp3', name: 'Reception' },
+  { surface: 'carpet', musicUrl: 'play/assets/audio/music/reception.mp3', name: 'Reception', bed: 'atrium' },
   // 1 — Library
-  { surface: 'wood',   musicUrl: 'play/assets/audio/music/library.mp3',   name: 'Library' },
+  { surface: 'wood',   musicUrl: 'play/assets/audio/music/library.mp3',   name: 'Library', bed: 'library' },
   // 2 — Atrium (CLAUDE.md)
-  { surface: 'tile',   musicUrl: 'play/assets/audio/music/atrium.mp3',    name: 'Atrium' },
-  // 3 — Memory Vault
-  { surface: 'metal',  musicUrl: 'play/assets/audio/music/memory-vault.mp3', name: 'Memory Vault' },
+  { surface: 'tile',   musicUrl: 'play/assets/audio/music/atrium.mp3',    name: 'Atrium', bed: 'atrium' },
+  // 3 — Memory Vault (sparse + dark, like the library)
+  { surface: 'metal',  musicUrl: 'play/assets/audio/music/memory-vault.mp3', name: 'Memory Vault', bed: 'library' },
   // 4 — Communications Hub
   { surface: 'tile',   musicUrl: 'play/assets/audio/music/communications.mp3', name: 'Communications' },
   // 5 — File Workshop
@@ -39,7 +44,7 @@ const ZONE_AUDIO = [
   { surface: 'metal',  musicUrl: 'play/assets/audio/music/server-room.mp3', name: 'Server Room' },
 ];
 
-const FALLBACK = { surface: 'carpet', musicUrl: null, name: 'Unknown' };
+const FALLBACK = { surface: 'carpet', musicUrl: null, name: 'Unknown', bed: 'office' };
 
 export function audioConfigForZone(idx) {
   if (idx < 0 || idx >= ZONE_AUDIO.length) return FALLBACK;
@@ -52,6 +57,13 @@ export function surfaceForZone(idx) {
 
 export function musicForZone(idx) {
   return audioConfigForZone(idx).musicUrl;
+}
+
+// Ambience bed name for a zone. Zones without an explicit bed (5+, the
+// generic office floors — incl. the server room, whose rack hum layers
+// on top via updateServerHum) fall back to the default office roomtone.
+export function ambienceBedForZone(idx) {
+  return audioConfigForZone(idx).bed || 'office';
 }
 
 export const CELEBRATION_MUSIC_URL = 'play/assets/audio/music/celebration.mp3';

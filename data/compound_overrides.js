@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-05-31T13:13:08.902Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-12T14:09:15.880Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.
@@ -47,6 +47,9 @@ window.COMPOUND_OVERRIDES = {
   },
   'atrium': {
     'mullion_h_0': { hidden: true },
+    'mullion_h_1': { hidden: true },
+    'mullion_h_2': { hidden: true },
+    'mullion_h_3': { hidden: true },
   },
   'reception_centerpiece': {
     'k_sculpture': { pos: [0.0358, 0, 0.6345], rotY: 0 },

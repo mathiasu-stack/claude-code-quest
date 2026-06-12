@@ -17,7 +17,7 @@
 //   voice:  achievementChime, levelUpFanfare, ppGain,
 //           kcCorrectTone, kcIncorrectTone, crowdCheer
 
-import { audio } from './AudioManager.js';
+import { audio } from './AudioManager.js?v=20260612c';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function envGain(ctx, output, attack = 0.005, release = 0.1, peak = 0.6) {
@@ -407,13 +407,17 @@ export function playFloorMChime() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Server hum bed (Kedash Protocol, AUDIO-03 / A21) — sustained low drone
-// near the ch16 rack. play.js calls updateServerHum(active, lowered) every
-// frame from its proximity check; state is managed here so a stolen voice
-// (mobile voice cap) simply restarts on the next frame. `lowered` drops
-// every partial one semitone (×2^(-1/12)) once the capstone is passed.
+// near the ch16 rack. play.js calls updateServerHum(active, lowered, pos)
+// every frame from its proximity check; state is managed here so a stolen
+// voice (mobile voice cap) simply restarts on the next frame. `lowered`
+// drops every partial one semitone (×2^(-1/12)) once the capstone passes.
+// When `position` ([x,y,z] world coords) is given, the hum routes through
+// the HRTF playSpatial path so it sits AT the rack and attenuates with
+// distance instead of toggling on/off; the proximity boolean then only
+// bounds CPU (no nodes when far away).
 // ─────────────────────────────────────────────────────────────────────────────
 let _hum = null; // { handle, lowered }
-export function updateServerHum(active, lowered = false) {
+export function updateServerHum(active, lowered = false, position = null) {
   if (!active || (_hum && _hum.lowered !== lowered)) {
     if (_hum) { try { _hum.handle.stop?.(); } catch {} _hum = null; }
     if (!active) return;
@@ -421,7 +425,7 @@ export function updateServerHum(active, lowered = false) {
   if (_hum) return;
   const ratio = lowered ? Math.pow(2, -1 / 12) : 1;
   const entry = { handle: null, lowered };
-  const handle = audio.play('sfx', (ctx, output) => {
+  const builder = (ctx, output) => {
     const t0 = ctx.currentTime;
     const o1 = makeOsc(ctx, 'sine', 55 * ratio);
     const o2 = makeOsc(ctx, 'triangle', 110 * ratio, 6);
@@ -429,7 +433,9 @@ export function updateServerHum(active, lowered = false) {
     lp.type = 'lowpass'; lp.frequency.value = 260; lp.Q.value = 0.7;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(0.07, t0 + 1.4);
+    // Spatial path attenuates with distance (inverse model), so its base
+    // level is hotter than the old binary toggle's flat 0.07.
+    g.gain.linearRampToValueAtTime(position ? 0.13 : 0.07, t0 + 1.4);
     // Slow ±15% wobble so it reads as machinery, not a test tone.
     const lfo = makeOsc(ctx, 'sine', 0.4);
     const lfoG = ctx.createGain();
@@ -442,11 +448,61 @@ export function updateServerHum(active, lowered = false) {
         if (_hum === entry) _hum = null;
         const t = ctx.currentTime;
         try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.2); } catch {}
-        scheduleStop(ctx, [o1, o2, lfo, lfoG, lp, g], 0.8);
+        // In the spatial case `output` is a dedicated PannerNode — include
+        // it in cleanup. (Never disconnect the shared bus gain.)
+        const nodes = [o1, o2, lfo, lfoG, lp, g];
+        if (position) nodes.push(output);
+        scheduleStop(ctx, nodes, 0.8);
       },
     };
-  });
+  };
+  const handle = position
+    ? audio.playSpatial('sfx', builder, position, { refDistance: 2.5, maxDistance: 28, rolloffFactor: 1.3 })
+    : audio.play('sfx', builder);
   if (handle) { entry.handle = handle; _hum = entry; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Elevator ride (AUDIO design pass) — low triangle "motor" ramp plus a
+// narrow filtered-noise band (cable/air shoosh) for the ride duration.
+// Fired from requestFloorChange alongside the floor chimes. The Floor-M
+// arrival stays silent — this ends exactly when the doors open.
+// ─────────────────────────────────────────────────────────────────────────────
+export function playElevatorRide(durationSec = 1.6) {
+  const dur = Math.max(0.4, Math.min(2.5, durationSec));
+  audio.play('sfx', (ctx, output) => {
+    const t0 = ctx.currentTime;
+    // Motor — low triangle, spins up a fourth, settles back down.
+    const o = makeOsc(ctx, 'triangle', 58);
+    o.frequency.setValueAtTime(58, t0);
+    o.frequency.linearRampToValueAtTime(76, t0 + dur * 0.35);
+    o.frequency.linearRampToValueAtTime(60, t0 + dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 320; lp.Q.value = 0.7;
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0, t0);
+    og.gain.linearRampToValueAtTime(0.11, t0 + Math.min(0.18, dur * 0.25));
+    og.gain.setValueAtTime(0.11, t0 + dur * 0.8);
+    og.gain.linearRampToValueAtTime(0, t0 + dur);
+    o.connect(lp).connect(og).connect(output);
+    o.start(t0);
+    safeStop(o, t0 + dur + 0.05);
+    // Shoosh — narrow bandpass noise riding the same envelope shape.
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 7;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0, t0);
+    ng.gain.linearRampToValueAtTime(0.05, t0 + Math.min(0.25, dur * 0.3));
+    ng.gain.setValueAtTime(0.05, t0 + dur * 0.75);
+    ng.gain.linearRampToValueAtTime(0, t0 + dur);
+    src.connect(bp).connect(ng).connect(output);
+    src.start(t0);
+    safeStop(src, t0 + dur + 0.05);
+    scheduleStop(ctx, [o, lp, og, src, bp, ng], dur + 0.1);
+    return { stop: () => { safeStop(o, ctx.currentTime); safeStop(src, ctx.currentTime); } };
+  }, { expectedDuration: dur + 0.2 });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

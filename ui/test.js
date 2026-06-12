@@ -2,9 +2,23 @@ function renderTest(chapterId) {
   const ch = CURRICULUM.find(c => c.id === chapterId);
   if (!ch) return;
   const test = ch.practicalTest;
-  const progress = window.App.progress;
+  let progress = window.App.progress;
   const main = document.getElementById('main-content');
   const prevResult = progress.testResults[test.id];
+
+  // Compliance verification code: tests carrying a `nonce` criterion get a
+  // per-attempt code minted when the view opens. Persisted via the normal
+  // save path so a reload mid-attempt keeps the same code.
+  let nonce = null;
+  if (test.criteria.some(c => c.type === 'nonce')) {
+    const minted = Progress.ensureTestNonce(progress, test.id);
+    if (minted.progress !== progress) {
+      progress = minted.progress;
+      Progress.save(progress);
+      window.App.progress = progress;
+    }
+    nonce = minted.nonce;
+  }
 
   const fromPlay = !!window.App._currentParams?.fromPlay;
   main.innerHTML = `
@@ -19,7 +33,7 @@ function renderTest(chapterId) {
         </div>` : ''}
       </div>
 
-      ${buildScenarioCard(test)}
+      ${buildScenarioCard(test, nonce)}
 
       <div class="test-task-box">
         <div class="task-label">Your Task</div>
@@ -63,7 +77,7 @@ function renderTest(chapterId) {
   });
 }
 
-function buildScenarioCard(test) {
+function buildScenarioCard(test, nonce = null) {
   const typeConfig = {
     slack: { label: 'Slack', icon: '💬', style: 'scenario-slack' },
     jira: { label: 'Jira Ticket', icon: '🎫', style: 'scenario-jira' },
@@ -85,6 +99,11 @@ function buildScenarioCard(test) {
           </div>
         </div>
         <div class="scenario-text">${test.scenario.replace(/\n/g, '<br>')}</div>
+        ${nonce ? `
+        <div class="scenario-nonce" style="margin-top:12px;padding:10px 12px;border:1px dashed currentColor;border-radius:6px;font-size:0.92em;">
+          🛡️ <strong>Kedash InfoSec — Compliance verification code: <code>${nonce}</code></strong><br>
+          Include this code in your real session: ask Claude to echo <code>${nonce}</code> in its reply, and paste the session output containing it below. Submissions without a live-session code won't clear compliance review.
+        </div>` : ''}
       </div>
     </div>
   `;
@@ -93,13 +112,20 @@ function buildScenarioCard(test) {
 function handleTestSubmit(ch, test) {
   const textarea = document.getElementById('test-submission');
   const submission = textarea.value;
-  const result = Evaluator.evaluate(submission, test.criteria, test.minLength, test.passThreshold);
-
   let progress = window.App.progress;
+  const result = Evaluator.evaluate(submission, test.criteria, test.minLength, test.passThreshold, {
+    nonce: Progress.getTestNonce(progress, test.id),
+  });
+
   const levelBefore = window.Scoring ? Scoring.getLevel(progress.totalXP).label : null;
   const wasAlreadyPassed = Progress.isTestPassed(progress, test.id);
   const attemptsBefore = progress.testResults[test.id]?.attempts || 0;
   progress = Progress.recordTestResult(progress, test.id, result, test.xpReward);
+
+  if (result.passed) {
+    // Rotate the compliance code: a passed submission can't be replayed.
+    progress = Progress.clearTestNonce(progress, test.id);
+  }
 
   if (result.passed && !wasAlreadyPassed) {
     const chIdx = CURRICULUM.findIndex(c => c.id === ch.id);

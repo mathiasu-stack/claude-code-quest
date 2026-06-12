@@ -73,6 +73,7 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 | `regex` | pattern string | regex matches |
 | `length` | number | submission.length >= value |
 | `structure` | `"numbered-steps"` / `"question-mark"` / `"code-block"` | structural pattern detected |
+| `nonce` | (none — code comes from `progress.testNonces[testId]`) | submission contains the current per-test verification code (case-insensitive); code is minted when the test view opens and rotated on pass |
 
 ## Progression model
 
@@ -90,13 +91,18 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 ## Deployment
 
 This project is hosted on a Synology NAS at /volume1/projects/claude-code-quest, 
-served via Web Station + Nginx at http://192.168.70.9:8888 (local), 
+served by `save_server.py` (single-process Python HTTP server, replaces 
+Web Station) at http://192.168.70.9:8888 (local), 
 http://ds925-urlacher:8888 (Tailscale).
 
 When running on the NAS (Remote Control sessions), deploy by committing 
-and pushing directly:
+and pushing directly. NEVER use `git add .` or `git add -A` — the assets 
+folder holds ~280 MB of deliberately untracked GLBs (space-named raw 
+uploads, Blender/, Hijabi_*.glb); bulk-adding them would exceed GitHub's 
+100 MB file limit and break the push. Stage explicitly:
 
-    git add .
+    git add -u                      # modified tracked files only
+    git add path/to/new_file.js     # new files by name
     git commit -m "your message"
     git push
 

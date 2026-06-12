@@ -400,7 +400,7 @@ export function buildFloorM({ baseY, floorIndex = 5 }) {
     new THREE.MeshStandardMaterial({ color: 0x23242a, roughness: 0.95 }),
   );
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set(CX, WALL_H + 0.2, CZ);
+  ceiling.position.set(CX, WALL_H - 0.01, CZ);
   group.add(ceiling);
 
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x2b3442, roughness: 0.8 });

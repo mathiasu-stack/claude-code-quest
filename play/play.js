@@ -3,16 +3,18 @@ import { LightingManager } from './lighting/manager.js';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
-import { audio } from './audio/AudioManager.js';
+import { audio } from './audio/AudioManager.js?v=20260612c';
 import {
   playFootstep, playJumpGrunt, playLandThud,
   playUi, playDialogueBlip, blipPitchForNpc,
   playAchievementChime, playLevelUpFanfare, playPpPing,
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
   playClearanceChime, playAnomalySting, playFloorMChime, updateServerHum,
-} from './audio/procedural.js?v=20260610g';
-import { surfaceForZone, musicForZone } from './audio/zoneConfig.js';
-import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
+  playElevatorRide,
+} from './audio/procedural.js?v=20260612c';
+import { surfaceForZone, musicForZone } from './audio/zoneConfig.js?v=20260612c';
+import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260612c';
+import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js?v=20260612c';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
 import { attachFlatFace, updateFlatFace, setFlatExpression, talkPulse } from './characters/flatFace.js';
@@ -21,11 +23,11 @@ import { getLookForNpc } from './characters/npcLooks.js';
 import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
-import { getAssetLoader } from './characters/assetLoader.js?v=20260525a';
-import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260610e';
+import { getAssetLoader } from './characters/assetLoader.js?v=20260612b';
+import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260612a';
 import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
-import { decorateReception } from './decorations/reception.js?v=20260528g';
+import { decorateReception } from './decorations/reception.js?v=20260611c';
 import { decorateLibrary, decorateLibraryAnomalies } from './decorations/library.js?v=20260610i';
 import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528n';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
@@ -37,10 +39,10 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exportLayout as exportRoomLayout,
          savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260610c';
 import { SkyDome, getSkyPresetForZone } from './world/sky.js';
-import { buildReceptionCeiling, buildLibraryCeiling } from './world/ceilings.js?v=20260528o';
+import { buildReceptionCeiling, buildLibraryCeiling, floorPatternTexture } from './world/ceilings.js?v=20260612c';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
-import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260610h';
+import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260611c';
 import { showTitleCard } from './ui/titleCard.js?v=20260610e';
 import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610g';
 import {
@@ -63,15 +65,16 @@ import { buildTokenCounter, resetTokenCounter } from './world/objectTypes/tokenC
 import { buildRecMirror } from './world/objectTypes/recMirror.js?v=20260610g';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js?v=20260610a';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
-import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260526d';
+import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260612c';
 import { TimeOfDay } from './world/timeOfDay.js';
-import { LiveAgents } from './world/liveAgents.js?v=20260610i';
+import { LiveAgents } from './world/liveAgents.js?v=20260612b';
 import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
-import Story from './story/storyState.js?v=20260610a';
+import { getPortrait } from './ui/portraitStudio.js?v=20260612b';
+import Story from './story/storyState.js?v=20260612c';
 import {
   initSceneRunner, registerSceneActions, runScene,
   isSceneActive, advanceScene, abortScene,
-} from './story/sceneRunner.js?v=20260610b';
+} from './story/sceneRunner.js?v=20260612b';
 import { initDocViewer, openDocument, isDocumentOpen } from './story/docViewer.js?v=20260610d';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
@@ -284,9 +287,59 @@ const ZONE_BOUNDS = Array.from({ length: ZONE_COUNT }, (_, i) => ({
   chapterId: (window.CURRICULUM || [])[i]?.id || `ch${String(i + 1).padStart(2, '0')}`,
 }));
 
-function zoneIndexAt(z) {
+// Room-aware zone lookup. Floor-1 rooms in data/rooms.js carry a
+// `zoneIdx` plus a footprint (floor_plate entry, a library_floor
+// builder entry, or a template `center`). Those AABBs win over the
+// legacy Z-band scan so rooms laid out along the X axis (the west
+// wing: library / Files / Plan Mode at x≈-22) resolve to their own
+// lighting zone instead of falling through to whatever Z-band they
+// happen to overlap. Precomputed once on first call — cheap per frame.
+let _roomZoneBoxes = null;
+function roomZoneBoxes() {
+  if (_roomZoneBoxes) return _roomZoneBoxes;
+  _roomZoneBoxes = [];
+  for (const room of (window.ROOMS || [])) {
+    if (room.floor !== 1 || typeof room.zoneIdx !== 'number') continue;
+    let cx = null, cz = null, w = 22, d = 22;
+    const plate = (room.objects || []).find((o) =>
+      o.type === 'floor_plate' || (o.type === 'builder' && o.fn === 'library_floor'));
+    if (plate && Array.isArray(plate.pos)) {
+      cx = plate.pos[0]; cz = plate.pos[2];
+      w = plate.size?.w ?? plate.args?.w ?? 22;
+      d = plate.size?.d ?? plate.args?.d ?? 22;
+    } else if (Array.isArray(room.center)) {
+      cx = room.center[0]; cz = room.center[2];
+    }
+    if (cx === null || cz === null) continue;
+    _roomZoneBoxes.push({
+      idx: room.zoneIdx,
+      minX: cx - w / 2 - 0.01, maxX: cx + w / 2 + 0.01,
+      minZ: cz - d / 2 - 0.01, maxZ: cz + d / 2 + 0.01,
+    });
+  }
+  return _roomZoneBoxes;
+}
+
+function zoneIndexAt(z, x) {
+  // Callers historically pass only z — default x to the player's
+  // current x so the room check works everywhere without touching
+  // every call site. (The footstep callers pass a *candidate* z one
+  // frame ahead; player.x is at most a step behind, which is fine.)
+  if (x === undefined && player) x = player.position.x;
+  if (x !== undefined && currentFloor === 1) {
+    for (const b of roomZoneBoxes()) {
+      if (x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ) return b.idx;
+    }
+  }
   for (let i = 0; i < ZONE_BOUNDS.length; i++) {
-    if (z >= ZONE_BOUNDS[i].startZ - 0.01 && z <= ZONE_BOUNDS[i].endZ + 0.01) return i;
+    if (z >= ZONE_BOUNDS[i].startZ - 0.01 && z <= ZONE_BOUNDS[i].endZ + 0.01) {
+      // Z-bands 1-3 no longer host interior rooms — the library and
+      // west wing moved onto the X axis and are claimed by the room
+      // AABBs above. Anything still landing in these bands is the
+      // outdoor space south of reception: keep it on the bright
+      // reception zone instead of resurrecting old interior moods.
+      return (i >= 1 && i <= 3) ? 0 : i;
+    }
   }
   return -1;
 }
@@ -962,6 +1015,44 @@ function buildChair(x, z, ry = 0, color = 0x37474f) {
   return g;
 }
 
+// ── Contact shadows ──────────────────────────────────────────────────
+// One shared 64px radial-gradient canvas texture; each furniture
+// builder drops a small transparent plane under itself so big props
+// feel grounded even where the directional shadow map doesn't reach
+// (and on mobile, where shadows are reduced). Cost: 1 texture total +
+// 1 tiny transparent quad per prop.
+let _contactShadowTex = null;
+function contactShadowTexture() {
+  if (_contactShadowTex) return _contactShadowTex;
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 4, 32, 32, 30);
+  grad.addColorStop(0, 'rgba(0,0,0,0.85)');
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.38)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  _contactShadowTex = new THREE.CanvasTexture(c);
+  return _contactShadowTex;
+}
+// Parents a shadow quad to `node` (whose origin must sit on the floor).
+function addContactShadow(node, w = 1.6, d = 1.0, opacity = 0.3) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({
+      map: contactShadowTexture(), transparent: true, opacity,
+      depthWrite: false,
+    }),
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.012; // above floor plates + the reception tile decal
+  m.renderOrder = 1;
+  m.userData._contactShadow = true;
+  node.add(m);
+  return node;
+}
+
 function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
   // stretch:true honours width/depth/height EXACTLY (non-uniform scale),
   // instead of the uniform-fit default which picks the SMALLEST scale
@@ -975,7 +1066,7 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
   if (glb) {
     glb.position.set(x, 0, z); glb.rotation.y = ry;
     glb.userData.surface = 'floor';
-    return glb;
+    return addContactShadow(glb, w + 0.5, d + 0.5);
   }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
@@ -990,7 +1081,7 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
   });
   g.position.set(x, 0, z); g.rotation.y = ry;
   g.userData.surface = 'floor';
-  return g;
+  return addContactShadow(g, w + 0.5, d + 0.5);
 }
 
 function buildMonitor(x, z, ry = 0, screenColor = 0x4fc3f7) {
@@ -1083,7 +1174,7 @@ function buildCouch(x, z, ry = 0) {
   if (glb) {
     glb.position.set(x, 0, z); glb.rotation.y = ry;
     glb.userData.surface = 'floor';
-    return glb;
+    return addContactShadow(glb, 2.8, 1.4);
   }
   const g = new THREE.Group();
   // Fabric — high roughness, no metalness.
@@ -1097,7 +1188,7 @@ function buildCouch(x, z, ry = 0) {
   const rA = new THREE.Mesh(armGeom, mat); rA.position.set(1.1, 0.55, 0); g.add(rA);
   g.position.set(x, 0, z); g.rotation.y = ry;
   g.userData.surface = 'floor';
-  return g;
+  return addContactShadow(g, 2.8, 1.4);
 }
 
 function buildFilingCabinet(x, z, ry = 0) {
@@ -1229,7 +1320,7 @@ function buildTable(x, z, ry = 0, w = 2.2) {
   if (glb) {
     glb.position.set(x, 0, z); glb.rotation.y = ry;
     glb.userData.surface = 'floor';
-    return glb;
+    return addContactShadow(glb, w + 0.5, 1.7);
   }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x6d4c41 });
@@ -1248,19 +1339,57 @@ function buildTable(x, z, ry = 0, w = 2.2) {
   book2.position.y = 0.87; g.add(book2);
   g.position.set(x, 0, z); g.rotation.y = ry;
   g.userData.surface = 'floor';
-  return g;
+  return addContactShadow(g, w + 0.5, 1.7);
 }
 
-function buildLamp(x, z) {
+function buildLamp(x, z, opts = {}) {
+  // Floor-standing variant — the default path is a TABLE lamp lifted to
+  // table-top height (0.78), which floats when the data places it at a
+  // bare-floor position. Rooms entries opt in via args: { floor: true }.
+  if (opts.floor) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x37474f, metalness: 0.4, roughness: 0.5 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.04, 16), mat);
+    base.position.y = 0.02; base.castShadow = true; g.add(base);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.42, 8), mat);
+    pole.position.y = 0.75; g.add(pole);
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 14, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0xfff59d, emissive: 0x6d5a1f, side: THREE.DoubleSide }));
+    shade.position.y = 1.52; g.add(shade);
+    const point = new THREE.PointLight(0xfff59d, 0.7, 6);
+    point.position.set(0, 1.42, 0); g.add(point);
+    g.position.set(x, 0, z);
+    g.userData.surface = 'floor';
+    return g;
+  }
   // Table lamp — sits on top of a 0.78m table, so the GLB origin needs
   // to be raised to y=0.78. The GLB itself is ~0.55m tall (lamp body).
+  //
+  // MOBILE: skip the PointLight entirely (point lights are the single
+  // biggest per-fragment cost on weak GPUs) and compensate by boosting
+  // emissive on the shade so the lamp still reads as "on".
+  const mob = isMobile();
   const glb = makeDecoration('table_lamp', { width: 0.35, height: 0.55, depth: 0.35 });
   if (glb) {
     glb.position.set(x, 0.78, z);
-    // Warm point light at the bulb height for actual illumination.
-    const point = new THREE.PointLight(0xfff59d, 0.6, 4);
-    point.position.set(0, 0.35, 0);
-    glb.add(point);
+    if (mob) {
+      // Light-colored sub-meshes are the shade; make them glow.
+      glb.traverse((o) => {
+        if (o.isMesh && o.material && o.material.emissive !== undefined && o.material.color) {
+          const hsl = { h: 0, s: 0, l: 0 };
+          o.material.color.getHSL(hsl);
+          if (hsl.l > 0.55) {
+            o.material.emissive = new THREE.Color(0xffd98a);
+            o.material.emissiveIntensity = 0.85;
+          }
+        }
+      });
+    } else {
+      // Warm point light at the bulb height for actual illumination.
+      const point = new THREE.PointLight(0xfff59d, 0.6, 4);
+      point.position.set(0, 0.35, 0);
+      glb.add(point);
+    }
     glb.userData.surface = 'top';
     return glb;
   }
@@ -1271,10 +1400,16 @@ function buildLamp(x, z) {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), mat);
   pole.position.y = 1.03; g.add(pole);
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.16, 12, 1, true),
-    new THREE.MeshStandardMaterial({ color: 0xfff59d, side: THREE.DoubleSide }));
+    new THREE.MeshStandardMaterial({
+      color: 0xfff59d, side: THREE.DoubleSide,
+      emissive: mob ? 0xffd98a : 0x000000,
+      emissiveIntensity: mob ? 1.0 : 0,
+    }));
   shade.position.y = 1.3; g.add(shade);
-  const point = new THREE.PointLight(0xfff59d, 0.6, 4);
-  point.position.set(0, 1.2, 0); g.add(point);
+  if (!mob) {
+    const point = new THREE.PointLight(0xfff59d, 0.6, 4);
+    point.position.set(0, 1.2, 0); g.add(point);
+  }
   g.position.set(x, 0, z);
   g.userData.surface = 'top'; // sits on a table at y≈0.78
   return g;
@@ -1884,7 +2019,7 @@ function registerRoomBuilders() {
     buildLibraryCounter(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('table', (pos, rotY, args) =>
     buildTable(pos[0], pos[2], rotY || 0, args.w));
-  registerRoomBuilder('lamp', (pos) => buildLamp(pos[0], pos[2]));
+  registerRoomBuilder('lamp', (pos, rotY, args) => buildLamp(pos[0], pos[2], args || {}));
   registerRoomBuilder('badge_printer', (pos, rotY) =>
     buildBadgePrinter(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('house_rules', (pos, rotY) =>
@@ -1953,15 +2088,45 @@ function registerRoomBuilders() {
     catch (e) { console.warn('reception windows failed', e); }
     return null;
   });
+  // Window center rides the data entry's pos ([wallX, 0, z]) so the
+  // editor-exported library layout stays the source of truth.
   registerRoomBuilder('library_arched_window', (pos, rotY, args, ctx) => {
-    try { libraryWindow = buildLibraryArchedWindow(ctx.scene); }
-    catch (e) { console.warn('library window failed', e); }
+    try {
+      libraryWindow = buildLibraryArchedWindow(ctx.scene, {
+        wallX: Array.isArray(pos) ? pos[0] : -33,
+        z: Array.isArray(pos) ? pos[2] : -28,
+      });
+    } catch (e) { console.warn('library window failed', e); }
     return null;
   });
+  // Ceiling kit centers itself on the entry's pos (the room center).
   registerRoomBuilder('library_ceiling', (pos, rotY, args, ctx) => {
-    try { buildLibraryCeiling(ctx.scene); }
-    catch (e) { console.warn('library ceiling failed', e); }
+    try {
+      buildLibraryCeiling(ctx.scene, {
+        cx: Array.isArray(pos) ? pos[0] : -22,
+        cz: Array.isArray(pos) ? pos[2] : -22,
+      });
+    } catch (e) { console.warn('library ceiling failed', e); }
     return null;
+  });
+  // Library floor — a floor_plate with a wood-plank canvas texture.
+  // Kept as a dedicated builder (instead of teaching roomsLoader about
+  // patterns) so roomsLoader.js keeps its pinned ?v= module identity
+  // with the in-game editor.
+  registerRoomBuilder('library_floor', (pos, rotY, args) => {
+    const w = args.w ?? 22, d = args.d ?? 22;
+    const tex = floorPatternTexture('wood');
+    if (tex) tex.repeat.set(w / 4, d / 4);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshStandardMaterial({
+        color: args.color ?? 0x8d6e63, map: tex || null, roughness: 0.85,
+      }),
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(pos[0], pos[1] || 0, pos[2]);
+    mesh.receiveShadow = true;
+    return mesh;
   });
   registerRoomBuilder('decorate_reception', (pos, rotY, args, ctx) => {
     try { decorateReception(ctx.scene, ctx.decoTickers); }
@@ -2152,22 +2317,13 @@ function buildWorld() {
   buildFloor1WestRoom(3, -22, 22);   // Plan Mode   (CURRICULUM[3])
   // Library now lives north of Files in the west wing (it used to sit
   // directly south of reception, but the south side is now the
-  // building's outdoor front facade). Walls + furniture come entirely
-  // from data/rooms.js's 'library' entry. Ceiling added in code here
-  // so a high camera doesn't see the room as an open box.
+  // building's outdoor front facade). Walls + furniture + the ceiling
+  // kit + arched window all come from data/rooms.js's 'library' entry
+  // (the old bare stopgap ceiling plane was replaced by the
+  // 'library_ceiling' builder kit from world/ceilings.js).
   try {
     const libRoom = window.ROOM_BY_ID && window.ROOM_BY_ID('library');
-    if (libRoom) {
-      loadRoom(scene, libRoom, { scene, decoTickers });
-      const libCeil = new THREE.Mesh(
-        new THREE.PlaneGeometry(22, 22),
-        new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
-      );
-      libCeil.rotation.x = Math.PI / 2;
-      libCeil.position.set(-22, 3.8 + 0.2, -22);   // wallH + a hair
-      libCeil.userData.floor = 1;
-      scene.add(libCeil);
-    }
+    if (libRoom) loadRoom(scene, libRoom, { scene, decoTickers });
   } catch (e) { console.warn('library load failed', e); }
 
   // ─── Interactable objects (Pillar 2) — driven by lessonRegistry ──────────
@@ -2462,7 +2618,7 @@ function buildFloorOffice(floorIdx) {
     new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
   );
   ceilingMesh.rotation.x = Math.PI / 2;
-  ceilingMesh.position.set(0, y0 + wallH + 0.2, 0);
+  ceilingMesh.position.set(0, y0 + wallH - 0.01, 0);
   ceilingMesh.userData.floor = floorIdx;
   scene.add(ceilingMesh);
 
@@ -3001,11 +3157,15 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
   if (!theme) return;
   const wallH = 3.8;
 
-  // Floor
+  // Floor — carpet-ish canvas texture (shared across both west rooms;
+  // the theme color does the tinting since the map is drawn neutral).
+  const carpetTex = floorPatternTexture('carpet');
+  if (carpetTex) carpetTex.repeat.set(22 / 4, 22 / 4);
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(22, 22),
     new THREE.MeshStandardMaterial({
-      color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
+      color: theme.floor, map: carpetTex || null,
+      metalness: theme.metal, roughness: Math.min(0.95, Math.max(0.15, 0.85 - theme.metal) + 0.1),
     }),
   );
   floor.rotation.x = -Math.PI / 2;
@@ -3023,7 +3183,7 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
     new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
   );
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set(centerX, wallH + 0.2, centerZ);
+  ceiling.position.set(centerX, wallH - 0.01, centerZ);
   ceiling.receiveShadow = true;
   scene.add(ceiling);
 
@@ -3737,6 +3897,56 @@ function spawnNPC(npcDef) {
   npcMeshes.push(mesh);
 }
 
+// Swap procedural stand-in NPCs to their GLTF rigs once the rig
+// resolves. makeCharacter is synchronous, so any NPC built before its
+// rig finished downloading (phase-2 background rigs, recovered
+// timeouts, retried failures) gets the blocky procedural body — and
+// without this pass it would stay blocky for the whole session.
+// Respawns through the canonical spawnNPC path (name tag, overrides,
+// props re-applied) and preserves the live transform so wanderers
+// don't snap back to their roster spot. Triggered per-asset via
+// assetLoader.onAssetResolved.
+function upgradeProceduralNpcs() {
+  if (!scene || !gltfAssetLoader) return;
+  let swapped = 0;
+  for (let i = npcMeshes.length - 1; i >= 0; i--) {
+    const mesh = npcMeshes[i];
+    const ud = mesh.userData || {};
+    // Ambient liveAgents bodies aren't spawnNPC products (no _isNpc);
+    // liveAgents.upgradeAmbients() below handles them.
+    if (ud.gltfChar || !ud._isNpc || !ud.npc) continue;
+    const assetId = resolveAssetForCharacter(ud.npc.id, gltfAssetLoader);
+    if (!assetId || !gltfAssetLoader.getResolved(assetId)) continue;
+    const pos = mesh.position.clone();
+    const rotY = mesh.rotation.y;
+    const visible = mesh.visible;
+    scene.remove(mesh);
+    npcMeshes.splice(i, 1);
+    if (interactionTarget === mesh) interactionTarget = null;
+    try {
+      spawnNPC(ud.npc);
+    } catch (err) {
+      // Respawn failed — put the procedural body back rather than
+      // losing the NPC entirely.
+      console.warn(`[play] NPC upgrade respawn failed for ${ud.npc.id}:`, err);
+      scene.add(mesh);
+      npcMeshes.push(mesh);
+      continue;
+    }
+    const fresh = npcMeshes[npcMeshes.length - 1];
+    fresh.position.copy(pos);
+    fresh.rotation.y = rotY;
+    fresh.visible = visible;
+    swapped += 1;
+  }
+  if (liveAgents) {
+    swapped += liveAgents.upgradeAmbients();
+    // Routine driver holds mesh refs by id — refresh them after any swap.
+    if (swapped) liveAgents.reindex();
+  }
+  if (swapped) console.info(`[play] upgraded ${swapped} NPC(s) from procedural to GLTF`);
+}
+
 // Chapters whose NPCs are hand-coded above in the NPCS roster.
 // Procedural generation skips these (by chapter ID, not position) so
 // they don't get duplicate NPCs after a curriculum reshuffle.
@@ -3897,9 +4107,15 @@ function setupInput() {
       return;
     }
     // Esc / E closes an open dialogue or inspect card (key repeat ignored
-    // so holding E to open doesn't immediately close it again).
+    // so holding E to open doesn't immediately close it again). When a
+    // hero reply/thought is pending (HERO-01), E advances to it first;
+    // Esc always closes outright.
     if (inputLocked && !e.repeat && dialogueEl?.classList.contains('visible') &&
         (e.key === 'Escape' || e.key === 'e' || e.key === 'E')) {
+      if (e.key !== 'Escape' && dialogueHeroBeat && !dialogueHeroBeat.shown) {
+        if (skipTypewriter()) return;   // reveal the NPC line first
+        if (showHeroBeat()) return;
+      }
       playUi('cancel');
       closeDialogue();
       return;
@@ -4527,8 +4743,17 @@ function openDialogue(npc) {
   // AUDIO-01: story lines may be { text, sting: true } — the sting flags
   // the line for a one-shot anomaly swell when it renders.
   let stingArmed = false;
+  // HERO-01: story lines may also carry heroReply (spoken) / heroThought
+  // (internal, italic) — the player character's beat, shown when the
+  // player advances (E / button) instead of closing the card outright.
+  let heroBeat = null;   // { text, thought }
   const normLine = (v) => {
-    if (v && typeof v === 'object') { if (v.sting) stingArmed = true; return v.text; }
+    if (v && typeof v === 'object') {
+      if (v.sting) stingArmed = true;
+      if (v.heroReply) heroBeat = { text: v.heroReply, thought: false };
+      else if (v.heroThought) heroBeat = { text: v.heroThought, thought: true };
+      return v.text;
+    }
     return v;
   };
   if (!gate) {
@@ -4552,7 +4777,7 @@ function openDialogue(npc) {
           if (typeof v === 'string') {
             introText = v;
           } else {
-            introText = v.text;
+            introText = normLine(v);   // captures sting + hero beat too
             speaker = {
               ...npc,
               name: v.speakerName || npc.name,
@@ -4562,6 +4787,14 @@ function openDialogue(npc) {
           }
         }
       }
+    }
+    // HERO-01 fallback: entry-level tier-keyed hero fields answer whatever
+    // intro rendered at this tier; line-attached beats (normLine) win.
+    if (!heroBeat && !postPassActive) {
+      const hr = resolveByTier(story?.heroReplyByTier, tier);
+      const ht = resolveByTier(story?.heroThoughtByTier, tier);
+      if (hr) heroBeat = { text: hr.value, thought: false };
+      else if (ht) heroBeat = { text: ht.value, thought: true };
     }
   }
 
@@ -4610,20 +4843,37 @@ function openDialogue(npc) {
     </div>
   `;
   d.classList.add('visible');
+  // PORT-01: rendered face portrait replaces the emoji when the speaking
+  // character's mesh is available; the emoji stays as fallback. PostPass
+  // relays (borrowed speaker) try a name match before falling back.
+  const speakingMesh = npcMeshes.find(m => m.userData?.npc?.id === npc.id);
+  const portraitMesh = (speaker === npc)
+    ? speakingMesh
+    : npcMeshes.find(m => m.userData?.npc?.name === speaker.name) || null;
+  applyPortraitImage(
+    d.querySelector('.dlg-portrait'), portraitMesh,
+    speaker === npc ? npc.id : `name:${speaker.name}`,
+  );
+  // HERO-01: arm the hero beat — E / advance shows it before the card closes.
+  dialogueHeroBeat = heroBeat ? { ...heroBeat, shown: false } : null;
   // Open chime
   playUi('confirm');
   // Typewriter the intro line — plays a blip per character (rate-limited).
   startTypewriter(d.querySelector('[data-typewriter]'), introText, blipPitchForNpc(npc.id));
   if (stingArmed) playAnomalySting();
   // Pulse the speaking NPC's mouth while the intro reveals.
-  const speakingMesh = npcMeshes.find(m => m.userData?.npc?.id === npc.id);
   if (speakingMesh?.userData?.face && speakingMesh.userData.faceKind === 'flat') {
     const charCount = introText?.length || 60;
     const talkMs = Math.min(8000, charCount * 22);
     talkPulse(speakingMesh.userData.face, true, talkMs);
   }
 
-  d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
+  // The neutral dismiss button ("Maybe later" / "Bye!") advances through a
+  // pending hero beat first; the × corner button (like Esc) always closes.
+  d.querySelector('.dlg-cancel').onclick = () => {
+    if (showHeroBeat()) return;
+    playUi('cancel'); closeDialogue();
+  };
   d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
   const goBtn = d.querySelector('.dlg-go');
   if (goBtn) {
@@ -4649,15 +4899,63 @@ function getLessonTitle(npc) {
   return l?.title || '';
 }
 
+// PORT-01 — swap a dlg-portrait's emoji for the rendered face. No-op (emoji
+// fallback stays) when the mesh is missing or the studio render fails.
+function applyPortraitImage(el, mesh, cacheKey) {
+  if (!el || !mesh) return;
+  const url = getPortrait(mesh, cacheKey);
+  if (!url) return;
+  el.classList.add('has-img');
+  el.innerHTML = `<img class="dlg-portrait-img" src="${url}" alt="">`;
+}
+
+// HERO-01 — the player character's beat in a conversation. Armed by
+// openDialogue; pressing E (or the dismiss button) swaps the open card to
+// the hero as speaker — rendered portrait, name "You", reply via the same
+// typewriter. Thoughts render italic + dimmer (CSS .dlg-thought). Returns
+// false when nothing is pending so callers fall through to closing.
+let dialogueHeroBeat = null;   // { text, thought, shown }
+function showHeroBeat() {
+  const beat = dialogueHeroBeat;
+  if (!beat || beat.shown || !dialogueEl?.classList.contains('visible')) return false;
+  const card = dialogueEl.querySelector('.dlg-card');
+  const body = card?.querySelector('.dlg-body');
+  if (!card || !body) return false;
+  beat.shown = true;
+  skipTypewriter();
+  // Header → the hero.
+  const nameEl = card.querySelector('.dlg-name');
+  const roleEl = card.querySelector('.dlg-role');
+  const portEl = card.querySelector('.dlg-portrait');
+  if (nameEl) nameEl.textContent = 'You';
+  if (roleEl) roleEl.textContent = beat.thought ? 'thinking' : 'New hire';
+  if (portEl) {
+    portEl.classList.remove('has-img');
+    portEl.textContent = '🧑‍💻';
+    if (player) applyPortraitImage(portEl, player, 'hero');
+  }
+  // NPC furniture (done-status, next-step pointer) isn't the hero's.
+  card.querySelector('.dlg-status')?.remove();
+  card.querySelector('.dlg-next')?.remove();
+  body.classList.toggle('dlg-thought', !!beat.thought);
+  playUi('click');
+  startTypewriter(body, beat.text, blipPitchForNpc('player'));
+  return true;
+}
+
 function closeDialogue() {
   if (currentTypewriter) { currentTypewriter.cancel(); currentTypewriter = null; }
+  dialogueHeroBeat = null;
   dialogueEl.classList.remove('visible');
   dialogueEl.innerHTML = '';
   inputLocked = false;
 }
 
 let currentTypewriter = null;
-function startTypewriter(el, text, pitch = 1.0) {
+// onDone fires when the text is fully visible — after the natural last
+// character AND on cancel (cancel reveals everything). Callers must keep
+// it DOM-safe: the card may already be tearing down when it fires.
+function startTypewriter(el, text, pitch = 1.0, onDone = null) {
   if (!el) return;
   el.textContent = '';
   let i = 0;
@@ -4667,7 +4965,11 @@ function startTypewriter(el, text, pitch = 1.0) {
 
   function tick() {
     if (cancelled) return;
-    if (i >= text.length) { currentTypewriter = null; return; }
+    if (i >= text.length) {
+      currentTypewriter = null;
+      if (onDone) { try { onDone(); } catch {} }
+      return;
+    }
     const ch = text.charAt(i++);
     el.textContent += ch;
     // Blip every ~2 visible characters; skip whitespace + punctuation
@@ -4681,6 +4983,7 @@ function startTypewriter(el, text, pitch = 1.0) {
     cancel() {
       cancelled = true;
       el.textContent = text; // reveal everything if cancelled
+      if (onDone) { try { onDone(); } catch {} }
     },
   };
   tick();
@@ -4699,6 +5002,9 @@ function openInspectCard(docId) {
   const resolved = resolveByTier(doc?.byTier, Story.getTier());
   if (!resolved) return;
   inputLocked = true;
+  // HERO-01 (docs): tier-keyed heroThoughtByTier on the doc renders as an
+  // italic trailing line that fades in once the doc text finishes typing.
+  const thought = resolveByTier(doc?.heroThoughtByTier, Story.getTier());
   const d = dialogueEl;
   d.innerHTML = `
     <div class="dlg-card">
@@ -4711,12 +5017,18 @@ function openInspectCard(docId) {
         </div>
       </div>
       <div class="dlg-body" data-typewriter></div>
+      ${thought ? '<div class="dlg-doc-thought"></div>' : ''}
       <div class="dlg-actions"><button class="btn-primary dlg-cancel">Close</button></div>
     </div>
   `;
   d.classList.add('visible');
   playUi('confirm');
-  startTypewriter(d.querySelector('[data-typewriter]'), resolved.value, 1.15);
+  startTypewriter(d.querySelector('[data-typewriter]'), resolved.value, 1.15, () => {
+    const t = d.querySelector('.dlg-doc-thought');
+    if (!t || !thought) return;
+    t.textContent = thought.value;
+    requestAnimationFrame(() => t.classList.add('visible'));
+  });
   d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
   d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
 }
@@ -4870,6 +5182,49 @@ function updateObjective(dt) {
       _beam.material.opacity = 0.06 + 0.10 * pulse;
     }
   }
+}
+
+// ─── KEDASH NORMALCY INDEX — story-tension HUD meter ─────────────────────────
+// A small corporate-dashboard widget (play mode only) whose 4-segment bar
+// DRAINS as the story tier rises: T0-1 full, T2-3 three, T4-5 two, T6 one,
+// T7 restored full with a gold tint (resolution). Created lazily inside
+// the play view DOM (same container as the compass) so app.js's view swap
+// destroys it with the rest of the HUD. Driven by the 1 Hz tier poll in
+// update().
+let _lastTierPollMs = 0;
+let _normalcyLastTier = -1;
+
+function _normalcySegments(t) {
+  if (t >= 7) return 4; // resolution — restored
+  if (t >= 6) return 1;
+  if (t >= 4) return 2;
+  if (t >= 2) return 3;
+  return 4;
+}
+
+function updateNormalcyMeter(tier) {
+  const host = document.getElementById('play-compass')?.parentElement;
+  if (!host) return;
+  let el = document.getElementById('play-normalcy');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'play-normalcy';
+    el.className = 'play-normalcy';
+    el.innerHTML = '<div class="normalcy-label">KEDASH NORMALCY INDEX</div>'
+      + '<div class="normalcy-bar">'
+      + '<span class="normalcy-seg"></span>'.repeat(4)
+      + '</div>';
+    host.appendChild(el);
+    _normalcyLastTier = -1; // force a paint on (re)mount
+  }
+  if (tier === _normalcyLastTier) return;
+  _normalcyLastTier = tier;
+  const segs = _normalcySegments(tier);
+  el.classList.toggle('restored', tier >= 7);
+  el.title = segs === 4 ? 'All metrics nominal.' : 'Recalibrating…';
+  el.querySelectorAll('.normalcy-seg').forEach((s, i) => {
+    s.classList.toggle('on', i < segs);
+  });
 }
 
 function update(dt) {
@@ -5207,10 +5562,14 @@ function update(dt) {
       }
       // Time-of-day baseline scales the preset values, so re-apply on transition.
       if (timeOfDay) timeOfDay.reapply();
-      // Crossfade zone music. fail-silent inside AudioManager. Floor M
-      // stays music-free (AUDIO-02) — only the arrival chime plays there.
+      // Crossfade zone music + ambience bed. fail-silent inside
+      // AudioManager. Floor M stays music-free AND bed-free (AUDIO-02) —
+      // only the arrival chime plays there; the silence is the point.
       if (currentFloor !== FLOOR_M_INDEX) {
         try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
+        try { startAmbience(idx); } catch {}
+      } else {
+        try { stopAmbience(1200); } catch {}
       }
     }
   }
@@ -5256,11 +5615,28 @@ function update(dt) {
   }
   // AUDIO-03: sustained hum near the ch16 server rack (floor 4). The hum
   // sits a semitone lower once the capstone is passed — the rack relaxes.
+  // Spatialized: the hum is HRTF-panned AT the rack (16.2, 16.2) and
+  // attenuates with distance; the proximity boolean (widened to 9 m,
+  // beyond which the inverse model is inaudible anyway) only bounds CPU.
   if (player) {
     updateServerHum(
-      currentFloor === 4 && Math.hypot(player.position.x - 16.2, player.position.z - 16.2) < 6,
+      currentFloor === 4 && Math.hypot(player.position.x - 16.2, player.position.z - 16.2) < 9,
       isTestDone('ch16-test'),
+      [16.2, floorBaseY(4) + 1.3, 16.2],
     );
+  }
+  // Story-tier audio + normalcy HUD — throttled 1 Hz poll. Drives the
+  // ambience detune/lowpass/beat layer, the music-bus highshelf, the
+  // KEDASH NORMALCY INDEX meter, and retries a bed start that raced the
+  // mobile audio unlock.
+  if (performance.now() - _lastTierPollMs > 1000) {
+    _lastTierPollMs = performance.now();
+    try {
+      const _tier = Story.getTier();
+      applyStoryTierAudio(_tier);
+      tickAmbience();
+      updateNormalcyMeter(_tier);
+    } catch { /* story/progress not ready yet — retried next second */ }
   }
   // Update audio listener position so PannerNode sources track the camera.
   if (camera) audio.listenerPosition(camera.position.x, camera.position.y, camera.position.z);
@@ -5494,28 +5870,42 @@ async function _preloadGltfAssets() {
   // Show progress overlay while loading.
   const overlay = createLoadingOverlay();
   overlay.show('Loading characters...');
-  // Warm just the named NPCs + player up front. Auto chapter NPCs and
-  // ambient agents pick up the cache as they're constructed.
-  const ids = [
-    'hero', 'ines',
-    'business_female_01', 'executive_male_01',
-    // 'maya' reuses western_female.glb but is its own manifest id (with
-    // textureOverride) — the sync builder needs HER id in the cache,
-    // not just western_female's, or she falls back to procedural.
+  // Phase 1 — blocking: the player's rig + the always-visible floor-1
+  // named cast. These are meshopt-compressed (~5 MB total), so gating
+  // startup on them is cheap even on mobile over Tailscale.
+  const critical = ['hero', 'ines', 'business_female_01', 'executive_male_01'];
+  await loader.warmCache(critical,
+    (loaded, total) => overlay.setProgress(loaded, total),
+    { concurrency: 3 });
+  await loader.loadAnimations();   // optional shared anim pack (~0.5 MB)
+  gltfAssetLoader = loader;
+  overlay.hide();
+  // Any rig resolving AFTER its NPCs spawned (phase-2 stream below, a
+  // recovered timeout, a retried failure) upgrades its procedural
+  // stand-ins in place.
+  loader.onAssetResolved = () => {
+    try { upgradeProceduralNpcs(); }
+    catch (e) { console.warn('[play] NPC upgrade pass failed:', e); }
+  };
+  // Phase 2 — background: the 10 ethnicity rigs + maya (~165 MB
+  // uncompressed — see the audit in the 2026-06-12 session notes).
+  // Deliberately NOT awaited: the world becomes interactive now; NPCs
+  // on these rigs spawn procedural and pop to GLTF per rig via the
+  // hook above. Concurrency-capped so a mobile link isn't saturated by
+  // eleven parallel 15 MB streams — which is what made the old 60s
+  // per-asset timeouts fire and strand NPCs procedural forever.
+  // 'maya' reuses western_female.glb but is her own manifest id (with
+  // textureOverride) — the sync builder needs HER id in the cache.
+  const background = [
     'maya',
-    // 10 ethnicity rigs — warmed up front so both named NPCs and the
-    // AUTO_POOL background NPCs render the GLTF (sync builder needs the
-    // cache hot at construction or it falls back to procedural).
     'western_male', 'western_female',
     'african_male', 'african_female',
     'easian_male', 'easian_female',
     'sasian_male', 'sasian_female',
     'arab_male', 'hijab_female',
   ];
-  await loader.warmCache(ids, (loaded, total) => overlay.setProgress(loaded, total));
-  await loader.loadAnimations();   // optional shared anim pack
-  gltfAssetLoader = loader;
-  overlay.hide();
+  loader.warmCache(background, null, { concurrency: 3 })
+    .catch((err) => console.warn('[play] background rig warm failed:', err?.message || err));
 }
 
 // Preload Meshy decoration GLBs. Runs BEFORE buildWorld so the
@@ -5593,6 +5983,12 @@ export async function start(host) {
     lastZoneIdx = idx >= 0 ? idx : 0;
     // Initial zone music — silent fallback if the file isn't there.
     try { audio.startMusic(`zone-${lastZoneIdx}`, musicForZone(lastZoneIdx), 2500); } catch {}
+    // Initial ambience bed. If the audio context is still locked (no
+    // gesture yet) this records the pending zone; the 1 Hz tickAmbience
+    // poll in update() starts the bed after the unlock.
+    if (currentFloor !== FLOOR_M_INDEX) {
+      try { startAmbience(lastZoneIdx); } catch {}
+    }
   }
   // Time-of-day modulates the current preset (intensity, sun, sky, exposure).
   timeOfDay = new TimeOfDay({ lighting, skyDome, renderer, receptionWindows });
@@ -5612,6 +6008,14 @@ export async function start(host) {
     skipTypewriter,
     playUi,
     setInputLocked: (v) => { inputLocked = !!v; },
+    // PORT-01: rendered face for a beat's speaker — matched by NPC name
+    // ('You' → the player). Null keeps the beat's emoji fallback.
+    portraitFor: (sp) => {
+      if (!sp?.name) return null;
+      if (sp.name === 'You') return player ? getPortrait(player, 'hero') : null;
+      const m = npcMeshes.find(mm => mm.userData?.npc?.name === sp.name);
+      return m ? getPortrait(m, `name:${sp.name}`) : null;
+    },
   });
   // Document viewer (SYS-05) — overlays ABOVE the dialogue card. While
   // a scene is active it must not release the scene's input lock on
@@ -5917,10 +6321,12 @@ async function requestFloorChange(targetFloor) {
     playClearanceChime();
   }
   // AUDIO-02: the ride down to Floor M is silent — fade the zone music
-  // out for the descent and mark arrival with a lower, slower chime.
-  // Leaving M re-arms the zone-music detector so it restarts on arrival.
+  // AND the ambience bed out for the descent and mark arrival with a
+  // lower, slower chime. Leaving M re-arms the zone-music detector so
+  // both restart on arrival.
   if (targetFloor === FLOOR_M_INDEX) {
     try { audio.stopMusic(600); } catch {}
+    try { stopAmbience(600); } catch {}
     playFloorMChime();
   }
   const leavingFloorM = currentFloor === FLOOR_M_INDEX;
@@ -5947,6 +6353,10 @@ async function requestFloorChange(targetFloor) {
   // Rides to/from the mezzanine hold the black a beat longer — the slot
   // below '1' going somewhere should feel like leaving the map.
   const rideMs = (targetFloor === FLOOR_M_INDEX || currentFloor === FLOOR_M_INDEX) ? 1600 : 450;
+  // Elevator travel SFX — motor ramp + cable shoosh sized to the ride.
+  // Fires at the actual ride start (after any first-visit floor load) and
+  // ends as the doors open, so Floor-M arrival silence stays intact.
+  try { playElevatorRide(rideMs / 1000 + 0.25); } catch {}
   setTimeout(() => {
     currentFloor = targetFloor;
     try { window.__playCurrentFloor = currentFloor; } catch {}
@@ -6017,6 +6427,10 @@ export function stop() {
   }
   if (ceremony) { ceremony.dispose(); ceremony = null; }
   if (liveAgents) { liveAgents.dispose(); liveAgents = null; }
+  // The asset loader is a singleton that outlives this play session —
+  // detach the upgrade hook so a straggler rig resolving after stop()
+  // can't run the pass against the torn-down scene.
+  try { getAssetLoader().onAssetResolved = null; } catch {}
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }

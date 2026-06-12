@@ -1,9 +1,16 @@
-function checkCriterion(type, value, submission) {
+function checkCriterion(type, value, submission, context) {
   const lower = submission.toLowerCase();
   switch (type) {
     case 'keyword': {
       const keywords = Array.isArray(value) ? value : [value];
       return keywords.some(k => lower.includes(k.toLowerCase()));
+    }
+    case 'nonce': {
+      // Compliance verification code: passes when the submission contains
+      // the CURRENT per-test nonce (supplied by the caller via context),
+      // case-insensitive. No stored nonce → cannot pass.
+      const nonce = context?.nonce;
+      return !!nonce && lower.includes(String(nonce).toLowerCase());
     }
     case 'regex': {
       try {
@@ -36,7 +43,7 @@ function checkStructure(name, submission) {
   }
 }
 
-function evaluate(submission, criteria, minLength, passThreshold) {
+function evaluate(submission, criteria, minLength, passThreshold, context = {}) {
   const trimmed = submission.trim();
 
   if (trimmed.length < minLength) {
@@ -57,7 +64,7 @@ function evaluate(submission, criteria, minLength, passThreshold) {
   let earnedWeight = 0;
 
   const criteriaResults = criteria.map(c => {
-    const passed = checkCriterion(c.type, c.value, trimmed);
+    const passed = checkCriterion(c.type, c.value, trimmed, context);
     totalWeight += c.weight;
     if (passed) earnedWeight += c.weight;
     return { description: c.description, improvement: c.improvement, passed, weight: c.weight };

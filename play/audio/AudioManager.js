@@ -3,10 +3,13 @@
 // Channel graph:
 //   destination
 //      ↑
+//   limiter (DynamicsCompressor — stacked ceremony voices can't clip)
+//      ↑
 //   masterGain
 //      ↑
-//   ┌──────┬──────┬──────┬──────┐
-//  music   sfx    ui    voice
+//   ┌──────┬──────┬──────┬──────┬──────────┐
+//  music   sfx    ui    voice   ambience
+//   (music routes through one tier-driven highshelf — see setStoryTier)
 //
 // Public API surface (consumed by play.js, app.js, lesson.js, test.js):
 //   AudioManager.shared() → singleton
@@ -33,18 +36,24 @@
 import { isMobile } from '../lighting/mobile.js';
 
 const PREFS_KEY = 'ccq_audio_prefs';
-const CHANNEL_NAMES = ['music', 'sfx', 'ui', 'voice'];
+const CHANNEL_NAMES = ['music', 'sfx', 'ui', 'voice', 'ambience'];
 
 const DEFAULT_PREFS = {
   master: 0.85,
   masterMute: false,
   channels: {
-    music: { volume: 0.55, mute: false },
-    sfx:   { volume: 0.85, mute: false },
-    ui:    { volume: 0.7,  mute: false },
-    voice: { volume: 0.8,  mute: false },
+    music:    { volume: 0.55, mute: false },
+    sfx:      { volume: 0.85, mute: false },
+    ui:       { volume: 0.7,  mute: false },
+    voice:    { volume: 0.8,  mute: false },
+    ambience: { volume: 0.8,  mute: false },
   },
 };
+
+// Tier-driven highshelf on the music bus (AUDIO design pass). Neutral at
+// T0–T3, gentle cut deepening through T4–T6, restored at T7 (resolution).
+// Values are deliberately below the conscious-notice threshold.
+const MUSIC_SHELF_DB = { 4: -1.5, 5: -2.8, 6: -4.5 };
 
 let _shared = null;
 
@@ -73,6 +82,11 @@ export class AudioManager {
     this.voiceCap = isMobile() ? 8 : 24;
     this.voicePool = []; // [{node, channel, t}]
     this._missingMusicLogged = new Set();
+
+    // Master limiter + tier-shift state (built lazily with the context)
+    this.limiter = null;
+    this.musicTierShelf = null;
+    this._storyTier = 0;
   }
 
   // ── Prefs ─────────────────────────────────────────────────────────────────
@@ -141,17 +155,52 @@ export class AudioManager {
     if (!Ctx) return;
     this.ctx = new Ctx({ latencyHint: isMobile() ? 'playback' : 'interactive' });
 
+    // Master limiter — a brick-wall-ish compressor between the master
+    // gain and the destination so stacked voices (ceremony: cheers +
+    // fanfare + music) can never clip the output. Fast attack, high
+    // ratio, threshold a touch under full-scale.
+    this.limiter = this.ctx.createDynamicsCompressor();
+    this.limiter.threshold.value = -6;
+    this.limiter.knee.value = 4;
+    this.limiter.ratio.value = 12;
+    this.limiter.attack.value = 0.003;
+    this.limiter.release.value = 0.25;
+    this.limiter.connect(this.ctx.destination);
+
     // master
     this.master = this.ctx.createGain();
     this.master.gain.value = this._effectiveMasterGain();
-    this.master.connect(this.ctx.destination);
+    this.master.connect(this.limiter);
 
-    // channel buses
+    // channel buses. The music bus routes through ONE tier-driven
+    // highshelf (neutral until T4) so late-story music reads slightly
+    // duller without the player consciously noticing.
     for (const name of CHANNEL_NAMES) {
       const g = this.ctx.createGain();
       g.gain.value = this._effectiveChannelGain(name);
-      g.connect(this.master);
+      if (name === 'music') {
+        this.musicTierShelf = this.ctx.createBiquadFilter();
+        this.musicTierShelf.type = 'highshelf';
+        this.musicTierShelf.frequency.value = 2400;
+        this.musicTierShelf.gain.value = MUSIC_SHELF_DB[this._storyTier] || 0;
+        g.connect(this.musicTierShelf).connect(this.master);
+      } else {
+        g.connect(this.master);
+      }
       this.channels[name] = { gain: g };
+    }
+  }
+
+  // ── Story tier → music bus shelf ─────────────────────────────────────────
+  // Called (throttled) from play.js. Safe before the context exists — the
+  // tier is stored and applied when _buildContext runs.
+  setStoryTier(tier) {
+    const t = Math.max(0, Math.min(7, tier | 0));
+    if (t === this._storyTier && this.musicTierShelf) return;
+    this._storyTier = t;
+    if (this.musicTierShelf && this.ctx) {
+      const db = MUSIC_SHELF_DB[t] || 0;
+      this.musicTierShelf.gain.setTargetAtTime(db, this.ctx.currentTime, 0.8);
     }
   }
 

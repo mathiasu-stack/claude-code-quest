@@ -129,6 +129,20 @@ function _renderBeat() {
     </div>
   `;
   d.classList.add('visible');
+  // PORT-01: swap the emoji for the speaker's rendered face when play.js
+  // can resolve a mesh for it (injected resolver; emoji stays as fallback).
+  if (ctx.portraitFor) {
+    try {
+      const purl = ctx.portraitFor(sp);
+      if (purl) {
+        const pEl = d.querySelector('.dlg-portrait');
+        if (pEl) {
+          pEl.classList.add('has-img');
+          pEl.innerHTML = `<img class="dlg-portrait-img" src="${purl}" alt="">`;
+        }
+      }
+    } catch (e) { console.warn('[scene] portrait failed', e); }
+  }
   ctx.startTypewriter(d.querySelector('[data-typewriter]'), beat.text || '', pitch);
 
   d.querySelector('.dlg-close').onclick = () => abortScene();

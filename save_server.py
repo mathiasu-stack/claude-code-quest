@@ -89,7 +89,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # it out either. .git carries history that probably shouldn't be
     # served from a LAN box.
     _BLOCKED_PREFIXES = ('/save_server.py', '/save.php', '/.git/', '/.git',
-                         '/RESUME.md', '/scripts/', '/CLAUDE.md')
+                         '/RESUME.md', '/scripts/', '/CLAUDE.md', '/logs/', '/logs')
+
+    # Cache policy (replaces the manual ?v= cache-bust discipline):
+    # code + data always revalidate (304 when unchanged — SimpleHTTP
+    # honors If-Modified-Since); heavy immutable-ish assets cache a day.
+    _NO_CACHE_EXT = ('.html', '.js', '.css', '.json')
+    _DAY_CACHE_EXT = ('.glb', '.gltf', '.png', '.jpg', '.webp', '.mp3', '.ogg', '.svg')
+
+    def end_headers(self):
+        p = self.path.split('?', 1)[0].lower()
+        if p.endswith(self._NO_CACHE_EXT) or p == '/' or p.endswith('/'):
+            self.send_header('Cache-Control', 'no-cache')
+        elif p.endswith(self._DAY_CACHE_EXT):
+            self.send_header('Cache-Control', 'public, max-age=86400')
+        super().end_headers()
 
     def do_GET(self):
         if self.path == '/save' or self.path == '/save/':
@@ -105,6 +119,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_POST(self):
+        if self.path in ('/errlog', '/errlog/'):
+            return self._handle_errlog()
         if self.path not in ('/save', '/save/'):
             return self._send_json(404, {'ok': False, 'error': 'unknown path'})
         try:
@@ -156,6 +172,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             written.append(f'data/{f["name"]}')
 
         return self._send_json(200, {'ok': True, 'written': written})
+
+    # Client error telemetry — unauthenticated by design (any player's
+    # browser reports), so it is strictly bounded: 8 KB per report,
+    # 5 MB file cap, appends one JSON line to logs/errlog.jsonl (the
+    # /logs/ path is GET-blocked above and gitignored).
+    _ERRLOG_PATH = os.path.join(PROJECT_ROOT, 'logs', 'errlog.jsonl')
+    _ERRLOG_MAX_REPORT = 8 * 1024
+    _ERRLOG_MAX_FILE = 5 * 1024 * 1024
+
+    def _handle_errlog(self):
+        try:
+            n = int(self.headers.get('Content-Length', '0') or '0')
+        except ValueError:
+            return self._send_json(400, {'ok': False})
+        if n <= 0 or n > self._ERRLOG_MAX_REPORT:
+            return self._send_json(400, {'ok': False})
+        raw = self.rfile.read(n)
+        try:
+            entry = json.loads(raw.decode('utf-8'))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return self._send_json(400, {'ok': False})
+        if not isinstance(entry, dict):
+            return self._send_json(400, {'ok': False})
+        import time
+        entry['_ts'] = time.strftime('%Y-%m-%dT%H:%M:%S')
+        entry['_ip'] = self.address_string()
+        try:
+            os.makedirs(os.path.dirname(self._ERRLOG_PATH), exist_ok=True)
+            if (os.path.exists(self._ERRLOG_PATH)
+                    and os.path.getsize(self._ERRLOG_PATH) > self._ERRLOG_MAX_FILE):
+                return self._send_json(200, {'ok': True, 'note': 'log full'})
+            with open(self._ERRLOG_PATH, 'a', encoding='utf-8') as fh:
+                fh.write(json.dumps(entry, ensure_ascii=False)[:self._ERRLOG_MAX_REPORT] + '\n')
+        except OSError:
+            pass
+        return self._send_json(200, {'ok': True})
 
     def log_message(self, fmt, *args):
         # Route through stdout so the nohup log captures it.

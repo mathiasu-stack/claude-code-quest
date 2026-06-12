@@ -370,6 +370,51 @@ export class LiveAgents {
     agent.mesh.rotation.y = Math.atan2(dx, dz);
   }
 
+  // Rebuild the id → mesh index after play.js respawns roster NPCs
+  // (procedural → GLTF upgrade swaps the mesh objects). Routine state
+  // is keyed by id, so only the mesh refs go stale.
+  reindex() {
+    this.named = {};
+    for (const m of this.npcMeshes) {
+      const id = m.userData?.npc?.id;
+      if (id) this.named[id] = m;
+    }
+  }
+
+  // Rebuild any ambient agent whose body is still procedural now that
+  // its rig has resolved (mirrors play.js upgradeProceduralNpcs —
+  // ambients aren't spawnNPC products, so the play.js pass skips
+  // them). Returns the number of bodies swapped.
+  upgradeAmbients() {
+    let swapped = 0;
+    for (const a of this.ambient) {
+      if (!a?.mesh || a.mesh.userData?.gltfChar) continue;
+      const old = a.mesh;
+      const look = old.userData?.look;
+      if (!look) continue;
+      const fresh = this.makeCharacter(look);
+      if (!fresh?.userData?.gltfChar) continue; // rig still missing — keep old body
+      fresh.position.copy(old.position);
+      fresh.rotation.y = old.rotation.y;
+      fresh.visible = old.visible;
+      fresh.userData.floor = old.userData.floor;
+      fresh.userData.npc = old.userData.npc;
+      if (this.makeNameTag && old.userData.npc) {
+        const n = old.userData.npc;
+        const tag = this.makeNameTag(`${n.portrait} ${n.name}`);
+        tag.position.set(0, 2.30, 0);
+        fresh.add(tag);
+      }
+      const idx = this.npcMeshes.indexOf(old);
+      if (idx >= 0) this.npcMeshes[idx] = fresh; else this.npcMeshes.push(fresh);
+      this.scene.remove(old);
+      this.scene.add(fresh);
+      a.mesh = fresh;
+      swapped += 1;
+    }
+    return swapped;
+  }
+
   dispose() {
     for (const a of this.ambient) {
       if (a?.mesh) {

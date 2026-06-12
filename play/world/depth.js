@@ -285,36 +285,43 @@ export function buildReceptionWindows(scene) {
 }
 
 // ── Library arched window ──────────────────────────────────────────────────
-// A tall arched glass panel on the east wall of the library, with a
-// luminous golden plane "behind" it suggesting streaming light. Real
-// shafts-of-light would need volumetrics; we fake with an additive
-// quad oriented toward the floor.
-export function buildLibraryArchedWindow(scene) {
+// A tall arched glass panel on the WEST wall of the library (the room
+// now lives in the west wing at center [-22,-22]; the west wall is the
+// building's outer face at x=-33), with a luminous golden plane
+// "behind" it suggesting streaming light. Real shafts-of-light would
+// need volumetrics; we fake with an additive quad oriented toward the
+// floor. Parameterized: opts.wallX is the wall plane, opts.z the window
+// center along it (default -28 keeps clear of the KNOWLEDGE LIBRARY
+// wall sign centered at z=-22).
+export function buildLibraryArchedWindow(scene, opts = {}) {
   const OWNER = 'library_arched_window';
   const out = { update: null };
+  const wallX = opts.wallX ?? -33;
+  const zc = opts.z ?? -28;
+  const fx = wallX + 0.22;   // frame plane, just inboard of the wall face
 
   // Arched frame approximated with one box + half-circle on top.
   const frameMat = new THREE.MeshStandardMaterial({ color: 0x3e2418, roughness: 0.65 });
   const lower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.0, 0.16), frameMat);
-  lower.position.set(10.78, 1.9, 22.4);
+  lower.position.set(fx, 1.9, zc - 1.6);
   placeCompoundChild(scene, lower, OWNER, 'jamb_left');
   const lowerR = lower.clone();
-  lowerR.position.z = 25.6;
+  lowerR.position.z = zc + 1.6;
   placeCompoundChild(scene, lowerR, OWNER, 'jamb_right');
   const top = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 3.2), frameMat);
-  top.position.set(10.78, 3.4, 24);
+  top.position.set(fx, 3.4, zc);
   placeCompoundChild(scene, top, OWNER, 'header');
   // Arch — semicircle approximation
   const arch = new THREE.Mesh(
     new THREE.TorusGeometry(1.6, 0.09, 8, 16, Math.PI),
     frameMat,
   );
-  arch.position.set(10.78, 3.4, 24);
+  arch.position.set(fx, 3.4, zc);
   arch.rotation.y = Math.PI / 2;
   arch.rotation.z = -Math.PI / 2;
   placeCompoundChild(scene, arch, OWNER, 'arch');
 
-  // Glass panel
+  // Glass panel — faces east, into the room.
   const glass = new THREE.Mesh(
     new THREE.PlaneGeometry(3.0, 3.0),
     new THREE.MeshStandardMaterial({
@@ -322,12 +329,12 @@ export function buildLibraryArchedWindow(scene) {
       metalness: 0.05, roughness: 0.05, depthWrite: false,
     }),
   );
-  glass.position.set(10.83, 2.0, 24);
-  glass.rotation.y = -Math.PI / 2;
+  glass.position.set(fx - 0.05, 2.0, zc);
+  glass.rotation.y = Math.PI / 2;
   placeCompoundChild(scene, glass, OWNER, 'glass');
 
   // Golden "streaming light" plane angled across the floor toward the
-  // reading tables. Additive blending so it lifts whatever it crosses.
+  // bookshelf rows. Additive blending so it lifts whatever it crosses.
   const streamMat = new THREE.MeshBasicMaterial({
     color: 0xfff1c5, transparent: true, opacity: 0.30,
     blending: THREE.AdditiveBlending, depthWrite: false,
@@ -336,9 +343,9 @@ export function buildLibraryArchedWindow(scene) {
     new THREE.PlaneGeometry(2.6, 7.5),
     streamMat,
   );
-  stream.position.set(7.8, 0.04, 22);
+  stream.position.set(wallX + 3.2, 0.04, zc + 1.0);
   stream.rotation.x = -Math.PI / 2;
-  stream.rotation.z = Math.PI / 6;
+  stream.rotation.z = -Math.PI / 6;
   placeCompoundChild(scene, stream, OWNER, 'light_stream');
 
   out.stream = stream;

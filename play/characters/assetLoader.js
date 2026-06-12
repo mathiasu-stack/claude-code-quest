@@ -35,6 +35,61 @@ export class AssetLoader {
     this._resolved = new Map();     // id -> GLTF (sync-accessible after warmCache)
     this._animClips = new Map();    // name -> THREE.AnimationClip
     this._animLoaded = false;
+    this._merged = new Set();       // ids whose extraAnimations were merged
+    // Optional hook: fired with (id) each time an asset becomes
+    // sync-resolvable — warmCache batches, recovered timeouts, retried
+    // failures. play.js uses it to upgrade procedural stand-in NPCs
+    // that spawned before their rig finished downloading.
+    this.onAssetResolved = null;
+  }
+
+  _notifyResolved(id) {
+    try { this.onAssetResolved?.(id); }
+    catch (e) { console.warn('[assetLoader] onAssetResolved hook failed:', e); }
+  }
+
+  // Merge a character's extraAnimations exactly once (warmCache can
+  // re-run across play sessions — the loader is a singleton — and a
+  // second merge would duplicate every clip).
+  async _mergeOnce(id, gltf) {
+    if (this._merged.has(id)) return;
+    this._merged.add(id);
+    await this._mergeExtraAnimations(id, gltf);
+  }
+
+  // GLTFLoader.load as a promise. Retries once on error (transient
+  // mobile network blips shouldn't strand a character procedural for
+  // the whole session); resolves null on final failure.
+  _loadWithRetry(id, url, retries = 1) {
+    return new Promise((resolve) => {
+      const attempt = (left) => {
+        this._gltfLoader.load(
+          url,
+          (gltf) => resolve(gltf),
+          undefined,
+          (err) => {
+            if (left > 0) {
+              console.warn(`[assetLoader] ${id} (${url}) failed — retrying:`, err?.message || err);
+              setTimeout(() => attempt(left - 1), 800);
+            } else {
+              console.warn(`[assetLoader] failed to load ${id} (${url}):`, err);
+              resolve(null);
+            }
+          },
+        );
+      };
+      attempt(retries);
+    });
+  }
+
+  // A download that outlived its safety timeout finally landed —
+  // adopt it into the caches and notify, so NPCs that already spawned
+  // procedural can upgrade instead of staying blocky all session.
+  async _adoptLate(id, gltf) {
+    await this._mergeOnce(id, gltf);
+    this._cache.set(id, Promise.resolve(gltf));
+    this._resolved.set(id, gltf);
+    this._notifyResolved(id);
   }
 
   // Load and parse the manifest. Safe to call multiple times.
@@ -89,23 +144,22 @@ export class AssetLoader {
     const url = ASSET_DIR + entry.file;
     // 60s safety timeout — without this a stalled mobile request would
     // freeze warmCache() forever (the loading bar gets stuck at N-1/N).
+    // The underlying load is NOT abandoned on timeout: when it lands
+    // late, _adoptLate swaps it into the resolved cache and fires
+    // onAssetResolved so procedural stand-ins can upgrade.
+    const loadP = this._loadWithRetry(id, url);
     const p = new Promise((resolve) => {
-      let done = false;
-      const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      let timedOut = false;
       const timer = setTimeout(() => {
-        console.warn(`[assetLoader] ${id} (${url}) timeout after 60s — skipping`);
-        finish(null);
+        timedOut = true;
+        console.warn(`[assetLoader] ${id} (${url}) timeout after 60s — continuing; will adopt when it lands`);
+        resolve(null);
       }, 60000);
-      this._gltfLoader.load(
-        url,
-        (gltf) => { clearTimeout(timer); finish(gltf); },
-        undefined,
-        (err) => {
-          clearTimeout(timer);
-          console.warn(`[assetLoader] failed to load ${id} (${url}):`, err);
-          finish(null);
-        },
-      );
+      loadP.then((gltf) => {
+        clearTimeout(timer);
+        if (!timedOut) { resolve(gltf); return; }
+        if (gltf) this._adoptLate(id, gltf);
+      });
     });
     this._cache.set(id, p);
     return p;
@@ -157,20 +211,34 @@ export class AssetLoader {
   }
 
   // Like preload(), but ALSO populates the sync-accessible resolved
-  // cache. Call this once at scene boot so makeCharacter can look up
+  // cache. Call this at scene boot so makeCharacter can look up
   // assets synchronously without await.
-  async warmCache(ids, onProgress) {
+  //
+  // opts.concurrency caps how many GLBs stream at once. The ethnicity
+  // rigs are 15-18 MB each; firing all of them in parallel saturates a
+  // mobile/Tailscale link, makes every per-asset timeout fire, and
+  // strands those characters procedural. Fires onAssetResolved per id
+  // (if installed) so callers can upgrade NPCs incrementally instead
+  // of waiting for the whole batch.
+  async warmCache(ids, onProgress, opts = {}) {
     const total = ids.length;
     let loaded = 0;
-    await Promise.all(ids.map(async (id) => {
-      const gltf = await this.get(id);
-      if (gltf) {
-        this._resolved.set(id, gltf);
-        await this._mergeExtraAnimations(id, gltf);
+    const queue = ids.slice();
+    const workerCount = Math.max(1, Math.min(opts.concurrency || total, total));
+    const worker = async () => {
+      while (queue.length) {
+        const id = queue.shift();
+        const gltf = await this.get(id);
+        if (gltf) {
+          await this._mergeOnce(id, gltf);
+          this._resolved.set(id, gltf);
+          this._notifyResolved(id);
+        }
+        loaded += 1;
+        onProgress?.(loaded, total);
       }
-      loaded += 1;
-      onProgress?.(loaded, total);
-    }));
+    };
+    await Promise.all(Array.from({ length: workerCount }, worker));
     return this._resolved.size;
   }
 

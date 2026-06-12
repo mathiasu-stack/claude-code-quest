@@ -440,6 +440,82 @@ ceremony claps pinned to exactly 8 (`CLAP_COUNT` in npcReactions.js).
 two lamps in the north lounge; shelf grid + south band have no light source.
 Offered to add aisle lamps; no answer yet.
 
+## NPC clothing-color variants (2026-06-11 session, IN PROGRESS / partially blocked)
+
+Goal: per-NPC shirt recolors (mustard/purple/charcoal/teal/burgundy) on the 10
+shared ethnicity rigs so reused models stop looking like clones.
+
+- **Code wiring DONE** (`play/characters/gltfCharacter.js`): below the stature
+  hash, a salted hash of `look._id` (+ `':shirt'`, `fin-` prefix stripped so
+  ceremony stand-ins match their originals, `player` skipped) picks
+  `hash % (textureVariants.length + 1)` — outcome 0 keeps the original baked
+  atlas; otherwise the variant jpg is applied through the same cloned-material
+  path as maya's `textureOverride` (which still wins when present).
+  Cache-bust: gltfCharacter import in play.js + play.js tag in index.html →
+  `?v=20260611b`. Harmless until the manifest gains `textureVariants`.
+- **Generation BLOCKED**: the Bash safety classifier was down for the whole
+  session — python could not be executed even once. The complete pipeline
+  lives in `scripts/gen_clothing_variants.py` (extract baked atlas from each
+  GLB, hue-select shirt pixels, luminance-preserving recolor, write
+  `<rig>_v1..v4.jpg` q85, verify skin invariance, then auto-patch
+  manifest.json `textureVariants`). Run:
+  1. `python3 scripts/gen_clothing_variants.py inspect` — check each rig's
+     detected shirt band; add per-rig `RIG_SHIRT` selector overrides for any
+     rig whose auto-detect grabs the wrong band (white shirts need
+     `{'white': True}`).
+  2. `python3 scripts/gen_clothing_variants.py generate` — writes jpgs,
+     verifies (skin-region diff must be jpg-noise only), and wires
+     manifest.json automatically when ALL rigs verify.
+  3. Hard-reload; NPCs on shared rigs get stable per-id shirt colors.
+- `node --check` could NOT be run on gltfCharacter.js / play.js (classifier
+  down) — visually reviewed only. Run it + `scripts/audit/run-all.sh` first
+  thing next session. manifest.json was NOT modified yet (by design — refs to
+  not-yet-existing jpgs would blank-texture every NPC on the live site).
+
+## Character loading perf + stale-fallback fix (2026-06-12 session, UNCOMMITTED)
+
+User reported (1) characters load too slowly and (2) blocky procedural NPCs
+persist after assets finish loading. Audit + fix:
+
+- **Audit finding (do NOT lose this)**: the 10 ethnicity rigs
+  (`western_male.glb` etc.) are NOT compressed to project standard. The
+  standard (hero/ines/linda/marcus/Idle) is gltfpack-style: meshopt +
+  KHR_mesh_quantization + WebP textures → 0.3–1.5 MB each. The ethnicity
+  rigs are raw Meshy exports: float32 positions, NO meshopt, NO
+  quantization, one ~6.3–8 MB embedded PNG atlas each → 14.6–17.9 MB
+  per rig, 184 MB total warm payload. Recompression with gltfpack
+  (`gltfpack -i in.glb -o out.glb -cc -tc` or `-tj` WebP/jpeg textures)
+  projected ~2–3 MB per rig (~25–35 MB total). NOT done (out of scope).
+- **Root cause of stale fallback**: warmCache fired all 15 GLBs in
+  parallel; on mobile/Tailscale the per-asset 60s timeout fired, cached
+  a permanent null (late download was discarded), and `makeCharacter`'s
+  sync `getResolved()` miss → procedural body forever (no upgrade pass).
+- **assetLoader.js (`?v=20260612b`)**: `get()` now keeps the underlying
+  load alive past the 60s timeout and adopts late arrivals
+  (`_adoptLate` → resolved cache + `onAssetResolved(id)` hook); one
+  retry on load error (`_loadWithRetry`); `warmCache(ids, onProgress,
+  {concurrency})` is a worker-pool (no more 15 parallel 16 MB streams)
+  and fires `onAssetResolved` per id; `_mergeOnce` guards duplicate
+  extraAnimations merges across play sessions (loader is a singleton).
+- **play.js (`?v=20260612b` in index.html)**: `_preloadGltfAssets` is
+  two-phase — phase 1 blocks on hero/ines/linda/marcus (~5 MB, overlay),
+  phase 2 streams maya + 10 ethnicity rigs (~165 MB) in the background
+  at concurrency 3, NOT awaited. New `upgradeProceduralNpcs()` (below
+  spawnNPC): on every `onAssetResolved`, respawns procedural spawnNPC
+  products (roster / auto chapter / fin- stand-ins) via spawnNPC
+  preserving live position/rotation/visibility, then
+  `liveAgents.upgradeAmbients()` + `liveAgents.reindex()`. stop()
+  detaches the loader hook.
+- **liveAgents.js (`?v=20260612b`)**: new `reindex()` (refresh
+  `named[id]` mesh refs after respawn) + `upgradeAmbients()` (in-place
+  body swap for ambient agents using their stored `userData.look`).
+- Expected UX now: loading overlay clears in seconds; background NPCs
+  appear procedural briefly and pop to GLTF per rig as downloads land.
+- Recommendations not implemented: recompress the 10 rigs with gltfpack
+  (biggest win, ~85% smaller); player-mesh upgrade pass (player is
+  phase-1 hero so only matters if hero itself times out); deleting the
+  unused space-named original uploads (~140 MB on disk, never fetched).
+
 ## How to start
 
 Begin by running `git log -10 --oneline` and `git status` to confirm the working tree matches what's described here, then wait for the user's next ask. If the working tree has changes you don't recognize, **don't discard them** — surface them to the user.

@@ -192,6 +192,7 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
         { type: 'keyword', value: ['welcome', 'version', 'model', 'help', 'tip', 'how can i'], description: 'Pasted session evidence (banner or Claude reply)', weight: 2 },
         { type: 'keyword', value: ['## Setup', '## First session'], description: 'Used section markers', weight: 1 },
         { type: 'keyword', value: ['hi', 'hello', 'hey'], description: 'Tiny exchange visible', weight: 1 },
+        { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 4 },
       ],
       exemplar: '<p>Strong answer: <code>mkdir kedash-support/ && cd kedash-support/</code> and <code>claude</code> under a <code>## Setup</code> heading, then a short paste under <code>## First session</code> showing the welcome banner and Claude\'s reply to your "Hi".</p>',
     },
@@ -285,7 +286,7 @@ Do not change the function signature or any callers.</code></pre>
       scenario: 'Hey 👋 First task: I need a reply template for our most-asked question — "How do I cancel my subscription?". Write the PROMPT you would give Claude Code to draft it (B2B SaaS, voice is warm-but-technical, must include greeting → cancellation steps → dashboard location → offer of further help). Then actually run it. Reply with BOTH your prompt and what Claude produced — separate with `## Prompt` and `## Response` headings.\n\n(And yes, the voice spec is oddly precise. House style. You\'ll get used to whose house.)',
       task: 'Paste your prompt AND Claude\'s response, with `## Prompt` / `## Response` markers.',
       hint: 'A good prompt names the task, gives voice context, lists required parts, specifies format. The response should be a usable template with the 4 sections.',
-      minLength: 300, passThreshold: 70, xpReward: 325,
+      minLength: 300, passThreshold: 75, xpReward: 325,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Response'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['cancel', 'cancellation', 'subscription'], description: 'Prompt specifies the topic', weight: 2 },
@@ -412,7 +413,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'KEDASH-CX-12 · Bug fix\n\nLine 14 of `kedash-support/faq.md` says we accept credit-card payments only, but we now also accept PayPal and ACH. Create a tiny `faq.md` with that wrong line, run Claude Code to fix JUST that line, then paste your prompt AND the diff Claude produced — with `## Prompt` and `## Diff` markers.\n\nReporter: D. Okonkwo (Northcliff Systems) · First reported: 4 cycles ago',
       task: 'Paste your prompt and the resulting diff.',
       hint: 'Prompt should name the file, the specific line, and constrain Claude to that one change. The diff should show `-` (old line) and `+` (new line).',
-      minLength: 200, passThreshold: 70, xpReward: 350,
+      minLength: 200, passThreshold: 75, xpReward: 350,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Diff'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['faq.md'], description: 'Names the file in the prompt', weight: 2 },
@@ -486,7 +487,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'Big one: reorganize `kedash-support/`. Everything is dumped in the root. I want `faqs/`, `templates/`, `escalations/`, `internal-notes/`, plus some renames (`auth-faq.md` → `faqs/auth.md`, etc.). **Use Plan Mode** — Shift+Tab to enter it, give Claude the prompt, capture the plan it outputs WITHOUT executing. Paste your prompt and the plan.\n\nOne more thing: do NOT execute. I\'m serious. The plan is the deliverable. Someone upstairs reads the plans.',
       task: 'Enter Plan Mode, give the reorganize prompt, paste both your prompt and the plan Claude generated.',
       hint: '`## Prompt` and `## Plan` markers. The plan should list numbered steps with source/target paths and end with awaiting-approval language.',
-      minLength: 300, passThreshold: 70, xpReward: 375,
+      minLength: 300, passThreshold: 80, xpReward: 375,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Plan'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['plan mode', 'shift+tab', 'shift-tab', 'plan'], description: 'Plan Mode referenced', weight: 2 },
@@ -494,6 +495,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         { type: 'keyword', value: ['approval', 'approve', 'confirm', 'review', 'before', 'wait'], description: 'Approval-gated (no execution)', weight: 2 },
         { type: 'structure', value: 'numbered-steps', description: 'Plan uses numbered steps', weight: 1 },
         { type: 'keyword', value: ['→', '->', 'move', 'rename', 'mv'], description: 'Plan describes actual moves', weight: 1 },
+        { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 3 },
       ],
       exemplar: '<p>Strong answer: prompt asking for a Plan-Mode reorganization, plus a numbered plan listing each move (auth-faq.md → faqs/auth.md, …) ending with "awaiting approval before execution".</p>',
     },
@@ -570,7 +572,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'From: priya.patel@kedashcorp.com\nSubject: Quick win — get a starter CLAUDE.md\n\nRun three slash commands in `kedash-support/`, in this order: `/init` to draft a CLAUDE.md, `/help` to see what else is available, and one more useful one (e.g. `/cost`, `/clear`, `/compact`). Paste a SHORT snippet of each command\'s output so I know you ran them — use `## /init`, `## /help`, and `## /<other>` headings.\n\nBilling note: you\'re on the kedash-prime seat. Don\'t worry about what that means.',
       task: 'Paste short snippets of `/init`, `/help`, and one other slash command\'s output.',
       hint: '/init prints tech-stack detection and a CLAUDE.md draft. /help lists available commands. /cost shows session token usage. Snippets only — don\'t paste pages.',
-      minLength: 200, passThreshold: 70, xpReward: 400,
+      minLength: 200, passThreshold: 80, xpReward: 400,
       criteria: [
         { type: 'keyword', value: ['/init'], description: 'Ran /init', weight: 2 },
         { type: 'keyword', value: ['/help'], description: 'Ran /help', weight: 2 },
@@ -996,7 +998,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       scenario: 'Hey, watching the support team\'s Claude usage — sessions get bloated, by lunch they\'re at 80% context. Try this yourself in `kedash-support/`: do a few file operations / Claude exchanges, run `/cost` to see your token spend, then run `/clear` or `/compact` and run `/cost` again. Paste BEFORE and AFTER `/cost` numbers + a short strategy from what you observed.\n\nBetween you and me: I\'ve been watching ONE person\'s usage for three years. Bloated sessions, 2am compactions. Don\'t end up like that. Learn this one properly.',
       task: 'Paste `## Before` (output of `/cost` after some activity), `## After` (`/cost` after `/clear` or `/compact`), and `## Strategy` (3-5 line takeaway).',
       hint: '`/cost` shows input/output token counts. `/clear` wipes context entirely; `/compact` summarizes and continues. Strategy should call out when to use each.',
-      minLength: 200, passThreshold: 70, xpReward: 500,
+      minLength: 200, passThreshold: 75, xpReward: 500,
       criteria: [
         { type: 'keyword', value: ['## Before', '## After', '## Strategy'], description: 'All three sections present', weight: 1 },
         { type: 'keyword', value: ['/cost'], description: 'Ran /cost', weight: 2 },

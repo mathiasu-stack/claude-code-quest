@@ -1,6 +1,12 @@
 const STORAGE_KEY = 'ccq_progress';
 
+// Bump when the save shape changes, and add a migration step in
+// loadProgress — existing players' saves must never be silently
+// reinterpreted under a new shape.
+const SCHEMA_VERSION = 1;
+
 const DEFAULT_PROGRESS = {
+  schemaVersion: SCHEMA_VERSION,
   playerName: '',
   totalXP: 0,
   completedLessons: [],
@@ -11,6 +17,10 @@ const DEFAULT_PROGRESS = {
   currentStreak: 0,
   longestStreak: 0,
   knowledgeChecks: {},
+  // Per-test compliance verification codes (nonces). Keyed by practical-test
+  // id, e.g. { 'ch01-test': 'KDQ-7F3A' }. Generated when the test view opens,
+  // checked by the `nonce` criteria type, rotated (cleared) on pass.
+  testNonces: {},
   // Corporate badge: the highest floor the player has access to. Each
   // floor holds 4 chapters; passing all 4 chapters' practical tests on a
   // floor bumps badgeFloor to the next one. Floor 1 is always accessible.
@@ -21,7 +31,15 @@ function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_PROGRESS };
-    return { ...DEFAULT_PROGRESS, ...JSON.parse(raw) };
+    const p = JSON.parse(raw);
+    const v = p.schemaVersion || 0;
+    // Save written by a NEWER build than this code (e.g. stale cached
+    // JS) — don't guess at the shape, start defaults without clobbering
+    // the stored save; the fresh code will read it fine after reload.
+    if (v > SCHEMA_VERSION) return { ...DEFAULT_PROGRESS };
+    // v0 → v1: pre-versioning saves have the identical shape; stamp.
+    p.schemaVersion = SCHEMA_VERSION;
+    return { ...DEFAULT_PROGRESS, ...p };
   } catch {
     return { ...DEFAULT_PROGRESS };
   }
@@ -170,6 +188,52 @@ function addBonusXP(progress, amount) {
   return { ...progress, totalXP: progress.totalXP + amount };
 }
 
+// ── Test nonces (compliance verification codes) ───────────────────────────
+// A short per-attempt code (e.g. KDQ-7F3A) the player must have Claude echo
+// inside a real session, proving the submission came from live terminal
+// output rather than pasted keywords.
+
+function generateTestNonce() {
+  let n;
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buf = new Uint16Array(1);
+    crypto.getRandomValues(buf);
+    n = buf[0];
+  } else {
+    n = Math.floor(Math.random() * 0x10000);
+  }
+  return 'KDQ-' + n.toString(16).toUpperCase().padStart(4, '0');
+}
+
+// Returns { progress, nonce }. Reuses the stored nonce if one exists (so a
+// page reload mid-attempt keeps the same code); otherwise mints a new one.
+// Caller is responsible for saving the returned progress.
+function ensureTestNonce(progress, testId) {
+  const existing = progress.testNonces?.[testId];
+  if (existing) return { progress, nonce: existing };
+  const nonce = generateTestNonce();
+  return {
+    progress: {
+      ...progress,
+      testNonces: { ...(progress.testNonces || {}), [testId]: nonce },
+    },
+    nonce,
+  };
+}
+
+function getTestNonce(progress, testId) {
+  return progress.testNonces?.[testId] || null;
+}
+
+// Rotation on pass: clearing the code means the next visit to the test view
+// mints a fresh one, so a passed submission can't be replayed.
+function clearTestNonce(progress, testId) {
+  if (!progress.testNonces?.[testId]) return progress;
+  const next = { ...progress.testNonces };
+  delete next[testId];
+  return { ...progress, testNonces: next };
+}
+
 // Recompute the player's badgeFloor from the testResults map. Idempotent
 // — call after recording any test result. Floor N is "complete" when
 // all 4 chapters on it (the 4 chapters at the corresponding positions
@@ -223,6 +287,9 @@ window.Progress = {
   recordKnowledgeCheck,
   isKnowledgeCheckPassed,
   addBonusXP,
+  ensureTestNonce,
+  getTestNonce,
+  clearTestNonce,
   applyBadgeBumpsIfDue,
   floorForChapter,
   CHAPTERS_PER_FLOOR,

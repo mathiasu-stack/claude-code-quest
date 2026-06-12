@@ -88,8 +88,11 @@ export function decorateReception(scene, decoTickers) {
   });
 
   // Ceiling pendant lamps — Meshy if loaded, else original recessed flats.
-  // Reception ceiling sits at ~3.7m; the pendants hang from there.
+  // The reception sits inside the 12 m atrium (its own 3.8 m ceiling was
+  // removed), so the pendants hang on long cords from the atrium ceiling
+  // — without the cord they float in mid-air at y≈3.
   const lampCoords = [[-4, -4], [4, -4], [-4, 4], [4, 4], [0, 0]];
+  const cordMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.9 });
   for (let i = 0; i < lampCoords.length; i++) {
     const [x, z] = lampCoords[i];
     const lampGlb = makeDecoration('ceiling_lamp', { width: 0.4, height: 0.7 });
@@ -98,6 +101,12 @@ export function decorateReception(scene, decoTickers) {
       // (makeDecoration parks the bottom of the AABB at the group origin,
       // so we raise the whole group so its BOTTOM is at ~3.0, top at ~3.7).
       lampGlb.position.set(x, 3.0, z);
+      // Cord from the pendant top (local ~0.7) to the atrium ceiling at
+      // world y=12 (local 9.0). Child of the lamp so editor moves keep
+      // them together.
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 8.3, 6), cordMat);
+      cord.position.set(0, 0.7 + 8.3 / 2, 0);
+      lampGlb.add(cord);
       placeCompoundChild(scene, lampGlb, OWNER, `ceiling_lamp_${i}`);
     } else {
       const ceil = buildCeilingLight(0.5);

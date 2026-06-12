@@ -7,8 +7,11 @@
 
 const STORY_KEY = 'ccq_story';
 
+const STORY_SCHEMA_VERSION = 1;
+
 function emptyState() {
-  return { scenesSeen: [], collectiblesRead: [], epilogue: false, flags: {} };
+  return { schemaVersion: STORY_SCHEMA_VERSION,
+           scenesSeen: [], collectiblesRead: [], epilogue: false, flags: {} };
 }
 
 function load() {
@@ -16,7 +19,9 @@ function load() {
     const raw = localStorage.getItem(STORY_KEY);
     if (!raw) return emptyState();
     const s = JSON.parse(raw);
+    if ((s.schemaVersion || 0) > STORY_SCHEMA_VERSION) return emptyState();
     return {
+      schemaVersion: STORY_SCHEMA_VERSION,
       scenesSeen: Array.isArray(s.scenesSeen) ? s.scenesSeen : [],
       collectiblesRead: Array.isArray(s.collectiblesRead) ? s.collectiblesRead : [],
       epilogue: !!s.epilogue,

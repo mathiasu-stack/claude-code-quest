@@ -13,3 +13,19 @@ play/assets/decorations/_originals/
 # extended-attribute / thumbnail sidecars (filename suffix @SynoEAStream).
 # We don't want those in the repo.
 **/@eaDir/
+
+# Raw Meshy character uploads (space-named, ~130 MB) — duplicates of the
+# underscore-named optimized rigs. Any filename with a space in this dir
+# is a raw upload, never a shipped asset.
+play/assets/characters/* *
+
+# Blender working files + the 137 MB unprocessed Hijabi source — local
+# only, would exceed GitHub's 100 MB hard limit and break the push.
+play/assets/characters/Blender/
+play/assets/characters/Hijabi_Professional_Arab_female.glb
+
+# Client error-telemetry log written by save_server.py /errlog.
+logs/
+
+# Claude Code session state (agent worktrees etc.).
+.claude/

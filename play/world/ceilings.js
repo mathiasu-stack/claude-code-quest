@@ -187,9 +187,19 @@ export function buildReceptionCeiling(scene) {
   buildVent(scene,  7, ceilingY - 0.001,  7, ventTex);
 }
 
-export function buildLibraryCeiling(scene) {
+// Library ceiling kit — parameterized on the room center so it follows
+// the library wherever the floor plan puts it (current home: west wing,
+// center [-22, -22], 22×22 room, wall tops at 3.8).
+//
+// LIGHTING NOTE: every "fixture" here (pendants, recessed cans) is an
+// EMISSIVE MESH ONLY — no PointLights. The real illumination comes from
+// the zone-1 accents in lighting/zone-presets.js, which are positioned
+// to match the three pendants below. The 8-light zone budget is hard.
+export function buildLibraryCeiling(scene, opts = {}) {
   const OWNER = 'library_ceiling';
-  const ceilingY = 3.6; // Library reads cosier — slightly lower
+  const cx = opts.cx ?? -22;
+  const cz = opts.cz ?? -22;
+  const ceilingY = opts.ceilingY ?? 3.6; // cosier — tucked under the 3.8 wall top
   const beamTex = woodBeamTexture();
   beamTex.repeat.set(2, 2);
   const ceiling = new THREE.Mesh(
@@ -197,37 +207,40 @@ export function buildLibraryCeiling(scene) {
     new THREE.MeshStandardMaterial({ map: beamTex, roughness: 0.9 }),
   );
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set(0, ceilingY, 22);
+  ceiling.position.set(cx, ceilingY, cz);
   placeCompoundChild(scene, ceiling, OWNER, 'ceiling');
 
   // Heavy beams crossing the room (visual only) — the "black bars"
   // the user noticed they couldn't select before this refactor.
   const beamMat = new THREE.MeshStandardMaterial({ color: 0x2c1810, roughness: 0.6 });
   const beam1 = new THREE.Mesh(new THREE.BoxGeometry(22, 0.18, 0.32), beamMat);
-  beam1.position.set(0, ceilingY - 0.08, 16);
+  beam1.position.set(cx, ceilingY - 0.08, cz - 6);
   placeCompoundChild(scene, beam1, OWNER, 'beam_0');
-  const beam2 = beam1.clone(); beam2.position.z = 22;
+  const beam2 = beam1.clone(); beam2.position.z = cz;
   placeCompoundChild(scene, beam2, OWNER, 'beam_1');
-  const beam3 = beam1.clone(); beam3.position.z = 28;
+  const beam3 = beam1.clone(); beam3.position.z = cz + 6;
   placeCompoundChild(scene, beam3, OWNER, 'beam_2');
 
-  // Crown molding (matches the warm-wood feel)
+  // Crown molding (matches the warm-wood feel). The doorway side
+  // (south, toward Files) gets the split pair; the other three walls
+  // run full length.
   buildCrownMolding(scene, [
-    { len: 8.5, x: -6.75, z: 32.95 },
-    { len: 8.5, x:  6.75, z: 32.95 },
-    { len: 22,  x: 10.95, z: 22, ry: Math.PI / 2 },
-    { len: 22,  x: -10.95, z: 22, ry: Math.PI / 2 },
+    { len: 8.5, x: cx - 6.75, z: cz + 10.95 },
+    { len: 8.5, x: cx + 6.75, z: cz + 10.95 },
+    { len: 22,  x: cx, z: cz - 10.95 },
+    { len: 22,  x: cx + 10.95, z: cz, ry: Math.PI / 2 },
+    { len: 22,  x: cx - 10.95, z: cz, ry: Math.PI / 2 },
   ], ceilingY, 0x2c1810, OWNER, 'molding');
 
-  // Hanging warm pendant lamps over the reading tables (additive; the
-  // existing buildLamp light pool stays).
+  // Hanging warm pendant shades down the room spine — aligned with the
+  // three zone-1 pendant accents in zone-presets.js (z = cz∓6, cz).
   let lampIdx = 0;
-  for (const z of [16, 22]) {
+  for (const z of [cz - 6, cz, cz + 6]) {
     const cord = new THREE.Mesh(
       new THREE.CylinderGeometry(0.012, 0.012, 1.2, 6),
       new THREE.MeshStandardMaterial({ color: 0x1a1a1a }),
     );
-    cord.position.set(0, ceilingY - 0.6, z);
+    cord.position.set(cx, ceilingY - 0.6, z);
     placeCompoundChild(scene, cord, OWNER, `pendant_${lampIdx}_cord`);
     const shade = new THREE.Mesh(
       new THREE.ConeGeometry(0.22, 0.22, 14, 1, true),
@@ -236,21 +249,98 @@ export function buildLibraryCeiling(scene) {
         emissive: 0xffd084, emissiveIntensity: 0.5, roughness: 0.5,
       }),
     );
-    shade.position.set(0, ceilingY - 1.1, z);
+    shade.position.set(cx, ceilingY - 1.1, z);
     placeCompoundChild(scene, shade, OWNER, `pendant_${lampIdx}_shade`);
     lampIdx++;
   }
 
-  // Recessed lights along the perimeter for ambient glow
+  // Recessed cans along the perimeter for ambient glow (emissive only).
   const lights = [
-    [-7, ceilingY - 0.02, 14],
-    [ 7, ceilingY - 0.02, 14],
-    [-7, ceilingY - 0.02, 30],
-    [ 7, ceilingY - 0.02, 30],
+    [cx - 7, ceilingY - 0.02, cz - 8],
+    [cx + 7, ceilingY - 0.02, cz - 8],
+    [cx - 7, ceilingY - 0.02, cz + 8],
+    [cx + 7, ceilingY - 0.02, cz + 8],
   ];
   let lightIdx = 0;
   for (const [x, y, z] of lights) {
     buildRecessedLight(scene, x, y, z, 0xffd084, 1.0, OWNER, `recessed_${lightIdx}`);
     lightIdx++;
   }
+}
+
+// ── Floor pattern textures (west wing, ART-DIRECTION pass) ────────────
+// Small 256px CanvasTextures in the dropTileTexture/woodBeamTexture
+// style. Drawn bright/neutral so the material's `color` keeps doing the
+// tinting (map multiplies color) — one texture serves any theme tint.
+let _floorPatternCache = {};
+
+function woodPlankTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  // Bright neutral base — the floor plate's color supplies the wood tint.
+  ctx.fillStyle = '#d8cfc4';
+  ctx.fillRect(0, 0, c.width, c.height);
+  // Plank rows with staggered end seams.
+  const rows = 6, rowH = c.height / rows;
+  for (let r = 0; r < rows; r++) {
+    const y = r * rowH;
+    // Row seam
+    ctx.fillStyle = 'rgba(60,40,25,0.55)';
+    ctx.fillRect(0, y, c.width, 3);
+    // Staggered butt joint
+    const jx = ((r * 97) % 256);
+    ctx.fillRect(jx, y, 3, rowH);
+    // Per-plank tone variation
+    ctx.fillStyle = `rgba(120,90,60,${0.06 + (r % 3) * 0.05})`;
+    ctx.fillRect(0, y + 3, c.width, rowH - 3);
+  }
+  // Grain streaks
+  for (let i = 0; i < 220; i++) {
+    ctx.fillStyle = `rgba(90,60,35,${0.04 + Math.random() * 0.08})`;
+    ctx.fillRect(Math.random() * c.width, Math.random() * c.height, 8 + Math.random() * 18, 1);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function carpetTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  // Bright neutral base — tinted by the floor material's color.
+  ctx.fillStyle = '#cfccc6';
+  ctx.fillRect(0, 0, c.width, c.height);
+  // Dense fiber speckle.
+  for (let i = 0; i < 2600; i++) {
+    const v = Math.random();
+    ctx.fillStyle = v > 0.5
+      ? `rgba(255,255,255,${0.05 + v * 0.07})`
+      : `rgba(40,40,45,${0.05 + (1 - v) * 0.08})`;
+    ctx.fillRect(Math.random() * c.width, Math.random() * c.height, 2, 2);
+  }
+  // Faint carpet-tile grid so big floors don't read as one slab.
+  ctx.strokeStyle = 'rgba(50,50,55,0.16)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, c.width - 2, c.height - 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Shared lookup — one texture instance per pattern, reused across rooms.
+// (Callers set .repeat on the shared texture; keep repeats consistent
+// per pattern — both current users tile at ~1 tile per 4 m.)
+export function floorPatternTexture(pattern) {
+  if (_floorPatternCache[pattern]) return _floorPatternCache[pattern];
+  let tex = null;
+  if (pattern === 'wood') tex = woodPlankTexture();
+  else if (pattern === 'carpet') tex = carpetTexture();
+  if (tex) _floorPatternCache[pattern] = tex;
+  return tex;
 }
