@@ -309,6 +309,18 @@ export function renderToCanvas(mesh, canvas, onReady) {
       o.castShadow = false; o.receiveShadow = false;
     }
   });
+  // Animation pose: the GLB ships in T-pose; gltfCharacter.update(dt)
+  // applies the averaged walk-frame quaternions that fake an idle.
+  // Without a tick the wall portrait captured the literal T-pose (arms
+  // straight out). Tick the mixer a few times so the idle settles before
+  // capturing the frame.
+  try {
+    const gc = mesh.userData?.gltfChar;
+    if (gc && typeof gc.update === 'function') {
+      gc.setMotion?.('idle');
+      for (let i = 0; i < 30; i++) gc.update(1 / 30);
+    }
+  } catch {}
   scene.add(subject);
   subject.updateMatrixWorld(true);
 
@@ -319,13 +331,17 @@ export function renderToCanvas(mesh, canvas, onReady) {
     const headNode = headPath ? nodeAtPath(subject, headPath) : null;
     if (headNode) headNode.getWorldPosition(headPos);
     else headPos.set(0, bb.max.y - height * 0.12, 0);
-    // Pull back further than the 256² dialogue portrait — wall paintings
-    // show head AND shoulders, framed slightly below the head.
+    // Tight head-and-collarbone framing — the previous values fit the
+    // whole chest + hands which read as a full-body photo, not a CEO
+    // portrait. Distance is a small fraction of body height (head is
+    // ~12 % of total height), and the camera tilts up onto the face.
     const aspect = W / H;
-    const cam = new THREE.PerspectiveCamera(28, aspect, 0.05, 50);
-    const dist = THREE.MathUtils.clamp(height * 0.95, 0.6, 8);
-    cam.position.set(headPos.x + 0.05, headPos.y - height * 0.05, headPos.z + dist);
-    cam.lookAt(headPos.x, headPos.y - height * 0.14, headPos.z);
+    const cam = new THREE.PerspectiveCamera(22, aspect, 0.05, 50);
+    const dist = THREE.MathUtils.clamp(height * 0.45, 0.35, 4);
+    cam.position.set(headPos.x + 0.03, headPos.y + height * 0.015, headPos.z + dist);
+    // Center on the face itself; very slight downward tilt frames the
+    // collarbone instead of cropping the chin.
+    cam.lookAt(headPos.x, headPos.y - height * 0.025, headPos.z);
     hiRenderer.render(scene, cam);
     // Composite: paint vignette into the target canvas, then blit the
     // alpha-rendered subject on top.

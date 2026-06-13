@@ -95,6 +95,16 @@ export function loadRoom(scene, room, ctx = {}) {
     node.userData._roomId = room.id;
     node.userData._roomEntryIndex = i;
     node.userData._yOffset = yOffset;
+    // The post-load settleStaticObjects() snaps every `surface: 'top'`
+    // and `surface: 'floor'` item to its computed Y (raycast or
+    // floorBaseY). That wins over any explicit Y in the data, so a
+    // table lamp the editor lifted up to 0.85 would get re-snapped back
+    // down to the table top on reload — silently overriding the save.
+    // Flag entries that carry an explicit non-zero Y so the settler
+    // leaves them alone (default y=0 items still settle normally).
+    if (Array.isArray(obj.pos) && typeof obj.pos[1] === 'number' && obj.pos[1] !== 0) {
+      node.userData._explicitY = true;
+    }
     if (!node.parent) scene.add(node);
   }
   return tickers;

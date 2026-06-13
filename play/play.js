@@ -2636,6 +2636,12 @@ function settleStaticObjects() {
     if (s === 'floor' || s === 'top') candidates.push(obj);
   }
   for (const obj of candidates) {
+    // Skip items the data declared an explicit non-zero Y for — the
+    // editor's saved Y wins over the auto-settle raycast. (Default-Y
+    // items still get snapped: a couch at y=0 still goes to floorBaseY,
+    // a fresh mug placed via 'add item' at y=0 still settles onto the
+    // table.)
+    if (obj.userData._explicitY) continue;
     const bbox = new THREE.Box3().setFromObject(obj);
     if (bbox.isEmpty()) continue;
     const objFloor = obj.userData.floor || 1;
