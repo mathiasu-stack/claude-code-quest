@@ -14,6 +14,34 @@
 
 window.STORY_SCENES = {
 
+  // Pre-TWIST 1 micro-cutscene — plays the FIRST time the player talks
+  // to Ines, before ch04-test is passed. She predicts a small ambient
+  // action; we deliver it. Lighter than twist1 (no Bingo card yet), but
+  // plants the same seed: this child can see the pattern.
+  inesAnticipates: {
+    id: 'inesAnticipates',
+    promptLabel: 'Talk — Ines is watching',
+    speaker: { name: 'Ines', role: 'Visitor, age 9', portrait: '👧' },
+    endLabel: '…okay.',
+    beats: [
+      {
+        text: '"Hi. Are you new? I\'m waiting for my dad. He\'s in a meeting." (she\'s coloring the carpet pattern, but the colors don\'t match the carpet.) "Wanna see something?"',
+        choices: ['Sure.'],
+      },
+      {
+        text: '"The lady at the water cooler is going to laugh in a second. Not because anything\'s funny. Just because." (she points without looking up.) "Watch."',
+        action: 'inesAnticipates_predict',
+      },
+      {
+        text: '(Beat. Tania laughs — three syllables, on the cue.) "See? My dad\'s meeting is taking forever. I have a lot of time to watch the office."',
+        choices: ['Lucky guess.', '...how did you know that?'],
+      },
+      {
+        text: '"It\'s not a guess. It\'s just what happens here." (she goes back to coloring) "You\'ll see more soon. The longer you stay, the more of it you see. Bye!" (she waves without looking up.)',
+      },
+    ],
+  },
+
   twist1: {
     id: 'twist1',
     promptLabel: 'Talk — Ines has been counting',

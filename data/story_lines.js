@@ -41,6 +41,12 @@ window.STORY_LINES = {
     nextHintByTier: {
       T0: '"Did I know your name before you said it? I\'m HR, sweetheart. Knowing names before people say them is the entire job."',
     },
+    // After ch01 lesson is done — a brief catch-up, not a re-pitch.
+    doneIntroByTier: {
+      T0: '"Settling in, sweetheart? Don\'t forget — first lesson done, hundreds of small wins ahead. Drop by anytime you need the company line."',
+      T2: '"Three weeks in and not one of your colleagues has remembered to thank me for the badge. I keep score, you know."',
+      T6: '"You\'re showing me you\'re different. I like that. Don\'t change."',
+    },
   },
 
   kenji: {
@@ -49,6 +55,10 @@ window.STORY_LINES = {
         text: '"Yo. Kenji. You walk like the last— like a natural. Like a natural. Anyway: interface." Now that you\'ve poked at it, let me actually walk you through the interface so you know what every part does.',
         heroThought: 'Like the last what?',
       },
+    },
+    doneIntroByTier: {
+      T0: '"You got the tour down. Cool. Cool cool cool." (he\'s tapping a rhythm I haven\'t heard before.)',
+      T3: '"You\'ve been asking the right questions. Most people don\'t. Or they ask once and stop." (the tapping stops.)',
     },
   },
 
@@ -63,6 +73,13 @@ window.STORY_LINES = {
 
   ines: {
     introByTier: {
+      // Pre-TWIST 1 (T0-T1): the new MICRO-CUTSCENE plays once on first
+      // talk via pendingSceneFor → inesAnticipates. After it, this line
+      // is the regular T0-T1 intro.
+      T0: {
+        text: '"You\'re the new one. You smell like the badge ink." (she\'s coloring something — looks like a building floorplan, but the rooms are labeled with names of people.)',
+        heroThought: 'Wait, she\'s drawing the floor I\'m on.',
+      },
       // Pre-TWIST 1 (T2): plants the clap count. Once ch04-test passes,
       // talking to her runs STORY_SCENES.twist1 instead of this intro;
       // after the scene the tier is 3 and the idle line below wins.
@@ -90,6 +107,10 @@ window.STORY_LINES = {
         sting: true,
         heroThought: 'Pre-worn. Whose hands wore them in?',
       },
+    },
+    doneIntroByTier: {
+      T0: '"You\'ve got the basics down. The fancy stuff is just more of the basics, stacked." (she pats the monitor like it\'s a horse.)',
+      T2: '"You\'re using shortcuts I haven\'t shown you yet. That\'s either talent or familiarity. I love talent."',
     },
   },
 

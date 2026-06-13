@@ -4624,6 +4624,9 @@ function pendingSceneFor(npc) {
   if (npc.id === 'ines' && !Story.sceneSeen('twist1')) {
     const progress = getProgress();
     if (window.Progress?.isTestPassed?.(progress, 'ch04-test')) return 'twist1';
+    // Pre-twist1 micro-cutscene — plays once on the first early-tier talk
+    // (i.e. ch04-test still ahead). After it, regular T0-T2 intros run.
+    if (!Story.sceneSeen('inesAnticipates')) return 'inesAnticipates';
   }
   // TWIST 2 plays at Engelhardt (the ch10 lesson mentor, not the
   // assessor) once the model-spend audit is passed.
@@ -4860,6 +4863,22 @@ function openDialogue(npc) {
             };
           }
         }
+      }
+    }
+    // Post-completion: when this lesson/test is already done, the stock
+    // intro is the LESSON RE-PITCH (re-teaching content the player
+    // already finished). Swap it for a shorter acknowledgment so revisits
+    // feel like catching up, not redoing. Copy authors may override per
+    // tier via doneIntroByTier; otherwise we fall back to a one-liner
+    // derived from the NPC's first name + their stock nextHint, which
+    // already varies per character.
+    if (done && !postPassActive) {
+      const doneOv = resolveByTier(story?.doneIntroByTier, tier);
+      if (doneOv) {
+        introText = normLine(doneOv.value);
+      } else if (introText === npc.intro) {
+        const first = (npc.name || '').split(' ')[0] || 'Hey';
+        introText = `"Good to see you again, friend. You've already got the ${npc.kind === 'test' ? 'assessment' : 'lesson'} behind you — what's next?" — ${first}`;
       }
     }
     // HERO-01 fallback: entry-level tier-keyed hero fields answer whatever
@@ -5726,15 +5745,16 @@ function update(dt) {
     const idx = zoneIndexAt(player.position.z);
     if (idx >= 0 && idx !== lastZoneIdx) {
       lastZoneIdx = idx;
-      lighting.applyPreset(idx);
-      if (postfx) postfx.applyPreset(lighting.getPostFx());
+      lighting.applyPreset(idx);              // starts a ~1.2 s lerp
       if (skyDome) {
         const skyP = getSkyPresetForZone(idx);
         skyDome.applyPreset(skyP.sky);
-        if (skyP.fog) scene.fog = new THREE.Fog(skyP.fog.color, skyP.fog.near, skyP.fog.far);
+        // Note: lighting.tick() controls fog during the transition.
+        // The pre-existing sky-driven scene.fog override applied INSTANTLY,
+        // making it look like the zone snapped despite the lerp. We let
+        // the lighting manager own fog now (sky still drives its own dome
+        // shader for the visible horizon band).
       }
-      // Time-of-day baseline scales the preset values, so re-apply on transition.
-      if (timeOfDay) timeOfDay.reapply();
       // Crossfade zone music + ambience bed. fail-silent inside
       // AudioManager. Floor M stays music-free AND bed-free (AUDIO-02) —
       // only the arrival chime plays there; the silence is the point.
@@ -5744,6 +5764,19 @@ function update(dt) {
       } else {
         try { stopAmbience(1200); } catch {}
       }
+    }
+    // Advance the in-progress preset transition every frame (interpolates
+    // hemi/dir colors+intensities, accents up/down, fog, background); the
+    // postfx composer reads getPostFx() so retuning on the lerp keeps it
+    // in sync without strobing.
+    lighting.tick(dt);
+    if (postfx) postfx.applyPreset(lighting.getPostFx());
+    // Time-of-day baseline scales the preset values, so re-apply once the
+    // lerp is settled — calling every frame would overwrite the lerp.
+    if (timeOfDay && !lighting._fromState && lighting.currentIdx >= 0
+        && timeOfDay._lastSettledIdx !== lighting.currentIdx) {
+      timeOfDay._lastSettledIdx = lighting.currentIdx;
+      timeOfDay.reapply();
     }
   }
   // Skydome anchors to camera each frame so the player never reaches it.
@@ -6199,6 +6232,21 @@ export async function start(host) {
     isSceneActive,
   });
   registerSceneActions({
+    // Pre-twist1 micro-cutscene: Ines predicts Tania's laugh.
+    inesAnticipates_predict: () => {
+      const ines = npcMeshes.find(m => m.userData?.npc?.id === 'ines');
+      if (ines) {
+        // Subtly orient her toward the water cooler so the visual cue
+        // matches her "watch" line.
+        ines.rotation.y = Math.atan2(-9.5 - ines.position.x, -2.8 - ines.position.z);
+      }
+      // The laugh lands ~4.3 s after the beat starts, comfortably after
+      // the typewriter on the prediction line finishes.
+      setTimeout(() => {
+        const tn = npcMeshes.find(m => m.userData?.npc?.id === 'tania');
+        if (tn) showSpeechBubble(tn, 'Ha! Ha ha. Haaaa.');
+      }, 4300);
+    },
     // TWIST 1 staging — every actor lookup is guarded: the scene plays
     // fine (dialogue only) if any stage actor is missing.
     twist1_point: () => {
