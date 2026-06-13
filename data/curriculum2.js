@@ -777,8 +777,8 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   // ── Chapter 16 ────────────────────────────────────────────────────────────
   {
     id: 'ch16',
-    title: 'Claude Code on NAS',
-    subtitle: 'Side Quest — Remote & Headless Specialist',
+    title: 'Remote & Headless Claude Code',
+    subtitle: 'Side Quest — Run Claude Code on any always-on box',
     icon: '🖥️',
     xpReward: 500,
     // Side quests sit outside the main path. They don't gate floor
@@ -791,41 +791,41 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
     sideQuest: true,
     lessons: [
       {
-        id: 'ch16-l01', title: 'Why Run Claude Code on a NAS?', xpReward: 125, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>The Capstone Setup</h2><p>Running Claude Code on a Synology DS925+ NAS gives you a persistent, always-on environment not tied to a specific laptop. This is the capstone — it combines every concept: SSH workflows, persistent sessions, headless auth, CLAUDE.md, Business Brain, and multi-window Command Center.</p><h3>Use cases</h3><ul><li>Persistent sessions — start, disconnect, reconnect without losing state (tmux)</li><li>Centralised code storage — any machine can SSH in and continue</li><li>Scheduled automation — Claude Code workflows without tying up a laptop</li><li>Multi-Goal Command Center — multiple tmux sessions = multiple parallel workstreams</li></ul>',
+        id: 'ch16-l01', title: 'Why Run Claude Code on a Remote Box?', xpReward: 125, videos: [],
+        lastVerified: '2026-06-13',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: '<h2>The Always-On Specialist Setup</h2><p>Running Claude Code on a remote, always-on machine gives you a persistent environment not tied to a specific laptop. Pick whatever you have:</p><ul><li><strong>Cloud VM</strong> — Oracle Always Free, GCP free tier, AWS Free Tier, Fly.io, Hetzner CX11 (~€4/mo)</li><li><strong>NAS</strong> — Synology, QNAP, or any home-server box with shell access</li><li><strong>Raspberry Pi 4/5</strong> — about $35-80, always on, runs Claude Code fine</li><li><strong>WSL on Windows</strong> — treat it as the "remote" from your editor terminal</li><li><strong>GitHub Codespace</strong> — instant, free hours, zero setup</li></ul><p>This is the side quest — it combines every main-path concept on a single deployment: SSH workflows, persistent sessions, headless auth, CLAUDE.md, Business Brain, and multi-window Command Center.</p><h3>Use cases</h3><ul><li>Persistent sessions — start, disconnect, reconnect without losing state (tmux)</li><li>Centralised code storage — any machine can SSH in and continue</li><li>Scheduled automation — Claude Code workflows without tying up a laptop</li><li>Multi-Goal Command Center — multiple tmux sessions = multiple parallel workstreams</li></ul><p>The lessons that follow use a Synology NAS as the worked example because it covers the most setup steps (SSH enable, DSM Task Scheduler, etc.). Skim past anything that doesn\'t apply to your box and use the equivalent on yours — every step has an analog on every platform.</p>',
       },
       {
-        id: 'ch16-l02', title: 'SSH Setup on Synology DSM', xpReward: 125, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Enabling SSH Access</h2><p>Control Panel → Terminal &amp; SNMP → Enable SSH. Then connect:</p><pre><code>ssh admin@192.168.1.x</code></pre><h3>SSH key auth + config shortcut</h3><pre><code>ssh-keygen -t ed25519 -C "nas-dev"\nssh-copy-id admin@192.168.1.x\n\n# ~/.ssh/config\nHost nas\n  HostName 192.168.1.x\n  User admin\n  IdentityFile ~/.ssh/nas-dev\n  ServerAliveInterval 60</code></pre><p>Connect with just: <code>ssh nas</code></p>',
+        id: 'ch16-l02', title: 'SSH Access to Your Remote Box', xpReward: 125, videos: [],
+        lastVerified: '2026-06-13',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: '<h2>Enabling SSH Access</h2><p>Get a shell on the remote box however your platform exposes one:</p><ul><li><strong>Synology DSM:</strong> Control Panel → Terminal &amp; SNMP → Enable SSH service.</li><li><strong>Cloud VM:</strong> Usually SSH is on by default — grab the public IP from the provider\'s console.</li><li><strong>Raspberry Pi:</strong> <code>sudo raspi-config</code> → Interface Options → SSH Enable. (Or drop an empty <code>ssh</code> file on the boot partition for first-boot enable.)</li><li><strong>WSL:</strong> <code>wsl</code> from a Windows terminal — you\'re already in.</li><li><strong>Codespace:</strong> the integrated terminal IS the shell.</li></ul><pre><code># Once SSH is on, connect from your laptop:\nssh user@1.2.3.4         # cloud VM by IP\nssh admin@192.168.1.x    # NAS / Pi on your LAN\nssh pi@raspberrypi.local # Pi via mDNS</code></pre><h3>SSH key auth + config shortcut</h3><p>One-time setup — replaces password prompts with a single short alias:</p><pre><code>ssh-keygen -t ed25519 -C "remote-dev"\nssh-copy-id user@&lt;host&gt;\n\n# ~/.ssh/config — pick any alias\nHost remote-dev\n  HostName 1.2.3.4          # or 192.168.1.x, or *.fly.dev\n  User user                 # or admin / pi / ubuntu / root\n  IdentityFile ~/.ssh/id_ed25519\n  ServerAliveInterval 60</code></pre><p>Connect with just: <code>ssh remote-dev</code></p><p><em>The rest of these lessons use <code>ssh nas</code> as a stand-in for whatever you named yours.</em></p>',
       },
       {
         id: 'ch16-l03', title: 'Installing Node.js and Claude Code', xpReward: 125, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Getting Claude Code on DSM</h2><p>The native installer is the easiest path. If you need the npm path on DSM (e.g. limited curl access), install nvm first for Node.js management.</p><pre><code># Option A: Native installer (recommended)\ncurl -fsSL https://claude.ai/install.sh | bash\n\n# Option B: npm path (requires Node.js)\n# Install nvm (check https://github.com/nvm-sh/nvm for latest version)\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash\nsource ~/.bashrc\nnvm install 20 && nvm use 20\nnpm install -g @anthropic-ai/claude-code\n\n# API key for headless auth\necho \'export ANTHROPIC_API_KEY="sk-ant-..."\' >> ~/.bashrc\nsource ~/.bashrc</code></pre>',
+        lastVerified: '2026-06-13',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: '<h2>Getting Claude Code on the Remote Box</h2><p>The native installer is the easiest path on most boxes — Linux x86_64 / arm64 and macOS are all supported. If your platform is unusual (DSM with limited curl, BusyBox, locked-down container), use the npm path.</p><pre><code># Option A: Native installer (recommended on Linux/macOS, including Pi and most NAS firmware)\ncurl -fsSL https://claude.ai/install.sh | bash\n\n# Option B: npm path (universal — works anywhere Node runs)\n# Install nvm (check https://github.com/nvm-sh/nvm for the latest version)\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/HEAD/install.sh | bash\nsource ~/.bashrc\nnvm install 20 && nvm use 20\nnpm install -g @anthropic-ai/claude-code\n\n# API key for headless auth (works on any box)\necho \'export ANTHROPIC_API_KEY="sk-ant-..."\' >> ~/.bashrc\nsource ~/.bashrc\n\n# Verify\nclaude --version</code></pre><h3>Platform notes</h3><ul><li><strong>Pi:</strong> Option A works fine on Pi OS 64-bit. On Pi OS 32-bit, use Option B with nvm.</li><li><strong>Cloud VM / Codespace:</strong> Option A. Done in 60 seconds.</li><li><strong>WSL:</strong> Option A from inside your WSL shell. Don\'t install via Windows — install inside the Linux env.</li><li><strong>Synology DSM:</strong> Option B is the safest path on DSM 7.x.</li></ul>',
       },
       {
         id: 'ch16-l04', title: 'Persistent Sessions with tmux', xpReward: 125, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Sessions That Survive Disconnection</h2><pre><code>ssh nas\ntmux new-session -s claude-work\ncd /volume1/projects/my-app\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh nas\ntmux attach -t claude-work</code></pre><h3>Multi-Goal Command Center on NAS</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
+        lastVerified: '2026-06-13',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: '<h2>Sessions That Survive Disconnection</h2><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
       },
       {
-        id: 'ch16-l05', title: 'NAS CLAUDE.md and Final Integration', xpReward: 125, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Applying Everything You\'ve Learned</h2><pre><code># ~/.claude/CLAUDE.md on NAS\nRunning on Synology DS925+, DSM 7.x, x86_64.\nNode.js via nvm. Projects in /volume1/projects/.\nNo browser available.\nPersistent sessions via tmux.\n\n## Business Context\nGlobal: /volume1/shared/business-brain/\nPer-project: .business-brain/ in each project root.</code></pre><p>Synology\'s Task Scheduler can run shell scripts that start tmux sessions, invoke Claude Code skills, and deposit output files — fully unattended scheduled automation on always-on hardware. (You\'ll wire one up in the next lesson.)</p>',
+        id: 'ch16-l05', title: 'Remote-Box CLAUDE.md and Final Integration', xpReward: 125, videos: [],
+        lastVerified: '2026-06-13',
+        verifiedAgainstVersion: 'v2.1.130',
+        content: '<h2>Applying Everything You\'ve Learned</h2><p>A global <code>~/.claude/CLAUDE.md</code> on the remote box tells Claude the environment it\'s in. The shape is identical across hosts — only the specifics change:</p><pre><code># Example A — Synology NAS\nRunning on Synology DS925+, DSM 7.x, x86_64.\nNode.js via nvm. Projects in /volume1/projects/.\nNo browser available. Persistent sessions via tmux.\n\n# Example B — Hetzner CX11 cloud VM\nRunning on Ubuntu 24.04 LTS, x86_64, 2 GB RAM.\nNode.js 20 via apt. Projects in /home/dev/projects/.\nNo browser available. Persistent sessions via tmux.\n\n# Example C — Raspberry Pi 5\nRunning on Pi OS 64-bit (Bookworm), aarch64.\nNode.js 20 via nvm. Projects in ~/projects/.\nNo browser available. Persistent sessions via tmux.\n\n## Business Context (any host)\nGlobal: ~/shared/business-brain/\nPer-project: .business-brain/ in each project root.</code></pre><p>The "no browser available" line is doing real work: Claude will offer terminal-only flows for tasks that would normally suggest opening a docs page.</p><p>Most always-on boxes can run scheduled scripts that start tmux sessions, invoke Claude Code skills, and deposit output files — fully unattended scheduled automation on hardware that never sleeps. (You\'ll wire one up in the next lesson.)</p>',
       },
       {
         id: 'ch16-l06', title: 'Scheduled Automation with Human Gates', xpReward: 125, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-13',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Automating the Repetitive 80%</h2>
-<p>The NAS is always on. <code>claude -p</code> runs unattended. Add a cron entry or Synology Task Scheduler job and you have round-the-clock automation. The senior-engineer rule for what to automate:</p>
+<p>The remote box is always on. <code>claude -p</code> runs unattended. Whatever your scheduler is — cron, systemd timer, Synology Task Scheduler, Windows Task Scheduler driving WSL — you have round-the-clock automation. The senior-engineer rule for what to automate:</p>
 <blockquote>Automate the predictable work. Keep a human in the loop for the judgment calls.</blockquote>
 <h3>The weekly report — a complete example</h3>
 <pre><code>Weekly Report Workflow:
@@ -834,22 +834,37 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 3. [Human] Review and edit the draft in the morning
 4. [Auto]  Send to Slack #team-updates
 5. [Auto]  Archive to .business-brain/reports/</code></pre>
-<h3>Synology Task Scheduler — the launcher script</h3>
+<h3>The launcher script (works on every platform)</h3>
 <pre><code>#!/bin/sh
-# /volume1/scripts/weekly-report.sh
-cd /volume1/projects/kedash-support
+# ~/scripts/weekly-report.sh   (or /volume1/scripts/ on Synology)
+cd ~/projects/kedash-support     # or /volume1/projects/... on Synology
 export ANTHROPIC_API_KEY="sk-ant-..."
-/usr/local/bin/claude -p "Run the /weekly-status skill. Save the draft to reports/draft.md." \\
+claude -p "Run the /weekly-status skill. Save the draft to reports/draft.md." \\
   --model claude-sonnet-4-6 \\
   --permission-mode plan \\
   --output-format json &gt; reports/last-run.json
 </code></pre>
-<p>Schedule it from DSM → Control Panel → Task Scheduler → Create → Scheduled Task → User-defined script. Friday 06:00. The draft is waiting when the team logs in.</p>
+<h3>Scheduling it</h3>
+<p>Pick whichever scheduler your box provides — all of these run the same script:</p>
+<pre><code># Linux / cloud VM / Pi / WSL — cron
+crontab -e
+0 6 * * 5 ~/scripts/weekly-report.sh
+
+# Linux / cloud VM — systemd timer (cleaner logs)
+# ~/.config/systemd/user/weekly-report.timer  →  OnCalendar=Fri 06:00
+
+# Synology DSM
+# Control Panel → Task Scheduler → Create → Scheduled Task →
+# User-defined script. Friday 06:00.
+
+# Windows (WSL backend)
+# Task Scheduler → Create Basic Task → Action: wsl.exe ~/scripts/weekly-report.sh</code></pre>
+<p>Friday 06:00. The draft is waiting when the team logs in.</p>
 <h3>The gate principle</h3>
 <p>Every workflow that produces external-facing output needs at least one human gate. A 2-minute skim before posting to Slack is often enough — but it must exist. The pattern: auto-draft → human approve → auto-distribute. Never auto-distribute something that hasn't been seen.</p>
 <h3>Idle behaviour matters for cost</h3>
 <p>From Chapter 12: the prompt cache evicts after 5 minutes. Scheduled jobs spawning fresh sessions every hour pay the cache miss on every run. That's fine — the alternative (a long-lived idle session) wastes more. Just be aware of the trade-off when you design the cadence.</p>
-<p><strong>Congratulations.</strong> You've completed the Claude Code Quest. From first session to headless NAS automation — you have the full toolkit: Business Brain, lean CLAUDE.md, the Memory Framework, refined skills, token efficiency, Plan Mode, model selection, subagent dispatch, MCP integration, hardened settings, and unattended scheduled automation.</p>`,
+<p><strong>Congratulations.</strong> You've completed the Remote & Headless side quest. From first session to unattended scheduled automation on whatever box you have — you have the full toolkit: Business Brain, lean CLAUDE.md, the Memory Framework, refined skills, token efficiency, Plan Mode, model selection, subagent dispatch, MCP integration, hardened settings, and unattended scheduled automation.</p>`,
       },
     ],
     practicalTest: {
