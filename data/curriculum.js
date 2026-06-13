@@ -185,7 +185,7 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
       scenario: 'Welcome aboard. The support team is drowning. I want you to set them up with Claude Code so they reply consistently and fast. First proof you can do this: create a folder called `kedash-support/`, open `claude` inside it, and say `Hi` to it. Send me back the terminal commands you ran AND a snippet from the session showing Claude responded.\n\nP.S. — Linda has your badge. I know it\'s fast. We move fast when we\'re sure.',
       task: 'Paste the setup commands AND a snippet of your first Claude session (welcome banner + one tiny exchange).',
       hint: 'Use two sections — `## Setup` (your terminal commands like `mkdir` and `claude`) and `## First session` (the welcome banner and Claude\'s reply to your `Hi`). One short exchange is enough.',
-      minLength: 100, passThreshold: 70, xpReward: 300,
+      minLength: 0, passThreshold: 70, xpReward: 300,
       criteria: [
         { type: 'keyword', value: ['mkdir', 'kedash-support'], description: 'Creates the project folder', weight: 2 },
         { type: 'keyword', value: ['claude'], description: 'Runs the claude command', weight: 2 },
@@ -286,7 +286,7 @@ Do not change the function signature or any callers.</code></pre>
       scenario: 'Hey 👋 First task: I need a reply template for our most-asked question — "How do I cancel my subscription?". Write the PROMPT you would give Claude Code to draft it (B2B SaaS, voice is warm-but-technical, must include greeting → cancellation steps → dashboard location → offer of further help). Then actually run it. Reply with BOTH your prompt and what Claude produced — separate with `## Prompt` and `## Response` headings.\n\n(And yes, the voice spec is oddly precise. House style. You\'ll get used to whose house.)',
       task: 'Paste your prompt AND Claude\'s response, with `## Prompt` / `## Response` markers.',
       hint: 'A good prompt names the task, gives voice context, lists required parts, specifies format. The response should be a usable template with the 4 sections.',
-      minLength: 300, passThreshold: 75, xpReward: 325,
+      minLength: 0, passThreshold: 75, xpReward: 325,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Response'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['cancel', 'cancellation', 'subscription'], description: 'Prompt specifies the topic', weight: 2 },
@@ -413,7 +413,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'KEDASH-CX-12 · Bug fix\n\nLine 14 of `kedash-support/faq.md` says we accept credit-card payments only, but we now also accept PayPal and ACH. Create a tiny `faq.md` with that wrong line, run Claude Code to fix JUST that line, then paste your prompt AND the diff Claude produced — with `## Prompt` and `## Diff` markers.\n\nReporter: D. Okonkwo (Northcliff Systems) · First reported: 4 cycles ago',
       task: 'Paste your prompt and the resulting diff.',
       hint: 'Prompt should name the file, the specific line, and constrain Claude to that one change. The diff should show `-` (old line) and `+` (new line).',
-      minLength: 200, passThreshold: 75, xpReward: 350,
+      minLength: 0, passThreshold: 75, xpReward: 350,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Diff'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['faq.md'], description: 'Names the file in the prompt', weight: 2 },
@@ -487,7 +487,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'Big one: reorganize `kedash-support/`. Everything is dumped in the root. I want `faqs/`, `templates/`, `escalations/`, `internal-notes/`, plus some renames (`auth-faq.md` → `faqs/auth.md`, etc.). **Use Plan Mode** — Shift+Tab to enter it, give Claude the prompt, capture the plan it outputs WITHOUT executing. Paste your prompt and the plan.\n\nOne more thing: do NOT execute. I\'m serious. The plan is the deliverable. Someone upstairs reads the plans.',
       task: 'Enter Plan Mode, give the reorganize prompt, paste both your prompt and the plan Claude generated.',
       hint: '`## Prompt` and `## Plan` markers. The plan should list numbered steps with source/target paths and end with awaiting-approval language.',
-      minLength: 300, passThreshold: 80, xpReward: 375,
+      minLength: 0, passThreshold: 80, xpReward: 375,
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Plan'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['plan mode', 'shift+tab', 'shift-tab', 'plan'], description: 'Plan Mode referenced', weight: 2 },
@@ -572,7 +572,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       scenario: 'From: priya.patel@kedashcorp.com\nSubject: Quick win — get a starter CLAUDE.md\n\nRun three slash commands in `kedash-support/`, in this order: `/init` to draft a CLAUDE.md, `/help` to see what else is available, and one more useful one (e.g. `/cost`, `/clear`, `/compact`). Paste a SHORT snippet of each command\'s output so I know you ran them — use `## /init`, `## /help`, and `## /<other>` headings.\n\nBilling note: you\'re on the kedash-prime seat. Don\'t worry about what that means.',
       task: 'Paste short snippets of `/init`, `/help`, and one other slash command\'s output.',
       hint: '/init prints tech-stack detection and a CLAUDE.md draft. /help lists available commands. /cost shows session token usage. Snippets only — don\'t paste pages.',
-      minLength: 200, passThreshold: 80, xpReward: 400,
+      minLength: 0, passThreshold: 80, xpReward: 400,
       criteria: [
         { type: 'keyword', value: ['/init'], description: 'Ran /init', weight: 2 },
         { type: 'keyword', value: ['/help'], description: 'Ran /help', weight: 2 },
@@ -699,7 +699,7 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       scenario: 'From: priya.patel@kedashcorp.com\nSubject: Trim the CLAUDE.md\n\nRun `/init` on `kedash-support/`, then ruthlessly cut it. Final version should have: one-line purpose, voice (warm-but-technical B2B), conventions (replies follow `templates/`, cancellations escalate to #cx-escalations, never mention `internal-notes/` in customer text), file map (`faqs/`, `templates/`, `escalations/`, `internal-notes/`, `business-brain/`). ~20-30 lines. Paste the FINAL trimmed CLAUDE.md, not the /init dump.\n\nThese conventions aren\'t mine, by the way. They\'re inherited. Treat them as scripture.',
       task: 'Paste the final lean CLAUDE.md after trimming /init\'s draft.',
       hint: 'Markdown headings. Tight sections. Drop anything not on the list. Aim for ~20-30 lines, definitely under 1500 characters.',
-      minLength: 200, passThreshold: 70, xpReward: 425,
+      minLength: 0, passThreshold: 70, xpReward: 425,
       criteria: [
         { type: 'keyword', value: ['# ', '## ', 'purpose'], description: 'Uses markdown headings', weight: 1 },
         { type: 'keyword', value: ['support', 'customer support'], description: 'States the support purpose', weight: 2 },
@@ -793,7 +793,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       scenario: 'From: elena.vasquez@kedashcorp.com\nSubject: Business Brain for Support — set it up properly\n\nThe support team needs its own Business Brain. Create `kedash-support/business-brain/` with three short files (4-6 lines each):\n\n1. `brand-voice.md` — voice rules\n2. `client-profiles.md` — mid-market eng leaders\n3. `glossary.md` — terms (workspace, tenant, seat, …)\n\nThen PROVE it works: open Claude in `kedash-support/` and ask it to draft a one-paragraph customer reply that uses your brand voice AND at least one glossary term. Paste all four things: the three files + the Claude-drafted reply.\n\nFor client-profiles.md, base your examples on our flagship accounts — Northcliff Systems, Veldt & Harrow, Brightline Manufacturing. Names matter. Spell them exactly.',
       task: 'Paste the three Business Brain files AND a Claude-drafted reply that uses your voice + at least one glossary term.',
       hint: 'Sections: `## brand-voice.md` / `## client-profiles.md` / `## glossary.md` / `## Test reply`. The test reply is the evidence Claude actually read your Business Brain.',
-      minLength: 350, passThreshold: 70, xpReward: 450,
+      minLength: 0, passThreshold: 70, xpReward: 450,
       criteria: [
         { type: 'keyword', value: ['## brand-voice.md', '## client-profiles.md', '## glossary.md', '## Test reply'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['warm', 'technical', 'professional', 'tone', 'voice'], description: 'brand-voice.md content', weight: 2 },
@@ -885,7 +885,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       scenario: 'KEDASH-CX-19 · Architecture review\n\nSeven pieces of info we will store across the support project. For each, tell me which memory layer (USER `~/.claude/CLAUDE.md` / PROJECT `kedash-support/CLAUDE.md` / BUSINESS BRAIN / SKILL `.claude/skills/`) and a one-line reason:\n\n1. The standard 4-section support reply format\n2. Our brand voice rules\n3. How to handle a chargeback escalation\n4. The fact that you use PostgreSQL internally (one-time engineer setup)\n5. The list of our 5 biggest customers and their pain points\n6. Your shortcut `~/dev/` that resolves to your laptop dev folder\n7. The standardized "send-update" workflow for weekly customer emails\n\nRe item 5: the five biggest customers are the five in business-brain/client-profiles.md. They are extremely important to the CEO. Personally.',
       task: 'For each of the 7 items, name the memory layer (User / Project / Business Brain / Skill) and give a one-line reason.',
       hint: 'Numbered list. Match scope to layer — user = personal across all projects, project = repo-specific, business brain = stable company knowledge, skill = repeatable workflow.',
-      minLength: 250, passThreshold: 70, xpReward: 475,
+      minLength: 0, passThreshold: 70, xpReward: 475,
       criteria: [
         { type: 'keyword', value: ['user', '~/.claude'], description: 'Names the user layer', weight: 2 },
         { type: 'keyword', value: ['project', 'kedash-support/claude.md'], description: 'Names the project layer', weight: 2 },
@@ -998,7 +998,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       scenario: 'Hey, watching the support team\'s Claude usage — sessions get bloated, by lunch they\'re at 80% context. Try this yourself in `kedash-support/`: do a few file operations / Claude exchanges, run `/cost` to see your token spend, then run `/clear` or `/compact` and run `/cost` again. Paste BEFORE and AFTER `/cost` numbers + a short strategy from what you observed.\n\nBetween you and me: I\'ve been watching ONE person\'s usage for three years. Bloated sessions, 2am compactions. Don\'t end up like that. Learn this one properly.',
       task: 'Paste `## Before` (output of `/cost` after some activity), `## After` (`/cost` after `/clear` or `/compact`), and `## Strategy` (3-5 line takeaway).',
       hint: '`/cost` shows input/output token counts. `/clear` wipes context entirely; `/compact` summarizes and continues. Strategy should call out when to use each.',
-      minLength: 200, passThreshold: 75, xpReward: 500,
+      minLength: 0, passThreshold: 75, xpReward: 500,
       criteria: [
         { type: 'keyword', value: ['## Before', '## After', '## Strategy'], description: 'All three sections present', weight: 1 },
         { type: 'keyword', value: ['/cost'], description: 'Ran /cost', weight: 2 },

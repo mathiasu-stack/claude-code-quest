@@ -57,13 +57,16 @@ function getLoader() {
   return _loader;
 }
 
-function loadOne(id) {
+function loadOne(id, retryOnError = true) {
   return new Promise((resolve) => {
     const url = ASSET_DIR + FILES[id] + CACHE_BUST;
+    // 12 s — decorations are 150–1300 KB each; 30 s was Meshy-era
+    // pessimism. If a connection truly stalls past this we give up
+    // (a single retry path catches the transient case).
     const timer = setTimeout(() => {
       console.warn(`[decorationAssets] ${id} timeout — skipping`);
       resolve(null);
-    }, 30000);
+    }, 12000);
     getLoader().load(
       url,
       (gltf) => {
@@ -75,23 +78,67 @@ function loadOne(id) {
       undefined,
       (err) => {
         clearTimeout(timer);
-        console.warn(`[decorationAssets] ${id} failed:`, err?.message || err);
-        resolve(null);
+        if (retryOnError) {
+          // Transient failures (chunked response interrupted, etc.) are
+          // common on mobile Tailscale; one retry catches them cheaply.
+          loadOne(id, false).then(resolve);
+        } else {
+          console.warn(`[decorationAssets] ${id} failed:`, err?.message || err);
+          resolve(null);
+        }
       },
     );
   });
 }
 
-// Loads every decoration GLB in parallel. onProgress is optional.
+// Run a list of async tasks with a fixed concurrency cap. Browsers limit
+// connections per origin (Chrome ≈ 6), so firing 24 in parallel just
+// queues 18 behind the first 6 — and a stalled fetch blocks the rest.
+// Bounded concurrency keeps the pipeline saturated without queueing.
+async function _runPool(items, concurrency, worker) {
+  let i = 0;
+  const lanes = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      await worker(items[idx], idx);
+    }
+  });
+  await Promise.all(lanes);
+}
+
+// First-floor essentials — anything visible in reception/atrium during
+// the first second of the world. We block start() on these; everything
+// else streams in the background after start() returns and the player
+// is already moving.
+const ESSENTIAL_IDS = [
+  'desk', 'chair', 'reception_desk', 'table', 'plant', 'door',
+  'monitor', 'floor_tile', 'window',
+];
+
+// Two-phase preload: ESSENTIALS block, the REST stream in the background.
+// onProgress reports overall (loaded, total) including both phases — so
+// the loading overlay shrinks to the fraction of essentials being blocked,
+// and the rest of the bar progresses while the player walks around.
 export async function preloadDecorations(onProgress) {
   const ids = Object.keys(FILES);
+  const essentials = ids.filter(id => ESSENTIAL_IDS.includes(id));
+  const rest = ids.filter(id => !ESSENTIAL_IDS.includes(id));
   const total = ids.length;
   let loaded = 0;
-  await Promise.all(ids.map(async (id) => {
-    await loadOne(id);
-    loaded += 1;
-    onProgress?.(loaded, total);
-  }));
+  const tick = () => { loaded += 1; onProgress?.(loaded, total); };
+
+  // Phase 1: blocking essentials at concurrency 4 (a couple of slow ones
+  // can't stall the whole lane).
+  await _runPool(essentials, 4, async (id) => { await loadOne(id); tick(); });
+
+  // Phase 2: rest stream in background — start() does NOT await this.
+  // Callers (makeDecoration) gracefully fall back to procedural for any
+  // decoration not yet in cache, so an item arriving 2 s into play is
+  // simply used the next time it's instanced (e.g. couches in the
+  // library lounge or props on upper floors loaded by elevator).
+  _runPool(rest, 4, async (id) => { await loadOne(id); tick(); })
+    .catch((e) => console.warn('[decorationAssets] background preload error:', e));
+
   return _cache.size;
 }
 

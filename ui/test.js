@@ -52,7 +52,7 @@ function renderTest(chapterId) {
           placeholder="Type your response here..."
           rows="10"
         >${prevResult ? '' : ''}</textarea>
-        <div class="char-counter"><span id="char-count">0</span> characters (minimum ${test.minLength})</div>
+        <div class="char-counter"><span id="char-count">0</span> characters</div>
       </div>
 
       <button class="btn-primary submit-btn" id="submit-test">Submit for Review →</button>
@@ -159,10 +159,13 @@ function renderFeedback(result, test, wasAlreadyPassed) {
   const feedbackEl = document.getElementById('test-feedback');
   feedbackEl.classList.remove('hidden');
 
+  // tooShort branch retained as a safety net for any legacy test entry
+  // that still carries a non-zero minLength — current curriculum has
+  // them all zeroed (the criteria + nonce do the integrity work now).
   if (result.tooShort) {
     feedbackEl.innerHTML = `
       <div class="feedback-banner fail">
-        <strong>Response too short.</strong> Minimum ${test.minLength} characters required. You submitted ${document.getElementById('test-submission').value.length} characters.
+        <strong>Response too short.</strong> You submitted ${document.getElementById('test-submission').value.length} characters.
       </div>
     `;
     feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
