@@ -26,7 +26,7 @@ const App = {
     this.touchActivity();
     this.renderSidebar();
     this.setupMobileNav();
-    this.navigate('dashboard');
+    this.navigate('landing');
   },
 
   showNameModal() {
@@ -83,6 +83,9 @@ const App = {
       case 'play':
         this.renderPlayView();
         break;
+      case 'landing':
+        this.renderLanding();
+        break;
       case 'shop':
         if (window.Shop) window.Shop.render();
         else Dashboard.renderDashboard();
@@ -91,6 +94,116 @@ const App = {
         Dashboard.renderDashboard();
     }
     this.updateSidebarActive(view, params);
+  },
+
+  renderLanding() {
+    const main = document.getElementById('main-content');
+    const sidebar = document.getElementById('sidebar');
+    // The landing page is the front door — keep the sidebar tucked away
+    // so the player sees the title screen, not the chapter list.
+    if (sidebar) sidebar.classList.add('hidden-on-landing');
+    const playerName = escHtml(this.progress?.playerName || 'New Hire');
+    const isReturning = (this.progress?.totalXP || 0) > 0
+      || (this.progress?.completedLessons?.length || 0) > 0;
+    const ctaLabel = isReturning ? 'CONTINUE' : 'BEGIN TRAINING';
+    const subline = isReturning
+      ? `Welcome back, <strong>${playerName}</strong>. Kedash Corp will see you now.`
+      : `Welcome, <strong>${playerName}</strong>. Your first day at Kedash Corp begins now.`;
+
+    main.innerHTML = `
+      <div class="landing-view">
+        <div class="landing-skyline" aria-hidden="true">
+          <!-- Stylized Kedash tower silhouette, pure SVG so it inherits
+               the brand palette and scales without artifacts. -->
+          <svg viewBox="0 0 800 540" preserveAspectRatio="xMidYMax slice">
+            <defs>
+              <linearGradient id="ldgSky" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#162042"/>
+                <stop offset="60%" stop-color="#0a1230"/>
+                <stop offset="100%" stop-color="#05091e"/>
+              </linearGradient>
+              <linearGradient id="ldgTower" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#3a4a78"/>
+                <stop offset="100%" stop-color="#0e1830"/>
+              </linearGradient>
+              <radialGradient id="ldgMoon" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0%" stop-color="#ffefb6" stop-opacity="0.9"/>
+                <stop offset="60%" stop-color="#ffefb6" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#ffefb6" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="800" height="540" fill="url(#ldgSky)"/>
+            <!-- Moon / corporate sun -->
+            <circle cx="640" cy="120" r="120" fill="url(#ldgMoon)"/>
+            <circle cx="640" cy="120" r="38" fill="#fff5d0" opacity="0.75"/>
+            <!-- Distant towers -->
+            <g opacity="0.55">
+              <rect x="60"  y="320" width="60"  height="220" fill="#1a2444"/>
+              <rect x="130" y="280" width="46"  height="260" fill="#1a2444"/>
+              <rect x="730" y="290" width="50"  height="250" fill="#1a2444"/>
+            </g>
+            <!-- Kedash tower (center, taller) -->
+            <rect x="320" y="80" width="160" height="460" fill="url(#ldgTower)" stroke="#c9a44c" stroke-width="2"/>
+            <rect x="320" y="80" width="160" height="20"  fill="#c9a44c"/>
+            <rect x="386" y="60" width="28"  height="22"  fill="#c9a44c"/>
+            <!-- Window grid (warm office lights) -->
+            ${this._landingWindowGrid()}
+            <!-- Ground band -->
+            <rect x="0" y="500" width="800" height="40" fill="#05091e"/>
+            <!-- Gold accent strip -->
+            <rect x="320" y="498" width="160" height="3" fill="#c9a44c"/>
+          </svg>
+        </div>
+
+        <div class="landing-content">
+          <div class="landing-logo">🏢</div>
+          <h1 class="landing-title">CLAUDE CODE<br>QUEST</h1>
+          <div class="landing-subtitle">Kedash Corp · Training Programme</div>
+          <p class="landing-flavor">${subline}</p>
+          <button class="landing-play-btn" id="landing-play-btn">
+            <span class="landing-play-icon">▶</span>
+            <span class="landing-play-label">${ctaLabel}</span>
+          </button>
+          <button class="landing-secondary-btn" id="landing-dashboard-btn">
+            View dashboard
+          </button>
+          ${isReturning ? `
+            <div class="landing-stats">
+              <span>Tier: <strong>${escHtml(this.getCurrentTierLabel())}</strong></span>
+              <span>·</span>
+              <span><strong>${this.progress?.totalXP || 0}</strong> PP</span>
+              <span>·</span>
+              <span>Day-<strong>${this.progress?.currentStreak || 1}</strong> streak</span>
+            </div>` : ''}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('landing-play-btn').addEventListener('click', () => {
+      if (sidebar) sidebar.classList.remove('hidden-on-landing');
+      this.navigate('play');
+    });
+    document.getElementById('landing-dashboard-btn').addEventListener('click', () => {
+      if (sidebar) sidebar.classList.remove('hidden-on-landing');
+      this.navigate('dashboard');
+    });
+  },
+
+  _landingWindowGrid() {
+    // 8 columns × 18 rows of small office windows, ~70 % lit warm.
+    const cellW = 14, cellH = 18, ox = 332, oy = 110;
+    const out = [];
+    for (let r = 0; r < 18; r++) {
+      for (let c = 0; c < 8; c++) {
+        // Deterministic flicker pattern — seeded by r/c so the SVG is
+        // identical on every render but feels alive.
+        const lit = ((r * 7 + c * 11) % 13) > 4;
+        const fill = lit ? '#ffe28a' : '#0b1530';
+        const op = lit ? 0.85 : 1;
+        out.push(`<rect x="${ox + c * cellW}" y="${oy + r * cellH + (c%2?2:0)}" width="9" height="11" fill="${fill}" opacity="${op}"/>`);
+      }
+    }
+    return out.join('');
   },
 
   renderPlayView() {

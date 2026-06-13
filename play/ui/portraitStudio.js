@@ -258,6 +258,119 @@ function _scheduleRender(mesh, id, pendingTex) {
   }
 }
 
+// Hi-fi portrait render — for the CEO wall painting (Maya). Renders the
+// mesh into the supplied canvas at the canvas's own width/height with a
+// formal studio look (dark navy radial vignette + warm key + gold rim).
+// Calls onReady once textures have decoded so the caller can flush the
+// canvas's CanvasTexture (.needsUpdate = true). Returns true when an
+// immediate render landed, false when deferred (onReady will fire).
+export function renderToCanvas(mesh, canvas, onReady) {
+  if (!mesh || !canvas) return false;
+  // A dedicated WebGL renderer is created on demand for hi-fi renders,
+  // then disposed — typical use is 1-2 portraits per page load.
+  const W = canvas.width, H = canvas.height;
+  let hiRenderer = null;
+  try {
+    hiRenderer = new THREE.WebGLRenderer({
+      antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: 'low-power',
+    });
+    hiRenderer.setSize(W, H);
+    hiRenderer.setPixelRatio(1);
+    hiRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    hiRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    hiRenderer.toneMappingExposure = 1.05;
+  } catch (e) {
+    console.warn('[portraitStudio] hi-fi init failed', e);
+    return false;
+  }
+  // Formal CEO studio: dark navy radial vignette, warm overhead key
+  // light, gold rim light from behind-camera-right.
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  const key = new THREE.DirectionalLight(0xfff0d0, 1.7);
+  key.position.set(0.5, 2.0, 2.2);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xc9a44c, 0.9);
+  rim.position.set(-1.8, 1.2, -1.0);
+  scene.add(rim);
+
+  // Paint a vignette canvas BEHIND the rendered subject — we composite
+  // the alpha-rendered character on top in the final blit.
+  const headSrc = findHeadSource(mesh);
+  const headPath = headSrc ? indexPath(mesh, headSrc) : null;
+  const subject = cloneCharacter(mesh);
+  if (!subject) { hiRenderer.dispose(); return false; }
+  subject.position.set(0, 0, 0);
+  subject.rotation.set(0, 0.18, 0);     // slight 3/4 turn — feels like a portrait
+  subject.traverse((o) => {
+    if (o.isSprite) o.visible = false;
+    if (o.isMesh || o.isSkinnedMesh) {
+      o.frustumCulled = false;
+      o.castShadow = false; o.receiveShadow = false;
+    }
+  });
+  scene.add(subject);
+  subject.updateMatrixWorld(true);
+
+  const finish = () => {
+    const bb = new THREE.Box3().setFromObject(subject);
+    const height = Math.max(0.5, bb.max.y - bb.min.y);
+    const headPos = new THREE.Vector3();
+    const headNode = headPath ? nodeAtPath(subject, headPath) : null;
+    if (headNode) headNode.getWorldPosition(headPos);
+    else headPos.set(0, bb.max.y - height * 0.12, 0);
+    // Pull back further than the 256² dialogue portrait — wall paintings
+    // show head AND shoulders, framed slightly below the head.
+    const aspect = W / H;
+    const cam = new THREE.PerspectiveCamera(28, aspect, 0.05, 50);
+    const dist = THREE.MathUtils.clamp(height * 0.95, 0.6, 8);
+    cam.position.set(headPos.x + 0.05, headPos.y - height * 0.05, headPos.z + dist);
+    cam.lookAt(headPos.x, headPos.y - height * 0.14, headPos.z);
+    hiRenderer.render(scene, cam);
+    // Composite: paint vignette into the target canvas, then blit the
+    // alpha-rendered subject on top.
+    const ctx = canvas.getContext('2d');
+    const bg = ctx.createRadialGradient(W/2, H*0.45, W*0.1, W/2, H*0.5, W*0.85);
+    bg.addColorStop(0, '#3a4a78');
+    bg.addColorStop(0.5, '#1e2a4c');
+    bg.addColorStop(1, '#0b1224');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(hiRenderer.domElement, 0, 0, W, H);
+    // Subtle gold inner-frame glow.
+    ctx.strokeStyle = 'rgba(201,164,76,0.35)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(8, 8, W - 16, H - 16);
+    // Teardown — temporary renderer + scene refs only; the cloned subject
+    // shares all GPU resources with the live character.
+    scene.remove(subject);
+    hiRenderer.dispose();
+    try { if (typeof onReady === 'function') onReady(); } catch {}
+  };
+
+  const pendingTex = _pendingTextures(subject);
+  if (!pendingTex.length) { finish(); return true; }
+
+  let remaining = pendingTex.length;
+  const tick = () => { if (--remaining <= 0) finish(); };
+  for (const tex of pendingTex) {
+    if (_textureReady(tex)) { tick(); continue; }
+    const img = tex.image;
+    if (img && 'addEventListener' in img) {
+      img.addEventListener('load', tick, { once: true });
+      img.addEventListener('error', tick, { once: true });
+    } else {
+      const start = performance.now();
+      const poll = () => {
+        if (_textureReady(tex) || performance.now() - start > 8000) tick();
+        else setTimeout(poll, 100);
+      };
+      poll();
+    }
+  }
+  return false;
+}
+
 // Public API — cached dataURL of the character's portrait, or null when the
 // mesh is missing / rendering fails (caller keeps the emoji fallback).
 //

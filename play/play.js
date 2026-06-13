@@ -70,7 +70,7 @@ import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js?v=20260612b';
 import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
 import { openPlanModeExercise, isPlanModeOpen } from './ui/planModeExercise.js?v=20260613a';
-import { getPortrait } from './ui/portraitStudio.js?v=20260612b';
+import { getPortrait, renderToCanvas as renderPortraitToCanvas } from './ui/portraitStudio.js?v=20260613b';
 import Story from './story/storyState.js?v=20260612c';
 import {
   initSceneRunner, registerSceneActions, runScene,
@@ -1687,6 +1687,52 @@ function drawCeoEye(ctx, cx, cy) {
   ctx.stroke();
 }
 
+// Build a temporary offscreen Maya mesh whose only job is to feed the
+// CEO wall portrait's high-fidelity render. Kept hidden (not added to
+// the scene) and freed after the render lands. Returns null when the
+// 'maya' asset isn't cached yet — the hand-drawn fallback then sticks.
+function _spawnMayaPortraitMesh() {
+  try {
+    const look = { _id: 'ceo-wall-portrait', _gltfAsset: 'maya' };
+    const mesh = makeGltfCharacter(look, gltfAssetLoader);
+    if (!mesh) return null;
+    // Park at origin; offscreen — we never add this to the live scene.
+    mesh.position.set(0, 0, 0);
+    mesh.rotation.set(0, 0, 0);
+    return mesh;
+  } catch (e) {
+    console.warn('[ceo-portrait] maya mesh build failed', e);
+    return null;
+  }
+}
+
+// Track pending CEO portrait upgrades so the asset-resolved hook can
+// retry whenever any phase-2 GLB lands (Maya may take a few seconds).
+const _pendingCeoPortraitUpgrades = [];
+
+function _upgradeCeoPortrait(targetCanvas, texture) {
+  // Try once at the next tick (Maya may already be in cache on a hot
+  // reload). If not, queue for the asset-resolved hook to retry.
+  const job = { canvas: targetCanvas, texture, done: false };
+  _pendingCeoPortraitUpgrades.push(job);
+  setTimeout(() => _tryUpgradeCeoPortraits(), 50);
+}
+
+function _tryUpgradeCeoPortraits() {
+  if (!gltfAssetLoader || !gltfAssetLoader.getResolved?.('maya')) return;
+  for (const job of _pendingCeoPortraitUpgrades) {
+    if (job.done) continue;
+    const mesh = _spawnMayaPortraitMesh();
+    if (!mesh) continue;
+    job.done = true;
+    try {
+      renderPortraitToCanvas(mesh, job.canvas, () => {
+        job.texture.needsUpdate = true;
+      });
+    } catch (e) { console.warn('[ceo-portrait] render failed', e); }
+  }
+}
+
 function buildCeoPortrait(targetScene) {
   // R-7: hearts + plaque flip are gated on the FINALE being seen (not on
   // raw all-tests-passed) so the reveal lands inside the ceremony via
@@ -1711,13 +1757,16 @@ function buildCeoPortrait(targetScene) {
   trim.position.z = 0;
   group.add(trim);
 
-  // Manga-style portrait drawn on canvas (no external image needed)
+  // Portrait canvas — initially the hand-drawn fallback (so something
+  // shows immediately), then upgraded to a high-fidelity render of the
+  // actual 3D Maya rig once the maya_skin.jpg overlay has decoded.
   const portraitCanvas = document.createElement('canvas');
   portraitCanvas.width = 768; portraitCanvas.height = 1024;
   drawCeoPortrait(portraitCanvas);
   const portraitTex = new THREE.CanvasTexture(portraitCanvas);
   portraitTex.colorSpace = THREE.SRGBColorSpace;
   portraitTex.anisotropy = 8;
+  _upgradeCeoPortrait(portraitCanvas, portraitTex);
   const photo = new THREE.Mesh(
     new THREE.PlaneGeometry(1.85, 2.25),
     new THREE.MeshBasicMaterial({ map: portraitTex })
@@ -6100,6 +6149,11 @@ async function _preloadGltfAssets() {
   loader.onAssetResolved = () => {
     try { upgradeProceduralNpcs(); }
     catch (e) { console.warn('[play] NPC upgrade pass failed:', e); }
+    // Maya specifically may resolve well after the wall portrait is
+    // built — re-check the pending CEO portrait queue on every asset
+    // resolution (cheap, returns early until 'maya' is cached).
+    try { _tryUpgradeCeoPortraits(); }
+    catch (e) { console.warn('[play] CEO portrait upgrade failed:', e); }
   };
   // Phase 2 — background: the 10 ethnicity rigs + maya (~165 MB
   // uncompressed — see the audit in the 2026-06-12 session notes).
