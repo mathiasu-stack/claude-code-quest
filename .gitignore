@@ -29,3 +29,6 @@ logs/
 
 # Claude Code session state (agent worktrees etc.).
 .claude/
+
+# Python bytecode cache from gen scripts.
+__pycache__/

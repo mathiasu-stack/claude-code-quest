@@ -102,7 +102,7 @@ function buildScenarioCard(test, nonce = null) {
         ${nonce ? `
         <div class="scenario-nonce" style="margin-top:12px;padding:10px 12px;border:1px dashed currentColor;border-radius:6px;font-size:0.92em;">
           🛡️ <strong>Kedash InfoSec — Compliance verification code: <code>${nonce}</code></strong><br>
-          Include this code in your real session: ask Claude to echo <code>${nonce}</code> in its reply, and paste the session output containing it below. Submissions without a live-session code won't clear compliance review.
+          Include this code in your real session: ask Claude to echo <code>${nonce}</code> in its reply, and paste the session output containing it below. Submissions without a live-session code won't clear compliance review.${(test.id === 'ch01-test' && window.Story?.getFlag?.('lobby_badge_printed')) ? ' <span style="opacity:0.75;font-style:italic;">(also printed at the lobby badge printer.)</span>' : ''}
         </div>` : ''}
       </div>
     </div>

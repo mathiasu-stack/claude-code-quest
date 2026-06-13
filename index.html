@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Code Quest — Kedash Corp Training</title>
-  <link rel="stylesheet" href="style.css?v=20260612c">
+  <link rel="stylesheet" href="style.css?v=20260613a">
 </head>
 <body>
 
@@ -95,19 +95,25 @@
 
   <!-- UI -->
   <script src="ui/dashboard.js?v=20260524d"></script>
-  <script src="ui/lesson.js?v=20260612c"></script>
-  <script src="ui/test.js?v=20260612c"></script>
+  <script src="ui/lesson.js?v=20260613a"></script>
+  <script src="ui/test.js?v=20260613a"></script>
+  <script src="ui/shop.js?v=20260613a"></script>
 
   <!-- 3D Play Mode (Three.js, ES module via importmap) -->
+  <!-- Vendored three.js 0.169 — no CDN dependency, no offline failure mode.
+       Files in play/vendor/ (1.5 MB total); refresh with:
+       BASE=https://cdn.jsdelivr.net/npm/three@0.169.0
+       curl -fsSL "$BASE/build/three.module.js" -o play/vendor/three.module.js
+       (and the matching addons under play/vendor/addons/). -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      "three": "/play/vendor/three.module.js",
+      "three/addons/": "/play/vendor/addons/"
     }
   }
   </script>
-  <script type="module" src="play/play.js?v=20260612d"></script>
+  <script type="module" src="play/play.js?v=20260613a"></script>
 
   <!-- App Bootstrap -->
   <script src="app.js?v=20260603b"></script>

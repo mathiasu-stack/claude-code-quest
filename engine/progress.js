@@ -25,6 +25,12 @@ const DEFAULT_PROGRESS = {
   // floor holds 4 chapters; passing all 4 chapters' practical tests on a
   // floor bumps badgeFloor to the next one. Floor 1 is always accessible.
   badgeFloor: 1,
+  // Desk Shop pilot: list of { id, cost } records for cosmetics the
+  // player has purchased. Stored as objects (not just ids) so the
+  // "spendable PP" math is independent of any future shop catalog
+  // edits — once you've spent the PP, the spend sticks at the price
+  // you paid. Guarded against double-purchase in purchaseItem.
+  ownedItems: [],
 };
 
 function loadProgress() {
@@ -270,6 +276,42 @@ function floorForChapter(chapterId) {
   return Math.min(FLOORS_TOTAL, Math.ceil((idx + 1) / CHAPTERS_PER_FLOOR));
 }
 
+// ── Desk Shop (PP cosmetics) ─────────────────────────────────────────────
+// Spendable PP is totalXP minus the sum of every recorded purchase price.
+// totalXP itself is NEVER mutated by a purchase — the player's level
+// (derived from totalXP in engine/scoring.js) must not regress when they
+// buy a mug. This keeps educational progress and economy progress on
+// separate ledgers while still giving PP an in-world use.
+
+function ownedItemIds(progress) {
+  return (progress.ownedItems || []).map(o => o.id);
+}
+
+function ownsItem(progress, itemId) {
+  return ownedItemIds(progress).includes(itemId);
+}
+
+function totalSpent(progress) {
+  return (progress.ownedItems || []).reduce((sum, o) => sum + (o.cost || 0), 0);
+}
+
+function getSpendablePP(progress) {
+  return Math.max(0, (progress.totalXP || 0) - totalSpent(progress));
+}
+
+// Returns the updated progress, or the same progress object if the
+// purchase is rejected (already owned, insufficient PP, invalid cost).
+// Caller checks identity (returned === progress) to detect rejection.
+function purchaseItem(progress, itemId, cost) {
+  if (!itemId || typeof cost !== 'number' || cost < 0) return progress;
+  if (ownsItem(progress, itemId)) return progress;          // double-spend guard
+  if (getSpendablePP(progress) < cost) return progress;     // can't afford
+  return {
+    ...progress,
+    ownedItems: [...(progress.ownedItems || []), { id: itemId, cost }],
+  };
+}
+
 window.Progress = {
   load: loadProgress,
   save: saveProgress,
@@ -287,6 +329,10 @@ window.Progress = {
   recordKnowledgeCheck,
   isKnowledgeCheckPassed,
   addBonusXP,
+  purchaseItem,
+  ownsItem,
+  ownedItemIds,
+  getSpendablePP,
   ensureTestNonce,
   getTestNonce,
   clearTestNonce,

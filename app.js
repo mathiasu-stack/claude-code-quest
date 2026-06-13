@@ -83,6 +83,10 @@ const App = {
       case 'play':
         this.renderPlayView();
         break;
+      case 'shop':
+        if (window.Shop) window.Shop.render();
+        else Dashboard.renderDashboard();
+        break;
       default:
         Dashboard.renderDashboard();
     }
@@ -198,6 +202,9 @@ const App = {
         <div class="nav-item ${isActive('dashboard')}" data-nav="dashboard">
           <span class="nav-icon">🏠</span><span>Dashboard</span>
         </div>
+        <div class="nav-item ${isActive('shop')}" data-nav="shop">
+          <span class="nav-icon">🛍️</span><span>Desk Shop</span>
+        </div>
         ${CURRICULUM.map(ch => {
           const unlocked = Progress.isChapterUnlocked(progress, ch.id);
           const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
@@ -222,12 +229,17 @@ const App = {
       const v = App._currentView;
       const p = App._currentParams;
       if (navType === 'dashboard') return v === 'dashboard' ? 'active' : '';
+      if (navType === 'shop') return v === 'shop' ? 'active' : '';
       if (navType === 'chapter') return p.chapterId === chapterId ? 'active' : '';
       return '';
     }
 
     sidebar.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(el => {
       el.addEventListener('click', () => { App.navigate('dashboard'); App.closeSidebar(); });
+    });
+
+    sidebar.querySelectorAll('.nav-item[data-nav="shop"]').forEach(el => {
+      el.addEventListener('click', () => { App.navigate('shop'); App.closeSidebar(); });
     });
 
     sidebar.querySelectorAll('.nav-item.chapter-nav:not(.nav-locked)').forEach(el => {
@@ -319,6 +331,8 @@ const App = {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     if (view === 'dashboard') {
       document.querySelector('[data-nav="dashboard"]')?.classList.add('active');
+    } else if (view === 'shop') {
+      document.querySelector('[data-nav="shop"]')?.classList.add('active');
     } else if (params.chapterId) {
       document.querySelector(`[data-chapter="${params.chapterId}"]`)?.classList.add('active');
     }

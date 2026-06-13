@@ -2071,6 +2071,293 @@ body.in-play #mobile-header { display: none !important; }
   .dlg-actions button { width: 100%; }
 }
 
+/* Phase 4 pilot — Badge printer overlay (ch01) */
+.badge-printer-card .dlg-portrait { background: linear-gradient(135deg, #2a3a52, #4f6680); }
+.badge-printer-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0 14px;
+  min-height: 180px;
+}
+.badge-printer-machine {
+  position: relative;
+  width: 220px;
+  height: 84px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #b0bec5 0%, #90a4ae 60%, #78909c 100%);
+  border: 1px solid #546e7a;
+  box-shadow: 0 4px 14px rgba(15,30,55,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 10px;
+}
+.badge-printer-slot {
+  position: absolute;
+  top: 16px; left: 50%;
+  width: 130px;
+  height: 8px;
+  margin-left: -65px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+}
+.badge-printer-progress {
+  position: absolute;
+  top: 36px; left: 22px; right: 22px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(10, 18, 35, 0.35);
+  overflow: hidden;
+}
+.badge-printer-progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #7fd4a0, #c9a44c);
+  animation: badgePrinterBar 1.2s ease-out forwards;
+}
+@keyframes badgePrinterBar {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.badge-printer-status {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #0a1622;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+.badge-printer-slip {
+  width: 220px;
+  background: linear-gradient(180deg, #fffbe9, #fff5d6);
+  border: 1px solid #d6c79a;
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color: #2a3a52;
+  box-shadow: 0 6px 14px rgba(15,30,55,0.18);
+  transform: translateY(-22px) rotate(-1.2deg);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.18, 0.78, 0.32, 1.12),
+              opacity 0.35s ease;
+}
+.badge-printer-slip.visible {
+  transform: translateY(0) rotate(-1.2deg);
+  opacity: 1;
+}
+.badge-printer-slip .slip-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #6e5a1f;
+  font-weight: 700;
+}
+.badge-printer-slip .slip-label {
+  font-size: 11px;
+  color: #4a3c24;
+  margin-top: 2px;
+}
+.badge-printer-slip .slip-code {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #2a3a52;
+  margin: 6px 0 4px;
+}
+.badge-printer-slip .slip-meta {
+  font-size: 10px;
+  color: #6c6650;
+  letter-spacing: 0.04em;
+}
+
+/* Persistent HUD pill — appears once the lobby printer has been used,
+   under the compass on desktop / top-right on mobile. Mirrors the
+   .play-badge-hud sibling visually. */
+.play-kdq-badge {
+  position: absolute;
+  top: 130px;
+  right: 16px;
+  z-index: 16;
+  background: rgba(10, 18, 35, 0.78);
+  color: var(--gold);
+  border: 1px solid rgba(201, 164, 76, 0.55);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.play-kdq-badge .kdq-icon { font-size: 13px; }
+.play-kdq-badge .kdq-code { font-weight: 700; }
+@media (max-width: 480px) {
+  .play-kdq-badge { top: 116px; right: 10px; font-size: 11px; padding: 4px 10px; }
+  .badge-printer-stage { min-height: 160px; }
+  .badge-printer-machine { width: 190px; }
+  .badge-printer-slip { width: 190px; }
+}
+
+/* Phase 4 pilot — Plan-Mode whiteboard panel (ch04) */
+.plan-mode-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(10, 18, 35, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.plan-mode-overlay.visible { display: flex; }
+.plan-mode-card {
+  width: 100%;
+  max-width: 720px;
+  background: #faf6ed;
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  padding: 18px 20px 16px;
+  position: relative;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  animation: dlgIn 0.18s ease-out;
+}
+.plan-mode-close {
+  position: absolute;
+  top: 8px; right: 12px;
+  background: none; border: none;
+  font-size: 24px; line-height: 1;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.plan-mode-close:hover { color: var(--navy); }
+.plan-mode-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: #6e5a1f;
+  text-transform: uppercase;
+}
+.plan-mode-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 4px 0 6px;
+}
+.plan-mode-target {
+  background: #fffbe9;
+  border: 1px dashed #c9a44c;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 6px 0 14px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--navy);
+}
+.plan-mode-target b { color: #4a3c24; }
+.plan-mode-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.plan-mode-col h3 {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gray-600);
+  margin: 0 0 8px;
+}
+.plan-mode-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #d6c79a;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--navy);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.plan-mode-chip:hover { background: #fffbe9; box-shadow: 0 2px 6px rgba(15,30,55,0.12); }
+.plan-mode-chip:active { transform: translateY(1px); }
+.plan-mode-chip[disabled] { opacity: 0.45; cursor: not-allowed; }
+.plan-mode-chip.danger { border-color: #c0392b; color: #8a2018; background: #fff1ee; }
+.plan-mode-chip.danger:hover { background: #fde2dc; }
+.plan-mode-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #c9a44c;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--navy);
+}
+.plan-mode-step .step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #fff;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.plan-mode-step .step-text { flex: 1; }
+.plan-mode-step .step-remove {
+  background: none; border: none;
+  font-size: 18px; line-height: 1;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.plan-mode-step .step-remove:hover { color: #c0392b; }
+.plan-mode-warning {
+  background: #fff1ee;
+  border: 1px solid #c0392b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  color: #8a2018;
+  font-size: 13px;
+  display: none;
+}
+.plan-mode-warning.visible { display: block; }
+.plan-mode-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.plan-mode-actions .btn-secondary { flex-shrink: 0; }
+.plan-mode-actions .plan-mode-submit { flex: 1; min-width: 200px; }
+.plan-mode-empty {
+  font-size: 12px;
+  color: var(--gray-600);
+  font-style: italic;
+  padding: 6px 0;
+}
+@media (max-width: 600px) {
+  .plan-mode-columns { grid-template-columns: 1fr; }
+  .plan-mode-card { padding: 16px 14px 14px; max-height: 100vh; overflow-y: auto; }
+}
+
 /* Document viewer (Kedash Protocol, SYS-05) — full-screen monospace
    reader styled like an internal memo / terminal `cat`. Sits ABOVE the
    dialogue card (z-index 25) so TWIST 2 can open it mid-scene. */
@@ -2207,3 +2494,323 @@ body.in-play #mobile-header { display: none !important; }
   .play-normalcy .normalcy-seg { width: 13px; height: 5px; }
 }
 
+
+/* ============================================================
+   NEW — Desk Shop (Phase 4 PP cosmetics pilot)
+   Confined block, all classes prefixed .shop-/.my-desk-/.desk-slot-.
+   ============================================================ */
+
+.shop-view {
+  padding: 28px 32px 80px;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.shop-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.shop-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.shop-sub {
+  font-size: 14px;
+  color: var(--gray-600);
+}
+
+.shop-pp-card {
+  background: var(--navy);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  text-align: right;
+  min-width: 180px;
+  box-shadow: var(--shadow-md);
+}
+
+.shop-pp-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.shop-pp-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.shop-pp-foot {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+
+.my-desk-panel {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-100);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 28px;
+}
+
+.my-desk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.my-desk-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.my-desk-count {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+/* The "desk" — a stylized perspective with a wood-tone top, a darker
+   "front" lip, a back wall, and a tiny monitor silhouette. Items sit in
+   slot positions (back row + front row). Pure CSS, no canvas. */
+.my-desk-surface {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(to bottom, #e7d6b8 0%, #d6c096 100%);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+}
+
+.my-desk-back {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: linear-gradient(to bottom, #2b3a5a 0%, #1a2744 100%);
+}
+
+.my-desk-monitor {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92px;
+  height: 50px;
+  background: #0b1326;
+  border: 2px solid #3a4a6a;
+  border-radius: 4px;
+  color: #5e7aa6;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+}
+
+.my-desk-top {
+  position: absolute;
+  bottom: 22px;
+  left: 0; right: 0;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.my-desk-front {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 22px;
+  background: linear-gradient(to bottom, #b89968 0%, #8c6f44 100%);
+}
+
+.desk-slot {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  z-index: 2;
+}
+
+/* Back-row: behind the monitor area, on top of the wall/desk seam. */
+.desk-slot--back {
+  top: 64px;
+}
+.desk-slot--back.desk-slot--col1 { left: 6%; }
+.desk-slot--back.desk-slot--col2 { left: 26%; }
+.desk-slot--back.desk-slot--col3 { right: 26%; }
+.desk-slot--back.desk-slot--col4 { right: 6%; }
+
+/* Front-row: closer to the player, just above the desk lip. */
+.desk-slot--front {
+  bottom: 30px;
+}
+.desk-slot--front.desk-slot--col1 { left: 4%; }
+.desk-slot--front.desk-slot--col2 { left: 28%; }
+.desk-slot--front.desk-slot--col3 { right: 28%; }
+.desk-slot--front.desk-slot--col4 { right: 4%; }
+
+.desk-slot-emoji {
+  font-size: 36px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  cursor: default;
+  transition: transform 0.15s ease;
+}
+
+.desk-slot-emoji:hover {
+  transform: translateY(-2px) scale(1.08);
+}
+
+.desk-slot-ghost {
+  width: 28px;
+  height: 28px;
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+}
+
+.my-desk-empty {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-600);
+  font-style: italic;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.shop-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-100);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.shop-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.shop-card--owned {
+  border-color: var(--green);
+  background: linear-gradient(to bottom right, #ffffff 0%, #f0fbf2 100%);
+}
+
+.shop-card--locked {
+  opacity: 0.7;
+}
+
+.shop-card-icon {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-50);
+  border-radius: 8px;
+}
+
+.shop-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+
+.shop-card-desc {
+  font-size: 12px;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.shop-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-card-cost {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.shop-buy-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.shop-buy-btn[disabled] {
+  background: var(--gray-200);
+  color: var(--gray-600);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.shop-owned-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: var(--green-bg);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+@media (max-width: 600px) {
+  .shop-view { padding: 20px 16px 80px; }
+  .shop-title { font-size: 22px; }
+  .shop-pp-card { width: 100%; text-align: left; }
+  .my-desk-surface { height: 180px; }
+  .desk-slot { width: 42px; height: 42px; }
+  .desk-slot-emoji { font-size: 28px; }
+  .my-desk-monitor { width: 70px; height: 38px; font-size: 16px; }
+}

@@ -69,6 +69,7 @@ import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway 
 import { TimeOfDay } from './world/timeOfDay.js';
 import { LiveAgents } from './world/liveAgents.js?v=20260612b';
 import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
+import { openPlanModeExercise, isPlanModeOpen } from './ui/planModeExercise.js?v=20260613a';
 import { getPortrait } from './ui/portraitStudio.js?v=20260612b';
 import Story from './story/storyState.js?v=20260612c';
 import {
@@ -2189,6 +2190,19 @@ function registerStoryInspectables() {
     if (!group || !group.parent) continue;
     const wp = new THREE.Vector3();
     group.getWorldPosition(wp);
+    // Pilot interaction: the badge printer in the lobby actually prints
+    // the player's ch01-test KDQ nonce in-world (see openBadgePrinter).
+    // The first interaction shows the PRINTING animation + slip; later
+    // visits show an "already printed" variant. Other inspectables
+    // (portrait, house rules, cx_folder) keep the read-only inspect card.
+    const onInteract = (docId === 'badge_printer')
+      ? () => openBadgePrinter()
+      : () => openInspectCard(docId);
+    const getPromptText = (docId === 'badge_printer')
+      ? () => (Story.getFlag?.('lobby_badge_printed')
+          ? 'Re-check badge printer — press E'
+          : 'Operate badge printer — press E')
+      : () => prompt;
     registerInteractable({
       mesh: group,
       kind: 'story-inspect',
@@ -2197,8 +2211,8 @@ function registerStoryInspectables() {
       glowSize: 0.9,
       glowColor,
       parent: scene,
-      onInteract: () => openInspectCard(docId),
-      getPromptText: () => prompt,
+      onInteract,
+      getPromptText,
     });
     // These props are ROOM entries (data/rooms.js) — the editor must keep
     // treating them as such. registerInteractable's _isInteractable tag
@@ -2342,7 +2356,7 @@ function buildWorld() {
     dispatchBoard:    buildDispatchBoard,
     permissionsPanel: buildPermissionsPanel,
   };
-  const onObjectInteract = (info) => {
+  const openLessonNow = (info) => {
     if (window.LessonOverlay?.open) {
       window.LessonOverlay.open(info);
     } else {
@@ -2350,6 +2364,66 @@ function buildWorld() {
         chapterId: info.chapterId, lessonId: info.lessonId, fromPlay: true,
       });
     }
+  };
+  const onObjectInteract = (info) => {
+    // Phase 4 pilot — ch04 whiteboard: first interaction runs the
+    // Plan-Mode exercise. Passing it stores a knowledge-check flag
+    // (`ch04-planmode`) + adds a +25 PP bonus through addBonusXP, then
+    // opens the lesson. Once the flag is set, future presses skip
+    // straight to the lesson (the existing already-done state).
+    if (info?.chapterId === 'ch04') {
+      const progress = window.App?.progress || window.Progress?.load?.();
+      const planDone = !!progress?.knowledgeChecks?.['ch04-planmode']?.correct;
+      if (!planDone && !isPlanModeOpen()) {
+        inputLocked = true;
+        openPlanModeExercise({
+          onSuccess: () => {
+            let p = window.App?.progress;
+            if (!p && window.Progress?.load) p = window.Progress.load();
+            if (p && window.Progress) {
+              p = window.Progress.recordKnowledgeCheck(p, 'ch04-planmode', true, true);
+              p = window.Progress.addBonusXP(p, 25);
+              window.Progress.save(p);
+              window.App.progress = p;
+              try { window.App.refreshSidebar?.(); } catch {}
+              try { window.Lesson?.showXpToast?.(25); } catch {}
+            }
+            // Hero reply — typed inside the dialogue card chrome so it
+            // reads as the player character thinking out loud before
+            // the lesson opens. Plays once per plan-pass.
+            inputLocked = true;
+            const d = dialogueEl;
+            d.innerHTML = `
+              <div class="dlg-card">
+                <div class="dlg-header">
+                  <div class="dlg-portrait">🧠</div>
+                  <div class="dlg-who">
+                    <div class="dlg-name">You</div>
+                    <div class="dlg-role">at the whiteboard</div>
+                  </div>
+                </div>
+                <div class="dlg-body" data-typewriter></div>
+                <div class="dlg-actions">
+                  <button class="btn-primary dlg-cancel">Open the lesson →</button>
+                </div>
+              </div>
+            `;
+            d.classList.add('visible');
+            playUi('confirm');
+            const line = 'Plan looks right. I won\'t execute until they say go.';
+            startTypewriter(d.querySelector('[data-typewriter]'), line, 1.0);
+            const proceed = () => {
+              closeDialogue();
+              openLessonNow(info);
+            };
+            d.querySelector('.dlg-cancel').onclick = () => { playUi('confirm'); proceed(); };
+          },
+          onClose: () => { inputLocked = false; },
+        });
+        return;
+      }
+    }
+    openLessonNow(info);
   };
   for (const [chapterId, cfg] of Object.entries(LESSON_DELIVERY)) {
     if (!cfg.delivery || cfg.delivery === 'npc') continue;
@@ -5033,6 +5107,105 @@ function openInspectCard(docId) {
   d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
 }
 
+// ─── Pilot interaction: badge printer (ch01 KDQ nonce in-world) ──────────────
+// Mints the player's ch01-test KDQ-XXXX compliance code (same call the
+// test view uses — Progress.ensureTestNonce) and prints it as an animated
+// paper slip. First press shows PRINTING… for 1.2s then the slip drops;
+// re-presses go to the "already printed" variant + re-show the slip.
+// On success: persists the nonce via Progress.save, sets the
+// `lobby_badge_printed` story flag so the test view can mention the
+// lobby printer, and refreshes the persistent KDQ HUD pill.
+function openBadgePrinter() {
+  let progress = window.App?.progress;
+  if (!progress && window.Progress?.load) {
+    progress = window.Progress.load();
+    if (window.App) window.App.progress = progress;
+  }
+  if (!progress) return;
+  // Idempotent — same code as the test view sees.
+  const minted = window.Progress.ensureTestNonce(progress, 'ch01-test');
+  if (minted.progress !== progress) {
+    progress = minted.progress;
+    window.Progress.save(progress);
+    window.App.progress = progress;
+  }
+  const nonce = minted.nonce;
+  const reprint = !!Story.getFlag?.('lobby_badge_printed');
+
+  inputLocked = true;
+  const d = dialogueEl;
+  const doc = window.STORY_DOCS?.badge_printer || {};
+  const heroByTier = doc.heroThoughtByTier || {};
+  const thought = (heroByTier.T0 || '');
+  const headerLine = reprint
+    ? 'You already filed this. The printer remembers.'
+    : 'The machine wakes up. A slip starts feeding.';
+
+  d.innerHTML = `
+    <div class="dlg-card badge-printer-card">
+      <button class="dlg-close" aria-label="Close">×</button>
+      <div class="dlg-header">
+        <div class="dlg-portrait">🖨️</div>
+        <div class="dlg-who">
+          <div class="dlg-name">Badge Printer</div>
+          <div class="dlg-role">${escapeHtml(headerLine)}</div>
+        </div>
+      </div>
+      <div class="badge-printer-stage">
+        <div class="badge-printer-machine">
+          <div class="badge-printer-slot"></div>
+          <div class="badge-printer-progress"><span></span></div>
+          <div class="badge-printer-status" data-printer-status>${reprint ? 'REPRINT…' : 'PRINTING…'}</div>
+        </div>
+        <div class="badge-printer-slip" data-printer-slip aria-hidden="true">
+          <div class="slip-eyebrow">KEDASH INFOSEC</div>
+          <div class="slip-label">Compliance verification code</div>
+          <div class="slip-code">${escapeHtml(nonce)}</div>
+          <div class="slip-meta">Issued · ch01 practical · keep with you</div>
+        </div>
+      </div>
+      ${thought ? `<div class="dlg-doc-thought" data-printer-thought></div>` : ''}
+      <div class="dlg-actions">
+        <button class="btn-primary dlg-cancel" data-printer-dismiss disabled>Take the slip</button>
+      </div>
+    </div>
+  `;
+  d.classList.add('visible');
+  playUi('confirm');
+
+  const slipEl    = d.querySelector('[data-printer-slip]');
+  const statusEl  = d.querySelector('[data-printer-status]');
+  const dismissEl = d.querySelector('[data-printer-dismiss]');
+  const thoughtEl = d.querySelector('[data-printer-thought]');
+
+  const printDur = reprint ? 700 : 1200;
+  setTimeout(() => {
+    if (!d.classList.contains('visible')) return;
+    if (statusEl) statusEl.textContent = reprint ? 'REISSUED' : 'PRINTED';
+    if (slipEl) {
+      slipEl.classList.add('visible');
+      slipEl.setAttribute('aria-hidden', 'false');
+    }
+    if (dismissEl) {
+      dismissEl.disabled = false;
+      dismissEl.textContent = reprint
+        ? 'Filed already (close)'
+        : 'Slip filed (compliance verification code stored)';
+    }
+    if (!reprint) {
+      try { Story.setFlag?.('lobby_badge_printed'); } catch {}
+    }
+    try { updateBadgeHud(); } catch {}
+    if (thoughtEl && thought) {
+      thoughtEl.textContent = thought;
+      requestAnimationFrame(() => thoughtEl.classList.add('visible'));
+    }
+  }, printDur);
+
+  d.querySelector('.dlg-cancel').onclick = () => { playUi('cancel'); closeDialogue(); };
+  d.querySelector('.dlg-close').onclick  = () => { playUi('cancel'); closeDialogue(); };
+}
+
 // ─── Update loop ─────────────────────────────────────────────────────────────
 function applyDance(t) {
   const p = player.userData.parts;
@@ -6393,6 +6566,31 @@ function updateBadgeHud() {
   const progress = window.App?.progress || (window.Progress?.load?.() || { badgeFloor: 1 });
   const el = document.getElementById('play-badge-level');
   if (el) el.textContent = String(progress.badgeFloor || 1);
+  // KDQ-XXXX persistent reminder of the ch01-test code, set in
+  // openBadgePrinter once the lobby printer has been used. Mounted
+  // lazily under the compass so the HUD layout doesn't need every
+  // play.start() path to wire it.
+  try {
+    const kdqVisible = !!Story.getFlag?.('lobby_badge_printed');
+    let kdq = document.getElementById('play-kdq-badge');
+    if (kdqVisible) {
+      if (!kdq) {
+        const host = document.getElementById('play-compass')?.parentElement
+          || document.getElementById('play-canvas-host')?.parentElement;
+        if (host) {
+          kdq = document.createElement('div');
+          kdq.id = 'play-kdq-badge';
+          kdq.className = 'play-kdq-badge';
+          kdq.title = 'Compliance verification code — present at the ch01 practical';
+          host.appendChild(kdq);
+        }
+      }
+      const nonce = window.Progress?.getTestNonce?.(progress, 'ch01-test');
+      if (kdq) kdq.innerHTML = `<span class="kdq-icon">🪪</span><span class="kdq-code">${nonce || 'KDQ-—'}</span>`;
+    } else if (kdq) {
+      kdq.remove();
+    }
+  } catch {}
 }
 
 export function stop() {
