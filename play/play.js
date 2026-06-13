@@ -4994,12 +4994,20 @@ function getLessonTitle(npc) {
 
 // PORT-01 — swap a dlg-portrait's emoji for the rendered face. No-op (emoji
 // fallback stays) when the mesh is missing or the studio render fails.
+// If the portrait is deferred because a texture (e.g. Maya's overlay JPG)
+// hasn't decoded yet, the onReady callback swaps the still-open card the
+// moment it arrives.
 function applyPortraitImage(el, mesh, cacheKey) {
   if (!el || !mesh) return;
-  const url = getPortrait(mesh, cacheKey);
-  if (!url) return;
-  el.classList.add('has-img');
-  el.innerHTML = `<img class="dlg-portrait-img" src="${url}" alt="">`;
+  const swap = (url) => {
+    if (!url) return;
+    el.classList.add('has-img');
+    el.innerHTML = `<img class="dlg-portrait-img" src="${url}" alt="">`;
+  };
+  const url = getPortrait(mesh, cacheKey, (lateUrl) => {
+    if (dialogueEl?.classList.contains('visible')) swap(lateUrl);
+  });
+  swap(url);
 }
 
 // HERO-01 — the player character's beat in a conversation. Armed by

@@ -25,6 +25,9 @@ const SIZE = 256;
 const SKY_BG = 0x87b7e8;          // plain light-blue sky, per reference shot
 
 const cache = new Map();          // id → dataURL
+// Per-id callbacks waiting for a texture-deferred render. Cleared once
+// the texture finishes decoding and the cache entry is populated.
+const pendingByCacheKey = new Map();
 let renderer = null;
 let studioScene = null;
 let camera = null;
@@ -116,6 +119,42 @@ function cloneCharacter(mesh) {
   }
 }
 
+// A texture is portrait-ready when its image is loaded AND decoded into
+// pixels. TextureLoader.load() returns the Texture synchronously but the
+// underlying Image is async — rendering before decode produces a blank/
+// stale face (this was the Maya-doesn't-look-like-Maya bug: maya_skin.jpg
+// hadn't decoded by the first portrait request, the placeholder rendered,
+// and the cache pinned the bad face forever).
+function _textureReady(tex) {
+  if (!tex) return true;
+  const img = tex.image;
+  if (!img) return false;
+  // ImageBitmap (modern decode path) lacks .complete but has width/height.
+  if (typeof ImageBitmap !== 'undefined' && img instanceof ImageBitmap) {
+    return img.width > 0 && img.height > 0;
+  }
+  // <img> element
+  return !!img.complete && (img.naturalWidth || img.width) > 0;
+}
+
+// Walk every material that contributes to the visible portrait and
+// collect any not-yet-ready textures so we can attach onload callbacks
+// and re-render once they're all in.
+function _pendingTextures(subject) {
+  const pending = [];
+  subject.traverse((o) => {
+    if (!o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      for (const slot of ['map', 'emissiveMap', 'normalMap']) {
+        const t = m[slot];
+        if (t && !_textureReady(t)) pending.push(t);
+      }
+    }
+  });
+  return pending;
+}
+
 function renderPortrait(mesh) {
   const headSrc = findHeadSource(mesh);
   const headPath = headSrc ? indexPath(mesh, headSrc) : null;
@@ -136,6 +175,15 @@ function renderPortrait(mesh) {
   });
   studioScene.add(subject);
   subject.updateMatrixWorld(true);
+
+  // Return a signal so getPortrait() can defer caching and listen for
+  // texture loads. The clone is left in the scene briefly so the bbox /
+  // head lookup math below still runs and the caller can decide.
+  const pendingTex = _pendingTextures(subject);
+  if (pendingTex.length) {
+    studioScene.remove(subject);
+    return { deferred: true, pendingTex };
+  }
 
   const bb = new THREE.Box3().setFromObject(subject);
   const height = Math.max(0.5, bb.max.y - bb.min.y);
@@ -159,20 +207,82 @@ function renderPortrait(mesh) {
   // Teardown: the clone shares all GPU resources with the live character,
   // so removing it from the studio scene is the complete cleanup.
   studioScene.remove(subject);
-  return url;
+  return { url };
+}
+
+// Schedule a re-render once every pending texture has decoded. Wired
+// when the first render attempt found undecoded images (e.g. Maya's
+// overlay JPG). Once all fire, the portrait is re-rendered, cached, and
+// any callbacks registered via onReady are invoked so already-open
+// dialogue cards can swap their emoji for the real face.
+function _scheduleRender(mesh, id, pendingTex) {
+  if (!id) return;                          // can't dedupe without a key
+  if (pendingByCacheKey.has(id)) return;    // already waiting
+  pendingByCacheKey.set(id, []);
+  let remaining = pendingTex.length;
+  const tryFinish = () => {
+    if (--remaining > 0) return;
+    let res = null;
+    try { res = renderPortrait(mesh); } catch (e) {
+      console.warn('[portraitStudio] deferred render failed', id, e);
+    }
+    if (res && res.url) {
+      cache.set(id, res.url);
+      const cbs = pendingByCacheKey.get(id) || [];
+      pendingByCacheKey.delete(id);
+      for (const cb of cbs) { try { cb(res.url); } catch {} }
+    } else {
+      // Still not ready (e.g. second-layer texture pending) — bail; the
+      // next dialogue open will retry from scratch.
+      pendingByCacheKey.delete(id);
+    }
+  };
+  for (const tex of pendingTex) {
+    if (_textureReady(tex)) { tryFinish(); continue; }
+    // Three.js Texture exposes onUpdate but not a clean onLoad; we wrap
+    // image.onload directly. Falls back to a polling check for browsers
+    // that don't trigger onload when the texture was constructed with a
+    // pre-existing Image.
+    const img = tex.image;
+    if (img && 'addEventListener' in img) {
+      img.addEventListener('load', tryFinish, { once: true });
+      img.addEventListener('error', tryFinish, { once: true });
+    } else {
+      const start = performance.now();
+      const poll = () => {
+        if (_textureReady(tex) || performance.now() - start > 8000) tryFinish();
+        else setTimeout(poll, 100);
+      };
+      poll();
+    }
+  }
 }
 
 // Public API — cached dataURL of the character's portrait, or null when the
 // mesh is missing / rendering fails (caller keeps the emoji fallback).
-export function getPortrait(mesh, id) {
+//
+// `onReady` is called with the dataURL once an in-flight deferred render
+// finishes (so the dialogue card that prompted the request can swap its
+// emoji for the real face without waiting for the player to reopen).
+export function getPortrait(mesh, id, onReady) {
   if (id && cache.has(id)) return cache.get(id);
   if (!mesh || !ensureStudio()) return null;
-  let url = null;
+  let res = null;
   try {
-    url = renderPortrait(mesh);
+    res = renderPortrait(mesh);
   } catch (e) {
     console.warn('[portraitStudio] render failed', id, e);
   }
-  if (url && id) cache.set(id, url);
-  return url;
+  if (res && res.url) {
+    if (id) cache.set(id, res.url);
+    return res.url;
+  }
+  if (res && res.deferred) {
+    if (typeof onReady === 'function' && id) {
+      const list = pendingByCacheKey.get(id);
+      if (list) list.push(onReady);
+    }
+    _scheduleRender(mesh, id, res.pendingTex);
+  }
+  return null;
 }
