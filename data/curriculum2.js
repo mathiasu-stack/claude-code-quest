@@ -778,9 +778,17 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   {
     id: 'ch16',
     title: 'Claude Code on NAS',
-    subtitle: 'Week 16 — Remote & Headless Capstone',
+    subtitle: 'Side Quest — Remote & Headless Specialist',
     icon: '🖥️',
     xpReward: 500,
+    // Side quests sit outside the main path. They don't gate floor
+    // progression and they don't have to be completed to "finish" the
+    // training programme — but the story finale is still gated on
+    // ch16-test (the Kedash Protocol's NAS metaphor is hard-baked into
+    // Marcus's dialogue), so players who want the full ending will
+    // pick the side quest up. Players who just want the core
+    // curriculum can skip it without penalty.
+    sideQuest: true,
     lessons: [
       {
         id: 'ch16-l01', title: 'Why Run Claude Code on a NAS?', xpReward: 125, videos: [],

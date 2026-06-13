@@ -38,8 +38,19 @@ function renderDashboard() {
 
       <h2 class="section-title">Training Curriculum</h2>
       <div class="chapter-grid">
-        ${CURRICULUM.map(ch => renderChapterCard(ch, progress)).join('')}
+        ${CURRICULUM.filter(ch => !Progress.isSideQuestChapter(ch))
+          .map(ch => renderChapterCard(ch, progress)).join('')}
       </div>
+
+      ${CURRICULUM.some(ch => Progress.isSideQuestChapter(ch)) ? `
+        <h2 class="section-title side-quest-title">
+          <span class="side-quest-icon">★</span> Side Quests
+          <span class="side-quest-tag">Optional · Specialist tracks</span>
+        </h2>
+        <div class="chapter-grid side-quest-grid">
+          ${CURRICULUM.filter(ch => Progress.isSideQuestChapter(ch))
+            .map(ch => renderChapterCard(ch, progress)).join('')}
+        </div>` : ''}
     </div>
     <!-- Fallback FAB: fixed-position so it's reachable even if any
          layout/cascade issue (Firefox Android) hides the inline CTA. -->
@@ -83,8 +94,10 @@ function renderChapterCard(ch, progress) {
     statusBadge = '<span class="badge badge-available">Available</span>';
   }
 
+  const sideQuest = Progress.isSideQuestChapter(ch);
   return `
-    <div class="chapter-card ${unlocked ? 'unlocked' : 'locked'} ${testPassed ? 'completed' : ''}" data-chapter="${ch.id}">
+    <div class="chapter-card ${unlocked ? 'unlocked' : 'locked'} ${testPassed ? 'completed' : ''} ${sideQuest ? 'is-side-quest' : ''}" data-chapter="${ch.id}">
+      ${sideQuest ? '<div class="card-side-quest-tag">★ Side Quest</div>' : ''}
       <div class="card-icon">${ch.icon}</div>
       <div class="card-body">
         <div class="card-eyebrow">${ch.subtitle}</div>

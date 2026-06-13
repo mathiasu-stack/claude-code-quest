@@ -253,6 +253,10 @@ function clearTestNonce(progress, testId) {
 // dashboard's positions 5–8.
 const CHAPTERS_PER_FLOOR = 4;
 const FLOORS_TOTAL = 4;
+function isSideQuestChapter(ch) {
+  return !!(ch && ch.sideQuest);
+}
+
 function applyBadgeBumpsIfDue(progress) {
   const curriculum = (typeof window !== 'undefined' && window.CURRICULUM) || [];
   if (!curriculum.length) return progress;
@@ -261,6 +265,10 @@ function applyBadgeBumpsIfDue(progress) {
     let allPassed = true;
     for (let i = (floor - 1) * CHAPTERS_PER_FLOOR; i < floor * CHAPTERS_PER_FLOOR; i++) {
       const ch = curriculum[i];
+      // Side-quest chapters don't gate floor progression — a player can
+      // earn the next badge by clearing every MAIN-path chapter on the
+      // floor and leave the optional content for later (or never).
+      if (isSideQuestChapter(ch)) continue;
       const testId = ch?.practicalTest?.id || (ch ? `${ch.id}-test` : null);
       if (!testId || !isTestPassed(progress, testId)) { allPassed = false; break; }
     }
@@ -337,6 +345,7 @@ window.Progress = {
   getTestNonce,
   clearTestNonce,
   applyBadgeBumpsIfDue,
+  isSideQuestChapter,
   floorForChapter,
   CHAPTERS_PER_FLOOR,
   FLOORS_TOTAL,

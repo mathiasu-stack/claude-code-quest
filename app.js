@@ -318,7 +318,7 @@ const App = {
         <div class="nav-item ${isActive('shop')}" data-nav="shop">
           <span class="nav-icon">🛍️</span><span>Desk Shop</span>
         </div>
-        ${CURRICULUM.map(ch => {
+        ${CURRICULUM.filter(ch => !Progress.isSideQuestChapter(ch)).map(ch => {
           const unlocked = Progress.isChapterUnlocked(progress, ch.id);
           const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
           return `
@@ -330,6 +330,21 @@ const App = {
             </div>
           `;
         }).join('')}
+        ${CURRICULUM.some(ch => Progress.isSideQuestChapter(ch)) ? `
+          <div class="nav-side-quest-header">★ Side Quests</div>
+          ${CURRICULUM.filter(ch => Progress.isSideQuestChapter(ch)).map(ch => {
+            const unlocked = Progress.isChapterUnlocked(progress, ch.id);
+            const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
+            return `
+              <div class="nav-item chapter-nav nav-side-quest ${unlocked ? '' : 'nav-locked'} ${passed ? 'nav-complete' : ''} ${isActive('chapter', ch.id)}"
+                   data-nav="chapter" data-chapter="${ch.id}">
+                <span class="nav-icon">${unlocked ? ch.icon : '🔒'}</span>
+                <span class="nav-chapter-title">${ch.title}</span>
+                ${passed ? '<span class="nav-tick">✓</span>' : ''}
+              </div>
+            `;
+          }).join('')}
+        ` : ''}
       </nav>
 
       <div class="sidebar-reset">
