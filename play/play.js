@@ -379,8 +379,76 @@ const ZONE_THEMES_BY_ID = {
 const ZONE_THEMES = (window.CURRICULUM || []).map(c => ZONE_THEMES_BY_ID[c.id] || null);
 
 // ─── NPC generator (chapters 3-16) ───────────────────────────────────────────
-const NAME_FIRST = ['Aiko','Ben','Carmen','Dario','Elena','Felix','Greta','Hassan','Imani','Joel','Kira','Lars','Maya','Nikhil','Omar','Priya','Quinn','Rita','Sven','Tara','Uma','Vince','Wren','Xander','Yara','Zane','Anna','Bilal','Camille','Diego','Esme','Farid','Gabi','Hugo','Iris','Jin','Karim'];
-const NAME_LAST = ['Chen','Diaz','Hassan','Kim','Liu','Mehta','Nakamura','Olsen','Park','Rao','Singh','Tanaka','Volkov','Wong','Zhang','Patel','Garcia','Lopez','Khan','Hassan','Andersson','Dubois','Rossi','Schmidt'];
+// Culturally-coherent (first, last, rig) triples. Picking the trio as a
+// UNIT (one hash, one pick) replaces the previous independent picks of
+// name vs rig, which produced nonsense like a south-asian-female rig
+// named "Karim" (Arab male). Last names are aligned to the region too
+// so a Karim is Karim Hassan, never Karim Tanaka. The rig field is
+// propagated onto npc.look._gltfAsset so npcCasting's id-hash skips.
+const PEOPLE_POOL = [
+  // Arab male
+  { first: 'Karim',  last: 'Hassan',    rig: 'arab_male' },
+  { first: 'Bilal',  last: 'Khan',      rig: 'arab_male' },
+  { first: 'Omar',   last: 'Mahmoud',   rig: 'arab_male' },
+  { first: 'Farid',  last: 'Al-Rashid', rig: 'arab_male' },
+  { first: 'Hassan', last: 'Saleh',     rig: 'arab_male' },
+  // Hijabi (Arab/Muslim female)
+  { first: 'Yara',   last: 'Hassan',    rig: 'hijab_female' },
+  { first: 'Aisha',  last: 'Khan',      rig: 'hijab_female' },
+  { first: 'Noor',   last: 'Mahmoud',   rig: 'hijab_female' },
+  { first: 'Layla',  last: 'Al-Rashid', rig: 'hijab_female' },
+  // South Asian male
+  { first: 'Raj',    last: 'Mehta',     rig: 'sasian_male' },
+  { first: 'Nikhil', last: 'Singh',     rig: 'sasian_male' },
+  { first: 'Vikram', last: 'Patel',     rig: 'sasian_male' },
+  { first: 'Arjun',  last: 'Rao',       rig: 'sasian_male' },
+  // South Asian female
+  { first: 'Priya',  last: 'Mehta',     rig: 'sasian_female' },
+  { first: 'Uma',    last: 'Singh',     rig: 'sasian_female' },
+  { first: 'Anjali', last: 'Patel',     rig: 'sasian_female' },
+  { first: 'Diya',   last: 'Rao',       rig: 'sasian_female' },
+  // East Asian male
+  { first: 'Jin',     last: 'Chen',     rig: 'easian_male' },
+  { first: 'Hiroshi', last: 'Tanaka',   rig: 'easian_male' },
+  { first: 'Kenji',   last: 'Nakamura', rig: 'easian_male' },
+  { first: 'Wei',     last: 'Wong',     rig: 'easian_male' },
+  { first: 'Liang',   last: 'Liu',      rig: 'easian_male' },
+  // East Asian female
+  { first: 'Aiko',  last: 'Nakamura', rig: 'easian_female' },
+  { first: 'Mei',   last: 'Liu',      rig: 'easian_female' },
+  { first: 'Yuki',  last: 'Tanaka',   rig: 'easian_female' },
+  { first: 'Lin',   last: 'Chen',     rig: 'easian_female' },
+  { first: 'Nari',  last: 'Park',     rig: 'easian_female' },
+  // African male
+  { first: 'Kojo',  last: 'Mensah',   rig: 'african_male' },
+  { first: 'Femi',  last: 'Adeyemi',  rig: 'african_male' },
+  { first: 'Ade',   last: 'Okoye',    rig: 'african_male' },
+  { first: 'Tunde', last: 'Asante',   rig: 'african_male' },
+  { first: 'Kwame', last: 'Diallo',   rig: 'african_male' },
+  // African female
+  { first: 'Zara',    last: 'Mensah',  rig: 'african_female' },
+  { first: 'Ayo',     last: 'Adeyemi', rig: 'african_female' },
+  { first: 'Imani',   last: 'Okoye',   rig: 'african_female' },
+  { first: 'Adaeze',  last: 'Asante',  rig: 'african_female' },
+  { first: 'Aminata', last: 'Diallo',  rig: 'african_female' },
+  // Western male
+  { first: 'Ben',    last: 'Andersson', rig: 'western_male' },
+  { first: 'Lars',   last: 'Olsen',     rig: 'western_male' },
+  { first: 'Sven',   last: 'Schmidt',   rig: 'western_male' },
+  { first: 'Hugo',   last: 'Volkov',    rig: 'western_male' },
+  { first: 'Felix',  last: 'Dubois',    rig: 'western_male' },
+  { first: 'Xander', last: 'Rossi',     rig: 'western_male' },
+  { first: 'Vince',  last: 'Garcia',    rig: 'western_male' },
+  // Western female
+  { first: 'Elena',   last: 'Rossi',     rig: 'western_female' },
+  { first: 'Carmen',  last: 'Diaz',      rig: 'western_female' },
+  { first: 'Greta',   last: 'Schmidt',   rig: 'western_female' },
+  { first: 'Iris',    last: 'Andersson', rig: 'western_female' },
+  { first: 'Anna',    last: 'Volkov',    rig: 'western_female' },
+  { first: 'Camille', last: 'Dubois',    rig: 'western_female' },
+  { first: 'Esme',    last: 'Lopez',     rig: 'western_female' },
+  { first: 'Rita',    last: 'Olsen',     rig: 'western_female' },
+];
 const PORTRAITS = ['👩‍💼','👨‍💼','🧑‍💼','👩‍💻','👨‍💻','🧑‍💻','👩‍🔬','👨‍🔬','👩‍🏫','👨‍🏫','🧑‍🚀','👨‍🚀','👩‍🚀','🧑‍🎨','👨‍🔧','👩‍🔧','👨‍⚕️','👩‍⚕️','👨‍🍳','👩‍🍳'];
 // Role pool for the procedurally-generated NPCs. Each string MUST NOT
 // exactly match any player-rank label in the RANKS array above (Intern,
@@ -446,22 +514,21 @@ function generateChapterNPCs(chapterIdx) {
   ch.lessons.forEach((l, i) => {
     const slot = slots[i % slots.length];
     const seed = chapterIdx * 11 + i * 7;
-    const first = pick(NAME_FIRST, seed);
-    const last = pick(NAME_LAST, seed + 1);
+    const person = pick(PEOPLE_POOL, seed);
     const tmpl = pick(INTRO_TEMPLATES, seed + 2);
     npcs.push({
       id: `auto-${l.id}`,
       zone: chapterIdx + 1,
       pos: [slot.x, slot.z],
       face: slot.face,
-      name: `${first} ${last}`,
+      name: `${person.first} ${person.last}`,
       role: pick(ROLES_LESSON, seed + 3),
       portrait: pick(PORTRAITS, seed + 4),
       chapterId: ch.id,
       lessonId: l.id,
       kind: 'lesson',
-      look: npcLook(seed),
-      intro: tmpl.replace('{name}', first).replace('{title}', l.title),
+      look: { ...npcLook(seed), _gltfAsset: person.rig },
+      intro: tmpl.replace('{name}', person.first).replace('{title}', l.title),
       nextHint: i < ch.lessons.length - 1
         ? pick(NEXT_HINTS, seed + 5)
         : `Now find the assessor by the back door — they run the practical for ${ch.title}.`,
@@ -469,20 +536,19 @@ function generateChapterNPCs(chapterIdx) {
   });
   // Test NPC at south end (near door to next zone)
   const seed = chapterIdx * 11 + 99;
-  const first = pick(NAME_FIRST, seed);
-  const last = pick(NAME_LAST, seed + 1);
+  const person = pick(PEOPLE_POOL, seed);
   npcs.push({
     id: `auto-${ch.id}-test`,
     zone: chapterIdx + 1,
     pos: [0, cZ + 8.5],
     face: Math.PI,
-    name: `${first} ${last}`,
+    name: `${person.first} ${person.last}`,
     role: 'Assessor',
     portrait: pick(PORTRAITS, seed + 2),
     chapterId: ch.id,
     testId: ch.practicalTest.id,
     kind: 'test',
-    look: npcLook(seed),
+    look: { ...npcLook(seed), _gltfAsset: person.rig },
     intro: pick(TEST_INTROS, seed).replace('{chTitle}', ch.title),
     nextHint: chapterIdx < ZONE_COUNT - 1
       ? `Pass it and the door to the next zone opens.`

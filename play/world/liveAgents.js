@@ -61,12 +61,14 @@ const ROUTINES = {
 };
 
 // Neutral identities for the procedural library ambients — they become
-// E-to-talk flavor NPCs (SYS-04), so they need names and a portrait.
+// E-to-talk flavor NPCs (SYS-04). Each identity bundles its rig so the
+// face matches the name (Dev Kapoor is sasian_male, not whatever a
+// hash of 'ambient-2' might pick).
 const AMBIENT_IDENTITIES = [
-  { name: 'Dev Kapoor',      portrait: '🧑‍💼' },
-  { name: 'Marta Lindqvist', portrait: '👩‍💼' },
-  { name: 'Theo Brandt',     portrait: '👨‍💼' },
-  { name: 'Suki Tanabe',     portrait: '👩‍💻' },
+  { name: 'Dev Kapoor',      portrait: '🧑‍💼', rig: 'sasian_male' },
+  { name: 'Marta Lindqvist', portrait: '👩‍💼', rig: 'western_female' },
+  { name: 'Theo Brandt',     portrait: '👨‍💼', rig: 'western_male' },
+  { name: 'Suki Tanabe',     portrait: '👩‍💻', rig: 'easian_female' },
 ];
 
 export class LiveAgents {
@@ -122,8 +124,13 @@ export class LiveAgents {
     const mouthShapes = ['smile', 'gentle', 'flat'];
     // _id ensures the flatFace system gives each ambient agent a unique
     // deterministic face via id hashing (faceConfigs.getFaceConfig).
+    // Identity decided FIRST so we can lock the rig to the name; the
+    // procedural-look attributes below are leftover from the pre-GLB era
+    // and only matter when the GLB fails to load (fallback procedural).
+    const ident = AMBIENT_IDENTITIES[seed % AMBIENT_IDENTITIES.length];
     const look = {
       _id: `ambient-${seed}`,
+      _gltfAsset: ident.rig,                  // name ↔ face stay coherent
       skin:       skinTones[seed % skinTones.length],
       hair:       hairColors[(seed * 3) % hairColors.length],
       hairStyle:  hairStyles[(seed * 5) % hairStyles.length],
@@ -149,7 +156,6 @@ export class LiveAgents {
     // act-gated six-line set (data/story_ambient.js). Slots 0-2 belong
     // to the dedicated lobby actors (folderman/partner/tania in the
     // NPCS roster); library ambients take slots 3+ and cycle lines 2-6.
-    const ident = AMBIENT_IDENTITIES[seed % AMBIENT_IDENTITIES.length];
     const slot = 3 + seed;
     mesh.userData.npc = {
       id: `ambient-${seed}`,
