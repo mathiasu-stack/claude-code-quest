@@ -154,6 +154,24 @@ function completeLesson(ch, lesson) {
   }
 }
 
+// Fisher-Yates shuffle on a copy of the array — used to randomize the
+// knowledge-check option order on every render so the player can't pass
+// by clicking position B every time (every authored KC in the
+// curriculum currently has correctIndex: 1, which made that the meta).
+function _shuffleIndexes(n) {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Live record of the displayed→original-index mapping per lesson id, so
+// the click handler can compare against the ORIGINAL correctIndex from
+// the curriculum data without needing to re-shuffle.
+const _kcDisplayOrder = new Map();
+
 function buildKnowledgeCheck(lesson, progress, lessonAlreadyDone) {
   if (!lesson.check) return '';
   const c = lesson.check;
@@ -164,6 +182,12 @@ function buildKnowledgeCheck(lesson, progress, lessonAlreadyDone) {
   // A wrong attempt leaves it interactive so the player can retry.
   const locked = lessonAlreadyDone || passed;
 
+  // Display order = randomized index permutation; e.g. order=[2,0,3,1]
+  // means option A in the UI is the original option 2 from the data.
+  // Stored so bindKnowledgeCheck can look up the original index on click.
+  const order = _shuffleIndexes(c.options.length);
+  _kcDisplayOrder.set(lesson.id, order);
+
   return `
     <div class="knowledge-check ${locked ? 'kc-locked' : ''}" id="kc-block">
       <div class="kc-header">
@@ -173,15 +197,14 @@ function buildKnowledgeCheck(lesson, progress, lessonAlreadyDone) {
       </div>
       <div class="kc-question">${c.question}</div>
       <div class="kc-options">
-        ${c.options.map((opt, i) => {
-          const isAnswer = i === c.correctIndex;
+        ${order.map((origIdx, displayIdx) => {
+          const opt = c.options[origIdx];
+          const isAnswer = origIdx === c.correctIndex;
           let cls = '';
-          if (locked) {
-            if (isAnswer) cls = 'kc-correct';
-          }
+          if (locked && isAnswer) cls = 'kc-correct';
           return `
-            <button class="kc-option ${cls}" data-idx="${i}" ${locked ? 'disabled' : ''}>
-              <span class="kc-option-letter">${String.fromCharCode(65 + i)}</span>
+            <button class="kc-option ${cls}" data-idx="${origIdx}" ${locked ? 'disabled' : ''}>
+              <span class="kc-option-letter">${String.fromCharCode(65 + displayIdx)}</span>
               <span class="kc-option-text">${opt}</span>
               ${locked && isAnswer ? '<span class="kc-tick">✓</span>' : ''}
             </button>
