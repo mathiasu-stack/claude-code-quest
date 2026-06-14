@@ -190,6 +190,25 @@ function isTestPassed(progress, testId) {
   return progress.testResults[testId]?.passed === true;
 }
 
+// ── Dual-track test gating ───────────────────────────────────────────────
+// Every chapter has both a Practical (hands-on) test and a Theoretical
+// (MCQ) test. Either passing path counts as "chapter passed" for the
+// purposes of unlocking the next chapter and bumping the badge floor.
+// XP is mirrored on both tracks, so the player isn't economically pushed
+// toward one or the other — the choice is just about format. The KDQ
+// compliance nonce stays scoped to the practical track (it proves a live
+// terminal session ran), but neither track is required to advance.
+function chapterTestIds(chapter) {
+  if (!chapter) return [];
+  const practicalId = chapter.practicalTest?.id || `${chapter.id}-test`;
+  const theoreticalId = chapter.theoreticalTest?.id || null;
+  return theoreticalId ? [practicalId, theoreticalId] : [practicalId];
+}
+
+function isChapterTestPassed(progress, chapter) {
+  return chapterTestIds(chapter).some(id => isTestPassed(progress, id));
+}
+
 function addBonusXP(progress, amount) {
   return { ...progress, totalXP: progress.totalXP + amount };
 }
@@ -269,8 +288,9 @@ function applyBadgeBumpsIfDue(progress) {
       // earn the next badge by clearing every MAIN-path chapter on the
       // floor and leave the optional content for later (or never).
       if (isSideQuestChapter(ch)) continue;
-      const testId = ch?.practicalTest?.id || (ch ? `${ch.id}-test` : null);
-      if (!testId || !isTestPassed(progress, testId)) { allPassed = false; break; }
+      // Either the practical or the theoretical test counts as passing
+      // the chapter — keep the dual track parity that ui/test.js exposes.
+      if (!ch || !isChapterTestPassed(progress, ch)) { allPassed = false; break; }
     }
     if (allPassed) badge = Math.max(badge, Math.min(FLOORS_TOTAL, floor + 1));
   }
@@ -330,6 +350,8 @@ window.Progress = {
   isChapterUnlocked,
   isLessonComplete,
   isTestPassed,
+  isChapterTestPassed,
+  chapterTestIds,
   recordActivity,
   getCurrentStreak,
   unlockAchievement,

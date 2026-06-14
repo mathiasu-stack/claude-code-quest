@@ -76,4 +76,45 @@ function evaluate(submission, criteria, minLength, passThreshold, context = {}) 
   return { passed, score, tooShort: false, criteriaResults };
 }
 
-window.Evaluator = { evaluate };
+// ── MCQ evaluation (theoretical test track) ─────────────────────────────
+// Drawn-test inputs: caller passes the SAME `drawnQuestions` array that was
+// used to render the form, plus `attempt` — a per-question array of the
+// ORIGINAL option indexes the player selected (single-answer: length 1,
+// multi: 0..n). Display-order shuffling happens in ui/test.js; this stays
+// position-neutral so a question can be regraded later without re-shuffling.
+//
+// A question counts as "fully correct" only when the selected set EXACTLY
+// matches correctIndexes (no extras, no misses). Partial credit is not
+// awarded — the pool is short and the threshold (80%) already permits one
+// miss out of six. Score = (questionsCorrect / questionsAsked) * 100, then
+// passed = score >= (test.passThreshold ?? 80).
+function evaluateMcq(attempt, theoreticalTest, drawnQuestions) {
+  const questions = Array.isArray(drawnQuestions) ? drawnQuestions : [];
+  const responses = Array.isArray(attempt) ? attempt : [];
+  const threshold = Number(theoreticalTest?.passThreshold ?? 80);
+
+  let correctCount = 0;
+  const perQuestion = questions.map((q, i) => {
+    const expected = Array.isArray(q.correctIndexes) ? q.correctIndexes.slice().sort((a, b) => a - b) : [];
+    const raw = responses[i];
+    const got = Array.isArray(raw) ? raw.slice().sort((a, b) => a - b) : [];
+    const correct = expected.length === got.length && expected.every((v, k) => v === got[k]);
+    if (correct) correctCount++;
+    return {
+      questionId: q.id,
+      prompt: q.prompt,
+      type: q.type,
+      correct,
+      selected: got,
+      expected,
+      explanation: q.explanation || '',
+    };
+  });
+
+  const total = questions.length;
+  const score = total === 0 ? 0 : Math.round((correctCount / total) * 100);
+  const passed = total > 0 && score >= threshold;
+  return { passed, score, correctCount, total, perQuestion };
+}
+
+window.Evaluator = { evaluate, evaluateMcq };

@@ -119,6 +119,147 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
       ],
       exemplar: '<p>Strong answer: skill file with frontmatter (name, description) and a body listing the 4 parts; sample reply visibly hits greeting → answer → next-step → sign-off.</p>',
     },
+    theoreticalTest: {
+      id: 'ch08-test-mcq', passThreshold: 80, xpReward: 525, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch08-q01', type: 'single',
+          prompt: 'In one sentence, what is a Skill in Claude Code?',
+          options: [
+            'A binary plugin compiled from Rust',
+            'A reusable, parameterised prompt template stored in <code>.claude/skills/</code> that you invoke as a slash command',
+            'A subagent definition under <code>.claude/agents/</code>',
+            'A keyboard macro recorded in the editor',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What Are Skills?" — skills are prompt templates exposed as slash commands.',
+        },
+        {
+          id: 'ch08-q02', type: 'single',
+          prompt: 'Which is the core "progressive disclosure" claim about skills?',
+          options: [
+            'Skills auto-improve as you use them',
+            'Only the skill\'s name and one-line description live in context at all times; the full body loads only when the skill is invoked',
+            'Skills only run when CLAUDE.md is empty',
+            'Skills are loaded in parallel via subagents',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Progressive Disclosure" — the index is always-loaded, body is on-invocation.',
+        },
+        {
+          id: 'ch08-q03', type: 'single',
+          prompt: 'When is the "skills" approach a better choice than a big CLAUDE.md?',
+          options: [
+            'For "always active" instructions — every session needs them',
+            'For "sometimes needed" instructions — only relevant on specific tasks',
+            'Whenever your CLAUDE.md exceeds 100 lines',
+            'Only on Opus tier',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Progressive Disclosure" — always-active belongs in CLAUDE.md; sometimes-needed belongs in skills.',
+        },
+        {
+          id: 'ch08-q04', type: 'multi',
+          prompt: 'Where do skills physically live? (pick all valid locations)',
+          options: [
+            '<code>.claude/skills/</code> in the project (shared via git)',
+            '<code>~/.claude/skills/</code> for personal skills',
+            '<code>.claude/commands/</code> — the legacy path still works but is no longer canonical',
+            '<code>/usr/local/share/claude/skills/</code>',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Writing Your First Skill" — first three are documented; the /usr/local path is invented.',
+        },
+        {
+          id: 'ch08-q05', type: 'single',
+          prompt: 'Inside a SKILL.md, which token receives dynamic input passed on the command line?',
+          options: [
+            '<code>$INPUT</code>',
+            '<code>$ARGUMENTS</code>',
+            '<code>%1</code>',
+            '<code>{{args}}</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Writing Your First Skill" — <code>$ARGUMENTS</code> is the placeholder; e.g. <code>/changelog v2.5.0</code> passes "v2.5.0" via $ARGUMENTS.',
+        },
+        {
+          id: 'ch08-q06', type: 'multi',
+          prompt: 'Which of these are listed as "best practices" for writing a skill?',
+          options: [
+            'Use <code>$ARGUMENTS</code> for dynamic input',
+            'Be explicit about output format',
+            'Include quality criteria',
+            'Avoid markdown',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Writing Your First Skill" — first three are explicit best practices; avoiding markdown is not.',
+        },
+        {
+          id: 'ch08-q07', type: 'multi',
+          prompt: 'Which of these are described as built-in commands (coded behavior, not prompt templates)?',
+          options: [
+            '<code>/init</code>',
+            '<code>/review</code>',
+            '<code>/security-review</code>',
+            '<code>/clear</code>',
+            '<code>/simplify</code>',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "What Are Skills?" — first four are built-ins; <code>/simplify</code> is named as a bundled prompt-based skill.',
+        },
+        {
+          id: 'ch08-q08', type: 'multi',
+          prompt: 'Which of the following are real hook events the lesson lists?',
+          options: [
+            'PreToolUse',
+            'PostToolUse',
+            'Stop',
+            'SessionStart / SessionEnd',
+            'UserPromptSubmit',
+            'PreCompact / PostCompact',
+            'SubagentStart / SubagentStop',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4, 5, 6],
+          explanation: 'Lesson "Hook-based Skills" — all seven appear in the selected-events list. (27 total exist; these are the named ones.)',
+        },
+        {
+          id: 'ch08-q09', type: 'single',
+          prompt: 'In the lesson\'s settings.json example, what role does the <code>matcher</code> field play?',
+          options: [
+            'Identifies a regex applied to the user prompt',
+            'Filters by tool name — empty string matches all tools',
+            'Picks a model tier for the hook to run on',
+            'Selects which CLAUDE.md the hook applies to',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Hook-based Skills" — matcher filters by tool name; empty means all.',
+        },
+        {
+          id: 'ch08-q10', type: 'single',
+          prompt: 'What are hooks "best for", according to the lesson?',
+          options: [
+            'Replacing CLAUDE.md entirely',
+            'Guardrails — things that should always happen regardless of the task (lint, type-check, run tests on a changed file)',
+            'Hiding output from the user',
+            'Throttling Claude\'s token output',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Hook-based Skills" — hooks are your automated guardrail/quality gate.',
+        },
+        {
+          id: 'ch08-q11', type: 'single',
+          prompt: 'You have ten skills in <code>.claude/skills/</code>. A session uses two of them. Which BEST captures the token math vs. dumping all ten workflows into CLAUDE.md?',
+          options: [
+            'Skills cost more — every skill loads on session start',
+            '~50-token index always loaded + only the invoked skills\' bodies, so the 2-skill session costs roughly 1,100 tokens for the skill layer rather than ~3,000 for "everything in CLAUDE.md"',
+            'No difference — CLAUDE.md and skills both stream content lazily',
+            'CLAUDE.md is always cheaper because of caching',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Progressive Disclosure" — those are the lesson\'s explicit numbers for the comparison.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 11 ─────────────────────────────────────────────────────────────
@@ -249,6 +390,137 @@ Your answer becomes the next learnings.md entry."</code></pre>
       ],
       exemplar: '<p>Strong answer: a numbered observation walking through a real billing ticket (account check → FAQ → template → escalation), then a skill file that names <code>name:</code> / <code>description:</code> and codifies those steps.</p>',
     },
+    theoreticalTest: {
+      id: 'ch09-test-mcq', passThreshold: 80, xpReward: 550, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch09-q01', type: 'single',
+          prompt: 'What is the "biggest skill-building mistake" the lesson identifies?',
+          options: [
+            'Writing the skill in YAML instead of markdown',
+            'Imagining what a good workflow looks like and writing the skill file BEFORE running the workflow manually',
+            'Putting skills in <code>~/.claude/skills/</code>',
+            'Using <code>$ARGUMENTS</code> too liberally',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Walk Before You Codify" — the failure mode is writing from imagination instead of from observed behavior.',
+        },
+        {
+          id: 'ch09-q02', type: 'multi',
+          prompt: 'Which are the three phases of the recommended skill-building methodology?',
+          options: [
+            'Manual runs — execute the workflow as a conversation, correcting as you go (3+ real tasks)',
+            'Pattern extraction — note which prompts worked, which corrections were needed, which inputs were required',
+            'Codification — convert the proven sequence into a skill file with corrections as guardrails',
+            'Marketing — announce the skill in #general',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Walk Before You Codify" — three phases: manual runs → pattern extraction → codification.',
+        },
+        {
+          id: 'ch09-q03', type: 'multi',
+          prompt: 'During the manual phase, what does the lesson tell you to deliberately capture?',
+          options: [
+            'The exact opening prompt that made Claude understand the task',
+            'Corrections you had to make',
+            'Required inputs the workflow always needs',
+            'Output criteria — what "good output" looks like',
+            'Failure modes — what went wrong and what fixed it',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "Documenting a Workflow Run" — all five are explicit capture targets.',
+        },
+        {
+          id: 'ch09-q04', type: 'single',
+          prompt: 'How many manual runs does the lesson recommend before writing the skill file?',
+          options: ['1', 'At least 3 successful runs on real tasks', '5', '10'],
+          correctIndexes: [1],
+          explanation: 'Lesson "Walk Before You Codify" + "Documenting a Workflow Run" — at least 3 successful real-task runs.',
+        },
+        {
+          id: 'ch09-q05', type: 'multi',
+          prompt: 'Which sections appear in the lesson\'s skill structure template?',
+          options: [
+            '## Context',
+            '## Inputs (including $ARGUMENTS line)',
+            '## Task',
+            '## Quality Criteria',
+            '## Output Format',
+            '## Pricing',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "Writing the Skill from Observation" — those five sections appear; pricing doesn\'t.',
+        },
+        {
+          id: 'ch09-q06', type: 'single',
+          prompt: 'A correction you ALWAYS had to make during manual runs — where does it live in the codified skill?',
+          options: [
+            'Skip it — Claude will figure it out',
+            'It becomes a line in the Quality Criteria section, encoded as a rule (essentially automating the correction)',
+            'Inside a code comment in the project source',
+            'In a CLAUDE.md',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Writing the Skill from Observation" — encode corrections as guardrails under Quality Criteria.',
+        },
+        {
+          id: 'ch09-q07', type: 'single',
+          prompt: 'What is the lesson\'s position on "shipped to the repo" skills?',
+          options: [
+            'They are done — no further edits',
+            'They are "ready to start learning" — every imperfect run is data fed back into the skill via learnings.md',
+            'They should be rewritten quarterly from scratch',
+            'They should be deleted after 30 days',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Closing the Loop with learnings.md" — shipping is the beginning; improvement compounds via learnings.md.',
+        },
+        {
+          id: 'ch09-q08', type: 'multi',
+          prompt: 'Which "failure modes to listen for" does the lesson name?',
+          options: [
+            'Missing context — the skill lacked information it needed',
+            'Ambiguous instructions — a phrase got read two ways',
+            'Missing guardrails — an edge case wasn\'t anticipated',
+            'Stale assumptions — the codebase changed',
+            'Insufficient emoji density',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Closing the Loop with learnings.md" — first four are named; emoji density is not.',
+        },
+        {
+          id: 'ch09-q09', type: 'multi',
+          prompt: 'Which fields does a learnings.md entry use, per the lesson?',
+          options: ['Problem', 'Fix', 'Verified', 'Owner'],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Closing the Loop with learnings.md" — Problem / Fix / Verified are the named fields; Owner is not.',
+        },
+        {
+          id: 'ch09-q10', type: 'single',
+          prompt: 'What is the "self-improving skill" pattern the lesson describes?',
+          options: [
+            'A skill that automatically rewrites itself with no human in the loop',
+            'A skill that asks the user for feedback at the end of every run, with the answer becoming the next learnings.md entry',
+            'A skill that calls another skill recursively',
+            'A skill that runs nightly via cron',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Closing the Loop with learnings.md" — building feedback INTO the skill is the compounding pattern.',
+        },
+        {
+          id: 'ch09-q11', type: 'single',
+          prompt: 'Before committing a freshly-written skill to the repo, what does the lesson say to do?',
+          options: [
+            'Push directly to main',
+            'Run the skill 2-3 times on real tasks and update the skill file if it still needs corrections',
+            'Open a Jira ticket',
+            'Add a pricing section',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Writing the Skill from Observation" — test 2-3 real runs and iterate until it runs cleanly.',
+        },
+      ],
+    },
   },
   // ── Chapter 12 ────────────────────────────────────────────────────────────
   {
@@ -260,9 +532,10 @@ Your answer becomes the next learnings.md entry."</code></pre>
     lessons: [
       {
         id: 'ch10-l01', title: 'Meet the Engines', xpReward: 110, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/model</code> showing the interactive picker (Opus / Sonnet / Haiku rows visible with current selection highlighted) and replace this marker. Save as <code>play/assets/lessons/ch10-l01.png</code>.</div>
 <p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
 <p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
 <h3>The Claude 4 family in Claude Code</h3>
@@ -379,6 +652,136 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
       ],
       exemplar: '<p>Strong answer: Haiku for ticket classification (high volume, mechanical, sub-second per call), Opus for the 14-file refactor (cross-file reasoning, possibly 1M context if total is large), Sonnet for the helper + call sites (small scope, default tier). Proof section shows <code>/model haiku</code>, <code>/model opus</code>, <code>/model sonnet</code> with status-line snippets confirming each switch — and at least one mention of how prompt caching keeps a tight burst cheap.</p>',
     },
+    theoreticalTest: {
+      id: 'ch10-test-mcq', passThreshold: 80, xpReward: 650, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch10-q01', type: 'single',
+          prompt: 'Which model does Claude Code use by default on launch?',
+          options: ['Opus 4.8', 'Sonnet 4.6', 'Haiku 4.5', 'It asks every time'],
+          correctIndexes: [1],
+          explanation: 'Lesson "Meet the Engines" — Sonnet 4.6 is the default and the recommended ~80% choice.',
+        },
+        {
+          id: 'ch10-q02', type: 'multi',
+          prompt: 'Which of the following are the three model tiers in the Claude 4 family available in Claude Code?',
+          options: ['Claude Opus 4.8', 'Claude Sonnet 4.6', 'Claude Haiku 4.5', 'Claude Lite 3.5'],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Meet the Engines" — three tiers: Opus 4.8, Sonnet 4.6, Haiku 4.5.',
+        },
+        {
+          id: 'ch10-q03', type: 'single',
+          prompt: 'What does <code>/fast</code> do?',
+          options: [
+            'Downgrades to Haiku',
+            'Toggles Fast Mode while on Opus — you stay on Opus, but output streams much faster',
+            'Disables prompt caching',
+            'Sends a single one-shot prompt',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Switching with /model and Fast Mode" — Fast Mode keeps you on Opus and speeds output; it is not a downgrade.',
+        },
+        {
+          id: 'ch10-q04', type: 'single',
+          prompt: 'You\'re about to ingest a huge codebase in a single session. Which feature does the lesson recommend?',
+          options: [
+            'Spin up multiple sessions',
+            'Run Opus 4.7+ which supports a 1,000,000-token context — model ID shows as <code>claude-opus-4-8[1m]</code>',
+            'Switch to Haiku — it has the most context',
+            'There\'s no way; split the codebase manually',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Switching with /model and Fast Mode" — the 1M-context tier on Opus 4.7/4.8 fits whole codebases in one session.',
+        },
+        {
+          id: 'ch10-q05', type: 'single',
+          prompt: 'For headless / scripted runs, how do you pin a specific model per command?',
+          options: [
+            'Edit <code>~/.claude/CLAUDE.md</code>',
+            'Pass <code>--model claude-haiku-4-5</code> (or similar) to <code>claude -p "..."</code>',
+            'Use an environment variable <code>CLAUDE_MODEL</code>',
+            'It always uses Sonnet for headless runs',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Switching with /model and Fast Mode" — <code>--model</code> is the one-shot per-command override.',
+        },
+        {
+          id: 'ch10-q06', type: 'single',
+          prompt: 'The "order-of-magnitude rule" for cost per million tokens, with Haiku as the reference, is roughly…',
+          options: [
+            'Opus ≈ 5×, Sonnet ≈ 2× Haiku',
+            'Opus ≈ 15×, Sonnet ≈ 3× Haiku',
+            'Opus ≈ 100×, Sonnet ≈ 10× Haiku',
+            'All tiers identical',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Cost Economics & Prompt Caching" — Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku.',
+        },
+        {
+          id: 'ch10-q07', type: 'multi',
+          prompt: 'Which of these tasks are good Haiku fits, per the lesson?',
+          options: [
+            'Renames, regex replaces, formatting JSON, tallying numbers',
+            'Sub-second answers for hooks or status-line scripts',
+            'Triaging logs or summarising a single short file',
+            'A high-volume batch (e.g. 1000 PR titles to classify)',
+            'Designing a new architecture across services',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Matching Model to Task" — the first four are explicit Haiku territory; architecture design is Opus territory.',
+        },
+        {
+          id: 'ch10-q08', type: 'multi',
+          prompt: 'When does the lesson say to pick Opus?',
+          options: [
+            'Reasoning across many files or unfamiliar territory',
+            'Subtle non-deterministic bugs',
+            'Designing an architecture (not just implementing one)',
+            'Audits, security reviews, compliance checks where missing something is expensive',
+            'Orchestrating subagents (the orchestrator benefits most from intelligence)',
+            'A one-line typo fix',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "Matching Model to Task" — first five are explicit Opus fits; the typo fix is the cautionary Opus over-use example.',
+        },
+        {
+          id: 'ch10-q09', type: 'single',
+          prompt: 'You started a session on Sonnet but it keeps making wrong guesses and asking you to re-explain. What does the lesson recommend?',
+          options: [
+            'Keep iterating — eventually Sonnet will get it',
+            'Use <code>/model opus</code> and re-prompt — don\'t burn an hour fighting the wrong tier',
+            'Restart your computer',
+            'Switch to Haiku',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Matching Model to Task" — escalate mid-session is part of the decision heuristic.',
+        },
+        {
+          id: 'ch10-q10', type: 'single',
+          prompt: 'You were on Opus for the architectural design and now you\'re typing out mechanical boilerplate from the plan. Best move?',
+          options: [
+            'Stay on Opus to keep things consistent',
+            'De-escalate — drop back to Sonnet (or Haiku for pure mechanical tail-end edits); cost compounds across a workday',
+            'Switch to a new project to start over',
+            'Restart Claude Code',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Matching Model to Task" — the de-escalate pattern is symmetric with escalate.',
+        },
+        {
+          id: 'ch10-q11', type: 'single',
+          prompt: 'The lesson calls out one polling interval as the "worst of both worlds" for caching. What is it, and why?',
+          options: [
+            'Under 60 seconds — too noisy',
+            '300 seconds (5 minutes) — you pay the cache eviction without amortising it',
+            'Exactly 4 minutes — the cache silently doubles cost',
+            '24 hours — too long',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Cost Economics & Prompt Caching" — 300 seconds straddles the 5-minute TTL, paying the miss with no amortisation.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 13 ────────────────────────────────────────────────────────────
@@ -432,6 +835,133 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
       ],
       exemplar: '<p>Strong answer: an install command (npm or npx), a JSON config block under <code>mcpServers</code> with <code>command</code>/<code>args</code>, a note about restarting Claude, and a snippet of Claude actually invoking the filesystem tool with paths visible.</p>',
     },
+    theoreticalTest: {
+      id: 'ch13-test-mcq', passThreshold: 80, xpReward: 600, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch13-q01', type: 'single',
+          prompt: 'What does MCP stand for, and what does it do?',
+          options: [
+            'Multi-Claude Protocol — splits work between models',
+            'Model Context Protocol — an open standard that lets Claude Code connect to external services, databases, and tools',
+            'Managed Cloud Proxy — Anthropic-hosted secrets management',
+            'Memory Compaction Protocol — speeds up <code>/compact</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is MCP?" — MCP = Model Context Protocol, the open standard for external-tool integration.',
+        },
+        {
+          id: 'ch13-q02', type: 'multi',
+          prompt: 'Which of these are described as common MCP-server integrations?',
+          options: ['GitHub', 'Postgres', 'Slack', 'Notion', 'Linear', 'Figma'],
+          correctIndexes: [0, 1, 2, 3, 4, 5],
+          explanation: 'Lesson "What is MCP?" — all six are named as community-built MCP integrations.',
+        },
+        {
+          id: 'ch13-q03', type: 'single',
+          prompt: 'Which file holds the per-PROJECT MCP server configuration that you commit and share with the team?',
+          options: [
+            '<code>~/.claude.json</code>',
+            '<code>.mcp.json</code> at the repo root',
+            '<code>.claude/settings.json</code>',
+            '<code>mcp.config.toml</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Connecting MCP Servers" — <code>.mcp.json</code> is the project-level file; <code>~/.claude.json</code> is the user-level alternative.',
+        },
+        {
+          id: 'ch13-q04', type: 'single',
+          prompt: 'After adding an MCP server, how do you VERIFY it actually connected?',
+          options: [
+            'Run <code>/mcp</code> — it lists connected servers and their tools',
+            'Run <code>/status</code>',
+            'Check <code>.claude/mcp.log</code>',
+            'No way to verify — assume it worked',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Connecting MCP Servers" — <code>/mcp</code> is the verification surface.',
+        },
+        {
+          id: 'ch13-q05', type: 'single',
+          prompt: 'You\'re wiring an MCP that touches a production database. The lesson\'s explicit safety advice?',
+          options: [
+            'Run with admin credentials so everything works',
+            'Use read-only credentials for production databases',
+            'Use the same creds as production cron jobs',
+            'Disable <code>/mcp</code> after setup',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Connecting MCP Servers" — production DBs: read-only creds, no exceptions in the lesson.',
+        },
+        {
+          id: 'ch13-q06', type: 'single',
+          prompt: 'Which CLI command adds a server from the Anthropic MCP Registry?',
+          options: [
+            '<code>claude mcp install &lt;server-name&gt;</code>',
+            '<code>claude mcp add &lt;server-name&gt;</code>',
+            '<code>claude add-mcp &lt;server-name&gt;</code>',
+            '<code>npm i -g claude-mcp-&lt;server-name&gt;</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is MCP?" — <code>claude mcp add &lt;server-name&gt;</code> pulls from the official registry.',
+        },
+        {
+          id: 'ch13-q07', type: 'multi',
+          prompt: 'Per the use-cases lesson, which of these would naturally use a database MCP server?',
+          options: [
+            '"Show schema for orders table"',
+            '"Write a migration to add deleted_at to products"',
+            '"What indexes exist on users?"',
+            '"Summarize the company\'s vision deck"',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Common MCP Use Cases" — first three are the listed database-MCP examples; vision-deck summarization is unrelated.',
+        },
+        {
+          id: 'ch13-q08', type: 'single',
+          prompt: 'What clever pattern does the lesson highlight for combining Business Brain + MCP?',
+          options: [
+            'Store CLAUDE.md inside the MCP server',
+            'Expose your Business Brain as a searchable MCP server so only RELEVANT sections come back, instead of loading whole files into context',
+            'Replace the Business Brain with a vector DB',
+            'Cache the Business Brain to disk',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Common MCP Use Cases" — searchable BB index scales the pattern without ballooning tokens.',
+        },
+        {
+          id: 'ch13-q09', type: 'multi',
+          prompt: 'Which official SDKs does Anthropic provide for writing your own MCP server?',
+          options: ['TypeScript', 'Python', 'Go', 'Rust'],
+          correctIndexes: [0, 1],
+          explanation: 'Lesson "Building a Simple MCP Server" — TypeScript and Python are the official SDKs named.',
+        },
+        {
+          id: 'ch13-q10', type: 'single',
+          prompt: 'When should you write your OWN MCP server vs. use a community one?',
+          options: [
+            'Always write your own — community ones are unsafe',
+            'Use community servers for standard tools; only build your own for internal systems without an open-source alternative',
+            'Always use the GitHub server',
+            'Build your own only on weekends',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Building a Simple MCP Server" — community for standard, custom only for internal-without-alternatives.',
+        },
+        {
+          id: 'ch13-q11', type: 'single',
+          prompt: 'In an MCP server\'s <code>.mcp.json</code> entry, which fields appear under each server name?',
+          options: [
+            '<code>url</code>, <code>port</code>, <code>token</code>',
+            '<code>command</code>, <code>args</code>, optional <code>env</code>',
+            '<code>language</code>, <code>handler</code>',
+            'Just <code>endpoint</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Connecting MCP Servers" — <code>command</code> + <code>args</code> (and an optional <code>env</code>) are the standard fields.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 14 ────────────────────────────────────────────────────────────
@@ -444,9 +974,10 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
     lessons: [
       {
         id: 'ch14-l01', title: 'Sam Okoye and the Dispatch Board', xpReward: 115, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>"I Don't Type — I Dispatch"</h2>
+<figure class="lesson-figure"><img src="https://mintcdn.com/claude-code/1B48Qz2Z9hac4SLG/images/agent-view-light.png?fit=max&auto=format&n=1B48Qz2Z9hac4SLG&q=85&s=7a186c96ed47d6700d084d77e786be65" alt="Claude Code agent view in a terminal showing many background subagent sessions grouped under 'Needs input', 'Working', and 'Completed', with a dispatch input at the bottom" loading="lazy"/><figcaption>Screenshot: Anthropic docs — Manage multiple agents with agent view.</figcaption></figure>
 <p><em>Sam Okoye runs Engineering at Kedash. He waves you over to a wall-mounted board covered in coloured cards. "This is the Dispatch Board," he says. "Every card is a subagent. I don't type code anymore — I dispatch."</em></p>
 <h3>What a subagent actually is</h3>
 <p>A <strong>subagent</strong> is a separate Claude session that the main session spawns with the <code>Agent</code> (a.k.a. Task) tool. It has its own context window, its own tool set, and runs to completion before reporting back a single summary message.</p>
@@ -579,6 +1110,140 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       ],
       exemplar: '<p>Strong answer: a code-reviewer agent file in <code>.claude/agents/</code> with name/description/model:opus/tools restricted to read-only; a single dispatch invoking that reviewer and its terse verdict; and a parallel dispatch with 2–3 Agent calls in one orchestrator turn working on genuinely independent scopes (e.g., three locale folders, or three unrelated docs files) with each summary printed back.</p>',
     },
+    theoreticalTest: {
+      id: 'ch14-test-mcq', passThreshold: 80, xpReward: 675, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch14-q01', type: 'single',
+          prompt: 'In one sentence, what is a subagent?',
+          options: [
+            'A keyboard shortcut for /agents',
+            'A separate Claude session the main session spawns with the Agent (Task) tool — its own context window, its own tools, runs to completion, reports back a single summary',
+            'A built-in skill that always runs',
+            'A model variant smaller than Haiku',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Sam Okoye and the Dispatch Board" — that\'s the precise definition.',
+        },
+        {
+          id: 'ch14-q02', type: 'single',
+          prompt: 'Why does the lesson emphasize that subagents have their OWN context window?',
+          options: [
+            'It makes the bill cheaper',
+            'Isolation is the point — the parent stays uncluttered while the subagent burns its own context on messy details; only the summary lands upstream',
+            'Subagents bypass <code>/clear</code>',
+            'Subagents always run on Haiku',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Sam Okoye and the Dispatch Board" — isolation = uncluttered parent + clean summary.',
+        },
+        {
+          id: 'ch14-q03', type: 'multi',
+          prompt: 'Which of these are listed as GOOD subagent use cases?',
+          options: [
+            'Open-ended search (e.g. "find every call site of OrderProcessor")',
+            'Independent parallel work (multiple unrelated tasks)',
+            'Specialist judgment (code-review, security-review)',
+            'Heavy reads that would otherwise burn 50k tokens just exploring',
+            'A single-file edit you could do in 5 seconds in the parent',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Sam Okoye and the Dispatch Board" — first four are listed; the single-file edit is in the "don\'t" column.',
+        },
+        {
+          id: 'ch14-q04', type: 'multi',
+          prompt: 'Which of these are described as situations to NOT use a subagent?',
+          options: [
+            'Single-file edits — just do them in the parent',
+            'Tasks where you need to iterate — subagents are one-shot, no sustained conversation',
+            'Trivial work where the parent can grep/read/edit faster than a subagent boots',
+            'Architecture review across 30 files',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Sam Okoye and the Dispatch Board" — first three are explicit don\'ts; the cross-file review is exactly the use case.',
+        },
+        {
+          id: 'ch14-q05', type: 'single',
+          prompt: 'You\'re defining a code-reviewer subagent. Where does its definition file live for a per-project setup?',
+          options: [
+            '<code>~/.claude/skills/</code>',
+            '<code>.claude/agents/</code> at the repo root',
+            '<code>.claude/settings.json</code>',
+            '<code>.mcp.json</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Custom Subagent Types in .claude/agents/" — per-project agents live in <code>.claude/agents/</code>.',
+        },
+        {
+          id: 'ch14-q06', type: 'multi',
+          prompt: 'Which fields appear in a subagent\'s frontmatter, per the lesson example?',
+          options: ['name', 'description', 'model', 'tools', 'price'],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Custom Subagent Types in .claude/agents/" — name, description, model, tools; no "price".',
+        },
+        {
+          id: 'ch14-q07', type: 'single',
+          prompt: 'Three tasks: audit i18n/en/* keys, audit i18n/fr/* keys, audit i18n/de/* keys. They don\'t depend on each other. Best dispatch shape?',
+          options: [
+            'Three sequential subagent calls',
+            'Three Agent calls in ONE orchestrator message — they run concurrently, summaries arrive together',
+            'One subagent doing all three serially',
+            'Three separate Claude sessions in different terminals',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Parallel vs Sequential Dispatch" — independent work → parallel in one message.',
+        },
+        {
+          id: 'ch14-q08', type: 'single',
+          prompt: 'Step 2 needs the output of step 1 (e.g. "find every DATABASE_URL read" → "wrap each with SecretsClient.fetch()"). What\'s the right dispatch?',
+          options: [
+            'Parallel — let the second subagent guess at step 1\'s answer',
+            'Sequential — run A first, read its result, then prompt B with what you learned; never batch dependents',
+            'Run them in two terminals at once',
+            'Skip subagents and do it manually',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Parallel vs Sequential Dispatch" — dependent work is sequential, full stop.',
+        },
+        {
+          id: 'ch14-q09', type: 'single',
+          prompt: 'Sam\'s rule of thumb for parallelism — what\'s his upper bound?',
+          options: [
+            '~5 in parallel',
+            'Three on the board at once, max — more means the task isn\'t decomposed cleanly yet',
+            'As many as your CPU has cores',
+            'Always one at a time',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Parallel vs Sequential Dispatch" — Sam\'s "three on the board" rule is the named heuristic.',
+        },
+        {
+          id: 'ch14-q10', type: 'single',
+          prompt: 'Subagents vs Sessions — when do you graduate to a multi-session Command Center?',
+          options: [
+            'Whenever Sonnet is too slow',
+            'For long-lived, human-supervised parallel streams — different repos, different goals, different review rhythms',
+            'When MCP isn\'t enough',
+            'For anything taking more than 10 minutes',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Multi-Session Command Center" — sessions are for long-lived parallel streams that need their own histories.',
+        },
+        {
+          id: 'ch14-q11', type: 'multi',
+          prompt: 'Where does the lesson tell you to PLACE human checkpoints across a multi-session board?',
+          options: [
+            'Where one stream\'s output feeds another',
+            'Where a judgement call is needed',
+            'Before any irreversible action (push, migration, delete)',
+            'Where a wrong output could compound through later work',
+            'On every single tool call',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Multi-Session Command Center" — those four are the explicit checkpoint triggers; "every tool call" is over-broad.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 15 ────────────────────────────────────────────────────────────
@@ -617,9 +1282,10 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       },
       {
         id: 'ch15-l02', title: 'Permissions: Allow, Ask, Deny', xpReward: 130, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>The Three Permission Verbs</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own screenshot of a real <code>settings.json</code> open in your editor with <code>permissions.allow</code>, <code>permissions.ask</code>, and <code>permissions.deny</code> blocks highlighted, and replace this marker. Save as <code>play/assets/lessons/ch15-l02.png</code>.</div>
 <p>Every tool call Claude Code wants to make is matched against your permission rules and resolved into one of three outcomes:</p>
 <ul>
   <li><strong>allow</strong> — runs immediately, no prompt.</li>
@@ -772,6 +1438,138 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       ],
       exemplar: '<p>Strong answer: a valid <code>.claude/settings.json</code> with permissions buckets (allow Read/Edit/safe bash; ask for git push and rm; deny rm -rf, curl-pipe-sh, and .env reads), a PostToolUse hook matching Edit|Write that calls a project-local format script, a CI command like <code>claude -p &quot;review diff&quot; --model claude-opus-4-8 --permission-mode plan --output-format json</code>, and a 4-line statusline script that prints branch + model + running cost.</p>',
     },
+    theoreticalTest: {
+      id: 'ch15-test-mcq', passThreshold: 80, xpReward: 725, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch15-q01', type: 'multi',
+          prompt: 'Claude Code merges settings from three locations. Which are they, and which wins on conflict?',
+          options: [
+            '<code>~/.claude/settings.json</code> (User — baseline)',
+            '<code>.claude/settings.json</code> at repo root (Project shared — committed, overrides User)',
+            '<code>.claude/settings.local.json</code> at repo root (Project local — gitignored, ALWAYS wins)',
+            '<code>/etc/claude/settings.json</code> (System-wide)',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Rena Vasquez and the Three settings.json Files" — three layers; local project file always wins. There is no /etc layer.',
+        },
+        {
+          id: 'ch15-q02', type: 'multi',
+          prompt: 'Which of the following belong in <code>settings.json</code>?',
+          options: [
+            'permissions (allow / ask / deny)',
+            'hooks (shell commands wired to lifecycle events)',
+            'env (vars injected into every Bash call)',
+            'a default model pin',
+            'statusLine config',
+            'outputStyle pick',
+            'MCP server configuration',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4, 5],
+          explanation: 'Lesson "Rena Vasquez and the Three settings.json Files" — first six belong; MCP servers go in <code>.mcp.json</code>, not settings.json.',
+        },
+        {
+          id: 'ch15-q03', type: 'multi',
+          prompt: 'Which of the following are valid permission outcomes for a tool call?',
+          options: [
+            '<code>allow</code> — runs immediately, no prompt',
+            '<code>ask</code> — confirmation prompt; default for anything not explicitly listed',
+            '<code>deny</code> — silently blocked, explanation in transcript',
+            '<code>warn</code> — runs but logs',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Permissions: Allow, Ask, Deny" — three verbs; "warn" is invented.',
+        },
+        {
+          id: 'ch15-q04', type: 'single',
+          prompt: 'In a permission rule, what does <code>"Bash(npm test:*)"</code> match?',
+          options: [
+            'Any Bash invocation',
+            'Bash commands starting with <code>npm test</code> (the pattern is a glob on the command line)',
+            'Only the literal string <code>npm test:*</code>',
+            'Anything except <code>npm test</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Permissions: Allow, Ask, Deny" — Tool(pattern) matchers narrow by argument; for Bash, the pattern is a glob over the command.',
+        },
+        {
+          id: 'ch15-q05', type: 'single',
+          prompt: 'Rena\'s "lab rule" for permission defaults:',
+          options: [
+            'Allow everything by default; tighten later',
+            'Default to <code>ask</code>. Promote to <code>allow</code> only after seeing the same prompt three times in a row. Only <code>deny</code> the things that can ruin a Friday.',
+            'Deny everything; allow only after a security review',
+            'Mirror your teammate\'s settings.local.json',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Permissions: Allow, Ask, Deny" — that\'s Rena\'s explicit rule.',
+        },
+        {
+          id: 'ch15-q06', type: 'single',
+          prompt: 'How many hook events does Claude Code expose in total?',
+          options: ['7', '12', '20', '27'],
+          correctIndexes: [3],
+          explanation: 'Lesson "The 27 Hook Events" — the count is in the lesson title and body: 27.',
+        },
+        {
+          id: 'ch15-q07', type: 'multi',
+          prompt: 'Which hook events does the lesson group under "Tool lifecycle" and "Session lifecycle"?',
+          options: [
+            'PreToolUse',
+            'PostToolUse',
+            'SessionStart / SessionEnd',
+            'PreCompact / PostCompact',
+            'NetworkRequest',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "The 27 Hook Events" — first four are in those clusters; NetworkRequest is invented.',
+        },
+        {
+          id: 'ch15-q08', type: 'single',
+          prompt: 'You want Prettier to run on every file Claude edits. Which hook event do you wire it to?',
+          options: [
+            '<code>PreToolUse</code> with matcher <code>Edit|Write</code>',
+            '<code>PostToolUse</code> with matcher <code>Edit|Write</code>',
+            '<code>SessionEnd</code>',
+            '<code>UserPromptSubmit</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The 27 Hook Events" — <code>PostToolUse</code> matched to Edit|Write is the canonical auto-format hook.',
+        },
+        {
+          id: 'ch15-q09', type: 'single',
+          prompt: 'How does a <code>PreToolUse</code> hook BLOCK a dangerous tool call?',
+          options: [
+            'It returns <code>"block": true</code> in JSON',
+            'It exits non-zero; output on stderr is shown to Claude, which can re-plan around the block',
+            'It restarts Claude Code',
+            'It mutates the prompt',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The 27 Hook Events" — non-zero exit + stderr message = blocked call with Claude-visible reason.',
+        },
+        {
+          id: 'ch15-q10', type: 'multi',
+          prompt: 'Which built-in output styles does the lesson list?',
+          options: ['default', 'concise', 'explanatory', 'verbose'],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Status Line, Output Styles & Headless Mode" — the three named built-ins are default / concise / explanatory.',
+        },
+        {
+          id: 'ch15-q11', type: 'multi',
+          prompt: 'For a nightly CI review with <code>claude -p</code>, which flags does the lesson recommend?',
+          options: [
+            '<code>--permission-mode plan</code> so CI can\'t accidentally mutate anything',
+            '<code>--output-format json</code> for parseable cost+duration',
+            '<code>--model claude-opus-4-8</code> (explicit model pin)',
+            '<code>ANTHROPIC_API_KEY</code> in env (no interactive login)',
+            '<code>--allow-edits</code> for fix-ups',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Status Line, Output Styles & Headless Mode" — first four are the explicit recipe; <code>--allow-edits</code> would defeat the purpose.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 16 ────────────────────────────────────────────────────────────
@@ -810,9 +1608,9 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       },
       {
         id: 'ch16-l04', title: 'Persistent Sessions with tmux', xpReward: 125, videos: [],
-        lastVerified: '2026-06-13',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
-        content: '<h2>Sessions That Survive Disconnection</h2><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
+        content: '<h2>Sessions That Survive Disconnection</h2><div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of a <code>tmux</code> session running <code>claude</code> (the green tmux status bar visible at the bottom with the session name), and replace this marker. Save as <code>play/assets/lessons/ch16-l04.png</code>.</div><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
       },
       {
         id: 'ch16-l05', title: 'Remote-Box CLAUDE.md and Final Integration', xpReward: 125, videos: [],
@@ -886,6 +1684,142 @@ crontab -e
         { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 3 },
       ],
       exemplar: '<p>Strong answer: a numbered command sequence (ssh → nvm → npm install Claude Code → API key → rsync the folder → tmux → <code>claude</code>), then a snippet of the remote Claude banner or prompt showing it\'s clearly on the remote box (different hostname, /home/ or /volume paths).</p>',
+    },
+    theoreticalTest: {
+      id: 'ch16-test-mcq', passThreshold: 80, xpReward: 675, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch16-q01', type: 'multi',
+          prompt: 'Which of these are listed as candidate "always-on remote boxes" for Claude Code?',
+          options: [
+            'A cloud VM (Oracle free, GCP free tier, Hetzner CX11)',
+            'A NAS (Synology, QNAP, etc.)',
+            'A Raspberry Pi 4/5',
+            'WSL on Windows (treated as remote)',
+            'A GitHub Codespace',
+            'A USB pen drive',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "Why Run Claude Code on a Remote Box?" — first five are the listed options; pen drives are not.',
+        },
+        {
+          id: 'ch16-q02', type: 'multi',
+          prompt: 'Which of the following are use-cases the lesson highlights for a remote Claude Code box?',
+          options: [
+            'Persistent sessions — start, disconnect, reconnect without losing state (tmux)',
+            'Centralised code storage — any machine can SSH in and continue',
+            'Scheduled automation — Claude workflows without tying up a laptop',
+            'Multi-Goal Command Center — multiple tmux sessions = parallel workstreams',
+            'GPU-accelerated training',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Why Run Claude Code on a Remote Box?" — first four are the explicit benefits; GPU training is not.',
+        },
+        {
+          id: 'ch16-q03', type: 'multi',
+          prompt: 'Which entries does the SSH key + config shortcut put into <code>~/.ssh/config</code>?',
+          options: ['<code>Host &lt;alias&gt;</code>', '<code>HostName</code>', '<code>User</code>', '<code>IdentityFile</code>', '<code>ServerAliveInterval</code>'],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "SSH Access to Your Remote Box" — all five appear in the example <code>~/.ssh/config</code> stanza.',
+        },
+        {
+          id: 'ch16-q04', type: 'single',
+          prompt: 'For a Synology DSM 7.x install, which Claude Code install path does the lesson call the safest?',
+          options: [
+            'Native installer (<code>curl ... install.sh | bash</code>)',
+            'npm path — nvm + <code>npm install -g @anthropic-ai/claude-code</code>',
+            'Docker container',
+            'Pre-built binary copied from a Mac',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Installing Node.js and Claude Code" — Synology DSM gets the npm path.',
+        },
+        {
+          id: 'ch16-q05', type: 'single',
+          prompt: 'Which environment variable does the lesson set for HEADLESS authentication on the remote box?',
+          options: [
+            '<code>CLAUDE_KEY</code>',
+            '<code>ANTHROPIC_API_KEY</code>',
+            '<code>OPENAI_KEY</code>',
+            '<code>ANTHROPIC_TOKEN</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Installing Node.js and Claude Code" — <code>ANTHROPIC_API_KEY</code> is exported into the shell for headless auth.',
+        },
+        {
+          id: 'ch16-q06', type: 'multi',
+          prompt: 'Which tmux commands does the lesson demonstrate?',
+          options: [
+            '<code>tmux new-session -s claude-work</code>',
+            'Detach: <code>Ctrl+B</code> then <code>D</code>',
+            '<code>tmux attach -t claude-work</code> (reattach)',
+            '<code>Ctrl+B C</code> for a new window',
+            '<code>tmux kill -9</code>',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Persistent Sessions with tmux" — those four appear; "tmux kill -9" is invented.',
+        },
+        {
+          id: 'ch16-q07', type: 'single',
+          prompt: 'Why does the remote-box CLAUDE.md often include the line "No browser available"?',
+          options: [
+            'For SEO',
+            'It tells Claude to offer terminal-only flows for tasks that would normally suggest opening a docs page',
+            'It disables MCP',
+            'It blocks /init',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Remote-Box CLAUDE.md and Final Integration" — the line is doing real work, steering Claude away from browser-based suggestions.',
+        },
+        {
+          id: 'ch16-q08', type: 'single',
+          prompt: 'The senior-engineer rule for scheduled automation is:',
+          options: [
+            'Automate everything — no human review',
+            'Automate the predictable work; keep a human in the loop for the judgment calls',
+            'Schedule manually for the first 6 months',
+            'Never automate user-facing output',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Scheduled Automation with Human Gates" — that exact rule is the lesson\'s headline blockquote.',
+        },
+        {
+          id: 'ch16-q09', type: 'multi',
+          prompt: 'For the weekly-report example, which flags does the launcher script pass to <code>claude -p</code>?',
+          options: [
+            '<code>--model claude-sonnet-4-6</code>',
+            '<code>--permission-mode plan</code>',
+            '<code>--output-format json</code>',
+            '<code>--accept-all-edits</code>',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Scheduled Automation with Human Gates" — first three flags are explicit; --accept-all-edits is not in the example.',
+        },
+        {
+          id: 'ch16-q10', type: 'single',
+          prompt: 'The "gate principle" for external-facing automation outputs is:',
+          options: [
+            'Auto-distribute everything; review later',
+            'Every workflow producing external-facing output needs at least one human gate — auto-draft → human approve → auto-distribute',
+            'Disable automation in the first 30 days',
+            'Always require a 2-FA prompt',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Scheduled Automation with Human Gates" — that\'s the explicit pattern: never auto-distribute unseen output.',
+        },
+        {
+          id: 'ch16-q11', type: 'single',
+          prompt: 'Scheduled jobs spawning a fresh Claude session every hour — what cost behaviour should you EXPECT, per the lesson?',
+          options: [
+            'Lower bill — fresh sessions cache fully',
+            'Each run pays the 5-minute prompt-cache miss because the cache evicts between hourly runs; the alternative (a long-lived idle session) wastes more, so it\'s usually fine',
+            'No effect — caching never matters in headless mode',
+            'Doubled bill — Claude pings the API twice',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Scheduled Automation with Human Gates" — the lesson explicitly calls out the cache miss + the trade-off vs idle sessions.',
+        },
+      ],
     },
   }
 );

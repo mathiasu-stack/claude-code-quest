@@ -26,7 +26,7 @@ function checkAfterLesson(progress, ch, lesson) {
   }
   // chapter-clear: all lessons of this chapter complete AND its test passed
   const allLessonsDone = ch.lessons.every(l => Progress.isLessonComplete(progress, l.id));
-  if (allLessonsDone && Progress.isTestPassed(progress, ch.practicalTest.id)) {
+  if (allLessonsDone && Progress.isChapterTestPassed(progress, ch)) {
     progress = unlock(progress, 'chapter-clear');
   }
   return progress;
@@ -51,8 +51,8 @@ function checkAfterTest(progress, ch, test, result, attemptsBefore, wasAlreadyPa
     progress = unlock(progress, 'chapter-clear');
   }
 
-  // graduated: every chapter's test passed
-  const allTestsPassed = (window.CURRICULUM || []).every(c => Progress.isTestPassed(progress, c.practicalTest.id));
+  // graduated: every chapter's test passed (either track counts)
+  const allTestsPassed = (window.CURRICULUM || []).every(c => Progress.isChapterTestPassed(progress, c));
   if (allTestsPassed) {
     progress = unlock(progress, 'graduated');
   }

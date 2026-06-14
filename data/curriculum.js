@@ -9,9 +9,10 @@ window.CURRICULUM = [
     lessons: [
       {
         id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/AJpK3YTTKZ4" title="Introducing Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-06-14',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Welcome to Kedash Corp</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>claude</code> on first run (the welcome banner with version + model + working directory) and replace this marker. Save as <code>play/assets/lessons/ch01-l01.png</code>.</div>
 <p>Congratulations on your first day! You've been assigned an AI coding assistant: <strong>Claude Code</strong>. Think of it as a senior engineer who lives in your terminal — one who never sleeps, never gets annoyed at your questions, and has read every doc you've been putting off.</p>
 <p>Claude Code is Anthropic's official CLI tool that brings the Claude AI model directly into your development workflow. Unlike a chat interface, Claude Code operates <em>inside your project directory</em>. It can read your files, understand your codebase, make edits, run commands, and help you ship faster.</p>
 <h3>What Claude Code can do</h3>
@@ -148,9 +149,10 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
       },
       {
         id: 'ch01-l05', title: 'This training has a shelf life', xpReward: 50, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>AI Tooling Docs Age Fast</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of the Claude Code status line in action (showing version, model, permission mode, and context usage), and replace this marker. Save as <code>play/assets/lessons/ch01-l05.png</code>.</div>
 <p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
 <h3>Why this matters</h3>
 <p>Unlike a course on SQL or Git, Claude Code is a living product. A tutorial written 6 months ago might reference a flag that no longer exists or miss a feature that would save you hours. The gap between "what the training says" and "what the tool actually does" can make you less effective, or worse, confidently wrong.</p>
@@ -196,6 +198,143 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
       ],
       exemplar: '<p>Strong answer: <code>mkdir kedash-support/ && cd kedash-support/</code> and <code>claude</code> under a <code>## Setup</code> heading, then a short paste under <code>## First session</code> showing the welcome banner and Claude\'s reply to your "Hi".</p>',
     },
+    theoreticalTest: {
+      id: 'ch01-test-mcq', passThreshold: 80, xpReward: 300, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch01-q01', type: 'single',
+          prompt: 'What is the single most important way Claude Code differs from a typical chat UI?',
+          options: [
+            'It uses a smarter underlying model than the chat product',
+            'It runs inside your project directory and can read, edit, and run files',
+            'It works fully offline once installed',
+            'It refuses non-coding questions',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is Claude Code?" — the defining trait is that Claude Code operates inside your project: it can actually act on files and run commands, not just discuss them.',
+        },
+        {
+          id: 'ch01-q02', type: 'single',
+          prompt: 'A teammate on a fresh macOS laptop wants the simplest install path — no Node.js, no extra tooling. Which command do you recommend?',
+          options: [
+            'npm install -g @anthropic-ai/claude-code (install Node.js first)',
+            'curl -fsSL https://claude.ai/install.sh | bash (or `brew install --cask claude-code`)',
+            'Download a zip and add it to PATH manually',
+            'pip install claude-code',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Installation & Setup" — the native installer is the recommended path on macOS/Linux/WSL; it bundles its own binary and needs no Node.js.',
+        },
+        {
+          id: 'ch01-q03', type: 'multi',
+          prompt: 'Which of the following are valid ways to authenticate Claude Code on a fresh machine?',
+          options: [
+            'Sign in via a Claude.ai account in the browser',
+            'Set the <code>ANTHROPIC_API_KEY</code> environment variable',
+            'Paste your password into the terminal on first run',
+            'Sign in with a GitHub Personal Access Token',
+          ],
+          correctIndexes: [0, 1],
+          explanation: 'Lesson "Installation & Setup" — only Claude.ai sign-in (easiest for individuals) and an <code>ANTHROPIC_API_KEY</code> (recommended for teams) are mentioned as auth paths.',
+        },
+        {
+          id: 'ch01-q04', type: 'single',
+          prompt: 'You\'ve been working on a complex refactor for 30 minutes and need to step away. What\'s the right move before exiting so you can pick up where you left off?',
+          options: [
+            'Just close the terminal — Claude Code restores prior sessions automatically',
+            'Run <code>/compact</code> to summarise the session so it fits back into context next time',
+            'Press Ctrl+C three times to save state',
+            'Copy the conversation into a Google Doc',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Your First Session" — <code>/compact</code> produces a summary you can hand back to the next session; sessions do not persist on their own.',
+        },
+        {
+          id: 'ch01-q05', type: 'single',
+          prompt: 'Claude Code is about to run a Bash command but pauses before executing. Why?',
+          options: [
+            'Bash commands always require an explicit human approval (press Y)',
+            'It needs the network to confirm permissions with the server',
+            'It\'s asking you to pick between several commands it drafted',
+            'It can\'t run Bash and is asking you to type the command yourself',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Understanding the Interface" — some tool actions auto-approve, but Bash and other state-changing actions are gated on a Y/N prompt as a human-in-the-loop guardrail.',
+        },
+        {
+          id: 'ch01-q06', type: 'single',
+          prompt: 'Which keyboard shortcut toggles between Auto and Plan modes in Claude Code?',
+          options: [
+            '<kbd>Ctrl</kbd>+<kbd>P</kbd>',
+            '<kbd>Shift</kbd>+<kbd>Tab</kbd>',
+            '<kbd>Alt</kbd>+<kbd>M</kbd>',
+            '<kbd>Ctrl</kbd>+<kbd>↑</kbd>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Understanding the Interface" — <kbd>Shift+Tab</kbd> cycles Auto and Plan modes; the arrow keys are reserved for prompt history.',
+        },
+        {
+          id: 'ch01-q07', type: 'single',
+          prompt: 'A tutorial mentions a flag like <code>--magic</code> that doesn\'t seem to do anything for you. What\'s the right first move?',
+          options: [
+            'Assume you typed it wrong and try every variation',
+            'File a bug report on GitHub immediately',
+            'Check <code>claude --help</code> and the changelog — the flag may have been renamed or removed',
+            'Ignore the flag and move on without checking',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "This training has a shelf life" — when behavior doesn\'t match the tutorial, default to "has this changed?" and consult <code>claude --help</code> against the version you actually have.',
+        },
+        {
+          id: 'ch01-q08', type: 'single',
+          prompt: 'Which command verifies your Claude Code installation and prints the version?',
+          options: [
+            '<code>claude doctor</code>',
+            '<code>claude --version</code>',
+            '<code>claude info</code>',
+            '<code>claude status</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Installation & Setup" — <code>claude --version</code> prints the installed version; <code>claude doctor</code> checks the broader setup health.',
+        },
+        {
+          id: 'ch01-q09', type: 'multi',
+          prompt: 'Which of the following are things Claude Code is described as doing for you?',
+          options: [
+            'Reading, writing, and refactoring code across your project',
+            'Running shell commands and interpreting the output',
+            'Reviewing pull requests on GitHub on its own without any human prompt',
+            'Following persistent project instructions from a <code>CLAUDE.md</code> file',
+          ],
+          correctIndexes: [0, 1, 3],
+          explanation: 'Lesson "What is Claude Code?" — those three are explicitly listed; spontaneous PR review without a prompt is not.',
+        },
+        {
+          id: 'ch01-q10', type: 'single',
+          prompt: 'You see a lesson stamped "Verified against Claude Code v2.1.114 · 22 Apr 2026" but you\'re on a much newer version. How should you treat that lesson?',
+          options: [
+            'Skip it entirely — outdated content is worthless',
+            'Trust it 100% — Claude Code rarely changes',
+            'Treat the lesson as a starting point and verify specifics against the installed version',
+            'Roll back to the verified version of Claude Code so the lesson matches',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "This training has a shelf life" — the verification stamp marks a known-good baseline; the right habit is to use it as a starting point and confirm details haven\'t shifted.',
+        },
+        {
+          id: 'ch01-q11', type: 'single',
+          prompt: 'Inside an interactive Claude Code session, what does a slash-prefixed command like <code>/clear</code> or <code>/help</code> address?',
+          options: [
+            'Claude Code itself — they are CLI directives, not messages to the model',
+            'The underlying shell — they are forwarded to bash',
+            'The Anthropic billing API',
+            'The remote MCP server, if one is connected',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Understanding the Interface" — commands starting with <code>/</code> are instructions to Claude Code itself, distinct from a prompt to the model.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 2 ─────────────────────────────────────────────────────────────
@@ -208,9 +347,10 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
     lessons: [
       {
         id: 'ch05-l01', title: 'Why Specificity Matters', xpReward: 55, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-06-14',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Garbage In, Garbage Out</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of pressing <kbd>Shift+Tab</kbd> to enter Plan Mode (the cycle indicator + plan-mode banner) and replace this marker. Save as <code>play/assets/lessons/ch05-l01.png</code>.</div>
 <p>The single biggest factor in Claude Code's output quality is how specific your prompt is. Vague instructions produce vague results. Claude Code will make reasonable guesses when information is missing, and those guesses will often be wrong for your context.</p>
 <h3>The specificity spectrum</h3>
 <table>
@@ -296,6 +436,145 @@ Do not change the function signature or any callers.</code></pre>
         { type: 'keyword', value: ['sign-off', 'regards', 'kedash support', 'support team', '— '], description: 'Response closes with a sign-off', weight: 1 },
       ],
       exemplar: '<p>Strong answer: a prompt that names the task, gives voice ("warm-but-technical, B2B"), lists the 4 sections, plus a Claude response that\'s a usable template with greeting / steps / dashboard / offer / sign-off.</p>',
+    },
+    theoreticalTest: {
+      id: 'ch05-test-mcq', passThreshold: 80, xpReward: 325, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch05-q01', type: 'single',
+          prompt: 'According to the lesson, what is the single biggest factor in the quality of Claude Code\'s output?',
+          options: [
+            'How long you let it run',
+            'How specific your prompt is',
+            'Which model variant you have selected',
+            'How many files are open in your editor',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Why Specificity Matters" — specificity is named as the single biggest factor; vague prompts produce vague output.',
+        },
+        {
+          id: 'ch05-q02', type: 'multi',
+          prompt: 'Which of the following items does the lesson recommend including in a specific, well-targeted prompt?',
+          options: [
+            'File path',
+            'Function or class name',
+            'Expected behavior when done',
+            'Constraints — what must NOT change',
+            'A guess at how many tokens it will use',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Why Specificity Matters" — file path, function/class name, expected behavior, and constraints are explicitly listed; token estimation is not.',
+        },
+        {
+          id: 'ch05-q03', type: 'single',
+          prompt: 'You find yourself pasting the same "we use TypeScript strict mode, no `any`" preamble into every session. Where does that context belong?',
+          options: [
+            'Keep pasting it — Claude Code forgets between sessions anyway',
+            'In your CLAUDE.md or Business Brain (persistent context)',
+            'Hard-coded into the source files as comments',
+            'In a JIRA ticket Claude Code can fetch',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Providing Context" — repeated session-level context belongs in persistent layers (CLAUDE.md or Business Brain), not in every prompt.',
+        },
+        {
+          id: 'ch05-q04', type: 'single',
+          prompt: 'What is "objective context" as described in the Providing Context lesson?',
+          options: [
+            'The version of the language model running',
+            'The reason behind the task — helps Claude make better judgment calls when it hits ambiguity',
+            'A list of file paths to ignore',
+            'A summary of past chat history',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Providing Context" — "Objective context: Why are you doing this? Helps Claude Code make better judgment calls when it encounters ambiguity."',
+        },
+        {
+          id: 'ch05-q05', type: 'single',
+          prompt: 'A session has gone sideways — Claude is confused, making circular edits, context is bloated. What does the lesson recommend?',
+          options: [
+            'Restart your computer',
+            'Keep pushing through — eventually it will recover',
+            'Use <code>/clear</code> to reset and start a fresh, focused session with a better first prompt',
+            'Switch to a smaller model and try again',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Iterative Prompting" — when a session has gone wrong, use <code>/clear</code> to reset rather than double down.',
+        },
+        {
+          id: 'ch05-q06', type: 'multi',
+          prompt: 'Which of the following are steps in the "iterative loop" described in the lesson?',
+          options: [
+            'Start rough — high-level intent first',
+            'Review Claude\'s proposed plan before any code is written',
+            'Refine — accept, reject, or redirect specific parts',
+            'Test — have Claude write or run tests',
+            'Submit the diff straight to production',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Iterative Prompting" — the loop is: start rough → review the plan → refine → test. Straight-to-production is not part of it.',
+        },
+        {
+          id: 'ch05-q07', type: 'single',
+          prompt: 'The lesson teaches a prompt formula. Which of these matches it?',
+          options: [
+            '[FILE] [LINE NUMBER] in [BRANCH NAME]',
+            '[QUESTION] [CONTEXT] [EXAMPLE OUTPUT]',
+            '[ACTION] [WHAT] in [WHERE] so that [WHY] [CONSTRAINTS]',
+            '[PERSONA] [TASK] [DEADLINE]',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Anatomy of a Good Prompt" — the formula is exactly that: action, target, location, outcome, then constraints.',
+        },
+        {
+          id: 'ch05-q08', type: 'multi',
+          prompt: 'Which of the following are explicitly listed as prompting antipatterns to avoid?',
+          options: [
+            'Combining multiple unrelated tasks in one prompt',
+            'Asking for both implementation and documentation in the same turn',
+            'Underspecifying which file or function when several candidates exist',
+            'Writing prompts in lowercase',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Anatomy of a Good Prompt" — those three appear in the antipattern list; capitalization is not.',
+        },
+        {
+          id: 'ch05-q09', type: 'single',
+          prompt: 'You\'re about to ask Claude Code to refactor calculateTax. Which prompt best follows the lesson\'s recommendations?',
+          options: [
+            '"Make calculateTax better."',
+            '"Fix the tax bug."',
+            '"Refactor calculateTax() in src/billing/tax.js so it returns 0 on null/undefined inputs; do not change the signature or callers."',
+            '"Clean up the billing code please."',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Anatomy of a Good Prompt" — the third option hits every part of the formula: action, what, where, success criteria, constraint.',
+        },
+        {
+          id: 'ch05-q10', type: 'single',
+          prompt: 'According to "Iterative Prompting", what should you do for very large operations spanning many files before charging in?',
+          options: [
+            'Run the prompt three times to get a consensus',
+            'Switch to Plan Mode first (covered in Chapter 4)',
+            'Increase the context window via env var',
+            'Use a fresh repo as a scratch space',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Iterative Prompting" — for large multi-file operations, the lesson explicitly says to switch to Plan Mode first.',
+        },
+        {
+          id: 'ch05-q11', type: 'single',
+          prompt: 'Which prompt example follows specificity best practices most closely?',
+          options: [
+            '"Fix the off-by-one error in <code>paginate()</code> in <code>src/utils.js</code> — it skips the last item when total is divisible by page size."',
+            '"Hey can you take a look at the pagination thing?"',
+            '"Pagination is broken in prod, fix it."',
+            '"Fix all the bugs in utils."',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Why Specificity Matters" — the first example is the lesson\'s own contrast for what "specific" looks like.',
+        },
+      ],
     },
   },
 
@@ -424,6 +703,145 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       ],
       exemplar: '<p>Strong answer: prompt naming <code>faq.md</code> + line 14 + scoped constraint ("only that line"), plus a diff with <code>-</code> credit-card line and <code>+</code> PayPal/ACH line.</p>',
     },
+    theoreticalTest: {
+      id: 'ch06-test-mcq', passThreshold: 80, xpReward: 350, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch06-q01', type: 'single',
+          prompt: 'According to the lesson, what does Claude Code do BEFORE it changes anything in your project?',
+          options: [
+            'It runs the test suite',
+            'It reads — your files, related files, and any CLAUDE.md',
+            'It opens a debugger',
+            'It silently commits a backup',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Reading Files with Claude Code" — Claude Code reads before it acts; that\'s the first move.',
+        },
+        {
+          id: 'ch06-q02', type: 'single',
+          prompt: 'Why does the lesson recommend "targeted, surgical" edits over broad prompts when you know what needs to change?',
+          options: [
+            'Cheaper API billing',
+            'They produce clean, reviewable diffs and reduce unintended side effects',
+            'They avoid lint warnings',
+            'They prevent Claude from reading any files',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Making Targeted Edits" — surgical prompts produce clean diffs and are less likely to introduce side effects.',
+        },
+        {
+          id: 'ch06-q03', type: 'multi',
+          prompt: 'Which of the following are recommended ways to undo a Claude Code edit?',
+          options: [
+            'Tell Claude "revert that last change" — it can undo its most recent edit',
+            'Use <code>git diff</code> / <code>git checkout</code> for manual recovery',
+            'Rely on regular commits as rollback points',
+            'Delete your .claude folder',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Making Targeted Edits" — all three undo paths are listed; nuking .claude is not.',
+        },
+        {
+          id: 'ch06-q04', type: 'multi',
+          prompt: 'Which of the following are steps in the "safe refactor playbook"?',
+          options: [
+            'Scope first — list every file and call site touched, without changing anything yet',
+            'Commit the current state for a one-command rollback',
+            'Use Plan Mode to review the full plan before execution',
+            'Phase the work — types/shared modules → implementations → call sites',
+            'Disable git hooks during the refactor',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Multi-file Operations & The Safe Refactor Playbook" — those four are explicit steps; disabling hooks is not.',
+        },
+        {
+          id: 'ch06-q05', type: 'single',
+          prompt: 'For very large multi-file operations, what should you do BEFORE Claude starts making changes?',
+          options: [
+            'Just trust Claude — it handles scope on its own',
+            'Switch to Plan Mode and review the plan before any execution',
+            'Run the tests and call it a day',
+            'Increase your terminal\'s scrollback buffer',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Multi-file Operations & The Safe Refactor Playbook" — Plan Mode (Chapter 4) is the playbook\'s answer for anything bigger than a rename.',
+        },
+        {
+          id: 'ch06-q06', type: 'single',
+          prompt: 'The lesson tells you to review every diff. Which of the following is the BEST framing for that review?',
+          options: [
+            'Glance at the first few lines and move on if they look fine',
+            'Read the diff fully, ask "does this match my intent?" and "could this break something I didn\'t think about?"',
+            'Trust Claude — it shows the diff for transparency, not for review',
+            'Only review diffs in files you wrote yourself',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Reviewing Changes Before Accepting" — the review habit is the full read plus the two intent/breakage questions.',
+        },
+        {
+          id: 'ch06-q07', type: 'single',
+          prompt: 'A workflow tip in the lesson: what should you do before every significant Claude Code operation so the worst case is a simple <code>git reset</code>?',
+          options: [
+            'Open a draft PR',
+            'Commit your current state',
+            'Make a tarball of the repo',
+            'Disable Claude\'s auto-edit',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Reviewing Changes Before Accepting" — commit before every significant operation; that\'s your guaranteed rollback point.',
+        },
+        {
+          id: 'ch06-q08', type: 'single',
+          prompt: 'What is "test-driven prompting" as taught in the lesson?',
+          options: [
+            'Asking Claude to write tests AFTER it implements the feature',
+            'Writing tests first, then asking Claude for an implementation that passes them',
+            'Running tests in a subagent automatically',
+            'Letting Claude write both prod and test code in the same turn',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Test-driven Prompting" — tests-first, then ask Claude to implement to pass them.',
+        },
+        {
+          id: 'ch06-q09', type: 'multi',
+          prompt: 'Why does the lesson argue tests-first prompts produce more reliable results? (pick all that apply)',
+          options: [
+            'The test file IS the spec — Claude can read it directly without interpreting prose',
+            '"Passes the tests" is an objective success criterion — no "close-but-not-quite"',
+            'Edge cases live in the test file, so they don\'t get forgotten',
+            'You can iterate cheaply: failing test → fix → re-run',
+            'Tests automatically increase the context window',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Test-driven Prompting" — those four reasons are explicitly listed; context-window expansion is not.',
+        },
+        {
+          id: 'ch06-q10', type: 'single',
+          prompt: 'When you spot Claude Code proposing something unexpected in a diff, what does the lesson say it usually means?',
+          options: [
+            'A bug in Claude Code itself — file a report',
+            'Your prompt was ambiguous; clarify and try again',
+            'The model is being lazy; switch to a more expensive tier',
+            'Your editor is corrupting the diff',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Making Targeted Edits" — unexpected changes are a signal that the prompt was ambiguous, not that Claude is malfunctioning.',
+        },
+        {
+          id: 'ch06-q11', type: 'single',
+          prompt: 'In the three-turn test-driven workflow, what happens in Turn 1?',
+          options: [
+            'Claude writes the implementation immediately',
+            'Claude reads the test file and lists the cases it covers, without writing code yet',
+            'You disable auto-approval globally',
+            'You commit a placeholder implementation',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Test-driven Prompting" — Turn 1 is read-and-summarize the cases; code comes in Turn 2.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 4 ────────────────────────────────────────────────────────────
@@ -452,9 +870,10 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       },
       {
         id: 'ch12-l02', title: 'Shift+Tab: Switching Modes', xpReward: 65, videos: [],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Switching Modes</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/permissions</code> showing the interactive picker (allow / ask / deny categories visible) and replace this marker. Save as <code>play/assets/lessons/ch12-l02.png</code>.</div>
 <p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: <em>default → acceptEdits → plan → default</em>. The current mode is shown in the status line.</p>
 <h3>Workflow</h3>
 <ol>
@@ -499,6 +918,146 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       ],
       exemplar: '<p>Strong answer: prompt asking for a Plan-Mode reorganization, plus a numbered plan listing each move (auth-faq.md → faqs/auth.md, …) ending with "awaiting approval before execution".</p>',
     },
+    theoreticalTest: {
+      id: 'ch12-test-mcq', passThreshold: 80, xpReward: 375, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch12-q01', type: 'single',
+          prompt: 'What does Plan Mode do in one sentence?',
+          options: [
+            'It speeds up Claude\'s thinking by skipping reads',
+            'It separates thinking from acting — Claude reasons and produces a plan, but takes no actions until you switch back',
+            'It runs Claude in offline mode',
+            'It pins Claude to a specific model tier',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is Plan Mode?" — Plan Mode\'s whole point is separating thinking from acting: zero execution until you flip out.',
+        },
+        {
+          id: 'ch12-q02', type: 'multi',
+          prompt: 'Which of the following are valid permission-mode values?',
+          options: [
+            '<code>default</code>',
+            '<code>acceptEdits</code>',
+            '<code>plan</code>',
+            '<code>bypassPermissions</code>',
+            '<code>readonly</code>',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "What is Plan Mode?" — the four modes are exactly default, acceptEdits, plan, and bypassPermissions; "readonly" is not a real mode name.',
+        },
+        {
+          id: 'ch12-q03', type: 'single',
+          prompt: 'Which keyboard shortcut cycles through Claude Code\'s permission modes?',
+          options: [
+            '<kbd>Ctrl</kbd>+<kbd>P</kbd>',
+            '<kbd>Tab</kbd>',
+            '<kbd>Shift</kbd>+<kbd>Tab</kbd>',
+            '<kbd>Alt</kbd>+<kbd>M</kbd>',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Shift+Tab: Switching Modes" — Shift+Tab cycles default → acceptEdits → plan → default.',
+        },
+        {
+          id: 'ch12-q04', type: 'single',
+          prompt: 'For a CI / headless run where you want a guaranteed review-only execution, what flag do you pass?',
+          options: [
+            '<code>--readonly</code>',
+            '<code>--no-execute</code>',
+            '<code>--permission-mode plan</code>',
+            '<code>--mode safe</code>',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "What is Plan Mode?" and "Shift+Tab: Switching Modes" — <code>--permission-mode plan</code> is the documented way to lock a headless invocation to read-only.',
+        },
+        {
+          id: 'ch12-q05', type: 'multi',
+          prompt: 'Which situations does the lesson recommend Plan Mode for?',
+          options: [
+            'Operations affecting more than 3-5 files',
+            'Renames or restructures of shared interfaces',
+            'Database migrations and security-sensitive changes',
+            'Anything you\'d want code-reviewed before it exists',
+            'Generating tests for a single function with bounded scope',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "When to Use Plan Mode" — those four are explicit Plan-Mode triggers; the single-function test case is listed as fine for Auto.',
+        },
+        {
+          id: 'ch12-q06', type: 'single',
+          prompt: 'The lesson offers a quick heuristic for picking Plan Mode. What is it?',
+          options: [
+            'If the file count is above 10',
+            'If your CI pipeline takes longer than 5 minutes',
+            'If "this goes wrong" would take more than 5 minutes to recover from',
+            'If Claude is in Opus mode',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "When to Use Plan Mode" — the recovery-cost heuristic ("more than 5 minutes → use Plan Mode") is the lesson\'s answer.',
+        },
+        {
+          id: 'ch12-q07', type: 'multi',
+          prompt: 'Which of the following are checks the lesson recommends you run on a plan before approving it?',
+          options: [
+            'Scope check — files affected as expected?',
+            'Approach check — is this the right solution?',
+            'Constraint check — does it respect your constraints?',
+            'Side-effect check — could this break something else?',
+            'Aesthetic check — does the plan use consistent indentation?',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Reviewing Plans Before Execution" — scope, approach, constraint, side-effect, completeness are the named checks; indentation is not.',
+        },
+        {
+          id: 'ch12-q08', type: 'single',
+          prompt: 'You\'re in Plan Mode and Claude\'s plan has a problematic step 3. What\'s the natural way to correct it?',
+          options: [
+            'Switch to Auto first, then re-prompt',
+            'Type the correction conversationally: "Remove step 3" or "step 2 should use a transaction" — keep iterating in Plan Mode',
+            'Edit Claude\'s plan in a text file and re-attach it',
+            'Exit and start a new session',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Reviewing Plans Before Execution" — corrections are conversational, and execution won\'t start until you switch out of plan mode, so iteration is cheap.',
+        },
+        {
+          id: 'ch12-q09', type: 'single',
+          prompt: 'Which mode is described as "Auto-accepts file edits and common filesystem commands; still prompts for other actions"?',
+          options: [
+            '<code>default</code>',
+            '<code>acceptEdits</code>',
+            '<code>plan</code>',
+            '<code>bypassPermissions</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is Plan Mode?" — that\'s the definition of <code>acceptEdits</code>.',
+        },
+        {
+          id: 'ch12-q10', type: 'single',
+          prompt: 'Which mode is described as "Disables all permission gating — only safe inside an isolated container / VM"?',
+          options: [
+            '<code>default</code>',
+            '<code>acceptEdits</code>',
+            '<code>plan</code>',
+            '<code>bypassPermissions</code>',
+          ],
+          correctIndexes: [3],
+          explanation: 'Lesson "What is Plan Mode?" — <code>bypassPermissions</code> is the all-off mode and carries the isolation caveat.',
+        },
+        {
+          id: 'ch12-q11', type: 'single',
+          prompt: 'After a Plan-Mode session, you flip to Auto and Claude executes. Why does the plan still apply?',
+          options: [
+            'Plan Mode persists the plan to disk in <code>.claude/plan.json</code>',
+            'The plan is part of the conversation — Claude remembers the decisions made during planning when it executes',
+            'Claude re-derives the plan from your terminal history',
+            'You have to copy-paste the plan back into the prompt',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Shift+Tab: Switching Modes" — the plan stays in conversation context, so the same session\'s execution honours the decisions made during planning.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 5 ────────────────────────────────────────────────────────────
@@ -511,9 +1070,10 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     lessons: [
       {
         id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>The Command Vocabulary</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/help</code> output (the full built-in commands list, with categories visible) and replace this marker. Save as <code>play/assets/lessons/ch11-l01.png</code>.</div>
 <table>
   <thead><tr><th>Command</th><th>What it does</th></tr></thead>
   <tbody>
@@ -582,6 +1142,145 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       ],
       exemplar: '<p>Strong answer: three sections, each with a real snippet — <code>/init</code>\'s tech-stack detection, <code>/help</code>\'s command listing, and a third like <code>/cost</code> showing token usage.</p>',
     },
+    theoreticalTest: {
+      id: 'ch11-test-mcq', passThreshold: 80, xpReward: 400, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch11-q01', type: 'single',
+          prompt: 'Which slash command generates a starter CLAUDE.md by inspecting your project?',
+          options: [
+            '<code>/setup</code>',
+            '<code>/init</code>',
+            '<code>/help</code>',
+            '<code>/scan</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "/init and Project Setup" — <code>/init</code> inspects the project and drafts a CLAUDE.md you then refine.',
+        },
+        {
+          id: 'ch11-q02', type: 'single',
+          prompt: 'Which command resets the session context?',
+          options: [
+            '<code>/reset</code>',
+            '<code>/clear</code>',
+            '<code>/compact</code>',
+            '<code>/exit</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Essential Slash Commands" — <code>/clear</code> resets context; <code>/compact</code> summarises and compresses without resetting.',
+        },
+        {
+          id: 'ch11-q03', type: 'single',
+          prompt: 'Which command summarises and compresses the current session (optionally with a focus hint)?',
+          options: [
+            '<code>/clear</code>',
+            '<code>/compact</code>',
+            '<code>/cost</code>',
+            '<code>/memory</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Essential Slash Commands" — <code>/compact</code> compresses; you can pass a focus hint like <code>/compact Focus on auth decisions</code>.',
+        },
+        {
+          id: 'ch11-q04', type: 'multi',
+          prompt: 'Which of these are listed as built-in slash commands?',
+          options: [
+            '<code>/model</code>',
+            '<code>/permissions</code>',
+            '<code>/agents</code>',
+            '<code>/skills</code>',
+            '<code>/deploy</code>',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Essential Slash Commands" — those four are in the built-in table; <code>/deploy</code> would be a custom team command, not built-in.',
+        },
+        {
+          id: 'ch11-q05', type: 'single',
+          prompt: 'What does <code>/model opus</code> do?',
+          options: [
+            'Permanently sets Opus as the default everywhere',
+            'Switches the current session to Opus immediately',
+            'Estimates the cost of running this session on Opus',
+            'Lists every available Opus variant',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Essential Slash Commands" — arguments follow the command name; <code>/model opus</code> swaps the session to Opus on the spot.',
+        },
+        {
+          id: 'ch11-q06', type: 'single',
+          prompt: 'You\'re on a brand-new repo. The lesson recommends running two specific slash commands in your first 30 seconds. Which?',
+          options: [
+            '<code>/init</code> and <code>/help</code>',
+            '<code>/skills</code> and <code>/agents</code>',
+            '<code>/cost</code> and <code>/status</code>',
+            '<code>/clear</code> and <code>/compact</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "/help, /skills and /agents — Discoverability" — <code>/skills</code> and <code>/agents</code> are the discovery pair for unfamiliar projects.',
+        },
+        {
+          id: 'ch11-q07', type: 'single',
+          prompt: 'After running <code>/init</code>, what does the lesson recommend you do?',
+          options: [
+            'Commit it unchanged — the generator is authoritative',
+            'Treat it as a first draft — correct inaccuracies, add Business-Brain pointer, apply lean principles, then commit',
+            'Run it again every week',
+            'Move the result to <code>~/.claude/CLAUDE.md</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "/init and Project Setup" — the generated file is a starting point; you refine before committing.',
+        },
+        {
+          id: 'ch11-q08', type: 'multi',
+          prompt: 'Which of these are listed as Session Hygiene rules?',
+          options: [
+            'One task per session',
+            'Start with a clear, specific first message',
+            '<code>/clear</code> when switching tasks',
+            '<code>/compact</code> on long sessions before context degrades',
+            'Always run <code>/init</code> after every prompt',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Session Hygiene" — those four are the explicit hygiene rules; re-running <code>/init</code> per prompt is not.',
+        },
+        {
+          id: 'ch11-q09', type: 'single',
+          prompt: 'Which command opens the subagent picker (built-in agents plus everything in <code>.claude/agents/</code>)?',
+          options: [
+            '<code>/skills</code>',
+            '<code>/agents</code>',
+            '<code>/mcp</code>',
+            '<code>/permissions</code>',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Essential Slash Commands" + "/help, /skills and /agents — Discoverability" — <code>/agents</code> is the subagent picker.',
+        },
+        {
+          id: 'ch11-q10', type: 'single',
+          prompt: 'Which command shows token usage and cost for the current session?',
+          options: [
+            '<code>/cost</code>',
+            '<code>/status</code>',
+            '<code>/memory</code>',
+            '<code>/model</code>',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Essential Slash Commands" — <code>/cost</code> is the per-session token-and-cost readout.',
+        },
+        {
+          id: 'ch11-q11', type: 'single',
+          prompt: 'Which slash command runs Claude\'s built-in code review against the current diff?',
+          options: [
+            '<code>/review</code>',
+            '<code>/diff</code>',
+            '<code>/scan</code>',
+            '<code>/lint</code>',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Essential Slash Commands" — <code>/review</code> is the built-in diff review.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 6 ─────────────────────────────────────────────────────────────
@@ -594,9 +1293,10 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     lessons: [
       {
         id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 75, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Persistent Memory for Your Project</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>ls -la</code> in a real project showing <code>CLAUDE.md</code> and <code>.claude/</code> alongside your source, and replace this marker. Save as <code>play/assets/lessons/ch03-l01.png</code>.</div>
 <p>Every time you start a new Claude Code session, the AI starts fresh. <strong>CLAUDE.md</strong> solves this — it's a markdown file you place in your project root that Claude Code reads automatically at the start of every session.</p>
 <h3>Where it lives</h3>
 <ul>
@@ -710,6 +1410,146 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       ],
       exemplar: '<p>Strong answer: tight markdown — one-line purpose, voice section (warm-but-technical B2B), conventions section (templates/ + escalations), file-map section listing the five folders. ~25 lines total.</p>',
     },
+    theoreticalTest: {
+      id: 'ch03-test-mcq', passThreshold: 80, xpReward: 425, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch03-q01', type: 'single',
+          prompt: 'In one sentence, what does CLAUDE.md do?',
+          options: [
+            'It runs the test suite at session start',
+            'It is a markdown file in your project that Claude Code reads automatically at the start of every session',
+            'It is a chat log of past sessions Claude scans for context',
+            'It encrypts your project files for the AI',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is CLAUDE.md?" — it\'s the per-project markdown auto-loaded on every session.',
+        },
+        {
+          id: 'ch03-q02', type: 'multi',
+          prompt: 'Which of these are valid CLAUDE.md locations?',
+          options: [
+            '<code>./CLAUDE.md</code> (project-specific, committed)',
+            '<code>./.claude/CLAUDE.md</code> (project-specific alternative)',
+            '<code>./CLAUDE.local.md</code> (personal, gitignored)',
+            '<code>~/.claude/CLAUDE.md</code> (global, every project)',
+            '<code>./src/CLAUDE.md</code> (subdirectory for monorepos)',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "What is CLAUDE.md?" — all five are valid scopes (project, project-alt, personal-override, global, subdir).',
+        },
+        {
+          id: 'ch03-q03', type: 'single',
+          prompt: 'What does the <code>@filename</code> import inside a CLAUDE.md do?',
+          options: [
+            'Mentions a user — like in chat',
+            'References another markdown file whose contents Claude inlines at load time',
+            'Skips the file at load time',
+            'Tags the file for git LFS',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is CLAUDE.md?" — <code>@some/file.md</code> inlines the referenced file when CLAUDE.md loads.',
+        },
+        {
+          id: 'ch03-q04', type: 'single',
+          prompt: 'The lesson warns that the @import chain has a cost. What is it?',
+          options: [
+            'Every imported file is loaded into context on every session, just like CLAUDE.md itself',
+            'Claude rate-limits imports to 3 per session',
+            'You have to pay extra per imported file',
+            'Imports break <code>/clear</code>',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "What is CLAUDE.md?" — chained imports compound the token cost; every imported file lands in every session.',
+        },
+        {
+          id: 'ch03-q05', type: 'multi',
+          prompt: 'Which of the following are described as "context rot"?',
+          options: [
+            'Earlier context gets compressed or dropped as the session grows',
+            'Claude starts forgetting instructions you gave at the start',
+            'Output quality degrades subtly but consistently',
+            'Your network connection times out',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "The Context Window and Context Rot" — those three are the named symptoms; network issues aren\'t context rot.',
+        },
+        {
+          id: 'ch03-q06', type: 'single',
+          prompt: 'What is the "lean context principle" the lesson identifies as most important?',
+          options: [
+            'Always summarize before submitting',
+            'Load only what\'s needed for the current session — a 300-token CLAUDE.md that\'s always relevant beats a 3,000-token CLAUDE.md that\'s usually irrelevant',
+            'Cap CLAUDE.md at 200 lines no matter what',
+            'Run <code>/compact</code> at the start of every session',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Context Window and Context Rot" — the principle is the relevance-density quote almost verbatim.',
+        },
+        {
+          id: 'ch03-q07', type: 'multi',
+          prompt: 'Which of these BELONG in a lean CLAUDE.md?',
+          options: [
+            'Stack and how to test/build/lint',
+            'Critical constraints (things Claude must never do)',
+            'Pointers to detailed docs (not the full content)',
+            'Brief folder structure map',
+            'A full transcript of past architecture debates',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Writing a Lean CLAUDE.md" — those four belong; long narrative history does not.',
+        },
+        {
+          id: 'ch03-q08', type: 'multi',
+          prompt: 'Which of these do NOT belong in CLAUDE.md according to the lesson?',
+          options: [
+            'Long explanations of your business or product',
+            'Workflow instructions for specific tasks',
+            'Rarely-needed edge cases',
+            'History / "why we made this decision" narratives',
+            'The test command for your project',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Writing a Lean CLAUDE.md" — first four are explicit "not in CLAUDE.md"; the test command DOES belong.',
+        },
+        {
+          id: 'ch03-q09', type: 'single',
+          prompt: 'The lesson calls one pattern "the pointer pattern". What does it actually mean?',
+          options: [
+            'Use C-style pointers inside CLAUDE.md',
+            'Reference where context lives (e.g. "See <code>.business-brain/</code>") instead of pasting the full content in',
+            'Always link a PR number in CLAUDE.md',
+            'Use mouse-cursor emoji to mark sections',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Writing a Lean CLAUDE.md" — the pattern is "pointers, not content" — refer to the file rather than copying the file.',
+        },
+        {
+          id: 'ch03-q10', type: 'single',
+          prompt: 'When CLAUDE.md is committed to your repo, what does it become?',
+          options: [
+            'A liability — every teammate sees your settings',
+            'A shared contract with the AI — every team member\'s sessions use the same project context',
+            'Read-only until the next migration',
+            'A subagent definition',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "CLAUDE.md as a Team Document" — committed CLAUDE.md = shared context, so the AI behaves consistently across the team.',
+        },
+        {
+          id: 'ch03-q11', type: 'single',
+          prompt: 'What is the standard context window on Claude Code\'s default plan, and which plans add the 1M extended window?',
+          options: [
+            '100k tokens; 1M on Pro and Team',
+            '200k tokens; 1M on Max, Team, and Enterprise plans',
+            '64k tokens; 1M on Enterprise only',
+            '500k tokens; 1M is not yet available',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Context Window and Context Rot" — 200k standard; 1M on Max / Team / Enterprise.',
+        },
+      ],
+    },
   },
 
   // ── Chapter 7 ─────────────────────────────────────────────────────────────
@@ -740,9 +1580,10 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       },
       {
         id: 'ch02-l02', title: 'Structuring the Business Brain Folder', xpReward: 80, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-06-14',
+        verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Folder Layout and File Conventions</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/init</code> reading your CLAUDE.md (or the just-generated draft on first run) and replace this marker. Save as <code>play/assets/lessons/ch02-l02.png</code>.</div>
 <p>The Business Brain folder is typically stored at the root of your project or in a shared repository accessible to all your projects. A consistent structure makes it easy for Claude Code to find and use the right context.</p>
 <h3>Recommended structure</h3>
 <pre><code>.business-brain/
@@ -804,6 +1645,146 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
         { type: 'keyword', value: ['kedash', 'support'], description: 'Test reply references the brand', weight: 1 },
       ],
       exemplar: '<p>Strong answer: three 4-6 line Business Brain stubs + a Claude-drafted reply that opens warmly, uses one of the glossary terms (workspace / tenant / seat), and signs off as Kedash Support.</p>',
+    },
+    theoreticalTest: {
+      id: 'ch02-test-mcq', passThreshold: 80, xpReward: 450, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch02-q01', type: 'single',
+          prompt: 'In a single sentence, what is a Business Brain?',
+          options: [
+            'A separate Claude account used only by leadership',
+            'A dedicated folder holding everything an AI assistant needs to understand your business — brand voice, clients, strategy, conventions, glossary',
+            'A backup of your Slack conversations',
+            'A self-hosted vector database for RAG',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is a Business Brain?" — it\'s a centralized folder of business context the AI can draw from.',
+        },
+        {
+          id: 'ch02-q02', type: 'single',
+          prompt: 'The lesson argues against one common pattern. Which?',
+          options: [
+            'Centralized business context — it slows the AI down',
+            'Trying to make the AI smarter through complex prompt engineering or multi-agent orchestration instead of just giving it rich centralized context',
+            'Using markdown files for context — JSON is better',
+            'Writing more than one CLAUDE.md per project',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is a Business Brain?" — the framing is "centralised context beats smart orchestration".',
+        },
+        {
+          id: 'ch02-q03', type: 'multi',
+          prompt: 'Which of the following are listed as things that belong in a Business Brain?',
+          options: [
+            'Brand context — voice, tone, values, messaging',
+            'Client profiles — who users are, their vocabulary',
+            'Product strategy — current priorities, roadmap, what\'s ruled out',
+            'Domain glossary — terms with specific meanings in your business',
+            'Team conventions — how the team works, decisions made',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "What is a Business Brain?" — all five are explicitly enumerated.',
+        },
+        {
+          id: 'ch02-q04', type: 'single',
+          prompt: 'Where is the recommended folder location for the Business Brain?',
+          options: [
+            '<code>/var/businessbrain/</code>',
+            '<code>~/.claude/brain/</code>',
+            '<code>.business-brain/</code> at the project root (or a shared repo)',
+            '<code>node_modules/.brain/</code>',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Structuring the Business Brain Folder" — the convention is <code>.business-brain/</code> at the project root.',
+        },
+        {
+          id: 'ch02-q05', type: 'multi',
+          prompt: 'In the recommended Business Brain layout, which top-level subfolders are shown?',
+          options: [
+            '<code>brand/</code>',
+            '<code>clients/</code>',
+            '<code>product/</code>',
+            '<code>team/</code>',
+            '<code>logs/</code>',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Structuring the Business Brain Folder" — brand / clients / product / team are the four top-level buckets; logs is not.',
+        },
+        {
+          id: 'ch02-q06', type: 'single',
+          prompt: 'How does CLAUDE.md typically connect to the Business Brain?',
+          options: [
+            'It dumps the entire Business Brain inline',
+            'It includes a short pointer like "All brand/client/product context lives in <code>.business-brain/</code> — consult <code>brand/voice.md</code> for user-facing content."',
+            'CLAUDE.md is incompatible with Business Brain folders',
+            'Claude auto-discovers <code>.business-brain/</code> without any CLAUDE.md mention',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Structuring the Business Brain Folder" — CLAUDE.md should point to the Business Brain, not inline it.',
+        },
+        {
+          id: 'ch02-q07', type: 'single',
+          prompt: 'The "before Business Brain" anti-pattern from the lesson is essentially…',
+          options: [
+            'Re-explaining your tone and audience in every prompt, every session',
+            'Hard-coding tone into the source files',
+            'Hiring more content writers',
+            'Letting Claude write without any voice guidance',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Business Brain in Practice" — the anti-pattern is repeating the same context in every prompt; Business Brain replaces that with a single pointer.',
+        },
+        {
+          id: 'ch02-q08', type: 'multi',
+          prompt: 'Which of these are maintenance practices the lesson recommends for the Business Brain?',
+          options: [
+            'Treat Business Brain files like code — PR review and versioning',
+            'When a major product decision is made, update <code>decisions.md</code> immediately',
+            'Update <code>voice.md</code> before the next sprint when brand guidelines change',
+            'Add "Did this change the Business Brain?" to the team\'s definition of done',
+            'Regenerate the entire Business Brain from <code>/init</code> every quarter',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Business Brain in Practice" — those four are explicit maintenance steps; regenerating from <code>/init</code> is not.',
+        },
+        {
+          id: 'ch02-q09', type: 'single',
+          prompt: 'Why is a stale Business Brain described as "worse than no Business Brain"?',
+          options: [
+            'It causes the build to fail',
+            'It produces confidently wrong output that humans tend to trust',
+            'It triggers a CLAUDE.md syntax error',
+            'It increases your token bill',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Business Brain in Practice" — stale context produces confidently-wrong output, the worst failure mode.',
+        },
+        {
+          id: 'ch02-q10', type: 'single',
+          prompt: 'According to the lesson, what is the "multiplier" — what should teams invest in FIRST when adopting Claude Code?',
+          options: [
+            'Building a multi-agent orchestration system',
+            'Deep business context — a single agent with rich context beats a 5-agent system with shallow context',
+            'Buying the highest model tier',
+            'Hiring more prompt engineers',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What is a Business Brain?" — context is the multiplier; orchestration only matters once context is rich.',
+        },
+        {
+          id: 'ch02-q11', type: 'single',
+          prompt: 'Which file would Claude consult to keep tone consistent on a user-facing error message under the recommended layout?',
+          options: [
+            '<code>.business-brain/brand/voice.md</code>',
+            '<code>.business-brain/product/strategy.md</code>',
+            '<code>.business-brain/clients/overview.md</code>',
+            '<code>.business-brain/team/glossary.md</code>',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Structuring the Business Brain Folder" — voice.md under brand/ holds tone/style/messaging.',
+        },
+      ],
     },
   },
 
@@ -895,6 +1876,139 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       ],
       exemplar: '<p>Strong answer: 7 numbered items, each tagged with one of {User, Project, Business Brain, Skill} and a one-line reason that ties the item\'s scope to the layer\'s scope.</p>',
     },
+    theoreticalTest: {
+      id: 'ch04-test-mcq', passThreshold: 80, xpReward: 475, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch04-q01', type: 'single',
+          prompt: 'How many memory layers does the framework identify?',
+          options: ['Three', 'Four', 'Five', 'Seven'],
+          correctIndexes: [2],
+          explanation: 'Lesson "The Five Memory Layers" — five, ordered from always-loaded to on-demand.',
+        },
+        {
+          id: 'ch04-q02', type: 'multi',
+          prompt: 'Which of these layers are described as "always in context — every token consumed on every session"?',
+          options: [
+            'Global CLAUDE.md (<code>~/.claude/CLAUDE.md</code>)',
+            'Project CLAUDE.md (<code>./CLAUDE.md</code>)',
+            'Business Brain',
+            'Skills',
+            'Auto-memory',
+          ],
+          correctIndexes: [0, 1],
+          explanation: 'Lesson "The Five Memory Layers" — Layers 1 and 2 are always-loaded. The other three are on-demand or partial.',
+        },
+        {
+          id: 'ch04-q03', type: 'single',
+          prompt: 'When is the Business Brain loaded?',
+          options: [
+            'Every session, every project',
+            'On demand — only when the task requires it (pointed to from CLAUDE.md)',
+            'Only when an MCP server requests it',
+            'Never — it\'s a backup',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Five Memory Layers" — Business Brain (Layer 3) is on-demand, surfaced via the pointer in CLAUDE.md.',
+        },
+        {
+          id: 'ch04-q04', type: 'single',
+          prompt: 'How does the Skills layer handle context cost?',
+          options: [
+            'Every skill\'s full content loads on session start',
+            'Only the skill\'s name and one-line description load by default; the full content loads when invoked',
+            'Skills don\'t consume any tokens',
+            'Skills never load unless invoked from MCP',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Five Memory Layers" — Layer 4 uses progressive disclosure: index up front, body on invocation.',
+        },
+        {
+          id: 'ch04-q05', type: 'single',
+          prompt: 'What distinguishes Layer 5 (auto-memory) from Layers 1-4?',
+          options: [
+            'Layers 1-4 are things you write for Claude; Layer 5 is what Claude writes for itself with your supervision',
+            'Layer 5 is cloud-only',
+            'Layer 5 always loads first',
+            'Layer 5 is encrypted',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "The Five Memory Layers" — Layer 5 is the layer Claude maintains itself (with corrections, project facts, references).',
+        },
+        {
+          id: 'ch04-q06', type: 'single',
+          prompt: 'A developer setting "I prefer concise responses in British English" — where does it belong?',
+          options: [
+            'Project CLAUDE.md (every project should know)',
+            'Global CLAUDE.md (~/.claude/CLAUDE.md) — it\'s a personal preference across all projects',
+            'Business Brain',
+            'A skill',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What Belongs Where" — personal preferences across all projects belong in the global CLAUDE.md.',
+        },
+        {
+          id: 'ch04-q07', type: 'single',
+          prompt: 'The 10-step "PR description workflow" — where should it live?',
+          options: [
+            'CLAUDE.md, so it\'s always loaded',
+            'A skill (<code>.claude/skills/</code>) — repeatable workflow loaded on demand',
+            'Business Brain',
+            'Auto-memory',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What Belongs Where" — repeatable workflows belong in skills, not CLAUDE.md.',
+        },
+        {
+          id: 'ch04-q08', type: 'multi',
+          prompt: 'Which of the following are described as anti-patterns to avoid?',
+          options: [
+            'Stuffing CLAUDE.md with Business Brain content (long, only sometimes needed)',
+            'Putting workflow instructions in CLAUDE.md (wrap them in a skill instead)',
+            'Linking from CLAUDE.md to a skill index',
+            'Writing personal defaults in global CLAUDE.md',
+          ],
+          correctIndexes: [0, 1],
+          explanation: 'Lesson "What Belongs Where" — only the first two are named anti-patterns; the other two are correct usage.',
+        },
+        {
+          id: 'ch04-q09', type: 'single',
+          prompt: 'The lesson gives a "test" for whether something belongs in CLAUDE.md. What is the question?',
+          options: [
+            '"Will my teammates approve?"',
+            '"If I never run a task that uses this, does it still belong here?" — if not, it belongs in a skill or Business Brain file',
+            '"Is this under 100 lines?"',
+            '"Is this in markdown?"',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What Belongs Where" — that\'s the gating question for CLAUDE.md additions.',
+        },
+        {
+          id: 'ch04-q10', type: 'single',
+          prompt: '"Lessons from a past skill bug" — where does it belong?',
+          options: [
+            'Project CLAUDE.md',
+            'learnings.md alongside the skill — history specific to that skill',
+            'Auto-memory',
+            'Business Brain',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "What Belongs Where" — skill-specific history goes in learnings.md next to the skill.',
+        },
+        {
+          id: 'ch04-q11', type: 'single',
+          prompt: 'A correction like "stop summarising at the end of every response" belongs in which layer?',
+          options: [
+            'Global CLAUDE.md',
+            'Project CLAUDE.md',
+            'Auto-memory — let Claude save it itself, supervise the entry',
+            'Business Brain',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "What Belongs Where" — corrections Claude shouldn\'t need twice go into auto-memory (Layer 5).',
+        },
+      ],
+    },
   },
 
   // ── Chapter 9 ─────────────────────────────────────────────────────────────
@@ -907,9 +2021,10 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     lessons: [
       {
         id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-05-30',
+        lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Every Word Costs</h2>
+<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/cost</code> output broken into input / cached input / output (a session with a cache hit clearly visible) and replace this marker. Save as <code>play/assets/lessons/ch07-l01.png</code>.</div>
 <p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Opus 4.7+ supports up to 1,000,000 tokens (the "1M-context" tier). That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
@@ -1008,6 +2123,146 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
         { type: 'keyword', value: ['task', 'topic', 'session', 'reset'], description: 'Strategy mentions session boundaries', weight: 1 },
       ],
       exemplar: '<p>Strong answer: <code>/cost</code> before showing meaningful token usage, then <code>/clear</code> or <code>/compact</code>, then <code>/cost</code> after showing reduced usage; strategy notes when to reset vs compact.</p>',
+    },
+    theoreticalTest: {
+      id: 'ch07-test-mcq', passThreshold: 80, xpReward: 500, drawCount: 6,
+      questionPool: [
+        {
+          id: 'ch07-q01', type: 'single',
+          prompt: 'What is the standard context window size in Claude Code, and what does Opus 4.7+ support?',
+          options: [
+            '100k tokens; 500k on Opus 4.7+',
+            '200k tokens; up to 1,000,000 tokens on Opus 4.7+ (the "1M-context" tier)',
+            '50k tokens; 256k on Opus 4.7+',
+            '500k tokens; unlimited on Opus 4.7+',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Understanding the Context Window Budget" — 200k standard, 1M on Opus 4.7+.',
+        },
+        {
+          id: 'ch07-q02', type: 'multi',
+          prompt: 'Which of the following consume tokens from your context budget?',
+          options: [
+            'Your full conversation history from session start',
+            'Every file Claude reads (full content, not summaries)',
+            'Claude\'s own responses, tool calls, and reasoning',
+            'Your CLAUDE.md on every session',
+            'Active skill contents when invoked',
+          ],
+          correctIndexes: [0, 1, 2, 3, 4],
+          explanation: 'Lesson "Understanding the Context Window Budget" — all five are explicitly listed as budget consumers.',
+        },
+        {
+          id: 'ch07-q03', type: 'single',
+          prompt: 'Why does the lesson say "compacting degrades output" — is that a bug?',
+          options: [
+            'Yes — a tracked bug, due for fix in a future release',
+            'No — compression is lossy by nature, so nuance, specific instructions, and edge cases can be dropped. "It is physics, not a bug."',
+            'Yes — only on Haiku',
+            'No — only happens at exactly 100% context',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Understanding the Context Window Budget" — compression is fundamentally lossy; the lesson describes it as physics.',
+        },
+        {
+          id: 'ch07-q04', type: 'single',
+          prompt: 'What discount does prompt caching give you on stable prefixes of your context?',
+          options: [
+            'Cached tokens cost roughly 10% of the normal input rate',
+            'Cached tokens are free',
+            'Cached tokens cost roughly 50% of the normal input rate',
+            'Cached tokens cost roughly 90% of the normal input rate',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Understanding the Context Window Budget" — ~10% of normal input cost on cache hits.',
+        },
+        {
+          id: 'ch07-q05', type: 'single',
+          prompt: 'What is the TTL on the prompt cache, and what does that mean for scheduled scripts?',
+          options: [
+            '60 minutes; idle gaps under an hour stay cached',
+            '5 minutes; tight bursts stay cached, but 300-second gaps are "the worst of both worlds" — you pay the eviction without amortising it',
+            '15 minutes; works fine for most batch jobs',
+            'There is no TTL — caches live until session end',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Understanding the Context Window Budget" — 5-minute TTL; 300-second polling is the named worst-case.',
+        },
+        {
+          id: 'ch07-q06', type: 'single',
+          prompt: 'Across model tiers, how does cost compare per million tokens?',
+          options: [
+            'All tiers cost the same',
+            'Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku',
+            'Opus ≈ 2× Haiku, Sonnet ≈ 1.5× Haiku',
+            'Sonnet is cheaper than Haiku',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Understanding the Context Window Budget" — Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku.',
+        },
+        {
+          id: 'ch07-q07', type: 'multi',
+          prompt: 'Which situations does the lesson recommend running <code>/clear</code> in?',
+          options: [
+            'Task switch — finished one task, starting something different',
+            'Session has gone wrong — Claude is confused or accumulated bad assumptions',
+            'Long build-up — quality is visibly degrading',
+            'In the middle of a task that needs continuity',
+            'When Claude needs to remember earlier decisions of the same workflow',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "When to Use /clear" — first three are the named good-fits; the last two are explicit don\'t-clears.',
+        },
+        {
+          id: 'ch07-q08', type: 'single',
+          prompt: 'You\'re in the middle of a long, complex task and your context is getting heavy but you NEED the earlier decisions to stick. Which command fits?',
+          options: [
+            '<code>/clear</code> — start fresh',
+            '<code>/compact</code> — summarise the conversation, continue from a leaner starting point',
+            '<code>/reset</code>',
+            '<code>/exit</code> and reopen',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "/compact and Summaries" — /compact preserves context (summarized) and reduces tokens; /clear discards.',
+        },
+        {
+          id: 'ch07-q09', type: 'single',
+          prompt: 'What\'s the recommended way to PASS context across a <code>/clear</code> if something IS important to carry forward?',
+          options: [
+            'Write the carry-forward summary yourself and paste it as the first message after /clear (or use /compact)',
+            'Save it to ~/.claude/session.json',
+            'Type it into a CLAUDE.md',
+            'Email it to the Claude API',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "When to Use /clear" — summarize manually and paste, or use /compact for the auto-summary path.',
+        },
+        {
+          id: 'ch07-q10', type: 'multi',
+          prompt: 'Which items appear on the lesson\'s "lean session checklist"?',
+          options: [
+            'Does this session have a single clear goal?',
+            'Are you carrying context from a different task? (/clear)',
+            'Is the session getting long without progress? (/compact)',
+            'Is your CLAUDE.md lean and pointer-based, not encyclopedic?',
+            'Have you upgraded to Opus this morning?',
+          ],
+          correctIndexes: [0, 1, 2, 3],
+          explanation: 'Lesson "Structuring Long Sessions" — four checklist items; the model-tier upgrade is not on it.',
+        },
+        {
+          id: 'ch07-q11', type: 'single',
+          prompt: 'A caveat about <code>/compact</code> the lesson highlights — what is it?',
+          options: [
+            'It silently disables /clear afterward',
+            'Even summarized context loses fidelity, so for CRITICAL early decisions you should also write them down externally (a note, a code comment)',
+            'It only works on Opus',
+            '/compact triples your token cost',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "/compact and Summaries" — compaction is lossy too; externalize critical decisions.',
+        },
+      ],
     },
   },
 

@@ -655,14 +655,16 @@ function isTestDone(id) { return id && window.Progress.isTestPassed(getProgress(
 function getCompletedChapterCount() {
   if (!window.Progress || !window.CURRICULUM || !window.App) return 0;
   return window.CURRICULUM.filter(ch =>
-    window.Progress.isTestPassed(getProgress(), ch.practicalTest.id)
+    window.Progress.isChapterTestPassed(getProgress(), ch)
   ).length;
 }
 function getOutfit() {
   return OUTFITS[Math.min(getCompletedChapterCount(), OUTFITS.length - 1)];
 }
 function isZone2Open() {
-  return isTestDone('ch01-test');
+  // Either ch01 track unlocks zone 2 — practical and theoretical both count.
+  const ch = (window.CURRICULUM || []).find(c => c.id === 'ch01');
+  return ch ? !!window.Progress?.isChapterTestPassed?.(getProgress(), ch) : isTestDone('ch01-test');
 }
 
 // ─── Static AABB colliders (chest-height+ furniture) ────────────────────────
@@ -5409,7 +5411,8 @@ function getObjectiveRef() {
     for (const l of (ch.lessons || [])) {
       if (!isLessonDone(l.id)) return { chapterId: ch.id, lessonId: l.id, kind: 'lesson' };
     }
-    if (ch.practicalTest && !isTestDone(ch.practicalTest.id)) {
+    if (ch.practicalTest && !window.Progress.isChapterTestPassed(getProgress(), ch)) {
+      // Either track will clear this objective; the test panel offers both.
       return { chapterId: ch.id, testId: ch.practicalTest.id, kind: 'test' };
     }
   }

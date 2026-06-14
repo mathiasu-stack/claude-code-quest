@@ -76,7 +76,8 @@ function renderDashboard() {
 
 function renderChapterCard(ch, progress) {
   const unlocked = Progress.isChapterUnlocked(progress, ch.id);
-  const testPassed = Progress.isTestPassed(progress, ch.practicalTest.id);
+  // Either track passes the chapter — practical (hands-on) or theoretical (MCQ).
+  const testPassed = Progress.isChapterTestPassed(progress, ch);
   const completedLessons = ch.lessons.filter(l => Progress.isLessonComplete(progress, l.id)).length;
   const totalLessons = ch.lessons.length;
   const lessonPct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
@@ -128,7 +129,7 @@ function renderChapterView(chapterId) {
   const unlocked = Progress.isChapterUnlocked(progress, ch.id);
   if (!unlocked) { renderDashboard(); return; }
 
-  const testPassed = Progress.isTestPassed(progress, ch.practicalTest.id);
+  const testPassed = Progress.isChapterTestPassed(progress, ch);
   const allLessonsDone = ch.lessons.every(l => Progress.isLessonComplete(progress, l.id));
 
   main.innerHTML = `

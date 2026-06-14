@@ -281,7 +281,7 @@ const App = {
     if (!window.CURRICULUM || !this.progress) return 'Intern';
     const tiers = ['Intern', 'Junior Hire', 'Associate', 'Engineer', 'Senior', 'Lead', 'Principal', 'Director'];
     const completed = window.CURRICULUM.filter(ch =>
-      Progress.isTestPassed(this.progress, ch.practicalTest.id)
+      Progress.isChapterTestPassed(this.progress, ch)
     ).length;
     return tiers[Math.min(completed, tiers.length - 1)];
   },
@@ -320,7 +320,7 @@ const App = {
         </div>
         ${CURRICULUM.filter(ch => !Progress.isSideQuestChapter(ch)).map(ch => {
           const unlocked = Progress.isChapterUnlocked(progress, ch.id);
-          const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
+          const passed = Progress.isChapterTestPassed(progress, ch);
           return `
             <div class="nav-item chapter-nav ${unlocked ? '' : 'nav-locked'} ${passed ? 'nav-complete' : ''} ${isActive('chapter', ch.id)}"
                  data-nav="chapter" data-chapter="${ch.id}">
@@ -334,7 +334,7 @@ const App = {
           <div class="nav-side-quest-header">★ Side Quests</div>
           ${CURRICULUM.filter(ch => Progress.isSideQuestChapter(ch)).map(ch => {
             const unlocked = Progress.isChapterUnlocked(progress, ch.id);
-            const passed = Progress.isTestPassed(progress, ch.practicalTest.id);
+            const passed = Progress.isChapterTestPassed(progress, ch);
             return `
               <div class="nav-item chapter-nav nav-side-quest ${unlocked ? '' : 'nav-locked'} ${passed ? 'nav-complete' : ''} ${isActive('chapter', ch.id)}"
                    data-nav="chapter" data-chapter="${ch.id}">
