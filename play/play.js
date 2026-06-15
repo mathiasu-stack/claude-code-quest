@@ -2124,6 +2124,78 @@ function buildCxFolder() {
 // piggy-back on scene.add / decoTickers internally — they return null
 // so the loader doesn't double-add anything.
 let _roomBuildersRegistered = false;
+// ── Procedural plaster/painted-wall surface ───────────────────────────
+// Replaces the flat single-colour MeshStandardMaterial that made walls
+// read as "Roblox". One shared 256px CanvasTexture (near-white mottle so
+// per-room colour still tints through via material.color) plus a matching
+// bump map for subtle painted-drywall relief. Mobile-cheap: textures are
+// generated once and reused across every wall; only the tint differs.
+let _wallMapTex = null;
+let _wallBumpTex = null;
+function _buildWallTextures() {
+  // Diffuse: white base with faint low-frequency mottle + fine grain.
+  // Kept near-white so material.color is preserved (map multiplies colour).
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 256, 256);
+  // Soft blotches of slightly-off-white for uneven paint/plaster.
+  for (let i = 0; i < 18; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256;
+    const r = 30 + Math.random() * 70;
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    const tone = 224 + Math.floor(Math.random() * 22); // 224..245
+    grad.addColorStop(0, `rgba(${tone},${tone},${tone},0.16)`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Fine speckle for a tooth/paper grain.
+  const img = g.getImageData(0, 0, 256, 256);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 12;
+    d[i] = Math.min(255, Math.max(0, d[i] + n));
+    d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
+    d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+  }
+  g.putImageData(img, 0, 0);
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+
+  // Bump: mid-grey base + the same speckle so light catches the grain.
+  const cb = document.createElement('canvas');
+  cb.width = cb.height = 256;
+  const gb = cb.getContext('2d');
+  gb.fillStyle = '#808080';
+  gb.fillRect(0, 0, 256, 256);
+  const bimg = gb.getImageData(0, 0, 256, 256);
+  const bd = bimg.data;
+  for (let i = 0; i < bd.length; i += 4) {
+    const n = 128 + (Math.random() - 0.5) * 46;
+    bd[i] = bd[i + 1] = bd[i + 2] = n;
+  }
+  gb.putImageData(bimg, 0, 0);
+  const bump = new THREE.CanvasTexture(cb);
+  bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+
+  _wallMapTex = map;
+  _wallBumpTex = bump;
+}
+function makeWallMaterial(color = 0xf4ecd8, metal = 0) {
+  if (!_wallMapTex) _buildWallTextures();
+  return new THREE.MeshStandardMaterial({
+    color,
+    map: _wallMapTex,
+    bumpMap: _wallBumpTex,
+    bumpScale: 0.04,
+    metalness: (metal || 0) * 0.2,
+    roughness: 0.92,
+  });
+}
+
 function registerRoomBuilders() {
   if (_roomBuildersRegistered) return;
   _roomBuildersRegistered = true;
@@ -2135,6 +2207,10 @@ function registerRoomBuilders() {
     makeWallSign,
     buildPosterTexture,
     buildCeoPortrait,
+    wallMaterialFactory: (material) => makeWallMaterial(
+      (material && material.color) || 0xf4ecd8,
+      (material && material.metal) || 0,
+    ),
   });
 
   // ── Furniture / decor builders (return THREE.Object3D) ────────────
@@ -2855,9 +2931,7 @@ function buildFloorOffice(floorIdx) {
   ceilingMesh.userData.floor = floorIdx;
   scene.add(ceilingMesh);
 
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
-  });
+  const wallMat = makeWallMaterial(theme.wall, theme.metal);
   function addWall(w, h, d, x, z, mat = wallMat) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     m.position.set(x, y0 + h / 2, z);
@@ -3438,9 +3512,7 @@ function buildFloor1WestRoom(idx, centerX, centerZ) {
   // Walls — west / north / south are SOLID. East wall has the doorway
   // that connects to atrium (idx=2) or library (idx=3). For idx=2 the
   // north wall also has a doorway to the Plan Mode room above it.
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
-  });
+  const wallMat = makeWallMaterial(theme.wall, theme.metal);
   function w(width, height, depth, x, y, z) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
     m.position.set(x, y, z);
@@ -3521,9 +3593,7 @@ function buildGenericZone(idx) {
   scene.add(floor);
 
   // Side walls
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: theme.wall, metalness: theme.metal * 0.4, roughness: 0.7,
-  });
+  const wallMat = makeWallMaterial(theme.wall, theme.metal);
   function w(width, height, depth, x, y, z) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
     m.position.set(x, y, z);
