@@ -1,5 +1,5 @@
 // npc_overrides.js — per-NPC position/face overrides applied at spawn.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:33:08.015Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:47:14.154Z
 //
 // Keyed by NPC id (hand-built or auto-${lessonId}). Applied in
 // spawnNPC() after floor-relocation overrides.

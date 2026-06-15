@@ -1,6 +1,6 @@
 // compound_overrides.js — per-child position/rotation/scale/hidden overrides
 // for compound builders.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:33:08.015Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:47:14.155Z
 //
 // Keyed by [ownerId][childId]. Applied by play/world/compoundChildren.js
 // at build time.

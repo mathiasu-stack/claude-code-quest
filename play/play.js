@@ -637,6 +637,7 @@ function _filteredCameraWalls() {
 const _camRay = new THREE.Raycaster();
 const _camRayDir = new THREE.Vector3();
 const _camRayOrigin = new THREE.Vector3();
+const _camCeilProbe = new THREE.Vector3();
 let ceremony = null;
 let player, npcMeshes = [];
 let keys = {}, touchVec = { x: 0, y: 0 };
@@ -2693,7 +2694,18 @@ function buildWorld() {
     const sz = bb.max.z - bb.min.z;
     const thinHoriz = (sx <= 0.5 || sz <= 0.5);
     const tall = sy >= 2.5;
-    if (thinHoriz && tall) cameraWalls.push(obj);
+    if (thinHoriz && tall) { cameraWalls.push(obj); return; }
+    // Ceiling planes: wide, flat, and well above the floor. Included so
+    // the camera's upward ceiling-probe (in update()) can keep the camera
+    // from rising through a single-sided ceiling into the open sky. A
+    // rotated PlaneGeometry reports its plane dims as sx/sy with sz≈0, so
+    // check the two largest dims are wide and the smallest thin, then
+    // confirm it sits above head height in world space.
+    const dims = [sx, sy, sz].sort((a, b) => a - b);
+    if (dims[2] >= 4 && dims[1] >= 4 && dims[0] <= 0.6) {
+      obj.updateWorldMatrix(true, false);
+      if (obj.getWorldPosition(_camCeilProbe).y >= 2.5) cameraWalls.push(obj);
+    }
   });
   _cameraWallsCacheFloor = -1;
 }
@@ -4291,7 +4303,18 @@ function refreshCameraWalls() {
     const sz = bb.max.z - bb.min.z;
     const thinHoriz = (sx <= 0.5 || sz <= 0.5);
     const tall = sy >= 2.5;
-    if (thinHoriz && tall) cameraWalls.push(obj);
+    if (thinHoriz && tall) { cameraWalls.push(obj); return; }
+    // Ceiling planes: wide, flat, and well above the floor. Included so
+    // the camera's upward ceiling-probe (in update()) can keep the camera
+    // from rising through a single-sided ceiling into the open sky. A
+    // rotated PlaneGeometry reports its plane dims as sx/sy with sz≈0, so
+    // check the two largest dims are wide and the smallest thin, then
+    // confirm it sits above head height in world space.
+    const dims = [sx, sy, sz].sort((a, b) => a - b);
+    if (dims[2] >= 4 && dims[1] >= 4 && dims[0] <= 0.6) {
+      obj.updateWorldMatrix(true, false);
+      if (obj.getWorldPosition(_camCeilProbe).y >= 2.5) cameraWalls.push(obj);
+    }
   });
   // Invalidate the floor-filtered cache so the next frame rebuilds it.
   _cameraWallsCacheFloor = -1;
@@ -5908,9 +5931,29 @@ function update(dt) {
   // current floor's baseline so it doesn't leak across floors.
   const rawCamY = floorY + camH + _camSmoothDist * pitchSin
     + Math.max(0, player.position.y - floorY) * 0.3;
+  // Ceiling clamp: the room ceilings are single-sided planes (normal
+  // points DOWN into the room), so the moment the camera rises above one
+  // it sees the invisible backface and the sky shows through. camH alone
+  // (4.2) already exceeds the 3.8 m interior ceilings, and the wall
+  // occlusion only shrinks the orbit distance, never this vertical
+  // offset — so probe straight up from the player and cap the camera
+  // just below whatever ceiling is overhead. Open exterior (no hit) and
+  // the 12 m atrium are handled automatically (their ceiling, if any,
+  // is far above), so this only bites in the low-ceilinged rooms.
+  let ceilCap = floorY + 14;
+  if (cameraWalls.length) {
+    _camRayOrigin.set(player.position.x, player.position.y + 1.0, player.position.z);
+    _camRayDir.set(0, 1, 0);
+    _camRay.set(_camRayOrigin, _camRayDir);
+    _camRay.near = 0.2;
+    _camRay.far = 30;
+    const upCandidates = _filteredCameraWalls().filter(w => w.visible);
+    const upHits = _camRay.intersectObjects(upCandidates, false);
+    if (upHits.length) ceilCap = Math.min(ceilCap, upHits[0].point.y - 0.4);
+  }
   // Clamp so extreme pitches don't push the camera below the floor or
-  // above the atrium ceiling.
-  camera.position.y = Math.max(floorY + 0.4, Math.min(floorY + 14, rawCamY));
+  // above the local ceiling.
+  camera.position.y = Math.max(floorY + 0.4, Math.min(ceilCap, rawCamY));
   camera.lookAt(lookX, player.position.y + 1.0, lookZ);
 
   // Animate doors live: color tint, label, AND the hinge swing toward

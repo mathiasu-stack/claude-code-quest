@@ -1,5 +1,5 @@
 // rooms.js — declarative scene-layout data.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:33:08.014Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:47:14.154Z
 //
 // See play/world/roomsLoader.js for the entry-type spec.
 
@@ -108,8 +108,8 @@ window.ROOMS = [
     template: 'west_room',
     center: [-22, 0, 0],
     objects: [
-      { type: 'builder', fn: 'table', pos: [-22, 0, 0] },
-      { type: 'builder', fn: 'lamp', pos: [-22, 0.78, 0], rotY: 0 },
+      { type: 'builder', fn: 'table', pos: [-22, 0, 0], rotY: 0, scale: [2.05, 2.05, 2.05] },
+      { type: 'builder', fn: 'lamp', pos: [-22, -0.41, 0], rotY: 0 },
       { type: 'builder', fn: 'plant', pos: [-31, 0, -9] },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 9] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 9] },
@@ -139,7 +139,7 @@ window.ROOMS = [
     center: [-22, 0, 22],
     objects: [
       { type: 'wall', pos: [-11, 1.9, 22], size: { w: 0.3, h: 3.8, d: 22 } },
-      { type: 'builder', fn: 'table', pos: [-22, 0, 22] },
+      { type: 'builder', fn: 'table', pos: [-22, 0, 22], rotY: 0, scale: [2.05, 2.05, 2.05] },
       { type: 'builder', fn: 'lamp', pos: [-22, 0.78, 22], rotY: 0 },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 13] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 13] },
