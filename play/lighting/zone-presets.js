@@ -153,23 +153,29 @@ const WEST_FILES_PRESET = {
   },
   directional: {
     color: 0xffeccc,
-    intensity: 1.10,
-    position: [-30, 14, 8],
-    castShadow: true,
+    intensity: 0.55,
+    position: [-30, 18, 8],
+    // Same interior fix as Plan Mode: kill the shadow-casting sun that
+    // chopped into a harsh wedge; light the room by its own warm ceiling
+    // pools instead.
+    castShadow: false,
     shadowMapSize: 1024,
     shadowBounds: 16,
     shadowBias: -0.0005,
   },
   accents: [
-    { type: 'point', color: 0xffe2bc, intensity: 1.20, distance: 14, decay: 1.5, position: [-22, 2.6, 0] },
-    { type: 'point', color: 0xb8d8ff, intensity: 0.45, distance: 12, decay: 1.8, position: [-30, 2.6, 0] },
+    // Warm ceiling pools over the room (the visible source).
+    { type: 'point', color: 0xffe2bc, intensity: 2.3, distance: 13, decay: 1.4, position: [-22, 2.4, 0] },
+    { type: 'point', color: 0xffe2bc, intensity: 1.7, distance: 13, decay: 1.4, position: [-22, 2.4, -6] },
+    // Head-height fill so faces aren't in silhouette.
+    { type: 'point', color: 0xfff1d8, intensity: 1.10, distance: 16, decay: 1.4, position: [-22, 1.7, 0] },
   ],
-  background: 0xefe6d4,
-  fog: { color: 0xefe6d4, near: 30, far: 80 },
+  background: 0x3a3024,
+  fog: { color: 0x3a3024, near: 30, far: 80 },
   postfx: {
-    bloomStrength: 0.40,
+    bloomStrength: 0.45,
     bloomRadius: 0.70,
-    bloomThreshold: 0.85,
+    bloomThreshold: 0.84,
     vignette: 0.30,
     grain: 0.02,
   },
@@ -181,28 +187,36 @@ const WEST_FILES_PRESET = {
 const WEST_PLANMODE_PRESET = {
   ambient: {
     skyColor: 0xdfe8f6,
-    groundColor: 0x46506a,
-    intensity: 1.05,
+    groundColor: 0x4a5470,
+    intensity: 1.30,
   },
   directional: {
     color: 0xeaf2ff,
-    intensity: 1.10,
-    position: [-30, 14, 30],
-    castShadow: true,
+    intensity: 0.55,
+    position: [-30, 18, 30],
+    // Interior room — a strong shadow-casting "sun" streamed in through
+    // the doorway and got chopped by the walls into a hard-edged wedge of
+    // light on the floor with no visible source. Drop the shadow + most
+    // of the intensity: this is now a soft directional fill, and the room
+    // is lit by its own ceiling point lights (the motivated accents below).
+    castShadow: false,
     shadowMapSize: 1024,
     shadowBounds: 16,
     shadowBias: -0.0005,
   },
   accents: [
-    { type: 'point', color: 0xdce8ff, intensity: 1.20, distance: 14, decay: 1.5, position: [-22, 2.6, 22] },
-    { type: 'point', color: 0xffe2bc, intensity: 0.50, distance: 12, decay: 1.8, position: [-30, 2.6, 22] },
+    // Cool ceiling panels over the room (the visible source).
+    { type: 'point', color: 0xdce8ff, intensity: 2.3, distance: 13, decay: 1.4, position: [-22, 2.4, 22] },
+    { type: 'point', color: 0xdce8ff, intensity: 1.8, distance: 13, decay: 1.4, position: [-22, 2.4, 28] },
+    // Head-height fill so faces aren't in silhouette.
+    { type: 'point', color: 0xeaf2ff, intensity: 1.10, distance: 16, decay: 1.4, position: [-22, 1.7, 22] },
   ],
-  background: 0xe4ebf6,
-  fog: { color: 0xe4ebf6, near: 30, far: 80 },
+  background: 0x2e3550,
+  fog: { color: 0x2e3550, near: 30, far: 80 },
   postfx: {
-    bloomStrength: 0.40,
+    bloomStrength: 0.45,
     bloomRadius: 0.70,
-    bloomThreshold: 0.85,
+    bloomThreshold: 0.84,
     vignette: 0.30,
     grain: 0.02,
   },
