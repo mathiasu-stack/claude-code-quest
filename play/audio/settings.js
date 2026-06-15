@@ -6,6 +6,7 @@
 
 import { audio } from './AudioManager.js?v=20260615b';
 import { stopAmbience } from './ambience.js?v=20260615b';
+import { isVoiceEnabled, setVoiceEnabled } from './voice.js?v=20260615h';
 
 const PANEL_ID = 'play-audio-panel';
 const BUTTON_ID = 'play-audio-gear';
@@ -46,6 +47,24 @@ function row(labelText, value, mute, onValueInput, onMuteToggle) {
   ]);
 }
 
+// A simple on/off row matching the channel rows, reusing the mute-button
+// styling for the toggle. Used for the spoken-line (TTS) preference.
+function toggleRow(labelText, isOn, onToggle) {
+  const btn = el('button', { class: `aud-mute ${isOn ? '' : 'on'}`, type: 'button' });
+  const paint = (on) => { btn.classList.toggle('on', !on); btn.textContent = on ? 'ON' : 'OFF'; };
+  paint(isOn);
+  btn.addEventListener('click', () => {
+    const next = btn.textContent === 'OFF';
+    paint(next);
+    onToggle(next);
+  });
+  return el('div', { class: 'aud-row' }, [
+    el('div', { class: 'aud-label' }, [labelText]),
+    el('div', { class: 'aud-range' }, []), // spacer to align with slider column
+    btn,
+  ]);
+}
+
 export function mountAudioSettings(parent) {
   if (!parent) parent = document.body;
   if (document.getElementById(PANEL_ID) || document.getElementById(BUTTON_ID)) return;
@@ -79,6 +98,14 @@ export function mountAudioSettings(parent) {
         m => audio.setChannelMute(channel, m),
       ));
     }
+
+    // Character voices (Web Speech API TTS) on/off — gated separately from
+    // the 'voice' channel volume above (muting Voice also silences TTS).
+    panel.appendChild(toggleRow(
+      '🗣 Character voices',
+      isVoiceEnabled(),
+      (on) => setVoiceEnabled(on),
+    ));
 
     const close = el('button', { class: 'aud-close', type: 'button' }, ['Close']);
     close.addEventListener('click', () => panel.classList.add('hidden'));

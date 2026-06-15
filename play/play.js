@@ -13,8 +13,9 @@ import {
   playElevatorRide,
 } from './audio/procedural.js?v=20260615b';
 import { surfaceForZone, musicForZone, procForZone } from './audio/zoneConfig.js?v=20260615b';
-import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260615b';
+import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260615h';
 import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js?v=20260615b';
+import { speakLine, setVoiceEnabled, isVoiceEnabled } from './audio/voice.js?v=20260615h';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
 import { attachFlatFace, updateFlatFace, setFlatExpression, talkPulse } from './characters/flatFace.js';
@@ -5298,6 +5299,9 @@ let currentTypewriter = null;
 // it DOM-safe: the card may already be tearing down when it fires.
 function startTypewriter(el, text, pitch = 1.0, onDone = null) {
   if (!el) return;
+  // Speak the FULL line aloud (not per-char fragments) via Web Speech API.
+  // Guarded so any SpeechSynthesis failure never breaks the dialogue.
+  try { speakLine(text, { pitch }); } catch {}
   el.textContent = '';
   let i = 0;
   let blipCounter = 0;
