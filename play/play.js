@@ -5161,10 +5161,17 @@ function openDialogue(npc) {
           x: player.position.x, z: player.position.z, floor: currentFloor,
         }));
       }
+      // Dismiss the NPC dialogue card first so it doesn't linger behind
+      // the overlay (mirrors the dlg-close / dlg-cancel teardown).
+      closeDialogue();
       if (npc.kind === 'test') {
-        window.App.navigate('test', { chapterId: npc.chapterId, fromPlay: true });
+        window.LessonOverlay?.open
+          ? window.LessonOverlay.open({ chapterId: npc.chapterId, kind: 'test', isTest: true })
+          : window.App.navigate('test', { chapterId: npc.chapterId, fromPlay: true });
       } else {
-        window.App.navigate('lesson', { chapterId: npc.chapterId, lessonId: npc.lessonId, fromPlay: true });
+        window.LessonOverlay?.open
+          ? window.LessonOverlay.open({ chapterId: npc.chapterId, lessonId: npc.lessonId, kind: 'npc' })
+          : window.App.navigate('lesson', { chapterId: npc.chapterId, lessonId: npc.lessonId, fromPlay: true });
       }
     };
   }
@@ -5234,6 +5241,48 @@ function closeDialogue() {
   dialogueEl.classList.remove('visible');
   dialogueEl.innerHTML = '';
   inputLocked = false;
+}
+
+// Re-checkable promotion-ceremony trigger. Called once on play start(), and
+// again by the in-world overlay's close() — because a test taken in the
+// overlay leaves the play scene alive, so start() never re-runs. Flag-gated
+// on sessionStorage 'ccq_promotion_for' (set by a passing test), so it's a
+// safe no-op when nothing is pending. Falls through to a plain dance if only
+// the older 'ccq_dance_for' flag is set.
+function maybeRunPromotionCeremony() {
+  try {
+    const promotionFor = sessionStorage.getItem('ccq_promotion_for');
+    // R-6: the ch16 capstone does NOT get the generic auto-ceremony —
+    // FIN-06 (the scripted finale after Maya's scene) IS the VP-of-AI
+    // moment. Consume the flag silently so it can't fire later either.
+    if (promotionFor === 'ch16' && !Story.sceneSeen('finale')) {
+      sessionStorage.removeItem('ccq_promotion_for');
+    } else if (promotionFor) {
+      // Pause briefly so the scene is on screen before the spotlight.
+      setTimeout(() => ceremony.maybeStartFromFlag(), 400);
+      // AUDIO-04 / A24: if the portrait is in view, her eyes glint once.
+      setTimeout(() => { try { flashPortraitEyeGlint(); } catch {} }, 700);
+      // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
+      // and the dance via setDanceUntil internally.
+      try {
+        audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+      } catch {}
+    } else {
+      const danceFlag = sessionStorage.getItem('ccq_dance_for');
+      if (danceFlag) {
+        sessionStorage.removeItem('ccq_dance_for');
+        setTimeout(() => {
+          danceUntil = performance.now() + 4500;
+          showCelebrationToast();
+          try {
+            playCrowdCheer(4.0);
+            playLevelUpFanfare();
+            audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
+          } catch {}
+        }, 400);
+      }
+    }
+  } catch {}
 }
 
 let currentTypewriter = null;
@@ -6437,6 +6486,10 @@ export async function start(host) {
       // Editor calls this after every drag / resize / paste so the
       // player can't walk through a moved desk's old footprint.
       rebuildColliders: () => rebuildColliders(),
+      // Lets the in-world overlay re-fire the promotion ceremony after a
+      // test taken in the overlay (the play scene stayed alive, so start()'s
+      // one-shot check never re-ran). Flag-gated → safe no-op otherwise.
+      maybeRunPromotionCeremony: () => maybeRunPromotionCeremony(),
     };
   } catch {}
   setupInput();
@@ -6636,41 +6689,7 @@ export async function start(host) {
   });
 
   // Trigger ceremony if the player just passed a test (`ccq_promotion_for`).
-  // Falls through to a plain dance if only `ccq_dance_for` is set
-  // (compatibility with older flag).
-  try {
-    const promotionFor = sessionStorage.getItem('ccq_promotion_for');
-    // R-6: the ch16 capstone does NOT get the generic auto-ceremony —
-    // FIN-06 (the scripted finale after Maya's scene) IS the VP-of-AI
-    // moment. Consume the flag silently so it can't fire later either.
-    if (promotionFor === 'ch16' && !Story.sceneSeen('finale')) {
-      sessionStorage.removeItem('ccq_promotion_for');
-    } else if (promotionFor) {
-      // Pause briefly so the scene is on screen before the spotlight.
-      setTimeout(() => ceremony.maybeStartFromFlag(), 400);
-      // AUDIO-04 / A24: if the portrait is in view, her eyes glint once.
-      setTimeout(() => { try { flashPortraitEyeGlint(); } catch {} }, 700);
-      // Side-effect: also kicks off audio (cheer/fanfare/celebration music)
-      // and the dance via setDanceUntil internally.
-      try {
-        audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
-      } catch {}
-    } else {
-      const danceFlag = sessionStorage.getItem('ccq_dance_for');
-      if (danceFlag) {
-        sessionStorage.removeItem('ccq_dance_for');
-        setTimeout(() => {
-          danceUntil = performance.now() + 4500;
-          showCelebrationToast();
-          try {
-            playCrowdCheer(4.0);
-            playLevelUpFanfare();
-            audio.startMusic('celebration', 'play/assets/audio/music/celebration.mp3', 600);
-          } catch {}
-        }, 400);
-      }
-    }
-  } catch {}
+  maybeRunPromotionCeremony();
 
   // ── Admin-gated room editor (Phase 2) ──────────────────────────────
   // Toolbar mounts hidden by default; it auto-shows when

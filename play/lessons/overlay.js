@@ -25,6 +25,7 @@ const KIND_TO_SKIN = {
   phone:      'skin-video',
   dialogue:   'skin-dialogue',
   npc:        'skin-dialogue',
+  test:       'skin-terminal',
 };
 
 const _state = {
@@ -91,8 +92,9 @@ const _api = {
   open(info) {
     const host = document.getElementById('play-canvas-host')?.parentElement || document.body;
     ensureBuilt(host);
-    const skin = KIND_TO_SKIN[info.kind] || 'skin-dialogue';
-    _state.currentKind = info.kind || 'npc';
+    const isTest = !!(info.isTest || info.kind === 'test');
+    const skin = KIND_TO_SKIN[isTest ? 'test' : info.kind] || 'skin-dialogue';
+    _state.currentKind = isTest ? 'test' : (info.kind || 'npc');
     _state.el.className = `lesson-overlay ${skin}`;
     _state.minimized = false;
 
@@ -106,11 +108,27 @@ const _api = {
     document.getElementById('lo-eyebrow').textContent =
       ch ? `${ch.icon} ${ch.title}` : 'Chapter';
     document.getElementById('lo-title').textContent =
-      lesson ? lesson.title : 'Lesson';
+      isTest ? 'Practical Assessment' : (lesson ? lesson.title : 'Lesson');
 
-    // Render lesson content into our content div via the existing
-    // Lesson module (modified to accept a target).
-    if (window.Lesson?.renderLesson) {
+    if (isTest) {
+      // Render the chapter test into our content div via the existing
+      // Test module (made target-aware). fromPlay must be set so the test's
+      // exit/return buttons behave as in-world (close the overlay).
+      try {
+        if (window.App) {
+          window.App._currentParams = { chapterId: info.chapterId, fromPlay: true };
+        }
+      } catch {}
+      if (window.TestView?.renderTest) {
+        window.TestView.renderTest(info.chapterId, _state.contentEl);
+      } else {
+        _state.contentEl.innerHTML = `<div style="padding:24px;color:#1a2744">
+          Test runtime not loaded. (chapter ${info.chapterId})
+        </div>`;
+      }
+    } else if (window.Lesson?.renderLesson) {
+      // Render lesson content into our content div via the existing
+      // Lesson module (modified to accept a target).
       // Stash params on App so the existing fromPlay flag inside
       // renderLesson works without a real route change.
       try {
@@ -138,6 +156,11 @@ const _api = {
     _state.open = false;
     try { _state.hooks.setInputLocked(false); } catch {}
     try { _state.hooks.restoreMusic(); } catch {}
+    // After a test, the play view stayed alive, so start()'s promotion-flag
+    // check never re-ran. Re-poll here: if a just-passed test set
+    // 'ccq_promotion_for', this fires the in-world ceremony. Flag-gated, so
+    // it's a safe no-op for lessons / non-passing closes.
+    try { window.__playApi?.maybeRunPromotionCeremony?.(); } catch {}
     if (_state.el) {
       _state.el.classList.remove('visible');
       _state.el.classList.remove('minimized');

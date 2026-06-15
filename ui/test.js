@@ -54,13 +54,17 @@ function buildMcqAttempt(theoreticalTest) {
   return { drawn, displayOrders };
 }
 
-function renderTest(chapterId) {
+function renderTest(chapterId, targetEl = null) {
   const ch = CURRICULUM.find(c => c.id === chapterId);
   if (!ch) return;
   const test = ch.practicalTest;
   const theoreticalTest = ch.theoreticalTest || null;
   let progress = window.App.progress;
-  const main = document.getElementById('main-content');
+  // Allow the test to render into a custom container (e.g. the in-world
+  // lesson/test overlay). Falls back to the dashboard's #main-content for
+  // the legacy 2D route. Only one test renders at a time, so the inner
+  // global IDs (test-submission / submit-test / etc.) still resolve.
+  const main = targetEl || document.getElementById('main-content');
   const prevPracticalResult = progress.testResults[test.id];
   const prevTheoryResult = theoreticalTest ? progress.testResults[theoreticalTest.id] : null;
 
@@ -86,6 +90,16 @@ function renderTest(chapterId) {
   if (mode === TEST_MODE_THEORETICAL && !theoreticalTest) mode = TEST_MODE_PRACTICAL;
 
   const fromPlay = !!window.App._currentParams?.fromPlay;
+
+  // Leaving the test: when the in-world overlay is open, CLOSE it (the play
+  // scene is alive behind it) instead of navigating away. Otherwise fall
+  // back to the dashboard route — to play if we came from play, else to the
+  // chapter view.
+  const exitToWorld = () => {
+    if (window.LessonOverlay?.isOpen?.()) window.LessonOverlay.close();
+    else if (fromPlay) window.App.navigate('play');
+    else window.App.navigate('chapter', { chapterId });
+  };
 
   function header(eyebrowSuffix, prevResult) {
     return `
@@ -125,10 +139,7 @@ function renderTest(chapterId) {
       </div>
     `;
 
-    document.getElementById('back-to-chapter').addEventListener('click', () => {
-      if (fromPlay) window.App.navigate('play');
-      else window.App.navigate('chapter', { chapterId });
-    });
+    document.getElementById('back-to-chapter').addEventListener('click', exitToWorld);
 
     document.querySelectorAll('.test-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -589,15 +600,22 @@ function applyPassSideEffectsUi(passed, wasAlreadyPassed, test, ch, levelBefore)
 }
 
 function bindBackToPlay(passed) {
+  // When the in-world overlay is open, "return to the office" closes the
+  // overlay (the play scene is alive behind it); otherwise navigate to play.
+  const exitToWorld = () => {
+    if (window.LessonOverlay?.isOpen?.()) window.LessonOverlay.close();
+    else window.App.navigate('play');
+  };
   const backToPlay = document.getElementById('back-to-play-from-test');
   if (backToPlay) {
-    backToPlay.addEventListener('click', () => window.App.navigate('play'));
+    backToPlay.addEventListener('click', exitToWorld);
     // Auto-return on PASSED tests so the player isn't stuck on the feedback
     // page. Failed tests do NOT auto-return — they stay so the player can
     // read the feedback and retry.
     if (passed) {
       setTimeout(() => {
-        if (window.App._currentView === 'test') window.App.navigate('play');
+        if (window.LessonOverlay?.isOpen?.()) window.LessonOverlay.close();
+        else if (window.App._currentView === 'test') window.App.navigate('play');
       }, 2600);
     }
   }
