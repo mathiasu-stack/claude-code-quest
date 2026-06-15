@@ -128,6 +128,21 @@ function audioAllowsVoice() {
   return true;
 }
 
+// TTS goes through the browser's SpeechSynthesis, NOT the Web Audio
+// graph, so the Voice channel's GAIN node can't touch it. Mirror that
+// slider onto the utterance.volume instead: effective = master × voice.
+// This is what makes the Voice dial actually change spoken-line loudness.
+function effectiveVoiceVolume() {
+  try {
+    const prefs = audio.getPrefs();
+    if (!prefs) return 0.95;
+    const master = (typeof prefs.master === 'number') ? prefs.master : 0.85;
+    const ch = prefs.channels?.voice;
+    const chVol = (ch && typeof ch.volume === 'number') ? ch.volume : 0.8;
+    return Math.max(0, Math.min(1, master * chVol));
+  } catch { return 0.95; }
+}
+
 // ─── Public: speak one line ──────────────────────────────────────────────────
 // opts: { pitch:Number (typewriter blip pitch, ~0.78–1.2), whisper:Bool }
 export function speakLine(text, opts = {}) {
@@ -155,7 +170,8 @@ export function speakLine(text, opts = {}) {
     // Slight per-character rate variation (~0.95–1.08) so distinct.
     const rateJitter = ((Math.round(blipPitch * 100) % 14) - 7) / 100; // -0.07..+0.06
     u.rate = Math.max(0.9, Math.min(1.1, (opts.whisper ? 0.92 : 1.0) + rateJitter));
-    u.volume = opts.whisper ? 0.7 : 0.95;
+    // Follow the Voice slider (× master). Whisper lines a touch quieter.
+    u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 
     const v = pickVoice(blipPitch);
     if (v) { u.voice = v; if (v.lang) u.lang = v.lang; }

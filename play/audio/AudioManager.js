@@ -242,6 +242,17 @@ export class AudioManager {
     this._savePrefs();
   }
 
+  // Temporarily scale the music channel by `factor` WITHOUT touching the
+  // saved volume — the lesson overlay calls duckMusic(0.5) on open and
+  // duckMusic(1.0) on close so music quietens behind a lesson then comes
+  // back, and the user's Music slider position is preserved.
+  duckMusic(factor = 0.5) {
+    if (!this.channels.music || !this.ctx) return;
+    const base = this._effectiveChannelGain('music');
+    const target = Math.max(0, Math.min(1, base * factor));
+    this.channels.music.gain.setTargetAtTime(target, this.ctx.currentTime, 0.15);
+  }
+
   // ── Voice playback (procedural & spatial) ────────────────────────────────
   // builder: function(ctx, output) where you create + connect nodes; return
   // an object { stop(), node } so the manager can steal voices on mobile.
