@@ -73,9 +73,14 @@ function genderHint(name) {
 //            same-gender characters get DIFFERENT voices even though most
 //            NPCs share the default pitch of 1.0 (the old code keyed only
 //            on pitch, so every default-pitch NPC got the identical voice).
+// Returns { voice, matchedGender }. matchedGender is true when the chosen
+// system voice's NAME actually reads as the requested gender — when it's
+// false (common: platforms like Android Chrome expose a single un-gendered
+// or female default), the caller compensates with a decisive pitch shift so
+// a male character still sounds male.
 function pickVoice(profile) {
   const voices = cachedVoices;
-  if (!voices || !voices.length) return null;
+  if (!voices || !voices.length) return { voice: null, matchedGender: false };
   const pitch = (typeof profile.pitch === 'number') ? profile.pitch : 1.0;
 
   let enPool = voices.filter(v => /^en(-|_|$)/i.test(v.lang || ''));
@@ -90,18 +95,19 @@ function pickVoice(profile) {
   // Prefer the requested accent, but only when it yields a matching-gender
   // voice; otherwise drop the accent and use the whole English pool.
   let candidates = enPool.filter(matchGender);
+  let matchedGender = candidates.length > 0;
   if (profile.lang) {
     const want = profile.lang.toLowerCase().replace('_', '-');
     const accent = enPool.filter(v =>
       (v.lang || '').toLowerCase().replace('_', '-').startsWith(want) && matchGender(v));
-    if (accent.length) candidates = accent;
+    if (accent.length) { candidates = accent; matchedGender = true; }
   }
   if (!candidates.length) candidates = enPool;
 
   // Deterministic, varied per character: combine the id seed with pitch so
   // two female western NPCs don't both land on the same voice.
   const seed = (Math.round((pitch + 0.0001) * 1000) + (profile.seed | 0)) >>> 0;
-  return candidates[seed % candidates.length] || null;
+  return { voice: candidates[seed % candidates.length] || null, matchedGender };
 }
 
 // ─── Text cleanup ────────────────────────────────────────────────────────────
@@ -192,24 +198,37 @@ export function speakLine(text, opts = {}) {
     const blipPitch = (typeof opts.pitch === 'number' && isFinite(opts.pitch)) ? opts.pitch : 1.0;
 
     const u = new SpeechSynthesisUtterance(spoken);
-    // Keep utterance.pitch moderate — the chosen system voice already
-    // carries the gender, so big pitch shifts just sound chipmunk/robotic.
-    // Nudge female a touch up, male a touch down around the blip pitch.
-    const genderBias = opts.gender === 'female' ? 0.08 : (opts.gender === 'male' ? -0.08 : 0);
-    u.pitch = Math.max(0.7, Math.min(1.3, blipPitch * 0.85 + 0.15 + genderBias));
-    // Slight per-character rate variation so same-voice characters differ.
-    const rateJitter = (((hashSeed(opts.id || '') % 14)) - 7) / 100; // -0.07..+0.06
-    u.rate = Math.max(0.9, Math.min(1.1, (opts.whisper ? 0.92 : 1.0) + rateJitter));
-    // Follow the Voice slider (× master). Whisper lines a touch quieter.
-    u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 
-    const v = pickVoice({
+    const { voice: v, matchedGender } = pickVoice({
       pitch: blipPitch,
       gender: opts.gender || null,
       lang: opts.lang || null,
       seed: hashSeed(opts.id || ''),
     });
     if (v) { u.voice = v; if (v.lang) u.lang = v.lang; }
+
+    // Pitch strategy:
+    //  • If we landed on a system voice whose NAME matches the requested
+    //    gender, the timbre already does the work — keep pitch moderate so
+    //    it doesn't sound chipmunk/robotic.
+    //  • If we did NOT (e.g. the platform only offers an un-gendered/female
+    //    default), the timbre is wrong, so shift pitch decisively: push male
+    //    well below 1.0 to deepen it, female above 1.0 to brighten it. This
+    //    is the lever that finally makes male characters stop sounding like
+    //    a female American voice on single-voice platforms.
+    if (opts.gender && !matchedGender) {
+      u.pitch = opts.gender === 'male' ? 0.55 : 1.35;
+    } else {
+      const genderBias = opts.gender === 'female' ? 0.08 : (opts.gender === 'male' ? -0.08 : 0);
+      u.pitch = Math.max(0.7, Math.min(1.3, blipPitch * 0.85 + 0.15 + genderBias));
+    }
+    // Slight per-character rate variation so same-voice characters differ.
+    // Males also read a touch slower, which helps sell a deeper voice.
+    const rateJitter = (((hashSeed(opts.id || '') % 14)) - 7) / 100; // -0.07..+0.06
+    const maleSlow = (opts.gender === 'male' && !matchedGender) ? -0.06 : 0;
+    u.rate = Math.max(0.82, Math.min(1.1, (opts.whisper ? 0.92 : 1.0) + rateJitter + maleSlow));
+    // Follow the Voice slider (× master). Whisper lines a touch quieter.
+    u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 
     synth.speak(u);
   } catch {
