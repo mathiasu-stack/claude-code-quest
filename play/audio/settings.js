@@ -6,7 +6,7 @@
 
 import { audio } from './AudioManager.js?v=20260615b';
 import { stopAmbience } from './ambience.js?v=20260615b';
-import { isVoiceEnabled, setVoiceEnabled } from './voice.js?v=20260615h';
+import { isVoiceEnabled, setVoiceEnabled, isCloudVoiceEnabled, setCloudVoiceEnabled } from './voice.js?v=20260615h';
 
 const PANEL_ID = 'play-audio-panel';
 const BUTTON_ID = 'play-audio-gear';
@@ -105,6 +105,14 @@ export function mountAudioSettings(parent) {
       '🗣 Character voices',
       isVoiceEnabled(),
       (on) => setVoiceEnabled(on),
+    ));
+
+    // Neural (cloud) voices vs the on-device fallback. ON = human-sounding
+    // Azure voices (needs the server key; small per-line cost, cached).
+    panel.appendChild(toggleRow(
+      '✨ Natural voice (cloud)',
+      isCloudVoiceEnabled(),
+      (on) => setCloudVoiceEnabled(on),
     ));
 
     const close = el('button', { class: 'aud-close', type: 'button' }, ['Close']);

@@ -5395,7 +5395,9 @@ function voiceProfileFor(npc) {
   }
   let lang = null;
   if (/sasian/.test(r)) lang = 'en-IN';
-  else if (/african|arab|hijab/.test(r)) lang = 'en-GB';
+  else if (/african/.test(r)) lang = 'en-NG';
+  else if (/easian/.test(r)) lang = 'en-HK';
+  else if (/arab|hijab/.test(r)) lang = 'en-GB';
   return { gender, lang, id };
 }
 

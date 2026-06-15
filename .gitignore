@@ -32,3 +32,7 @@ logs/
 
 # Python bytecode cache from gen scripts.
 __pycache__/
+
+# Neural TTS — secret key + per-line audio cache (never commit)
+tts_config.json
+tts-cache/

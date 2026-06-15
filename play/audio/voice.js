@@ -162,8 +162,85 @@ export function cleanForSpeech(raw) {
   return t;
 }
 
+// ─── Cloud neural TTS (Azure) ────────────────────────────────────────────────
+// When the server's /tts endpoint is configured with an Azure key, we play
+// genuinely human neural voices instead of the on-device Web Speech voices.
+// If the endpoint is unconfigured/unreachable we fall back to local speech, so
+// the game still works offline / with no key.
+const CLOUD_LS_KEY = 'ccq_voice_cloud';
+let cloudPref = (() => {
+  try {
+    const raw = localStorage.getItem(CLOUD_LS_KEY);
+    if (raw === null) return true; // default: use cloud when available
+    return raw === '1' || raw === 'true';
+  } catch { return true; }
+})();
+let cloudDisabledThisSession = false; // set after a 503 so we stop retrying
+let _cloudAudio = null;               // current HTMLAudioElement
+let _speakToken = 0;                  // guards against stale async responses
+
+export function isCloudVoiceEnabled() { return cloudPref; }
+export function setCloudVoiceEnabled(on) {
+  cloudPref = !!on;
+  try { localStorage.setItem(CLOUD_LS_KEY, cloudPref ? '1' : '0'); } catch {}
+  if (!cloudPref) cancelSpeech();
+}
+
+// Map a character profile → an Azure neural voice. The accent (profile.lang,
+// derived from the rig's ethnicity in play.js voiceProfileFor) picks the voice
+// LOCALE so a South-Asian rig sounds Indian-English, etc.; gender picks within
+// it; the id seed keeps a character consistent yet distinct from same-bucket peers.
+const AZ_VOICES = {
+  'en-US': { male: ['en-US-AndrewNeural', 'en-US-GuyNeural', 'en-US-BrianNeural', 'en-US-DavisNeural'],
+             female: ['en-US-AriaNeural', 'en-US-JennyNeural', 'en-US-MichelleNeural', 'en-US-AvaNeural'] },
+  'en-GB': { male: ['en-GB-RyanNeural', 'en-GB-ThomasNeural'],
+             female: ['en-GB-SoniaNeural', 'en-GB-LibbyNeural'] },
+  'en-IN': { male: ['en-IN-PrabhatNeural'], female: ['en-IN-NeerjaNeural'] },
+  'en-NG': { male: ['en-NG-AbeoNeural'], female: ['en-NG-EzinneNeural'] },
+  'en-HK': { male: ['en-HK-SamNeural'], female: ['en-HK-YanNeural'] },
+};
+function azureVoiceFor(opts) {
+  const bucket = AZ_VOICES[opts.lang] || AZ_VOICES['en-US'];
+  const g = opts.gender === 'male' ? 'male' : 'female'; // unknown → female
+  const list = bucket[g] || bucket.female || bucket.male;
+  const seed = hashSeed((opts.id || '') + g);
+  return list[seed % list.length];
+}
+
+// Returns true if it kicked off a cloud playback attempt (which may still
+// fall back to local on network failure). Returns false to signal "use local
+// straight away" (cloud off / disabled / unsupported).
+function speakCloud(spoken, opts, token) {
+  if (!cloudPref || cloudDisabledThisSession) return false;
+  if (typeof fetch !== 'function' || typeof Audio === 'undefined') return false;
+  const voice = azureVoiceFor(opts);
+  fetch('/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: spoken, voice }),
+  }).then((r) => {
+    if (r.status === 503) { cloudDisabledThisSession = true; throw new Error('tts-unconfigured'); }
+    if (!r.ok) throw new Error('tts-' + r.status);
+    return r.blob();
+  }).then((blob) => {
+    if (token !== _speakToken) return;            // a newer line started
+    if (!enabled || !audioAllowsVoice()) return;  // muted in the meantime
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    a.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
+    a.addEventListener('ended', () => URL.revokeObjectURL(url));
+    _cloudAudio = a;
+    a.play().catch(() => { /* autoplay/interrupt — ignore */ });
+  }).catch(() => {
+    // Network/credential failure → degrade gracefully to local speech.
+    if (token === _speakToken) speakLocal(spoken, opts);
+  });
+  return true;
+}
+
 function cancelSpeech() {
   try { window.speechSynthesis?.cancel(); } catch {}
+  try { if (_cloudAudio) { _cloudAudio.pause(); _cloudAudio = null; } } catch {}
 }
 
 // True if the dedicated TTS flag is on AND the AudioManager 'voice'
@@ -207,22 +284,36 @@ function hashSeed(s) {
 
 // ─── Public: speak one line ──────────────────────────────────────────────────
 // opts: { pitch, whisper, gender:'male'|'female', lang:'en-GB'|…, id:String }
+// Tries cloud neural TTS first (human voices); falls back to the on-device
+// Web Speech voices if the cloud endpoint is off/unreachable.
 export function speakLine(text, opts = {}) {
   if (!enabled) return;
   try {
-    const synth = window.speechSynthesis;
-    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
     if (!audioAllowsVoice()) return;
-
     const spoken = cleanForSpeech(text);
     if (!spoken) return;
 
+    // New line → bump the token and stop anything still playing so rapid
+    // line changes / skipping the typewriter don't stack overlapping speech.
+    const token = ++_speakToken;
+    cancelSpeech();
+
+    if (speakCloud(spoken, opts, token)) return; // cloud attempt in flight
+    speakLocal(spoken, opts);
+  } catch {
+    // Voice must never break dialogue.
+  }
+}
+
+// On-device Web Speech fallback (and the path when cloud is disabled).
+function speakLocal(spoken, opts = {}) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
+    if (!enabled || !audioAllowsVoice()) return;
+
     // Lazily ensure we have the latest voice list.
     if (!cachedVoices.length) refreshVoices();
-
-    // Cancel any in-flight utterance so rapid line changes / skipping the
-    // typewriter don't stack overlapping speech.
-    cancelSpeech();
 
     const blipPitch = (typeof opts.pitch === 'number' && isFinite(opts.pitch)) ? opts.pitch : 1.0;
 
