@@ -3,7 +3,7 @@ import { LightingManager } from './lighting/manager.js?v=20260615a';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
-import { audio } from './audio/AudioManager.js?v=20260612c';
+import { audio } from './audio/AudioManager.js?v=20260615b';
 import {
   playFootstep, playJumpGrunt, playLandThud,
   playUi, playDialogueBlip, blipPitchForNpc,
@@ -11,10 +11,10 @@ import {
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
   playClearanceChime, playAnomalySting, playFloorMChime, updateServerHum,
   playElevatorRide,
-} from './audio/procedural.js?v=20260612c';
-import { surfaceForZone, musicForZone } from './audio/zoneConfig.js?v=20260612c';
-import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260612c';
-import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js?v=20260612c';
+} from './audio/procedural.js?v=20260615b';
+import { surfaceForZone, musicForZone, procForZone } from './audio/zoneConfig.js?v=20260615b';
+import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260615b';
+import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js?v=20260615b';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
 import { attachFlatFace, updateFlatFace, setFlatExpression, talkPulse } from './characters/flatFace.js';
@@ -103,7 +103,7 @@ const NPCS = [
     nextHint: "Done with me? Walk over to Marcus at the IT bench so he can get you set up.",
   },
   {
-    id: 'marcus', zone: 1, pos: [-6, -3], face: Math.PI / 2,
+    id: 'marcus', zone: 1, pos: [-15, -8], face: 0,
     name: 'Marcus Webb', role: 'IT Setup Lead', portrait: '👨‍🔧',
     chapterId: 'ch01', lessonId: 'ch01-l02', kind: 'lesson',
     look: { skin: 0x8d5524, hair: 0x1a1a1a, hairStyle: 'short', shirt: 0x6b8090, pants: 0x263238, glasses: true, prop: 'tablet', beard: true, face: 'sharp', expression: 'focused', accent: 0x1565c0, gesture: 'glasses' },
@@ -5891,7 +5891,9 @@ function update(dt) {
       // AudioManager. Floor M stays music-free AND bed-free (AUDIO-02) —
       // only the arrival chime plays there; the silence is the point.
       if (currentFloor !== FLOOR_M_INDEX) {
-        try { audio.startMusic(`zone-${idx}`, musicForZone(idx), 2500); } catch {}
+        // Procedural piano per zone (no audio files). 4 moods spread
+        // across the zones — see zoneConfig.procForZone + proceduralMusic.js.
+        try { audio.startProceduralMusic(`zone-${procForZone(idx)}`, procForZone(idx), 2500); } catch {}
         try { startAmbience(idx); } catch {}
       } else {
         try { stopAmbience(1200); } catch {}
@@ -6343,8 +6345,8 @@ export async function start(host) {
     const idx = zoneIndexAt(player.position.z);
     lighting.applyPreset(idx >= 0 ? idx : 0);
     lastZoneIdx = idx >= 0 ? idx : 0;
-    // Initial zone music — silent fallback if the file isn't there.
-    try { audio.startMusic(`zone-${lastZoneIdx}`, musicForZone(lastZoneIdx), 2500); } catch {}
+    // Initial zone music — procedural piano (no audio file dependency).
+    try { audio.startProceduralMusic(`zone-${procForZone(lastZoneIdx)}`, procForZone(lastZoneIdx), 2500); } catch {}
     // Initial ambience bed. If the audio context is still locked (no
     // gesture yet) this records the pending zone; the 1 Hz tickAmbience
     // poll in update() starts the bed after the unlock.

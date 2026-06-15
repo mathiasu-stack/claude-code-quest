@@ -19,8 +19,8 @@
 // Routes through the 'ambience' channel bus (persisted pref like the
 // other channels — see AudioManager DEFAULT_PREFS).
 
-import { audio } from './AudioManager.js?v=20260612c';
-import { ambienceBedForZone } from './zoneConfig.js?v=20260612c';
+import { audio } from './AudioManager.js?v=20260615b';
+import { ambienceBedForZone } from './zoneConfig.js?v=20260615b';
 
 // ── Bed recipes ──────────────────────────────────────────────────────────────
 // gain values are pre-bus: effective loudness ≈ gain × ambience(0.8) ×

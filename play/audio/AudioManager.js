@@ -34,6 +34,7 @@
 //   • Music files load with credentials:'omit' to be safe.
 
 import { isMobile } from '../lighting/mobile.js';
+import { createPianoPlayer } from './proceduralMusic.js?v=20260615b';
 
 const PREFS_KEY = 'ccq_audio_prefs';
 const CHANNEL_NAMES = ['music', 'sfx', 'ui', 'voice', 'ambience'];
@@ -370,10 +371,35 @@ export class AudioManager {
     this.music.lastUrl = url;
   }
 
+  // Procedural music track (chill 4-chord piano, no audio file). `spec`
+  // is a key into PIANO_TRACKS ('reception'|'library'|'andante'|'workshop')
+  // or a full track object. Routed through the same music channel gain as
+  // streamed music, so the tier shelf + master limiter apply uniformly.
+  startProceduralMusic(name, spec, fadeMs = 2500) {
+    if (!this.unlocked) { this._buildContext(); }
+    if (!this.ctx) return;
+    // Already playing this procedural track — no-op (avoids restarting on
+    // every zone re-entry).
+    if (this.music.current?.procName === name) return;
+    // Tear down whatever's playing (streamed or procedural).
+    this.stopMusic(fadeMs);
+    const player = createPianoPlayer(this.ctx, this.channels.music.gain, spec);
+    player.start(fadeMs);
+    this.music.current = { proc: player, procName: name, name };
+    this.music.lastUrl = null;
+  }
+
   stopMusic(fadeMs = 1500) {
     if (!this.ctx || !this.music.current) return;
     const ctx = this.ctx;
     const old = this.music.current;
+    // Procedural track — has its own scheduler/teardown.
+    if (old.proc) {
+      try { old.proc.stop(fadeMs); } catch {}
+      this.music.current = null;
+      this.music.lastUrl = null;
+      return;
+    }
     const now = ctx.currentTime;
     const fade = Math.max(0.1, fadeMs / 1000);
     old.gain.gain.setTargetAtTime(0, now, fade / 3);

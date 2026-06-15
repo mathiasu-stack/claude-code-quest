@@ -17,7 +17,7 @@
 //   voice:  achievementChime, levelUpFanfare, ppGain,
 //           kcCorrectTone, kcIncorrectTone, crowdCheer
 
-import { audio } from './AudioManager.js?v=20260612c';
+import { audio } from './AudioManager.js?v=20260615b';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function envGain(ctx, output, attack = 0.005, release = 0.1, peak = 0.6) {

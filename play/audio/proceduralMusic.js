@@ -1,0 +1,220 @@
+// proceduralMusic.js — chill 4-chord classical piano, synthesized live.
+//
+// No audio files, no licensing, no 404s — same philosophy as the
+// procedural ambience + stings. Each "track" is a slow 4-chord
+// progression (one bar per chord) with a soft piano left-hand arpeggio
+// and a sparse right-hand melody drawn from the chord tones. Four
+// variants give the zones distinct moods without authoring four MP3s.
+//
+// Public API:
+//   const player = createPianoPlayer(ctx, destination, spec);
+//   player.start(fadeMs);   // fades in, loops until stopped
+//   player.stop(fadeMs);    // fades out + tears down the scheduler
+//
+// `destination` is an AudioNode (the music channel gain) so the master
+// limiter + tier shelf in AudioManager apply to it like any music.
+
+// ── Note → frequency ───────────────────────────────────────────────────────
+// MIDI note number to Hz. A4 (69) = 440.
+function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+// Named pitch (e.g. 'C4') → MIDI. Supports sharps with '#'.
+const _NOTE_BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function noteToMidi(name) {
+  const m = /^([A-G])(#?)(-?\d)$/.exec(name);
+  if (!m) return 60;
+  return (parseInt(m[3], 10) + 1) * 12 + _NOTE_BASE[m[1]] + (m[2] ? 1 : 0);
+}
+
+// ── Track specs ─────────────────────────────────────────────────────────────
+// Each spec: a key center + a 4-chord progression. Chords are arrays of
+// scale-degree pitch names in a comfortable register. The melody is
+// generated from chord tones at schedule time (sparse, with rests) so it
+// never sounds like a fixed loop even though the harmony repeats.
+//
+// Progressions are classic "chill classical" shapes:
+//   reception  — C major  I–V–vi–IV   (warm, welcoming)
+//   library    — A minor  i–VI–III–VII (pensive)
+//   andante    — D minor  i–VII–VI–V   (andalusian, a touch uncanny)
+//   workshop   — G major  I–vi–IV–V    (gentle, optimistic)
+export const PIANO_TRACKS = {
+  reception: {
+    bpm: 64,
+    chords: [
+      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
+      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
+      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // Am
+      { bass: 'F2', notes: ['F3', 'A3', 'C4'] },   // F
+    ],
+    scale: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'E5'],
+  },
+  library: {
+    bpm: 58,
+    chords: [
+      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // Am
+      { bass: 'F2', notes: ['F3', 'A3', 'C4'] },   // F
+      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
+      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
+    ],
+    scale: ['A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+  },
+  andante: {
+    bpm: 60,
+    chords: [
+      { bass: 'D2', notes: ['D3', 'F3', 'A3'] },   // Dm
+      { bass: 'C2', notes: ['C3', 'E3', 'G3'] },   // C
+      { bass: 'A1', notes: ['A2', 'C3', 'E3'] },   // Am (low)
+      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // A (resolve)
+    ],
+    scale: ['D4', 'E4', 'F4', 'A4', 'C5', 'D5'],
+  },
+  workshop: {
+    bpm: 66,
+    chords: [
+      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
+      { bass: 'E2', notes: ['E3', 'G3', 'B3'] },   // Em
+      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
+      { bass: 'D2', notes: ['D4', 'F4', 'A4'] },   // D (suspended-ish)
+    ],
+    scale: ['G4', 'A4', 'B4', 'D5', 'E5', 'G5'],
+  },
+};
+
+// ── Piano voice ──────────────────────────────────────────────────────────────
+// A piano-ish strike: a few harmonic partials with a fast attack and a
+// long exponential decay, softened by a per-note lowpass. Cheap enough to
+// schedule a few per beat on mobile.
+function playPianoNote(ctx, dest, freq, when, dur, velocity) {
+  const partials = [
+    { ratio: 1.0,  gain: 1.0 },
+    { ratio: 2.0,  gain: 0.42 },
+    { ratio: 3.01, gain: 0.18 },   // slight inharmonicity
+    { ratio: 4.02, gain: 0.08 },
+  ];
+  const vca = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = Math.min(7000, freq * 6 + 1200);
+  lp.Q.value = 0.5;
+  vca.connect(lp).connect(dest);
+
+  const peak = Math.max(0.0001, velocity);
+  const a = 0.006;                 // 6 ms attack
+  const d = Math.max(0.6, dur);    // decay/release length
+  vca.gain.setValueAtTime(0.0001, when);
+  vca.gain.exponentialRampToValueAtTime(peak, when + a);
+  vca.gain.exponentialRampToValueAtTime(0.0001, when + a + d);
+
+  const oscs = [];
+  for (const p of partials) {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = freq * p.ratio;
+    const g = ctx.createGain();
+    g.gain.value = p.gain;
+    o.connect(g).connect(vca);
+    o.start(when);
+    o.stop(when + a + d + 0.05);
+    oscs.push(o, g);
+  }
+  // Auto-cleanup: oscillators disconnect themselves on stop; the vca/lp
+  // are GC'd once their sources end.
+  return when + a + d;
+}
+
+export function createPianoPlayer(ctx, destination, spec) {
+  const track = (typeof spec === 'string') ? PIANO_TRACKS[spec] : spec;
+  const cfg = track || PIANO_TRACKS.reception;
+
+  // Per-player gain for fade in/out, between the notes and the music bus.
+  const out = ctx.createGain();
+  out.gain.value = 0.0001;
+  out.connect(destination);
+
+  const beatDur = 60 / cfg.bpm;     // seconds per beat
+  const barDur = beatDur * 4;       // 4 beats per bar, one chord per bar
+  let nextBarTime = 0;              // ctx time of the next bar to schedule
+  let barIndex = 0;
+  let timer = null;
+  let stopped = false;
+  let scaleMidi = cfg.scale.map(noteToMidi);
+
+  // Schedule one bar: a soft bass + left-hand arpeggio of the chord, plus
+  // a sparse right-hand melody. Deliberately leaves rests so it breathes.
+  function scheduleBar(barStart) {
+    const chord = cfg.chords[barIndex % cfg.chords.length];
+    const chordMidi = chord.notes.map(noteToMidi);
+    const bassMidi = noteToMidi(chord.bass);
+
+    // Bass note on beat 1 (and a soft re-strike on beat 3).
+    playPianoNote(ctx, out, mtof(bassMidi), barStart, barDur * 0.9, 0.22);
+    playPianoNote(ctx, out, mtof(bassMidi), barStart + beatDur * 2, barDur * 0.5, 0.13);
+
+    // Left-hand arpeggio: chord tones rolled across the bar's eighth notes.
+    const arpPattern = [0, 1, 2, 1, 0, 2, 1, 2];
+    for (let i = 0; i < 8; i++) {
+      // Skip a couple of eighths so it's not a relentless arp.
+      if (i === 3 || i === 6) continue;
+      const t = barStart + i * (beatDur / 2);
+      const m = chordMidi[arpPattern[i] % chordMidi.length];
+      playPianoNote(ctx, out, mtof(m), t, beatDur * 1.1, 0.085 + (i === 0 ? 0.03 : 0));
+    }
+
+    // Right-hand melody: 2–3 notes per bar from the scale, biased to chord
+    // tones, with gentle randomness so the loop never feels mechanical.
+    const melodyBeats = (barIndex % 2 === 0) ? [0, 2.5] : [1, 2, 3.5];
+    for (const b of melodyBeats) {
+      // 35% chance to rest on any melody slot — keeps it sparse/chill.
+      if (Math.random() < 0.35) continue;
+      const t = barStart + b * beatDur;
+      // Prefer a chord tone up an octave; sometimes a neighbouring scale note.
+      let m;
+      if (Math.random() < 0.6) {
+        m = chordMidi[Math.floor(Math.random() * chordMidi.length)] + 12;
+      } else {
+        m = scaleMidi[Math.floor(Math.random() * scaleMidi.length)] + 12;
+      }
+      playPianoNote(ctx, out, mtof(m), t, beatDur * 1.6, 0.13);
+    }
+
+    barIndex++;
+  }
+
+  // Lookahead scheduler — schedule any bar starting within the next 200 ms.
+  function tick() {
+    if (stopped) return;
+    const ahead = ctx.currentTime + 0.2;
+    while (nextBarTime < ahead) {
+      scheduleBar(nextBarTime);
+      nextBarTime += barDur;
+    }
+  }
+
+  return {
+    name: 'piano',
+    start(fadeMs = 2500) {
+      if (stopped) return;
+      const now = ctx.currentTime;
+      nextBarTime = now + 0.1;
+      barIndex = 0;
+      out.gain.cancelScheduledValues(now);
+      out.gain.setValueAtTime(0.0001, now);
+      out.gain.exponentialRampToValueAtTime(0.9, now + Math.max(0.2, fadeMs / 1000));
+      tick();
+      timer = setInterval(tick, 60);
+    },
+    stop(fadeMs = 1500) {
+      if (stopped) return;
+      stopped = true;
+      const now = ctx.currentTime;
+      const fade = Math.max(0.1, fadeMs / 1000);
+      try {
+        out.gain.cancelScheduledValues(now);
+        out.gain.setValueAtTime(Math.max(0.0001, out.gain.value), now);
+        out.gain.exponentialRampToValueAtTime(0.0001, now + fade);
+      } catch {}
+      if (timer) { clearInterval(timer); timer = null; }
+      setTimeout(() => { try { out.disconnect(); } catch {} }, fadeMs + 300);
+    },
+  };
+}

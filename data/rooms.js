@@ -110,13 +110,40 @@ window.ROOMS = [
       { type: 'builder', fn: 'table', pos: [-22, 0, 0] },
       { type: 'builder', fn: 'lamp', pos: [-22, 0.38, 0], rotY: 0 },
       { type: 'builder', fn: 'plant', pos: [-31, 0, -9] },
-      { type: 'builder', fn: 'plant', pos: [-13, 0, -9] },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 9] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 9] },
       { type: 'builder', fn: 'cx_folder', pos: [-32.55, 0, -5], rotY: 1.5708 },
       { type: 'builder', fn: 'filing_cabinet', pos: [-32.55, 0, -6.6], rotY: 1.5708 },
       { type: 'builder', fn: 'filing_cabinet', pos: [-32.55, 0, -3.4], rotY: 1.5708 },
-      { type: 'builder', fn: 'filing_cabinet', pos: [-32.55, 0, -1.8], rotY: 1.5708 }
+      { type: 'builder', fn: 'filing_cabinet', pos: [-32.55, 0, -1.8], rotY: 1.5708 },
+
+      // ── Enclosed IT office (NE corner, nearest the reception entrance) ──
+      // Reuses the room's outer east wall (x=-11) and north wall (z=-11).
+      // Two interior walls close it off; a 1.6 m doorway in the south wall
+      // (centered x=-13) faces +z so a player arriving from reception sees
+      // and walks into it. Interior footprint: x[-18.7,-11.2] z[-11.2,-5.3].
+      // Interior WEST wall (solid), x=-18.7, z -11..-5.3 (len 5.7).
+      { type: 'wall', pos: [-18.7, 1.9, -8.15], size: { w: 0.3, h: 3.8, d: 5.7 } },
+      // Interior SOUTH wall, z=-5.3, split by a 1.6 m doorway at x -13.8..-12.2.
+      { type: 'wall', pos: [-16.25, 1.9, -5.3], size: { w: 4.9, h: 3.8, d: 0.3 } },
+      { type: 'wall', pos: [-11.6, 1.9, -5.3], size: { w: 1.2, h: 3.8, d: 0.3 } },
+      // Flat ceiling cap at y=3.79 (just under the 3.8 wall tops) so the
+      // office reads as enclosed from a high camera. floor_plate normal
+      // faces +y → visible as a solid ceiling looking down.
+      { type: 'floor_plate', pos: [-14.95, 3.79, -8.15], size: { w: 7.5, d: 5.9 }, color: 0xcfd6df },
+      // Wall sign above the doorway, facing +z (toward the arriving player).
+      { type: 'wall_sign', text: 'IT — SETUP & SUPPORT', pos: [-14.95, 2.95, -5.43], rotY: 0, size: { width: 3.2, height: 0.55 }, bg: '#1a2744', fg: '#5b9bd5' },
+      // IT room dressing — L-shaped desk along the back (north) + west walls.
+      { type: 'builder', fn: 'desk', pos: [-15.5, 0, -10.4], rotY: 0, args: { w: 2.6, d: 0.8 } },
+      { type: 'builder', fn: 'desk', pos: [-17.9, 0, -8.5], rotY: 1.5708, args: { w: 2.4, d: 0.8 } },
+      { type: 'builder', fn: 'monitor', pos: [-16.4, 0, -10.55], rotY: 0, args: { screenColor: 0x5b9bd5 } },
+      { type: 'builder', fn: 'monitor', pos: [-14.6, 0, -10.55], rotY: 0, args: { screenColor: 0x4fc3f7 } },
+      { type: 'builder', fn: 'monitor', pos: [-18.05, 0, -8.5], rotY: 1.5708, args: { screenColor: 0x80cbc4 } },
+      { type: 'builder', fn: 'chair', pos: [-15.5, 0, -9.4], rotY: 0, args: { color: 0x37474f } },
+      // "IT closet" filing cabinets in the SW corner of the office.
+      { type: 'builder', fn: 'filing_cabinet', pos: [-17.9, 0, -6.0], rotY: 1.5708 },
+      { type: 'builder', fn: 'filing_cabinet', pos: [-17.9, 0, -6.7], rotY: 1.5708 },
+      { type: 'builder', fn: 'water_cooler', pos: [-11.9, 0, -10.5] }
     ],
   },
   {

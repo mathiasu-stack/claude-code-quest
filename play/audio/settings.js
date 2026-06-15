@@ -4,8 +4,8 @@
 // Mounts on demand via mountAudioSettings(parent). Idempotent (safe to
 // call repeatedly — re-uses existing DOM if already present).
 
-import { audio } from './AudioManager.js?v=20260612c';
-import { stopAmbience } from './ambience.js?v=20260612c';
+import { audio } from './AudioManager.js?v=20260615b';
+import { stopAmbience } from './ambience.js?v=20260615b';
 
 const PANEL_ID = 'play-audio-panel';
 const BUTTON_ID = 'play-audio-gear';

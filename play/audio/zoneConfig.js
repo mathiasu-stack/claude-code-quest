@@ -59,6 +59,36 @@ export function musicForZone(idx) {
   return audioConfigForZone(idx).musicUrl;
 }
 
+// Procedural piano track per zone (no audio file — see proceduralMusic.js).
+// Four moods spread across the zones so adjacent areas feel distinct:
+//   'reception' (warm C major)   — onboarding / social / control rooms
+//   'library'   (pensive A minor)— quiet study / memory / lab spaces
+//   'andante'   (D minor, uncanny)— atrium / capstone / integration tension
+//   'workshop'  (gentle G major) — hands-on build spaces
+const ZONE_PROC = [
+  'reception', // 0 Reception
+  'library',   // 1 Library
+  'andante',   // 2 Atrium (CLAUDE.md)
+  'library',   // 3 Memory Vault
+  'reception', // 4 Communications Hub
+  'workshop',  // 5 File Workshop
+  'reception', // 6 Token Lounge
+  'workshop',  // 7 Skill Forge
+  'library',   // 8 Methodology Lab
+  'andante',   // 9 Refinement Loop
+  'reception', // 10 Slash Command Center
+  'library',   // 11 Plan War Room
+  'andante',   // 12 Integration Bay
+  'reception', // 13 Mission Control
+  'library',   // 14 Architect Studio
+  'andante',   // 15 NAS Server Room (capstone)
+];
+
+export function procForZone(idx) {
+  if (idx < 0 || idx >= ZONE_PROC.length) return 'reception';
+  return ZONE_PROC[idx];
+}
+
 // Ambience bed name for a zone. Zones without an explicit bed (5+, the
 // generic office floors — incl. the server room, whose rack hum layers
 // on top via updateServerHum) fall back to the default office roomtone.
