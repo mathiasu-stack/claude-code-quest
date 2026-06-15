@@ -26,7 +26,19 @@ const App = {
     this.touchActivity();
     this.renderSidebar();
     this.setupMobileNav();
+    this._applyAdminBodyClass();
     this.navigate('landing');
+  },
+
+  // Stamps body.is-admin when the admin passcode was previously entered
+  // this session. Used by CSS to reveal author-facing scaffolding (the
+  // .lesson-todo-shot screenshot placeholders) without leaking it to
+  // regular players.
+  _applyAdminBodyClass() {
+    try {
+      const isAdmin = sessionStorage.getItem('ccq_admin') === '1';
+      document.body.classList.toggle('is-admin', isAdmin);
+    } catch {}
   },
 
   showNameModal() {
@@ -394,6 +406,7 @@ const App = {
           sessionStorage.setItem('ccq_admin', '1');
           sessionStorage.setItem('ccq_admin_pass', entered);
         } catch {}
+        this._applyAdminBodyClass();
         App.unlockEverything();
       } else {
         window.alert('Incorrect passcode.');
