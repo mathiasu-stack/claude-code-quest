@@ -1070,8 +1070,8 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     lessons: [
       {
         id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-06-14',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-06-15',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>The Command Vocabulary</h2>
 <div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/help</code> output (the full built-in commands list, with categories visible) and replace this marker. Save as <code>play/assets/lessons/ch11-l01.png</code>.</div>
 <table>
@@ -1092,6 +1092,9 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     <tr><td><code>/cost</code></td><td>Show token usage and cost for the current session</td></tr>
     <tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr>
     <tr><td><code>/review</code></td><td>Built-in code review against the current diff</td></tr>
+    <tr><td><code>/simplify</code></td><td>Run a cleanup-only review and apply the fixes</td></tr>
+    <tr><td><code>/cd</code></td><td>Move the session to a new directory without breaking the prompt cache</td></tr>
+    <tr><td><code>/reload-skills</code></td><td>Re-scan skill directories without restarting the session</td></tr>
     <tr><td><code>/exit</code></td><td>End the session</td></tr>
   </tbody>
 </table>

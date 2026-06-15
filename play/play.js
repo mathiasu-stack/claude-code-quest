@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LightingManager } from './lighting/manager.js';
+import { LightingManager } from './lighting/manager.js?v=20260615a';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
@@ -38,7 +38,7 @@ import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
          savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260610c';
-import { SkyDome, getSkyPresetForZone } from './world/sky.js';
+import { SkyDome, getSkyPresetForZone } from './world/sky.js?v=20260615a';
 import { buildReceptionCeiling, buildLibraryCeiling, floorPatternTexture } from './world/ceilings.js?v=20260612c';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
@@ -66,7 +66,7 @@ import { buildRecMirror } from './world/objectTypes/recMirror.js?v=20260610g';
 import { LESSON_DELIVERY } from './world/lessonRegistry.js?v=20260610a';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
 import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260612c';
-import { TimeOfDay } from './world/timeOfDay.js';
+import { TimeOfDay } from './world/timeOfDay.js?v=20260615a';
 import { LiveAgents } from './world/liveAgents.js?v=20260612b';
 import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
 import { openPlanModeExercise, isPlanModeOpen } from './ui/planModeExercise.js?v=20260613a';
@@ -6148,12 +6148,31 @@ function update(dt) {
   updateObjective(dt);
 }
 
+// A thrown error inside update() used to kill the entire RAF loop — the
+// canvas froze on its last (often blank) frame, producing a white screen
+// with no recovery (this is exactly how a stale cached module that lost a
+// method, e.g. lighting.tick, white-screened desktop on 2026-06-15). Now
+// the per-frame work is guarded: one bad frame is logged once and skipped,
+// the loop keeps running, and rendering still happens so the world stays
+// visible even if a subsystem update is failing.
+let _loopErrLogged = false;
 function loop() {
   raf = requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
-  update(dt);
-  if (postfx) postfx.render();
-  else renderer.render(scene, camera);
+  try {
+    update(dt);
+  } catch (e) {
+    if (!_loopErrLogged) {
+      _loopErrLogged = true;
+      console.error('[play] update() threw — continuing render loop:', e);
+    }
+  }
+  try {
+    if (postfx) postfx.render();
+    else renderer.render(scene, camera);
+  } catch (e) {
+    if (renderer && scene && camera) renderer.render(scene, camera);
+  }
 }
 
 // ─── Cross-view hints ────────────────────────────────────────────────────────

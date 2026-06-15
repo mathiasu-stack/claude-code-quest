@@ -11,8 +11,8 @@ window.CURRICULUM.push(
     lessons: [
       {
         id: 'ch08-l01', title: 'What Are Skills?', xpReward: 95, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-06-15',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Reusable Prompt Templates</h2>
 <p>Skills (custom slash commands) are reusable, parameterised prompt templates stored in <code>.claude/skills/</code>. They let you package complex workflows into a single command invocable from any session.</p>
 <h3>Without skills</h3>
@@ -20,7 +20,9 @@ window.CURRICULUM.push(
 <h3>With skills</h3>
 <p>You run <code>/pr-description</code> or <code>/security-review</code> and get consistent, high-quality output every time — without burning context on the prompt instructions themselves.</p>
 <h3>Built-in commands vs bundled skills</h3>
-<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/review</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>`,
+<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/review</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>
+<h3>Update: commands and skills have converged</h3>
+<p>Custom commands and skills are now the same concept — a file at <code>.claude/commands/deploy.md</code> and a skill at <code>.claude/skills/deploy/SKILL.md</code> both create <code>/deploy</code> and work the same way. Existing <code>.claude/commands/</code> files keep working; skills simply add optional features (a directory for supporting files, frontmatter for invocation control, and automatic loading when relevant).</p>`,
       },
       {
         id: 'ch08-l02', title: 'Progressive Disclosure: Why Skills Beat Static Config', xpReward: 95, videos: [],
@@ -83,7 +85,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
   <li><strong>PreCompact / PostCompact</strong> — around /compact operations</li>
   <li><strong>SubagentStart / SubagentStop</strong> — for multi-agent workflows</li>
 </ul>
-<p>There are 27 hook events in total — see the official docs for the complete list.</p>
+<p>There are more than 30 hook events in total, and the set grows with each release — see the official docs for the current complete list.</p>
 <h3>Example: auto-lint on stop</h3>
 <pre><code>{
   "hooks": {
@@ -220,7 +222,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
             'SubagentStart / SubagentStop',
           ],
           correctIndexes: [0, 1, 2, 3, 4, 5, 6],
-          explanation: 'Lesson "Hook-based Skills" — all seven appear in the selected-events list. (27 total exist; these are the named ones.)',
+          explanation: 'Lesson "Hook-based Skills" — all seven appear in the selected-events list. (30+ events exist in total; these are the commonly-named ones.)',
         },
         {
           id: 'ch08-q09', type: 'single',
@@ -532,14 +534,15 @@ Your answer becomes the next learnings.md entry."</code></pre>
     lessons: [
       {
         id: 'ch10-l01', title: 'Meet the Engines', xpReward: 110, videos: [],
-        lastVerified: '2026-06-14',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-06-15',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
 <div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/model</code> showing the interactive picker (Opus / Sonnet / Haiku rows visible with current selection highlighted) and replace this marker. Save as <code>play/assets/lessons/ch10-l01.png</code>.</div>
 <p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
 <p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
 <h3>The Claude 4 family in Claude Code</h3>
 <p>Three model tiers are available, each with a different cost/intelligence trade-off:</p>
+<p>Above Opus sits <strong>Claude Fable 5</strong> (<code>claude-fable-5</code>) — Anthropic's most capable widely-released model, with a 1M-token context, for the most demanding reasoning and long-horizon agentic work.</p>
 <ul>
   <li><strong>Claude Opus 4.8</strong> — the smartest model. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest cost per token; slowest output.</li>
   <li><strong>Claude Sonnet 4.6</strong> — the balanced default. Most coding work, day-to-day prompts, skill execution, code review. Strong intelligence at ~⅕ the cost of Opus.</li>
@@ -1324,11 +1327,11 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 <p>Rena's lab rule: <em>"Default to <code>ask</code>. Only promote to <code>allow</code> after you've watched the same prompt three times in a row. Only <code>deny</code> the things that can ruin a Friday."</em></p>`,
       },
       {
-        id: 'ch15-l03', title: 'The 27 Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        id: 'ch15-l03', title: 'Claude Code Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        lastVerified: '2026-06-15',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Wire Shell Commands to Lifecycle Events</h2>
-<p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>27 hook events</strong> covering every phase of a Claude Code session. The most useful clusters:</p>
+<p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>more than 30 hook events</strong> covering every phase of a Claude Code session, and the set keeps growing — recent additions include <code>Setup</code>, <code>PostToolUseFailure</code>, <code>PermissionRequest</code>, <code>Elicitation</code>, and <code>SessionEnd</code>. The most useful clusters:</p>
 <h3>Tool lifecycle</h3>
 <ul>
   <li><code>PreToolUse</code> — before a tool runs. Can block by exiting non-zero with a message.</li>
@@ -1518,10 +1521,10 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         },
         {
           id: 'ch15-q06', type: 'single',
-          prompt: 'How many hook events does Claude Code expose in total?',
-          options: ['7', '12', '20', '27'],
-          correctIndexes: [3],
-          explanation: 'Lesson "The 27 Hook Events" — the count is in the lesson title and body: 27.',
+          prompt: 'Roughly how many lifecycle hook events does Claude Code expose?',
+          options: ['About 5', 'About 12', 'Around 30 (and growing)', 'Over 200'],
+          correctIndexes: [2],
+          explanation: 'Lesson "Claude Code Hook Events" — there are 30+ distinct events spanning the tool, session, subagent, and compaction lifecycles, and the set grows with releases. The point isn\'t the exact number — it\'s that there\'s a hook for nearly every lifecycle moment.',
         },
         {
           id: 'ch15-q07', type: 'multi',
@@ -1534,7 +1537,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
             'NetworkRequest',
           ],
           correctIndexes: [0, 1, 2, 3],
-          explanation: 'Lesson "The 27 Hook Events" — first four are in those clusters; NetworkRequest is invented.',
+          explanation: 'Lesson "Claude Code Hook Events" — first four are in those clusters; NetworkRequest is invented.',
         },
         {
           id: 'ch15-q08', type: 'single',
@@ -1546,7 +1549,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
             '<code>UserPromptSubmit</code>',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "The 27 Hook Events" — <code>PostToolUse</code> matched to Edit|Write is the canonical auto-format hook.',
+          explanation: 'Lesson "Claude Code Hook Events" — <code>PostToolUse</code> matched to Edit|Write is the canonical auto-format hook.',
         },
         {
           id: 'ch15-q09', type: 'single',
@@ -1558,7 +1561,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
             'It mutates the prompt',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "The 27 Hook Events" — non-zero exit + stderr message = blocked call with Claude-visible reason.',
+          explanation: 'Lesson "Claude Code Hook Events" — non-zero exit + stderr message = blocked call with Claude-visible reason.',
         },
         {
           id: 'ch15-q10', type: 'multi',
