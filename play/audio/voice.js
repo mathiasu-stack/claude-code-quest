@@ -64,27 +64,44 @@ function genderHint(name) {
   return 0;
 }
 
-// Pick a system voice deterministically from a numeric key (the pitch).
-// English voices preferred; bias toward gendered voices that match the
-// pitch (higher → feminine). Falls back to plain deterministic indexing
-// so each character still gets a stable, distinct voice.
-function pickVoice(pitch) {
+// Pick a system voice for a speaker profile { gender, lang, pitch, seed }.
+//   gender — 'male' | 'female' | null (null → infer from pitch)
+//   lang   — preferred accent like 'en-GB' / 'en-IN' (used only if the
+//            platform actually has a matching voice; else falls back to
+//            any English voice of the right gender)
+//   seed   — a per-character integer (hash of the id) so DIFFERENT
+//            same-gender characters get DIFFERENT voices even though most
+//            NPCs share the default pitch of 1.0 (the old code keyed only
+//            on pitch, so every default-pitch NPC got the identical voice).
+function pickVoice(profile) {
   const voices = cachedVoices;
   if (!voices || !voices.length) return null;
+  const pitch = (typeof profile.pitch === 'number') ? profile.pitch : 1.0;
 
-  // Prefer en-* voices; if none, use everything.
-  let pool = voices.filter(v => /^en(-|_|$)/i.test(v.lang || ''));
-  if (!pool.length) pool = voices.slice();
+  let enPool = voices.filter(v => /^en(-|_|$)/i.test(v.lang || ''));
+  if (!enPool.length) enPool = voices.slice();
 
-  const wantFeminine = pitch >= 1.0;
-  const gendered = pool.filter(v => genderHint(v.name) === (wantFeminine ? 1 : -1));
-  const candidates = gendered.length ? gendered : pool;
+  // Real gender if we know it; otherwise infer from pitch (legacy).
+  const wantFeminine = profile.gender
+    ? (profile.gender === 'female')
+    : (pitch >= 1.0);
+  const matchGender = (v) => genderHint(v.name) === (wantFeminine ? 1 : -1);
 
-  // Deterministic index from the pitch so a given character is stable.
-  // Spread distinct pitches across the candidate list.
-  const seed = Math.round((pitch + 0.0001) * 1000);
-  const idx = seed % candidates.length;
-  return candidates[idx] || null;
+  // Prefer the requested accent, but only when it yields a matching-gender
+  // voice; otherwise drop the accent and use the whole English pool.
+  let candidates = enPool.filter(matchGender);
+  if (profile.lang) {
+    const want = profile.lang.toLowerCase().replace('_', '-');
+    const accent = enPool.filter(v =>
+      (v.lang || '').toLowerCase().replace('_', '-').startsWith(want) && matchGender(v));
+    if (accent.length) candidates = accent;
+  }
+  if (!candidates.length) candidates = enPool;
+
+  // Deterministic, varied per character: combine the id seed with pitch so
+  // two female western NPCs don't both land on the same voice.
+  const seed = (Math.round((pitch + 0.0001) * 1000) + (profile.seed | 0)) >>> 0;
+  return candidates[seed % candidates.length] || null;
 }
 
 // ─── Text cleanup ────────────────────────────────────────────────────────────
@@ -143,8 +160,18 @@ function effectiveVoiceVolume() {
   } catch { return 0.95; }
 }
 
+// Simple string hash → small int, for per-character voice variety.
+function hashSeed(s) {
+  let h = 2166136261;
+  for (let i = 0; i < (s || '').length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return h;
+}
+
 // ─── Public: speak one line ──────────────────────────────────────────────────
-// opts: { pitch:Number (typewriter blip pitch, ~0.78–1.2), whisper:Bool }
+// opts: { pitch, whisper, gender:'male'|'female', lang:'en-GB'|…, id:String }
 export function speakLine(text, opts = {}) {
   if (!enabled) return;
   try {
@@ -165,15 +192,23 @@ export function speakLine(text, opts = {}) {
     const blipPitch = (typeof opts.pitch === 'number' && isFinite(opts.pitch)) ? opts.pitch : 1.0;
 
     const u = new SpeechSynthesisUtterance(spoken);
-    // Map blip pitch (~0.7–1.6) → utterance.pitch (clamp 0.6–1.4).
-    u.pitch = Math.max(0.6, Math.min(1.4, blipPitch));
-    // Slight per-character rate variation (~0.95–1.08) so distinct.
-    const rateJitter = ((Math.round(blipPitch * 100) % 14) - 7) / 100; // -0.07..+0.06
+    // Keep utterance.pitch moderate — the chosen system voice already
+    // carries the gender, so big pitch shifts just sound chipmunk/robotic.
+    // Nudge female a touch up, male a touch down around the blip pitch.
+    const genderBias = opts.gender === 'female' ? 0.08 : (opts.gender === 'male' ? -0.08 : 0);
+    u.pitch = Math.max(0.7, Math.min(1.3, blipPitch * 0.85 + 0.15 + genderBias));
+    // Slight per-character rate variation so same-voice characters differ.
+    const rateJitter = (((hashSeed(opts.id || '') % 14)) - 7) / 100; // -0.07..+0.06
     u.rate = Math.max(0.9, Math.min(1.1, (opts.whisper ? 0.92 : 1.0) + rateJitter));
     // Follow the Voice slider (× master). Whisper lines a touch quieter.
     u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 
-    const v = pickVoice(blipPitch);
+    const v = pickVoice({
+      pitch: blipPitch,
+      gender: opts.gender || null,
+      lang: opts.lang || null,
+      seed: hashSeed(opts.id || ''),
+    });
     if (v) { u.voice = v; if (v.lang) u.lang = v.lang; }
 
     synth.speak(u);

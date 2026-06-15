@@ -5144,6 +5144,7 @@ function openDialogue(npc) {
   // Open chime
   playUi('confirm');
   // Typewriter the intro line — plays a blip per character (rate-limited).
+  _currentVoiceProfile = voiceProfileFor(speaker || npc);
   startTypewriter(d.querySelector('[data-typewriter]'), introText, blipPitchForNpc(npc.id));
   if (stingArmed) playAnomalySting();
   // Pulse the speaking NPC's mouth while the intro reveals.
@@ -5239,6 +5240,7 @@ function showHeroBeat() {
   card.querySelector('.dlg-next')?.remove();
   body.classList.toggle('dlg-thought', !!beat.thought);
   playUi('click');
+  _currentVoiceProfile = { gender: 'male', id: 'player' };
   startTypewriter(body, beat.text, blipPitchForNpc('player'));
   return true;
 }
@@ -5297,11 +5299,43 @@ let currentTypewriter = null;
 // onDone fires when the text is fully visible — after the natural last
 // character AND on cancel (cancel reveals everything). Callers must keep
 // it DOM-safe: the card may already be tearing down when it fires.
+// One-shot voice profile (gender / accent / id) for the NEXT
+// startTypewriter call — set by the dialogue/scene callers that know who
+// is speaking, consumed + cleared here. Lets the TTS pick a voice that
+// matches the character's actual gender and ethnicity instead of always
+// defaulting to a female en-US voice (every un-pitched NPC used to).
+let _currentVoiceProfile = null;
+
+// Derive { gender, lang, id } for a speaker (NPC object or id string) from
+// its rig — the rig name reliably encodes gender (…_male / …_female /
+// hijab) and ethnicity (western/african/easian/sasian/arab); bespoke rigs
+// (hero/ines/maya) and named mentors are handled explicitly.
+function voiceProfileFor(npc) {
+  const id = (typeof npc === 'string') ? npc : (npc?.id || '');
+  let rig = (typeof npc === 'object' && npc?.look?._gltfAsset) || '';
+  if (!rig) { try { rig = resolveAssetForCharacter(id, gltfAssetLoader) || ''; } catch {} }
+  const r = rig.toLowerCase();
+  const s = (rig + ' ' + id).toLowerCase();
+  let gender = null;
+  if (/female|hijab/.test(r)) gender = 'female';
+  else if (/male/.test(r)) gender = 'male';   // _male, executive_male_01
+  if (!gender) {
+    if (/\b(hero|player|marcus|kenji|folderman|partner|okoye|\bsam\b)\b/.test(s)) gender = 'male';
+    else if (/\b(ines|maya|linda|elena|diana|aisha|sarah|noor|priya|engelhardt|rena|vasquez|mei|tania|rita)\b/.test(s)) gender = 'female';
+  }
+  let lang = null;
+  if (/sasian/.test(r)) lang = 'en-IN';
+  else if (/african|arab|hijab/.test(r)) lang = 'en-GB';
+  return { gender, lang, id };
+}
+
 function startTypewriter(el, text, pitch = 1.0, onDone = null) {
   if (!el) return;
   // Speak the FULL line aloud (not per-char fragments) via Web Speech API.
   // Guarded so any SpeechSynthesis failure never breaks the dialogue.
-  try { speakLine(text, { pitch }); } catch {}
+  const vp = _currentVoiceProfile || {};
+  _currentVoiceProfile = null;   // one-shot
+  try { speakLine(text, { pitch, gender: vp.gender, lang: vp.lang, id: vp.id }); } catch {}
   el.textContent = '';
   let i = 0;
   let blipCounter = 0;

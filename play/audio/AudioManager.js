@@ -228,16 +228,21 @@ export class AudioManager {
   setChannelVolume(name, v) {
     if (!this.prefs.channels[name]) return;
     this.prefs.channels[name].volume = Math.max(0, Math.min(1, v));
-    if (this.channels[name]) {
-      this.channels[name].gain.setTargetAtTime(this._effectiveChannelGain(name), this.ctx.currentTime, 0.02);
+    // channels[name] is { gain: GainNode }, so the AudioParam is
+    // channels[name].gain.gain — the old code called setTargetAtTime on
+    // the NODE (channels[name].gain), which threw every time and left the
+    // channel stuck at its initial volume (this is why the Music dial did
+    // nothing, and the throw also skipped the _savePrefs below).
+    if (this.channels[name] && this.ctx) {
+      this.channels[name].gain.gain.setTargetAtTime(this._effectiveChannelGain(name), this.ctx.currentTime, 0.02);
     }
     this._savePrefs();
   }
   setChannelMute(name, m) {
     if (!this.prefs.channels[name]) return;
     this.prefs.channels[name].mute = !!m;
-    if (this.channels[name]) {
-      this.channels[name].gain.setTargetAtTime(this._effectiveChannelGain(name), this.ctx.currentTime, 0.02);
+    if (this.channels[name] && this.ctx) {
+      this.channels[name].gain.gain.setTargetAtTime(this._effectiveChannelGain(name), this.ctx.currentTime, 0.02);
     }
     this._savePrefs();
   }
@@ -250,7 +255,7 @@ export class AudioManager {
     if (!this.channels.music || !this.ctx) return;
     const base = this._effectiveChannelGain('music');
     const target = Math.max(0, Math.min(1, base * factor));
-    this.channels.music.gain.setTargetAtTime(target, this.ctx.currentTime, 0.15);
+    this.channels.music.gain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.15);
   }
 
   // ── Voice playback (procedural & spatial) ────────────────────────────────
