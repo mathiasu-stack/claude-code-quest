@@ -55,13 +55,35 @@ try {
 // Heuristic: does this voice name read as feminine? Platforms don't
 // expose a reliable gender field, but names often hint. Returns
 // 1 (feminine), -1 (masculine), 0 (unknown).
-const FEMALE_HINTS = ['female', 'samantha', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'zira', 'susan', 'allison', 'ava', 'kate', 'serena', 'amelie', 'anna', 'paulina', 'google uk english female', 'google us english'];
-const MALE_HINTS = ['male', 'daniel', 'alex', 'fred', 'tom', 'oliver', 'rishi', 'david', 'mark', 'google uk english male', 'aaron', 'arthur', 'gordon'];
+const FEMALE_HINTS = ['female', 'samantha', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'zira', 'susan', 'allison', 'ava', 'kate', 'serena', 'amelie', 'anna', 'paulina', 'google uk english female', 'google us english',
+  // Edge / Azure "Natural" + other neural female voice names
+  'aria', 'jenny', 'michelle', 'ana', 'natasha', 'clara', 'sonia', 'libby', 'maisie', 'emma', 'nova', 'jane', 'nancy', 'amber', 'ashley', 'cora', 'elizabeth', 'monica', 'sara', 'hazel', 'heera', 'catherine', 'neerja', 'yan'];
+const MALE_HINTS = ['male', 'daniel', 'alex', 'fred', 'tom', 'oliver', 'rishi', 'david', 'mark', 'google uk english male', 'aaron', 'arthur', 'gordon',
+  // Edge / Azure "Natural" + other neural male voice names
+  'guy', 'davis', 'tony', 'jason', 'andrew', 'brian', 'christopher', 'eric', 'jacob', 'roger', 'steffan', 'ryan', 'thomas', 'william', 'liam', 'adam', 'ethan', 'prabhat', 'george', 'james', 'paul', 'richard', 'sean', 'wayne'];
 function genderHint(name) {
   const n = (name || '').toLowerCase();
   for (const h of FEMALE_HINTS) if (n.includes(h)) return 1;
   for (const h of MALE_HINTS) if (n.includes(h)) return -1;
   return 0;
+}
+
+// Higher = more natural-sounding. Network/neural voices (Edge "Natural",
+// Google network, Apple Siri/enhanced) sound dramatically closer to
+// Alexa/ChatGPT than the old local "compact"/eSpeak/"Desktop" voices, so
+// we rank them up and the robotic ones down.
+function qualityScore(v) {
+  const n = (v.name || '').toLowerCase();
+  let s = 0;
+  if (v.localService === false) s += 5;        // cloud/network voice
+  if (n.includes('natural')) s += 7;
+  if (n.includes('neural')) s += 7;
+  if (n.includes('online')) s += 4;
+  if (n.includes('siri')) s += 5;
+  if (n.includes('enhanced') || n.includes('premium')) s += 4;
+  if (n.includes('google')) s += 3;
+  if (n.includes('compact') || n.includes('espeak') || n.includes('desktop')) s -= 5;
+  return s;
 }
 
 // Pick a system voice for a speaker profile { gender, lang, pitch, seed }.
@@ -104,10 +126,17 @@ function pickVoice(profile) {
   }
   if (!candidates.length) candidates = enPool;
 
-  // Deterministic, varied per character: combine the id seed with pitch so
-  // two female western NPCs don't both land on the same voice.
+  // Rank by naturalness first, then pick deterministically WITHIN the best
+  // quality tier so a character always sounds the same yet two same-gender
+  // NPCs still differ when several top-tier voices exist.
+  let best = -Infinity;
+  for (const v of candidates) best = Math.max(best, qualityScore(v));
+  const topTier = candidates.filter(v => qualityScore(v) >= best - 1);
+  const pool = topTier.length ? topTier : candidates;
+
   const seed = (Math.round((pitch + 0.0001) * 1000) + (profile.seed | 0)) >>> 0;
-  return { voice: candidates[seed % candidates.length] || null, matchedGender };
+  const voice = pool[seed % pool.length] || null;
+  return { voice, matchedGender, quality: voice ? qualityScore(voice) : 0 };
 }
 
 // ─── Text cleanup ────────────────────────────────────────────────────────────
@@ -199,7 +228,7 @@ export function speakLine(text, opts = {}) {
 
     const u = new SpeechSynthesisUtterance(spoken);
 
-    const { voice: v, matchedGender } = pickVoice({
+    const { voice: v, matchedGender, quality } = pickVoice({
       pitch: blipPitch,
       gender: opts.gender || null,
       lang: opts.lang || null,
@@ -207,26 +236,24 @@ export function speakLine(text, opts = {}) {
     });
     if (v) { u.voice = v; if (v.lang) u.lang = v.lang; }
 
-    // Pitch strategy:
-    //  • If we landed on a system voice whose NAME matches the requested
-    //    gender, the timbre already does the work — keep pitch moderate so
-    //    it doesn't sound chipmunk/robotic.
-    //  • If we did NOT (e.g. the platform only offers an un-gendered/female
-    //    default), the timbre is wrong, so shift pitch decisively: push male
-    //    well below 1.0 to deepen it, female above 1.0 to brighten it. This
-    //    is the lever that finally makes male characters stop sounding like
-    //    a female American voice on single-voice platforms.
+    // Pitch strategy — pitch-shifting is the #1 cause of "robotic", so do as
+    // little of it as we can get away with:
+    //  • Right-gender voice found → keep pitch essentially natural (tiny bias).
+    //  • No gender match but the voice is high quality (neural/network) →
+    //    only a GENTLE shift; these voices stay natural through ±0.15.
+    //  • No gender match AND a low-quality local voice → last-resort stronger
+    //    shift so a male at least reads male (accept some artificiality).
     if (opts.gender && !matchedGender) {
-      u.pitch = opts.gender === 'male' ? 0.55 : 1.35;
+      const gentle = quality >= 4; // neural / network voice tolerates less shift
+      if (opts.gender === 'male')   u.pitch = gentle ? 0.82 : 0.6;
+      else                          u.pitch = gentle ? 1.18 : 1.32;
     } else {
-      const genderBias = opts.gender === 'female' ? 0.08 : (opts.gender === 'male' ? -0.08 : 0);
-      u.pitch = Math.max(0.7, Math.min(1.3, blipPitch * 0.85 + 0.15 + genderBias));
+      const genderBias = opts.gender === 'female' ? 0.05 : (opts.gender === 'male' ? -0.05 : 0);
+      u.pitch = Math.max(0.85, Math.min(1.15, 1.0 + genderBias));
     }
     // Slight per-character rate variation so same-voice characters differ.
-    // Males also read a touch slower, which helps sell a deeper voice.
     const rateJitter = (((hashSeed(opts.id || '') % 14)) - 7) / 100; // -0.07..+0.06
-    const maleSlow = (opts.gender === 'male' && !matchedGender) ? -0.06 : 0;
-    u.rate = Math.max(0.82, Math.min(1.1, (opts.whisper ? 0.92 : 1.0) + rateJitter + maleSlow));
+    u.rate = Math.max(0.9, Math.min(1.08, (opts.whisper ? 0.94 : 1.0) + rateJitter));
     // Follow the Voice slider (× master). Whisper lines a touch quieter.
     u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 
