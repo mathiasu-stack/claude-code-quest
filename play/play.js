@@ -3850,6 +3850,13 @@ function buildPlayer() {
   // (we ensure that entry exists below) or fall back to the deterministic
   // generator. Either way, the player gets a face.
   const playerLook = { ...buildPlayerLook(o), _id: 'player' };
+  // Player-chosen avatar (customization.js): a manifest rig id. 'hero' is
+  // the default casting (leave _gltfAsset unset → resolveAssetForCharacter
+  // maps 'player' → hero); any other choice overrides the rig directly.
+  try {
+    const avatar = loadCustomization()?.avatar;
+    if (avatar && avatar !== 'hero') playerLook._gltfAsset = avatar;
+  } catch {}
   player = makeCharacter(playerLook);
   addPlayerAccessories(player, tier);
 

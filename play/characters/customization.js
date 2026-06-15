@@ -5,20 +5,32 @@
 
 const KEY = 'ccq_customization';
 
+// The player is a GLTF-rigged character, so the old face-style / hair-color
+// / skin-tone options had no effect (those only apply to the procedural
+// fallback body — the rig has a single baked mesh + texture). The
+// meaningful customization for a GLTF avatar is choosing the MODEL itself.
+// `avatar` is a manifest rig id; buildPlayer sets it as the player look's
+// _gltfAsset so makeCharacter uses the chosen rig.
+export const AVATARS = [
+  { id: 'hero',           label: 'Default' },
+  { id: 'western_male',   label: 'Western · M' },
+  { id: 'western_female', label: 'Western · F' },
+  { id: 'african_male',   label: 'African · M' },
+  { id: 'african_female', label: 'African · F' },
+  { id: 'easian_male',    label: 'E. Asian · M' },
+  { id: 'easian_female',  label: 'E. Asian · F' },
+  { id: 'sasian_male',    label: 'S. Asian · M' },
+  { id: 'sasian_female',  label: 'S. Asian · F' },
+  { id: 'arab_male',      label: 'Arab · M' },
+  { id: 'hijab_female',   label: 'Hijabi · F' },
+];
+const AVATAR_IDS = AVATARS.map(a => a.id);
+
+// Kept for the procedural-fallback body (when a chosen rig fails to load).
 export const FACE_STYLES = ['round', 'dot', 'sleepy', 'sharp'];
-export const HAIR_COLORS = [
-  { label: 'Brown',  hex: 0x3e2723 },
-  { label: 'Black',  hex: 0x1a1a1a },
-  { label: 'Blonde', hex: 0xc8a572 },
-  { label: 'Red',    hex: 0xb87333 },
-];
-export const SKIN_TONES = [
-  { label: 'Light',  hex: 0xfdd9b5 },
-  { label: 'Tan',    hex: 0xc68642 },
-  { label: 'Deep',   hex: 0x8d5524 },
-];
 
 export const DEFAULT_CUSTOMIZATION = {
+  avatar: 'hero',
   face: 'round',
   hairColor: 0x3e2723,
   skin: 0xfdd9b5,
@@ -30,6 +42,7 @@ export function loadCustomization() {
     if (!raw) return { ...DEFAULT_CUSTOMIZATION };
     const parsed = JSON.parse(raw);
     return {
+      avatar: AVATAR_IDS.includes(parsed.avatar) ? parsed.avatar : DEFAULT_CUSTOMIZATION.avatar,
       face: FACE_STYLES.includes(parsed.face) ? parsed.face : DEFAULT_CUSTOMIZATION.face,
       hairColor: typeof parsed.hairColor === 'number' ? parsed.hairColor : DEFAULT_CUSTOMIZATION.hairColor,
       skin: typeof parsed.skin === 'number' ? parsed.skin : DEFAULT_CUSTOMIZATION.skin,
@@ -72,19 +85,10 @@ export function mountCustomization(parent, onChange) {
     panel.innerHTML = '';
     const cur = loadCustomization();
 
-    panel.appendChild(el('div', { class: 'aud-title' }, ['Customize']));
+    panel.appendChild(el('div', { class: 'aud-title' }, ['Choose your avatar']));
 
-    panel.appendChild(el('div', { class: 'cust-label' }, ['Face']));
-    panel.appendChild(buildPicker(FACE_STYLES.map(s => ({ label: s, value: s, swatch: false })),
-      cur.face, v => { saveCustomization({ ...cur, face: v }); onChange?.(loadCustomization()); rebuild(); }));
-
-    panel.appendChild(el('div', { class: 'cust-label' }, ['Hair']));
-    panel.appendChild(buildPicker(HAIR_COLORS.map(h => ({ label: h.label, value: h.hex, swatch: '#' + h.hex.toString(16).padStart(6, '0') })),
-      cur.hairColor, v => { saveCustomization({ ...cur, hairColor: v }); onChange?.(loadCustomization()); rebuild(); }));
-
-    panel.appendChild(el('div', { class: 'cust-label' }, ['Skin']));
-    panel.appendChild(buildPicker(SKIN_TONES.map(s => ({ label: s.label, value: s.hex, swatch: '#' + s.hex.toString(16).padStart(6, '0') })),
-      cur.skin, v => { saveCustomization({ ...cur, skin: v }); onChange?.(loadCustomization()); rebuild(); }));
+    panel.appendChild(buildPicker(AVATARS.map(a => ({ label: a.label, value: a.id, swatch: false })),
+      cur.avatar, v => { saveCustomization({ ...cur, avatar: v }); onChange?.(loadCustomization()); rebuild(); }));
 
     const close = el('button', { class: 'aud-close', type: 'button' }, ['Close']);
     close.addEventListener('click', () => panel.classList.add('hidden'));
