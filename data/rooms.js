@@ -1,5 +1,5 @@
 // rooms.js — declarative scene-layout data.
-// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:28:03.058Z
+// EXPORTED FROM IN-GAME EDITOR — generated 2026-06-15T08:33:08.014Z
 //
 // See play/world/roomsLoader.js for the entry-type spec.
 
@@ -42,13 +42,14 @@ window.ROOMS = [
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, 9.5] },
       { type: 'builder', fn: 'plant', pos: [10.2, 0, 9.5] },
       { type: 'builder', fn: 'water_cooler', pos: [-9.5037, 0, -2.8088], rotY: 0, scale: [1.2, 1.2, 1.2] },
-      { type: 'builder', fn: 'couch', pos: [-8.5, 0, 5], rotY: 1.5708 },
-      { type: 'builder', fn: 'couch', pos: [8.5, 0, 5], rotY: -1.5708 },
+      { type: 'builder', fn: 'couch', pos: [-8.5, 0, 5], rotY: 1.5708, scale: [1.85, 1, 1] },
+      { type: 'builder', fn: 'couch', pos: [8.0689, 0, 5.2686], rotY: -1.5708, scale: [2, 1, 1] },
       { type: 'builder', fn: 'reception_windows' },
       { type: 'builder', fn: 'decorate_reception' },
       { type: 'builder', fn: 'reception_centerpiece' },
       { type: 'builder', fn: 'atrium' },
-      { type: 'builder', fn: 'elevator' }
+      { type: 'builder', fn: 'elevator' },
+      { type: 'builder', fn: 'couch', pos: [8.479, 0, -1.56], rotY: -1.5708, scale: [2.05, 1, 1] }
     ],
   },
   {
@@ -108,7 +109,7 @@ window.ROOMS = [
     center: [-22, 0, 0],
     objects: [
       { type: 'builder', fn: 'table', pos: [-22, 0, 0] },
-      { type: 'builder', fn: 'lamp', pos: [-22, -0.41, 0], rotY: 0 },
+      { type: 'builder', fn: 'lamp', pos: [-22, 0.78, 0], rotY: 0 },
       { type: 'builder', fn: 'plant', pos: [-31, 0, -9] },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 9] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 9] },
@@ -139,7 +140,7 @@ window.ROOMS = [
     objects: [
       { type: 'wall', pos: [-11, 1.9, 22], size: { w: 0.3, h: 3.8, d: 22 } },
       { type: 'builder', fn: 'table', pos: [-22, 0, 22] },
-      { type: 'builder', fn: 'lamp', pos: [-22, -0.41, 22], rotY: 0 },
+      { type: 'builder', fn: 'lamp', pos: [-22, 0.78, 22], rotY: 0 },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 13] },
       { type: 'builder', fn: 'plant', pos: [-13, 0, 13] },
       { type: 'builder', fn: 'plant', pos: [-31, 0, 31] },

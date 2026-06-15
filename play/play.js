@@ -1411,10 +1411,17 @@ function buildTable(x, z, ry = 0, w = 2.2) {
   return addContactShadow(g, w + 0.5, 1.7);
 }
 
-function buildLamp(x, z, opts = {}) {
-  // Floor-standing variant — the default path is a TABLE lamp lifted to
-  // table-top height (0.78), which floats when the data places it at a
-  // bare-floor position. Rooms entries opt in via args: { floor: true }.
+function buildLamp(x, z, opts = {}, y = null) {
+  // `y` is the lamp BASE height from the rooms data (pos[1]). It MUST be
+  // honoured so the in-game editor can place the lamp on a table and have
+  // the change survive a reload — the old code dropped pos[1] entirely
+  // and hard-pinned the table lamp to y=0.78, so every editor move was
+  // silently reverted. A table lamp with no explicit Y still defaults to
+  // table-top height; a floor lamp defaults to the floor.
+  const hasY = (typeof y === 'number' && y > 0.01);
+  // Floor-standing variant — its geometry is a tall pole + shade, base at
+  // the group origin, so the group sits directly at the data Y (or the
+  // floor). Rooms entries opt in via args: { floor: true }.
   if (opts.floor) {
     const g = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({ color: 0x37474f, metalness: 0.4, roughness: 0.5 });
@@ -1427,20 +1434,22 @@ function buildLamp(x, z, opts = {}) {
     shade.position.y = 1.52; g.add(shade);
     const point = new THREE.PointLight(0xfff59d, 0.7, 6);
     point.position.set(0, 1.42, 0); g.add(point);
-    g.position.set(x, 0, z);
+    g.position.set(x, hasY ? y : 0, z);
     g.userData.surface = 'floor';
     return g;
   }
-  // Table lamp — sits on top of a 0.78m table, so the GLB origin needs
-  // to be raised to y=0.78. The GLB itself is ~0.55m tall (lamp body).
+  // Table lamp — its GLB origin is at the lamp base, so the group sits at
+  // the data Y (where the lamp base should rest, e.g. a table top ~0.78),
+  // defaulting to 0.78 when the data leaves Y at 0.
   //
   // MOBILE: skip the PointLight entirely (point lights are the single
   // biggest per-fragment cost on weak GPUs) and compensate by boosting
   // emissive on the shade so the lamp still reads as "on".
+  const baseY = hasY ? y : 0.78;
   const mob = isMobile();
   const glb = makeDecoration('table_lamp', { width: 0.35, height: 0.55, depth: 0.35 });
   if (glb) {
-    glb.position.set(x, 0.78, z);
+    glb.position.set(x, baseY, z);
     if (mob) {
       // Light-colored sub-meshes are the shade; make them glow.
       glb.traverse((o) => {
@@ -1479,7 +1488,10 @@ function buildLamp(x, z, opts = {}) {
     const point = new THREE.PointLight(0xfff59d, 0.6, 4);
     point.position.set(0, 1.2, 0); g.add(point);
   }
-  g.position.set(x, 0, z);
+  // This procedural fallback models its parts at table-relative heights
+  // (base at y≈0.82), so the group sits at the data Y minus that built-in
+  // offset, landing the visible base at the requested Y.
+  g.position.set(x, hasY ? y - 0.82 : 0, z);
   g.userData.surface = 'top'; // sits on a table at y≈0.78
   return g;
 }
@@ -2137,7 +2149,7 @@ function registerRoomBuilders() {
     buildLibraryCounter(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('table', (pos, rotY, args) =>
     buildTable(pos[0], pos[2], rotY || 0, args.w));
-  registerRoomBuilder('lamp', (pos, rotY, args) => buildLamp(pos[0], pos[2], args || {}));
+  registerRoomBuilder('lamp', (pos, rotY, args) => buildLamp(pos[0], pos[2], args || {}, pos[1]));
   registerRoomBuilder('badge_printer', (pos, rotY) =>
     buildBadgePrinter(pos[0], pos[2], rotY || 0));
   registerRoomBuilder('house_rules', (pos, rotY) =>
