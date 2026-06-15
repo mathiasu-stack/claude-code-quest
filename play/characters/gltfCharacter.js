@@ -429,41 +429,55 @@ export function makeGltfCharacter(look, assetLoader) {
       if (trk && trk.values.length >= 4) idlePose[boneName] = averageQuatTrack(trk);
     }
     for (const side of ['Left', 'Right']) {
-      const fore = idlePose[side + 'ForeArm'];
-      const foreBind = bindQuat[side + 'ForeArm'];
-      if (fore && foreBind) fore.slerp(foreBind, 0.55);
       if (bindQuat[side + 'Hand']) idlePose[side + 'Hand'] = bindQuat[side + 'Hand'].clone();
     }
-    // The walk average keeps natural shoulder posture, arm twist and
-    // elbow hinge, but its upper-arm DIRECTION still hangs ~35° outward
-    // and behind the body (Meshy walks barely swing the upper arm — the
-    // motion is mostly forearm). Solve the direction exactly instead of
-    // hand-tuning local-axis corrections: compute the averaged arm's
-    // root-space direction through the quaternion chain (bones are
-    // still at bind here, matching the idle-time spine state), then
-    // apply the minimal rotation taking it to "nearly straight down,
-    // slightly outward + forward". setFromUnitVectors preserves the
-    // averaged twist and assumes nothing about per-rig axis signs.
-    // (Character forward is +Z; left side is +X — verified from the
-    // toe-bone direction in the rig data.)
+    // Why the explicit per-bone direction solve (and not just the walk
+    // average): the walk-cycle average produces a DIFFERENT arm pose for
+    // every rig, because each rig has its own walk clip + its own bind
+    // pose. Linda's walk happened to average to a relaxed arms-at-sides
+    // pose; the Meshy ethnicity rigs and the hero averaged to splayed
+    // arms. To make EVERY character hang their arms like Linda, we solve
+    // BOTH the upper arm and the forearm to fixed WORLD-space directions,
+    // so the result no longer depends on the rig's walk clip. The upper
+    // arm hangs nearly straight down (a hair outward so it clears the
+    // torso); the forearm continues down but tilted a little more forward,
+    // which reads as a natural slightly-bent elbow. setFromUnitVectors
+    // preserves each bone's own roll/twist and assumes nothing about
+    // per-rig local axis signs. (Bone primary axis is +Y toward the child;
+    // character forward is +Z, left side +X — verified from the rig data.)
     const yUp = new THREE.Vector3(0, 1, 0);
-    const chainQuatAbove = (bone) => {
+    // Accumulated parent world-rotation down to (not including) boneName,
+    // using already-solved idlePose values for ancestors so the forearm
+    // solve sees the NEW upper-arm rotation, not the bind one.
+    const accumParent = (boneName) => {
+      const bone = inst.skeleton.getBoneByName(boneName);
+      if (!bone) return null;
       const stack = [];
       for (let b = bone.parent; b && b.isBone; b = b.parent) stack.push(b);
       const q = new THREE.Quaternion();
-      for (let i = stack.length - 1; i >= 0; i--) q.multiply(stack[i].quaternion);
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const nm = stack[i].name;
+        q.multiply(idlePose[nm] || stack[i].quaternion);
+      }
       return q;
     };
+    const solveDir = (boneName, targetDir) => {
+      const bone = inst.skeleton.getBoneByName(boneName);
+      if (!bone) return;
+      const qLocal = idlePose[boneName] || bone.quaternion.clone();
+      const P = accumParent(boneName);
+      if (!P) return;
+      const d0 = yUp.clone().applyQuaternion(P.clone().multiply(qLocal));
+      const qFix = new THREE.Quaternion().setFromUnitVectors(d0, targetDir.clone().normalize());
+      idlePose[boneName] = P.clone().invert().multiply(qFix).multiply(P).multiply(qLocal);
+    };
     for (const side of ['Left', 'Right']) {
-      const sh = inst.skeleton.getBoneByName(side + 'Shoulder');
-      const arm = inst.skeleton.getBoneByName(side + 'Arm');
-      const qArm = idlePose[side + 'Arm'];
-      if (!sh || !arm || !qArm) continue;
-      const P = chainQuatAbove(sh).multiply(idlePose[side + 'Shoulder'] || sh.quaternion);
-      const d0 = yUp.clone().applyQuaternion(P.clone().multiply(qArm));
-      const dT = new THREE.Vector3(side === 'Left' ? 0.12 : -0.12, -0.99, 0.04).normalize();
-      const qFix = new THREE.Quaternion().setFromUnitVectors(d0, dT);
-      idlePose[side + 'Arm'] = P.clone().invert().multiply(qFix).multiply(P).multiply(qArm);
+      const s = side === 'Left' ? 1 : -1;
+      // Upper arm: almost straight down, a hair outward + forward.
+      solveDir(side + 'Arm',     new THREE.Vector3(0.11 * s, -0.99, 0.05));
+      // Forearm: down but ~13° more forward than the upper arm → a gentle
+      // relaxed elbow bend (a perfectly straight arm reads as stiff).
+      solveDir(side + 'ForeArm', new THREE.Vector3(0.06 * s, -0.95, 0.23));
     }
   }
   for (const boneName of ARM_CHAIN) {

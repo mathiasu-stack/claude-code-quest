@@ -24,7 +24,7 @@ import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
 import { getAssetLoader } from './characters/assetLoader.js?v=20260612b';
-import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260612a';
+import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260615b';
 import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260611c';
