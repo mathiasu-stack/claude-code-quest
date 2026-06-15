@@ -1442,16 +1442,28 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       id: 'ch15-test-mcq', passThreshold: 80, xpReward: 725, drawCount: 6,
       questionPool: [
         {
-          id: 'ch15-q01', type: 'multi',
-          prompt: 'Claude Code merges settings from three locations. Which are they, and which wins on conflict?',
+          id: 'ch15-q01a', type: 'multi',
+          prompt: 'Which of these files does Claude Code merge settings from? (Pick all that apply.)',
           options: [
-            '<code>~/.claude/settings.json</code> (User — baseline)',
-            '<code>.claude/settings.json</code> at repo root (Project shared — committed, overrides User)',
-            '<code>.claude/settings.local.json</code> at repo root (Project local — gitignored, ALWAYS wins)',
-            '<code>/etc/claude/settings.json</code> (System-wide)',
+            '<code>~/.claude/settings.json</code>',
+            '<code>.claude/settings.json</code> at repo root',
+            '<code>.claude/settings.local.json</code> at repo root',
+            '<code>/etc/claude/settings.json</code>',
           ],
           correctIndexes: [0, 1, 2],
-          explanation: 'Lesson "Rena Vasquez and the Three settings.json Files" — three layers; local project file always wins. There is no /etc layer.',
+          explanation: 'Lesson "Rena Vasquez and the Three settings.json Files" — Claude Code reads three files: user (<code>~/.claude/settings.json</code>), project shared (<code>.claude/settings.json</code>, committed), and project local (<code>.claude/settings.local.json</code>, gitignored). There is no system-wide <code>/etc</code> layer.',
+        },
+        {
+          id: 'ch15-q01b', type: 'single',
+          prompt: 'When the three settings layers disagree on the same key, which one wins?',
+          options: [
+            '<code>~/.claude/settings.json</code>',
+            '<code>.claude/settings.json</code> at repo root',
+            '<code>.claude/settings.local.json</code> at repo root',
+            'The first one read from disk, in alphabetical order',
+          ],
+          correctIndexes: [2],
+          explanation: 'Lesson "Rena Vasquez and the Three settings.json Files" — the project-local file wins, then project-shared, then user. The local file is gitignored on purpose: it\'s the per-developer override layer.',
         },
         {
           id: 'ch15-q02', type: 'multi',

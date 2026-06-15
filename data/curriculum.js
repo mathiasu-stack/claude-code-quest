@@ -542,13 +542,13 @@ Do not change the function signature or any callers.</code></pre>
           id: 'ch05-q09', type: 'single',
           prompt: 'You\'re about to ask Claude Code to refactor calculateTax. Which prompt best follows the lesson\'s recommendations?',
           options: [
-            '"Make calculateTax better."',
-            '"Fix the tax bug."',
+            '"Refactor calculateTax in the billing module to make it cleaner and easier for the team to maintain going forward."',
+            '"Look at calculateTax in src/billing and rewrite whatever is broken about it — leave the rest of the billing module alone for now."',
             '"Refactor calculateTax() in src/billing/tax.js so it returns 0 on null/undefined inputs; do not change the signature or callers."',
-            '"Clean up the billing code please."',
+            '"Clean up the calculateTax function so the QA team stops filing tickets about the tax line on customer invoices each month."',
           ],
           correctIndexes: [2],
-          explanation: 'Lesson "Anatomy of a Good Prompt" — the third option hits every part of the formula: action, what, where, success criteria, constraint.',
+          explanation: 'Lesson "Anatomy of a Good Prompt" — only the third option hits every part of the formula: action (refactor), what (calculateTax), where (src/billing/tax.js), success criteria (returns 0 on null/undefined), and constraint (don\'t change the signature or callers). The other prompts are similar in length but stay vague — they sound thorough without naming the file, the actual bug, or the constraint.',
         },
         {
           id: 'ch05-q10', type: 'single',
