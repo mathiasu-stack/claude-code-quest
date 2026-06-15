@@ -2597,8 +2597,15 @@ function buildWorld() {
         // hides it on other floors (the ring is parented directly to
         // the scene, not to the interactable group, so it wouldn't
         // inherit the group's floor tag automatically).
-        const glow = root.userData._interactable?.glow;
-        if (glow?.userData) glow.userData.floor = loc.floor || 1;
+        // NOTE: `_interactable` lives on the inner interactable MESH, not
+        // on the group `root` — the old `root.userData._interactable`
+        // lookup always missed, so floor-3/4 glow rings were never tagged
+        // and leaked as glowing rings floating in the sky on every floor.
+        // Traverse to find the real interactable mesh + tag its ring.
+        root.traverse((o) => {
+          const glow = o.userData?._interactable?.glow;
+          if (glow?.userData) glow.userData.floor = loc.floor || 1;
+        });
       }
     } catch (e) {
       console.warn(`object build failed for ${chapterId} (${cfg.delivery})`, e);
@@ -3268,6 +3275,21 @@ function registerStaticColliders() {
     // from the atrium into the cab through the south-facing opening;
     // floor M keeps it open so the cab spills into the loft vestibule.
     if (f >= 2 && f !== FLOOR_M_INDEX) addColliderAABB(11.00, 11.20, -8.80, -6.40, f);
+  }
+
+  // Reception centerpiece (the "K" awards sculpture) — a compound
+  // builder (receptionCenterpiece.js), so it has NO window.ROOMS entry
+  // with a pos for the auto-collider loop to read, and clicking it in
+  // the editor selects a compound child (no collide checkbox). Result:
+  // the player walked straight through it. Hardcode a collider on its
+  // base footprint (cylinder r≈0.95 at the group's world pos 0,0,1),
+  // honouring an editor compound-override move if one exists.
+  {
+    const ov = window.COMPOUND_OVERRIDES?.reception_centerpiece?.k_sculpture;
+    const cx = (ov?.pos && ov.pos.length >= 1) ? ov.pos[0] : 0;
+    const cz = (ov?.pos && ov.pos.length >= 3) ? ov.pos[2] : 1;
+    const r = 1.0; // base radius ~0.95 + a little pad
+    addColliderAABB(cx - r, cx + r, cz - r, cz + r, 1);
   }
 
   // Floor M (mezzanine loft) — bespoke geometry, colliders supplied by
