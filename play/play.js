@@ -595,6 +595,10 @@ const cameraTouches = new Map();
 let cameraDist = 6.5;
 const CAM_DIST_MIN = 2.5;
 const CAM_DIST_MAX = 18.0;
+// Smoothed camera distance after wall-occlusion clamping. Snaps IN
+// instantly when a wall appears (so the camera never shows through it)
+// and eases OUT when the wall clears.
+let _camSmoothDist = 6.5;
 let decoTickers = [];   // per-frame callbacks for animated decorations
 let skyDome = null;
 let receptionWindows = null;
@@ -5839,51 +5843,75 @@ function update(dt) {
   // Camera position = player.pos − camFwd * camDist
   //   camFwd = (sin(yaw), 0, cos(yaw))
   const camH = 4.2;
-  // Wall-occlusion clamp: cast a ray from the player toward where the
-  // camera wants to sit. If a wall is closer than cameraDist, pull the
-  // camera in to keep it inside the room (otherwise it punches through
-  // and exposes the exterior).
+  const pitchCos = Math.cos(cameraPitch);
+  const pitchSin = Math.sin(cameraPitch);
+  const floorY = floorBaseY(currentFloor);
+
+  // The look target — the point the camera frames (the character's upper
+  // body). The occlusion ray starts HERE, not at camera height.
+  const lookX = player.position.x;
+  const lookY = player.position.y + 1.2;
+  const lookZ = player.position.z;
+
+  // Where the camera WANTS to sit at the full requested distance (the
+  // complete 3D orbit position, accounting for pitch). The previous
+  // occlusion ray was horizontal at a fixed 4.2 m height — but the walls
+  // are only 3.8 m tall, so that ray sailed clean over every wall top and
+  // never registered a hit, letting the camera punch straight through.
+  // Casting from the look target toward this true camera position hits
+  // walls at the correct height at any pitch.
+  const horizFull = cameraDist * pitchCos;
+  const desiredX = lookX - Math.sin(cameraYaw) * horizFull;
+  const desiredZ = lookZ - Math.cos(cameraYaw) * horizFull;
+  const desiredY = floorY + camH + cameraDist * pitchSin
+    + Math.max(0, player.position.y - floorY) * 0.3;
+
+  // Wall-occlusion clamp.
   let effDist = cameraDist;
   if (cameraWalls.length) {
-    const floorYRay = floorBaseY(currentFloor);
-    _camRayOrigin.set(player.position.x, floorYRay + camH, player.position.z);
-    _camRayDir.set(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+    _camRayOrigin.set(lookX, lookY, lookZ);
+    _camRayDir.set(desiredX - lookX, desiredY - lookY, desiredZ - lookZ);
+    const fullLen = _camRayDir.length() || 1e-3;
+    _camRayDir.multiplyScalar(1 / fullLen);
     _camRay.set(_camRayOrigin, _camRayDir);
-    _camRay.near = 0;
-    _camRay.far = cameraDist;
-    // Floor-filter cached per (cameraWalls list × currentFloor). The
-    // `.visible` predicate was previously inside the filter — moved
-    // into the raycast loop below since visibility can flip per frame
-    // (during fade transitions) but floor membership doesn't.
+    _camRay.near = 0.2;
+    _camRay.far = fullLen;
     const candidates = _filteredCameraWalls().filter(w => w.visible);
     const hits = _camRay.intersectObjects(candidates, false);
     if (hits.length) {
-      effDist = Math.max(CAM_DIST_MIN, hits[0].distance - 0.35);
+      // Pull the camera to just inside the nearest wall. Convert the hit
+      // distance along the ray back into an orbit distance (the ray's
+      // full length corresponds to the full cameraDist).
+      const hitDist = Math.max(0, hits[0].distance - 0.35);
+      effDist = Math.max(CAM_DIST_MIN, cameraDist * (hitDist / fullLen));
     }
   }
+
+  // Snap IN instantly (so we never render a frame with the camera behind
+  // a wall), ease OUT smoothly when the wall clears.
+  if (effDist < _camSmoothDist) _camSmoothDist = effDist;
+  else _camSmoothDist += (effDist - _camSmoothDist) * (1 - Math.exp(-dt * 5));
+
   // Orbit: horizontal distance shrinks with pitch (the camera arcs over
   // the target instead of just sliding up). cos(pitch) only — sin(pitch)
   // alone would let the camera "fall" inside the target at high pitch.
-  const pitchCos = Math.cos(cameraPitch);
-  const pitchSin = Math.sin(cameraPitch);
-  const horizDist = effDist * pitchCos;
-  const targetCamX = player.position.x - Math.sin(cameraYaw) * horizDist;
-  const targetCamZ = player.position.z - Math.cos(cameraYaw) * horizDist;
-  const camLerp = 1 - Math.exp(-dt * 6);
+  const horizDist = _camSmoothDist * pitchCos;
+  const targetCamX = lookX - Math.sin(cameraYaw) * horizDist;
+  const targetCamZ = lookZ - Math.cos(cameraYaw) * horizDist;
+  // Light position lerp for smooth following; the distance smoothing
+  // above already handles the snap-in, so this can stay gentle.
+  const camLerp = 1 - Math.exp(-dt * 10);
   camera.position.x += (targetCamX - camera.position.x) * camLerp;
   camera.position.z += (targetCamZ - camera.position.z) * camLerp;
   // Camera height = floor baseline + camH (constant ride height when
   // pitch=0) + pitched vertical offset + a small jump bob. Held at the
   // current floor's baseline so it doesn't leak across floors.
-  const floorY = floorBaseY(currentFloor);
-  const rawCamY = floorY + camH + effDist * pitchSin
+  const rawCamY = floorY + camH + _camSmoothDist * pitchSin
     + Math.max(0, player.position.y - floorY) * 0.3;
   // Clamp so extreme pitches don't push the camera below the floor or
-  // above the atrium ceiling. 0.4m above floor is enough that the
-  // camera can still see the player's shoes; 14m caps it just under
-  // the atrium roof so the lookAt stays anchored on the character.
+  // above the atrium ceiling.
   camera.position.y = Math.max(floorY + 0.4, Math.min(floorY + 14, rawCamY));
-  camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
+  camera.lookAt(lookX, player.position.y + 1.0, lookZ);
 
   // Animate doors live: color tint, label, AND the hinge swing toward
   // its target rotation (0 = closed, openRot = swung open).
