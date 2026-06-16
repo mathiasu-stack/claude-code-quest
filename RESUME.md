@@ -70,10 +70,18 @@ emissive recessed light panels (flat quads, catch the post-fx bloom) + a dark
 baseboard band along all 4 walls. All overhead/wall-hug — no collision/NPC/
 finale coupling. Deterministic, mobile-cheap (shared geo/mat).
 
+### Increment 4 — Phase 4 cove lighting + Phase 2 color grade (`929f152`, `?v=20260616c`)
+- Office cove lighting (`buildFloorOffice`): recessed soffit lip + warm emissive
+  strip near each wall top, uplighting the ceiling edge. Overhead/wall-hug.
+- Color grade: extended the post ShaderPass (`play/postfx/composer.js`
+  `VignetteGrainShader`) with `uContrast`/`uSaturation`/`uTemperature` (gentle
+  defaults 1.05/1.06/+0.012). Per-zone tunable via `postfx.contrast/saturation/
+  temperature` in `zone-presets.js`; set 1/1/0 to disable. `applyPreset` reads
+  them if present, else keeps the global defaults.
+
 ### NEXT / OPEN
-- **AWAITING USER VERIFICATION of the IBL look** before Phase 2 (materials)
-  authoring — per the team's "don't tune materials twice" guardrail. If IBL is
-  too bright, dim the envProbe gradient (`buildSkyEnvTexture` opts in play.js).
+- **IBL look CONFIRMED GOOD by user** ("looking great") → Phase 2 materials
+  unblocked. (Tuning knobs still available: envProbe gradient; grade uniforms.)
 - **Phase 0 gltfpack BLOCKED**: gltfpack not on the NAS and project is npm-free.
   Needs a tooling decision (install gltfpack binary, or compress off-box). NOT
   required for other phases — just the biggest perf win.
