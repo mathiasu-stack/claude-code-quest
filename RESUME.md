@@ -101,8 +101,26 @@ finale coupling. Deterministic, mobile-cheap (shared geo/mat).
 - DEFERRED (needs a finale playtest to tune): finale cast semicircle staging —
   positions/`face` are script-safe to change but risky to get right blind.
 
+### Increment 7 — Scene-wide bloom blowout FIX (`b6e599f`, `?v=20260616g`)
+User screenshots (reception + exterior, floor 1) showed a white wash hiding the
+VP-of-AI finale. It was NOT the office cove/panels (wrong first guess in incr 6).
+Real cause = bright surfaces blooming into a white sheet, introduced after the
+"looking great" state:
+- Wall/floor `roughnessMap`s (incr 5) → glossy patches reflecting the bright sky
+  via IBL. REVERTED: walls flat roughness 0.92, office floors matte (min 0.35);
+  envMapIntensity lowered (walls 0.5, floors 0.4).
+- CEO-portrait niche stone was reflective + sat in the wash corner → made matte
+  (roughness 0.85 / envMapIntensity 0.3); warm light 0.75→0.55.
+- **Bloom safety clamp** in `composer.applyPreset`: `strength ×0.6`,
+  `threshold = max(preset, 0.9)`. If the scene now looks under-glowy, raise/relax
+  these — single chokepoint.
+LESSON: the IBL reflections only look good on TRULY low-roughness hero surfaces
+(marble/glass/metal). Do NOT lower roughness on big diffuse surfaces (walls/
+floors) — they bloom out. Keep their envMapIntensity low.
+
 ### NEXT / OPEN
-- **Verify:** brightness fix + portrait niche (visible anytime in reception);
+- **Verify:** the finale is visible again + no white wash; portrait niche reads
+  ok (now matte). If under-glowy, relax the bloom clamp in composer.js.
   Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
   to tune the deferred cast staging together.
 - **IBL CONFIRMED GOOD** → Phase 2 done (roughness maps + color grade). Optional
