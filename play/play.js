@@ -2213,6 +2213,45 @@ function officeGlassMaterial() {
   return _officeGlassMat;
 }
 
+// Procedural suspended-ceiling acoustic tile: a near-white 2×2 tile cell with
+// recessed grout lines + faint per-tile speckle. Tiled across the office
+// ceiling it reads as a real dropped grid instead of a blank white slab — the
+// single biggest "this is an office" cue overhead. Generated once, shared.
+let _ceilingTileTex = null;
+function ceilingTileTexture() {
+  if (_ceilingTileTex) return _ceilingTileTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#eef0f1';
+  g.fillRect(0, 0, 256, 256);
+  // Faint acoustic speckle.
+  for (let i = 0; i < 1400; i++) {
+    const v = Math.random();
+    g.fillStyle = v > 0.5 ? 'rgba(255,255,255,0.5)' : 'rgba(150,155,160,0.18)';
+    g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  // 2×2 grid grout (so tex.repeat gives an even tile count).
+  g.strokeStyle = 'rgba(120,126,132,0.85)';
+  g.lineWidth = 4;
+  for (const p of [0, 128, 256]) {
+    g.beginPath(); g.moveTo(p, 0); g.lineTo(p, 256); g.stroke();
+    g.beginPath(); g.moveTo(0, p); g.lineTo(256, p); g.stroke();
+  }
+  // Soft inner shadow at each tile edge for depth.
+  g.strokeStyle = 'rgba(90,95,100,0.25)';
+  g.lineWidth = 10;
+  for (const p of [0, 128]) {
+    g.strokeRect(p + 6, p + 6, 116, 116);
+    g.strokeRect(p + 6, (p + 128) % 256 + 6, 116, 116);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  _ceilingTileTex = tex;
+  return tex;
+}
+
 // Distant city ring + ground far below, so the office windows look onto a
 // skyline instead of empty skydome. Tagged with the floor so single-floor
 // culling hides it on other floors. Buildings sit on absolute world ground
@@ -2980,15 +3019,37 @@ function buildFloorOffice(floorIdx) {
   floorMesh.userData.floor = floorIdx;
   scene.add(floorMesh);
 
-  // Ceiling — same size
+  // Ceiling — a suspended acoustic-tile grid (36 m → 0.6 m tiles) instead of
+  // a blank white slab. The dropped grid + recessed light panels below read
+  // as a real office overhead.
+  const ceilTileTex = ceilingTileTexture().clone();
+  ceilTileTex.needsUpdate = true;
+  ceilTileTex.wrapS = ceilTileTex.wrapT = THREE.RepeatWrapping;
+  ceilTileTex.repeat.set(FULL / 1.2, FULL / 1.2);   // 2 tiles/cell → 0.6 m tiles
   const ceilingMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(FULL, FULL),
-    new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0xf2f4f5, map: ceilTileTex, roughness: 0.92 }),
   );
   ceilingMesh.rotation.x = Math.PI / 2;
   ceilingMesh.position.set(0, y0 + wallH - 0.01, 0);
   ceilingMesh.userData.floor = floorIdx;
   scene.add(ceilingMesh);
+
+  // Recessed light panels — a 4×4 grid of slightly-dropped emissive troffers.
+  // Emissive so the post-fx bloom gives them a soft glow; cheap flat quads.
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0xfff4e0, emissiveIntensity: 0.9, roughness: 0.6,
+  });
+  const panelGeo = new THREE.PlaneGeometry(1.6, 1.6);
+  for (let gx = -1.5; gx <= 1.5; gx++) {
+    for (let gz = -1.5; gz <= 1.5; gz++) {
+      const panel = new THREE.Mesh(panelGeo, panelMat);
+      panel.rotation.x = Math.PI / 2;
+      panel.position.set(gx * 8.4, y0 + wallH - 0.06, gz * 8.4);
+      panel.userData.floor = floorIdx;
+      scene.add(panel);
+    }
+  }
 
   const wallMat = makeWallMaterial(theme.wall, theme.metal);
   function addWall(w, h, d, x, z, mat = wallMat) {
@@ -3056,6 +3117,16 @@ function buildFloorOffice(floorIdx) {
   addCurtainWall('z', -H);   // west
   // East wall — solid (elevator shaft sits as an interior column near it).
   addWall(0.3, wallH, FULL,  H, 0);
+
+  // Baseboard — a thin dark band hugging the floor along every wall. Grounds
+  // the walls (a top "Roblox" tell is walls meeting the floor with no trim).
+  // Sits just inside the wall plane; overhead/wall-hug only, no collision.
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.7, metalness: 0.1 });
+  const baseInset = H - 0.12, baseH = 0.16;
+  addBox(FULL, baseH, 0.08, 0, baseH / 2, -baseInset, baseMat);
+  addBox(FULL, baseH, 0.08, 0, baseH / 2,  baseInset, baseMat);
+  addBox(0.08, baseH, FULL, -baseInset, baseH / 2, 0, baseMat);
+  addBox(0.08, baseH, FULL,  baseInset, baseH / 2, 0, baseMat);
 
   // Distant skyline so the new windows look onto a city, not the void.
   buildOfficeSkyline(floorIdx);
