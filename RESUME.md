@@ -154,9 +154,24 @@ After finale (tier T7), revisiting any character plays a NEW arc-aware line.
   `VIOLIN_PHRASE` chord-tone contour, a register above the piano, quieter so it
   harmonises not doubles. All 4 zone tracks. Single-importer + no-cache.
 
+### Increment 11 — REAL sampled piano + violin (`d557f1f`)
+Replaced the oscillator voices (synthetic; the saw "violin" sounded like a
+harmonica) with real recorded samples, pitch-shifted to nearest.
+- Vendored multisamples under `play/assets/audio/instruments/`: 14 piano (A1..C6)
+  + 8 violin (G3..C6) mp3s from gleitz/midi-js-soundfonts (MusyngKite, MIT),
+  ~540KB. mp3 served day-cached.
+- `proceduralMusic.js`: lazy module-wide `_bank` (fetch + decodeAudioData on
+  first start), `playSampleNote` (nearest sample + playbackRate shift + gain
+  env). `notePiano`/`noteViolin` route to samples when loaded ELSE the original
+  oscillator voices (graceful fallback — never breaks on 404/offline). Synth
+  plays until bank resolves (~a few sec), then upgrades to samples.
+- Tuning knobs: `SAMPLE_GAIN = { piano: 0.8, violin: 1.3 }`. NOT verified by ear
+  (can't hear) — adjust if balance is off. Module is no-cache (loads fresh).
+
 ### NEXT / OPEN
-- **Verify:** finale reveal frames the lobby; light good; post-finale every NPC
-  has a fresh line; music now has piano + violin harmony in all zones.
+- **Verify:** music now sounds like real piano + violin (a few sec after it
+  starts, once samples load); balance ok? (tune SAMPLE_GAIN). Finale reveal
+  frames the lobby; post-finale every NPC has a fresh line.
 - If under-glowy anywhere, relax the bloom clamp in composer.js.
   Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
   to tune the deferred cast staging together.
