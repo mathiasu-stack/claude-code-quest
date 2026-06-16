@@ -24,7 +24,7 @@ const PLAYER_RANKS = [
   'Lead', 'Principal', 'Director',
 ];
 
-const EVALUATOR_TYPES = new Set(['keyword', 'regex', 'length', 'structure']);
+const EVALUATOR_TYPES = new Set(['keyword', 'regex', 'length', 'structure', 'nonce']);
 const STRUCTURE_NAMES = new Set(['numbered-steps', 'question-mark', 'code-block']);
 
 const findings = [];

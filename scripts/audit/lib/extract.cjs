@@ -109,9 +109,11 @@ function lineMap(src, base) {
 // lessonId/testId, kind). Used to enumerate the NPCs created for
 // chapters 3-16 by the procedural generator.
 
-// Parse these arrays out of play.js at audit time so the audit can't
-// drift from the live data. Each is matched by name then bracket-balanced.
-function parseStringArray(src, name) {
+// Parse an array literal out of play.js at audit time so the audit can't
+// drift from the live data. Matched by name then bracket-balanced; the
+// content is eval'd, so it works for string OR object-literal arrays
+// (comments inside the array are fine for the Function eval).
+function parseArrayLiteral(src, name) {
   const re = new RegExp(`const ${name}\\s*=\\s*\\[`);
   const m = src.match(re);
   if (!m) throw new Error(`${name} not found in play.js`);
@@ -126,9 +128,11 @@ function parseStringArray(src, name) {
 }
 
 const _playSrc = readFile('play/play.js');
-const NAME_FIRST = parseStringArray(_playSrc, 'NAME_FIRST');
-const NAME_LAST = parseStringArray(_playSrc, 'NAME_LAST');
-const ROLES_LESSON = parseStringArray(_playSrc, 'ROLES_LESSON');
+// play.js:generateChapterNPCs names people from PEOPLE_POOL (objects with
+// first/last/rig) and roles from ROLES_LESSON. Mirror both so ids/zones/
+// positions/roles stay in lockstep with the live generator.
+const PEOPLE_POOL = parseArrayLiteral(_playSrc, 'PEOPLE_POOL');
+const ROLES_LESSON = parseArrayLiteral(_playSrc, 'ROLES_LESSON');
 const pick = (arr, seed) => arr[(seed * 9301 + 49297) % arr.length];
 
 // play.js:HAND_BUILT_CHAPTER_IDS — chapters whose NPCs are in the
@@ -150,13 +154,12 @@ function generateAutoNpcs(curriculum) {
     (ch.lessons || []).forEach((l, i) => {
       const slot = slots[i % slots.length];
       const seed = chapterIdx * 11 + i * 7;
-      const first = pick(NAME_FIRST, seed);
-      const last = pick(NAME_LAST, seed + 1);
+      const person = pick(PEOPLE_POOL, seed);
       out.push({
         id: `auto-${l.id}`,
         zone: chapterIdx + 1,
         pos: [slot.x, slot.z],
-        name: `${first} ${last}`,
+        name: `${person.first} ${person.last}`,
         role: pick(ROLES_LESSON, seed + 3),
         chapterId: ch.id,
         lessonId: l.id,
@@ -165,15 +168,14 @@ function generateAutoNpcs(curriculum) {
         _line: 0,   // procedural; no source line to point at
       });
     });
-    // Test NPC at south end
-    const testSeed = chapterIdx * 13;
-    const first = pick(NAME_FIRST, testSeed);
-    const last = pick(NAME_LAST, testSeed + 1);
+    // Test NPC at south end (near door to next zone)
+    const testSeed = chapterIdx * 11 + 99;
+    const person = pick(PEOPLE_POOL, testSeed);
     out.push({
       id: `auto-${ch.id}-test`,
       zone: chapterIdx + 1,
-      pos: [0, cZ + 8],
-      name: `${first} ${last}`,
+      pos: [0, cZ + 8.5],
+      name: `${person.first} ${person.last}`,
       role: 'Assessor',
       chapterId: ch.id,
       testId: ch.practicalTest?.id || `${ch.id}-test`,
