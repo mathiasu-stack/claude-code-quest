@@ -90,7 +90,21 @@ finale coupling. Deterministic, mobile-cheap (shared geo/mat).
   Caveat: furniture mostly renders as GLBs at runtime, so bevels mainly show
   during the two-phase load / when GLBs are absent — lower ROI than hoped.
 
+### Increment 6 — emissive blowout fix + finale-coupled framing (`dda17c7`, `2d20667`, `?v=20260616f`)
+- Tamed the office cove/recessed-panel emissive (user screenshots showed wall
+  blowout under bloom): cove 1.2→0.45, panels 0.9→0.4.
+- CEO portrait gallery niche built INTO the portrait group (editor-selectable,
+  moves with it): flanking stone pilasters + header + low plinth + a
+  widened/stronger warm light. Additive — no spawn/script/collider changes.
+- Floor M: warm key light pooling on Maya's standing spot ([4.0,-7.6]) as the
+  elevator-exit reveal terminus.
+- DEFERRED (needs a finale playtest to tune): finale cast semicircle staging —
+  positions/`face` are script-safe to change but risky to get right blind.
+
 ### NEXT / OPEN
+- **Verify:** brightness fix + portrait niche (visible anytime in reception);
+  Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
+  to tune the deferred cast staging together.
 - **IBL CONFIRMED GOOD** → Phase 2 done (roughness maps + color grade). Optional
   remainder: desktop 512px texture tiering (minor); normal maps (deferred —
   bump already present; colorSpace care needed).
