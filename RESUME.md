@@ -8,6 +8,71 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## VISUAL UPGRADE ROADMAP (2026-06-16 session, IN PROGRESS)
+
+A 4-discipline art team (Environment Artist, Level Designer, Hard-Surface
+Modeler, Technical Artist — run as parallel subagents) proposed a phased
+"semi-realistic" upgrade. User greenlit the whole plan and said "push Phase 4
+as far as we can". Goal: at least semi-realistic. The agents discovered the
+engine is further along than RESUME claimed: **post-FX is already live**
+(`play/postfx/composer.js` — EffectComposer+Bloom+vignette/grain, per-zone via
+`play/lighting/zone-presets.js`), a **marble material lib exists**
+(`play/materials/modernLibrary.js`, with `envMapIntensity:1.0` that was wired
+to a non-existent envMap), meshopt decoder is wired, dust-motes exist, and
+`renderer.useLegacyLights = true` (load-bearing — env/PBR work must respect it).
+
+Dependency chain (do in order): **Phase0 gltfpack → Phase1 IBL → {Phase2 PBR
+maps, tiering} → Phase3 bevels-before-materials → Phase4 spatial}**. Guardrails:
+mobile budget (≤~150 draws/floor, no SSAO, no added PointLights on mobile,
+procedural maps ≤256px on mobile until gltfpack frees memory); `useLegacyLights`
+means one ambient rebalance when IBL lands; instance only NON-editable clutter
+(merged/instanced meshes lose the editor's `_roomId` tagging); **the finale is a
+fragile scripted chain — any reception/Floor-M spatial change needs the full
+playtest path (admin skip → ch16 → Marcus → elevator → Maya → ceremony)**.
+
+### Increment 1 — COMMITTED + LIVE (`703316c`, cache-bust `play/play.js?v=20260616a`)
+- **See-through office windows (floors 2/3/4)** — `buildFloorOffice` in play.js
+  now builds CURTAIN WALLS (new `addCurtainWall(axis,fixed)`): solid sill
+  (0→0.4) + header (2.4→3.8) band, slim mullions, and 5 transparent glass
+  openings/wall on N/S/W (`officeGlassMaterial()`, shared, `envMapIntensity 1`).
+  East stays solid. New `buildOfficeSkyline(floorIdx)` adds a distant procedural
+  building ring + hazy ground (tagged `userData.floor` for single-floor culling)
+  so windows look onto a city. **Removed all 45 opaque `id:'window'` decorations
+  from data/rooms.js.** Collision unchanged (±17.5 clamp), so openings are safe.
+  NOTE: floor-1 reception windows were ALREADY see-through (`buildReceptionWindows`
+  in depth.js, procedural frame + transparent glass) — left as-is; user should
+  confirm they read fine.
+- **Phase 1 IBL — DONE** — new `play/lighting/envProbe.js` `buildSkyEnvTexture
+  (renderer)`: PMREMGenerator over a procedural equirect sky gradient → returned
+  texture assigned to `scene.environment` in `start()` (after timeOfDay init),
+  disposed in `stop()` (`_envTexture`). Baked ONCE at moderate brightness — NO
+  light rebalance (avoids fighting the 3 hemi-intensity writers: manager
+  _applyImmediate, manager tick, timeOfDay tick). **Tuning knob:** if too
+  hot/cold, pass `{top,horizon,ground}` hex (or dim them) to `buildSkyEnvTexture`
+  in play.js. **Deferred (TA #9):** env regen on zone/time-of-day change — v1
+  bakes one daytime sky; reflections don't track sunset yet.
+- **Ines child voice** (earlier same session, finally deployed here): Azure
+  `en-US-AnaNeural` cloud TTS + raised pitch/rate local fallback; `child` flag in
+  `voiceProfileFor`.
+
+### NEXT / OPEN
+- **AWAITING USER VERIFICATION of the IBL look** before Phase 2 (materials)
+  authoring — per the team's "don't tune materials twice" guardrail. If IBL is
+  too bright, dim the envProbe gradient.
+- **Phase 0 gltfpack BLOCKED**: gltfpack not on the NAS and project is npm-free.
+  Needs a tooling decision (install gltfpack binary, or compress off-box). NOT
+  required for other phases — just the biggest perf win.
+- **Audit harness is DEAD (pre-existing, not from this session)**:
+  `scripts/audit/lib/extract.cjs` throws `NAME_FIRST not found in play.js` at
+  load — play.js's NPC name gen moved to `PEOPLE_POOL` (objects), but extract.cjs
+  still parses `NAME_FIRST`/`NAME_LAST` string arrays. Both audits
+  (data-consistency, spatial) can't run. Shipping on `node --check` + review
+  meanwhile. Fix = rewrite the audit's NPC mirror to read PEOPLE_POOL.
+- Remaining phases (2 materials, 3 geometry/bevels, 4 spatial/cinematic) not yet
+  started. Phase 4 is the user's priority ("push as far as we can"); sequence its
+  finale-coupled bits (spine corridor + NPC repath, ceremony staging, Floor M)
+  behind a coordinated playtest since they can break the scripted finale.
+
 ## LATEST — Audio, voices & wall textures (2026-06-15 session, COMMITTED + LIVE)
 
 All shipped via `nas-deploy` and verified. Current entry cache-bust: **`play/play.js?v=20260615k`** in `index.html`. `voice.js` / `settings.js` / `AudioManager.js` / `zone-presets.js` are served **no-cache** by `save_server.py` (revalidate-on-reload), so edits to them load fresh WITHOUT a `?v=` bump — only the `play.js` entry tag is bumped by convention. **Do not** give the AudioManager.js singleton mismatched `?v=` across importers (forks module state).
