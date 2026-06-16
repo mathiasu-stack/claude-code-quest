@@ -45,7 +45,7 @@ import { SkyDome, getSkyPresetForZone } from './world/sky.js?v=20260615a';
 import { buildReceptionCeiling, buildLibraryCeiling, floorPatternTexture } from './world/ceilings.js?v=20260612c';
 import { buildAtrium } from './world/atrium.js?v=20260528g';
 import { buildElevator } from './world/elevator.js';
-import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260611c';
+import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260616f';
 import { showTitleCard } from './ui/titleCard.js?v=20260610e';
 import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610g';
 import {
@@ -1885,10 +1885,38 @@ function buildCeoPortrait(targetScene) {
   group.add(plaque);
   ceoPlaque = plaque;
 
+  // Gallery niche framing (Phase 4 hero-moment framing): flanking stone
+  // pilasters + a header + a low plinth turn the portrait from "a thing on a
+  // wall" into a composed focal point the player reads on entry. All project
+  // FORWARD (+z local) so they clear the back wall behind. Group-local coords:
+  // the group sits at world y≈2, so the floor is local y≈-2.
+  const stoneMat = new THREE.MeshStandardMaterial({
+    color: 0xe6ddc8, roughness: 0.55, metalness: 0.15, envMapIntensity: 1.0,
+  });
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x6d5a3f, roughness: 0.5, metalness: 0.25 });
+  // Flanking pilasters (floor → above the frame).
+  for (const sx of [-1.55, 1.55]) {
+    const pil = new THREE.Mesh(bevelBox(0.24, 3.6, 0.42, 0.03), stoneMat);
+    pil.position.set(sx, -0.2, 0.14);
+    pil.castShadow = true;
+    group.add(pil);
+  }
+  // Header capping the pilasters.
+  const header = new THREE.Mesh(bevelBox(3.5, 0.34, 0.5, 0.04), stoneMat);
+  header.position.set(0, 1.66, 0.16);
+  header.castShadow = true;
+  group.add(header);
+  // Low plinth on the floor in front — a subtle step up to the portrait.
+  const plinth = new THREE.Mesh(bevelBox(3.4, 0.14, 0.95, 0.03), baseMat);
+  plinth.position.set(0, -1.95, 0.55);
+  plinth.receiveShadow = true;
+  group.add(plinth);
+
   // Warm accent light so the portrait reads as "lit with care" — a small
-  // story beat (PROP-04): someone keeps this corner of reception warm.
-  const warmLight = new THREE.PointLight(0xffd9a0, 0.6, 4);
-  warmLight.position.set(0, 0.4, 0.9);
+  // story beat (PROP-04): someone keeps this corner of reception warm. Bumped
+  // to a wider, slightly stronger pool now that the niche frames it.
+  const warmLight = new THREE.PointLight(0xffd9a0, 0.75, 5.5);
+  warmLight.position.set(0, 0.4, 1.1);
   group.add(warmLight);
 
   // Floating hearts once the finale has been seen (the building's owner

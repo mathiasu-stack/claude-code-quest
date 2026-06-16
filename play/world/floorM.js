@@ -471,6 +471,15 @@ export function buildFloorM({ baseY, floorIndex = 5 }) {
   screenGlow.position.set(3.6, 2.4, Z_MIN + 1.2);
   group.add(screenGlow);
 
+  // Warm key light pooling on Maya's standing spot (center, ~[4.0, -7.6]) —
+  // the terminus of the player's sightline as they exit the elevator on the
+  // east and look across the loft. Makes her the clear focal point of the
+  // reveal against the room's cool screen-spill. Additive; story-critical so
+  // not mobile-gated (one light, brief Floor-M visit).
+  const mayaKey = new THREE.PointLight(0xffc89c, 0.85, 9);
+  mayaKey.position.set(4.3, 2.7, -7.0);
+  group.add(mayaKey);
+
   // ── NAS rack (in-fiction twin of the ch16 box) ─────────────────────
   const rack = makeNasRack();
   rack.group.position.set(-1.9, 0, Z_MIN + 0.75);
