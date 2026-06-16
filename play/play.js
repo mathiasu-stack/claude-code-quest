@@ -4,6 +4,7 @@ import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
 import { buildSkyEnvTexture, disposeEnv } from './lighting/envProbe.js?v=20260616a';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { audio } from './audio/AudioManager.js?v=20260615b';
 import {
   playFootstep, playJumpGrunt, playLandThud,
@@ -1068,6 +1069,17 @@ function makePoster(title, subtitle, w = 1.6, h = 2.2, accent = '#c9a44c') {
 }
 
 // ─── Decor builders ──────────────────────────────────────────────────────────
+// Chamfered box — a drop-in for THREE.BoxGeometry that softens the edges so
+// they catch a highlight (no real edge is perfectly sharp — the #1 "Roblox"
+// tell). Same w/h/d as a box, so proportions and collider footprints are
+// unchanged. 1 segment = a flat 45° chamfer (cheap); radius auto-clamped to
+// thin pieces. Used by the procedural furniture fallbacks + architectural trim.
+function bevelBox(w, h, d, radius) {
+  const r = radius != null ? radius : Math.min(0.03, Math.min(w, h, d) * 0.22);
+  if (r <= 0.004) return new THREE.BoxGeometry(w, h, d);
+  return new RoundedBoxGeometry(w, h, d, 1, r);
+}
+
 function buildChair(x, z, ry = 0, color = 0x37474f) {
   const glb = makeDecoration('chair', { width: 0.6, depth: 0.6, height: 1.1 });
   if (glb) {
@@ -1077,9 +1089,9 @@ function buildChair(x, z, ry = 0, color = 0x37474f) {
   }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.6), mat);
+  const seat = new THREE.Mesh(bevelBox(0.6, 0.1, 0.6), mat);
   seat.position.y = 0.5; seat.castShadow = true; g.add(seat);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.1), mat);
+  const back = new THREE.Mesh(bevelBox(0.6, 0.7, 0.1), mat);
   back.position.set(0, 0.85, -0.25); g.add(back);
   const legGeom = new THREE.BoxGeometry(0.06, 0.5, 0.06);
   const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
@@ -1147,7 +1159,7 @@ function buildDesk(x, z, ry = 0, w = 1.6, d = 0.8, color = 0x6b4f3a) {
   }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color });
-  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), mat);
+  const top = new THREE.Mesh(bevelBox(w, 0.06, d), mat);
   top.position.y = 0.78; top.castShadow = true; top.receiveShadow = true; g.add(top);
   const legGeom = new THREE.BoxGeometry(0.08, 0.78, 0.08);
   const legMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
@@ -1256,11 +1268,11 @@ function buildCouch(x, z, ry = 0) {
   const g = new THREE.Group();
   // Fabric — high roughness, no metalness.
   const mat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.95 });
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 0.8), mat);
+  const seat = new THREE.Mesh(bevelBox(2.2, 0.4, 0.8), mat);
   seat.position.y = 0.4; seat.castShadow = true; g.add(seat);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.2), mat);
+  const back = new THREE.Mesh(bevelBox(2.2, 0.7, 0.2), mat);
   back.position.set(0, 0.75, -0.3); g.add(back);
-  const armGeom = new THREE.BoxGeometry(0.2, 0.6, 0.8);
+  const armGeom = bevelBox(0.2, 0.6, 0.8);
   const lA = new THREE.Mesh(armGeom, mat); lA.position.set(-1.1, 0.55, 0); g.add(lA);
   const rA = new THREE.Mesh(armGeom, mat); rA.position.set(1.1, 0.55, 0); g.add(rA);
   g.position.set(x, 0, z); g.rotation.y = ry;
@@ -1278,7 +1290,7 @@ function buildFilingCabinet(x, z, ry = 0) {
   const g = new THREE.Group();
   // Painted metal — moderate metalness so it catches the directional.
   const mat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, metalness: 0.6, roughness: 0.45 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.5), mat);
+  const body = new THREE.Mesh(bevelBox(0.6, 1.4, 0.5), mat);
   body.position.y = 0.7; body.castShadow = true; g.add(body);
   // drawer lines
   for (let i = 0; i < 3; i++) {
@@ -1345,9 +1357,9 @@ function buildLibraryCounter(x, z, ry = 0) {
   const topMat = new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.55 });
   const brass = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.35 });
 
-  const base = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.95, 0.65), wood);
+  const base = new THREE.Mesh(bevelBox(3.0, 0.95, 0.65), wood);
   base.position.y = 0.475; base.castShadow = true; g.add(base);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.06, 0.85), topMat);
+  const top = new THREE.Mesh(bevelBox(3.2, 0.06, 0.85), topMat);
   top.position.y = 0.98; top.castShadow = true; g.add(top);
 
   // Two inset front panels (left + center); the right section is a
@@ -1401,7 +1413,7 @@ function buildTable(x, z, ry = 0, w = 2.2) {
   }
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x6d4c41 });
-  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, 1.2), mat);
+  const top = new THREE.Mesh(bevelBox(w, 0.06, 1.2), mat);
   top.position.y = 0.78; top.castShadow = true; top.receiveShadow = true; g.add(top);
   const legGeom = new THREE.BoxGeometry(0.08, 0.78, 0.08);
   [[-w/2+0.1,-0.5],[w/2-0.1,-0.5],[-w/2+0.1,0.5],[w/2-0.1,0.5]].forEach(([lx,lz]) => {
@@ -2134,6 +2146,7 @@ let _roomBuildersRegistered = false;
 // generated once and reused across every wall; only the tint differs.
 let _wallMapTex = null;
 let _wallBumpTex = null;
+let _wallRoughTex = null;
 function _buildWallTextures() {
   // Diffuse: white base with faint low-frequency mottle + fine grain.
   // Kept near-white so material.color is preserved (map multiplies colour).
@@ -2183,8 +2196,32 @@ function _buildWallTextures() {
   const bump = new THREE.CanvasTexture(cb);
   bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
 
+  // Roughness: low-frequency gloss variation (buffed vs matte patches) so the
+  // wall doesn't reflect the IBL as one flat sheen. roughnessMap multiplies the
+  // material roughness (we set that to 1.0), reading the green channel. Linear
+  // colour space — NOT sRGB. Range ~0.66..0.94.
+  const cr = document.createElement('canvas');
+  cr.width = cr.height = 256;
+  const gr = cr.getContext('2d');
+  gr.fillStyle = '#cdcdcd';            // ~0.80 base
+  gr.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 16; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256;
+    const r = 40 + Math.random() * 80;
+    const grad = gr.createRadialGradient(x, y, 0, x, y, r);
+    const v = 170 + Math.floor(Math.random() * 70); // 0.66..0.94
+    grad.addColorStop(0, `rgba(${v},${v},${v},0.5)`);
+    grad.addColorStop(1, 'rgba(205,205,205,0)');
+    gr.fillStyle = grad;
+    gr.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  const rough = new THREE.CanvasTexture(cr);
+  rough.colorSpace = THREE.NoColorSpace;
+  rough.wrapS = rough.wrapT = THREE.RepeatWrapping;
+
   _wallMapTex = map;
   _wallBumpTex = bump;
+  _wallRoughTex = rough;
 }
 function makeWallMaterial(color = 0xf4ecd8, metal = 0) {
   if (!_wallMapTex) _buildWallTextures();
@@ -2193,9 +2230,15 @@ function makeWallMaterial(color = 0xf4ecd8, metal = 0) {
     map: _wallMapTex,
     bumpMap: _wallBumpTex,
     bumpScale: 0.04,
+    roughnessMap: _wallRoughTex,
     metalness: (metal || 0) * 0.2,
-    roughness: 0.92,
+    roughness: 1.0,            // modulated down by roughnessMap (~0.66..0.94)
   });
+}
+// Shared accessor so floor plates can borrow the wall roughness variation.
+function wallRoughnessTexture() {
+  if (!_wallRoughTex) _buildWallTextures();
+  return _wallRoughTex;
 }
 
 // Shared tinted glass for the office curtain-wall windows. Low opacity so
@@ -3006,11 +3049,18 @@ function buildFloorOffice(floorIdx) {
   const themeIdx = (floorIdx - 1) * CHAPTERS_PER_FLOOR;
   const theme = ZONE_THEMES[themeIdx] || { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', metal: 0.1, title: floorThemeName(floorIdx) };
 
-  // Floor plate — 36×36
+  // Floor plate — 36×36. A roughness map (tiled wall-gloss variation) gives the
+  // floor buffed/scuffed patches so it catches the IBL as a real polished floor
+  // rather than one flat sheen.
+  const floorRough = wallRoughnessTexture().clone();
+  floorRough.needsUpdate = true;
+  floorRough.wrapS = floorRough.wrapT = THREE.RepeatWrapping;
+  floorRough.repeat.set(FULL / 6, FULL / 6);
   const floorMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(FULL, FULL),
     new THREE.MeshStandardMaterial({
-      color: theme.floor, metalness: theme.metal, roughness: Math.max(0.15, 0.85 - theme.metal),
+      color: theme.floor, metalness: theme.metal,
+      roughness: Math.max(0.15, 0.85 - theme.metal), roughnessMap: floorRough,
     }),
   );
   floorMesh.rotation.x = -Math.PI / 2;
