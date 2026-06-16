@@ -55,23 +55,39 @@ playtest path (admin skip → ch16 → Marcus → elevator → Maya → ceremony
   `en-US-AnaNeural` cloud TTS + raised pitch/rate local fallback; `child` flag in
   `voiceProfileFor`.
 
+### Increment 2 — Audit harness FIXED + green (`bf81dbd`)
+The audit was dead (pre-existing): `scripts/audit/lib/extract.cjs` parsed
+`NAME_FIRST`/`NAME_LAST` string arrays that play.js had replaced with
+`PEOPLE_POOL` (objects). Rewrote the mirror to parse `PEOPLE_POOL` +
+`ROLES_LESSON` and match current seeds (lesson `chapterIdx*11+i*7`, test
+`chapterIdx*11+99`, test pos `cZ+8.5`). Added `nonce` to data-consistency's
+`EVALUATOR_TYPES`. `bash scripts/audit/run-all.sh` → "AUDIT: all clean." again.
+
+### Increment 3 — Phase 4 safe win: office ceiling + baseboard (`3627691`, `?v=20260616b`)
+`buildFloorOffice` (play.js): blank white ceiling → procedural suspended
+acoustic-tile grid (`ceilingTileTexture()`, 0.6 m tiles) + a 4×4 grid of
+emissive recessed light panels (flat quads, catch the post-fx bloom) + a dark
+baseboard band along all 4 walls. All overhead/wall-hug — no collision/NPC/
+finale coupling. Deterministic, mobile-cheap (shared geo/mat).
+
 ### NEXT / OPEN
 - **AWAITING USER VERIFICATION of the IBL look** before Phase 2 (materials)
   authoring — per the team's "don't tune materials twice" guardrail. If IBL is
-  too bright, dim the envProbe gradient.
+  too bright, dim the envProbe gradient (`buildSkyEnvTexture` opts in play.js).
 - **Phase 0 gltfpack BLOCKED**: gltfpack not on the NAS and project is npm-free.
   Needs a tooling decision (install gltfpack binary, or compress off-box). NOT
   required for other phases — just the biggest perf win.
-- **Audit harness is DEAD (pre-existing, not from this session)**:
-  `scripts/audit/lib/extract.cjs` throws `NAME_FIRST not found in play.js` at
-  load — play.js's NPC name gen moved to `PEOPLE_POOL` (objects), but extract.cjs
-  still parses `NAME_FIRST`/`NAME_LAST` string arrays. Both audits
-  (data-consistency, spatial) can't run. Shipping on `node --check` + review
-  meanwhile. Fix = rewrite the audit's NPC mirror to read PEOPLE_POOL.
-- Remaining phases (2 materials, 3 geometry/bevels, 4 spatial/cinematic) not yet
-  started. Phase 4 is the user's priority ("push as far as we can"); sequence its
-  finale-coupled bits (spine corridor + NPC repath, ceremony staging, Floor M)
-  behind a coordinated playtest since they can break the scripted finale.
+- **Phase 4 remaining**, in rough safety order:
+  - SAFE/blind-ok (deterministic geometry): vertical scale + ceiling-height
+    raise (watch camera ceilCap clamp), structural columns (mind collision vs
+    desks), elevator/atrium vertical landmark, floor-identity signage.
+  - VISUAL/needs user eyes: per-zone cinematic lighting mood (zone-presets.js;
+    also fixes dark-library debt) — best tuned WITH the user since it's
+    subjective and layered on the unverified IBL.
+  - FINALE-COUPLED (needs the user to run the finale playtest after): spine
+    corridor + NPC waypoint repath (liveAgents), CEO-portrait niche + ceremony
+    staging in reception, Floor M reveal composition.
+- Phases 2 (materials) and 3 (bevels/arch-kit/instancing) not yet started.
 
 ## LATEST — Audio, voices & wall textures (2026-06-15 session, COMMITTED + LIVE)
 
