@@ -118,9 +118,22 @@ LESSON: the IBL reflections only look good on TRULY low-roughness hero surfaces
 (marble/glass/metal). Do NOT lower roughness on big diffuse surfaces (walls/
 floors) — they bloom out. Keep their envMapIntensity low.
 
+### Increment 8 — finale lobby camera fix (`43c89f0`, `?v=20260616h`)
+Finale rode player to floor 1, default spawn = east elevator (x=10) facing west
+into reception's SHORT (1–1.8m) window-wall segments, which camera occlusion
+(only catches walls ≥2.5m) can't see → chase cam backed through → showed wall.
+Fix: one-shot `_spawnOverride` consumed by `spawnPlayerOnFloor`; finale sets it
+to lobby vantage (1, 2.5) facing north (cast+portrait), camera lands inside.
+Under the ride fade (no teleport). Normal rides unchanged.
+KNOWN (pre-existing, low-pri): any NON-finale elevator ride DOWN to reception
+hits the same east-wall camera issue. Broader fix = lower the cameraWalls `tall`
+threshold (~1.6) or clamp camera to floor interior — deferred (furniture-occlude
+risk). The "Locked — internal" files are STORY collectibles (Cycle Reports +
+learnings fragments), tier-gated (mostly unlockTier 5); optional lore.
+
 ### NEXT / OPEN
-- **Verify:** the finale is visible again + no white wash; portrait niche reads
-  ok (now matte). If under-glowy, relax the bloom clamp in composer.js.
+- **Verify:** finale reveal now frames the lobby (not a wall); light still good.
+- If under-glowy anywhere, relax the bloom clamp in composer.js.
   Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
   to tune the deferred cast staging together.
 - **IBL CONFIRMED GOOD** → Phase 2 done (roughness maps + color grade). Optional
