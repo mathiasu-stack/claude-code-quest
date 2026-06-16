@@ -144,9 +144,19 @@ After finale (tier T7), revisiting any character plays a NEW arc-aware line.
 - NOT covered (by design): pure background/ambient flavor NPCs (folderman/tania/
   ambient workers) keep their stock intros — not "characters we interacted with".
 
+### Increment 10 — generic flavor T7 lines + violin harmony (`d16d433`, `?v=20260616j`)
+- Post-finale flavor NPCs: `genericFlavorPostFinaleLine` + hook in openDialogue's
+  intro path (`isFlavor && tier>=7`, skips bespoke-T7 ines/maya, resets carried
+  sting/hero). Now EVERY talkable character has a post-finale line.
+- Violin harmony (`play/audio/proceduralMusic.js`): new `playViolinNote` bowed
+  voice (2 detuned saws + lowpass + vibrato, slow attack/sustain) scheduled in
+  `scheduleBar` as a sustained counter-melody over the 4-chord piano —
+  `VIOLIN_PHRASE` chord-tone contour, a register above the piano, quieter so it
+  harmonises not doubles. All 4 zone tracks. Single-importer + no-cache.
+
 ### NEXT / OPEN
-- **Verify:** finale reveal now frames the lobby (not a wall); light still good;
-  post-finale, talk to NPCs → fresh arc-aware lines.
+- **Verify:** finale reveal frames the lobby; light good; post-finale every NPC
+  has a fresh line; music now has piano + violin harmony in all zones.
 - If under-glowy anywhere, relax the bloom clamp in composer.js.
   Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
   to tune the deferred cast staging together.
