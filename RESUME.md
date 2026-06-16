@@ -131,8 +131,22 @@ threshold (~1.6) or clamp camera to floor interior — deferred (furniture-occlu
 risk). The "Locked — internal" files are STORY collectibles (Cycle Reports +
 learnings fragments), tier-gated (mostly unlockTier 5); optional lore.
 
+### Increment 9 — Post-finale (T7) dialogue for every character (`61672e8`, `?v=20260616i`)
+After finale (tier T7), revisiting any character plays a NEW arc-aware line.
+- play.js `postFinaleLineFor(npc)` + done-intro hook (`tier >= 7` branch in
+  openDialogue, after the doneIntroByTier check): topical fallback naming the
+  NPC's lesson/chapter, varied by id-hash across 5 lesson + 3 test templates.
+  Covers ALL ~80 lesson/test NPCs automatically (all are `done` at T7).
+- Bespoke `doneIntroByTier: { T7 }` in story_lines.js for the named cast: linda,
+  kenji, aisha, sarah, elena, auto-ch10-l01 (Engelhardt), auto-ch14-l01 (Okoye),
+  auto-ch15-l01 (Vasquez), auto-ch16-l05 (capstone), + new `marcus` entry.
+  ines/maya/newhire already had T7 introByTier (flavor → intro slot, not done).
+- NOT covered (by design): pure background/ambient flavor NPCs (folderman/tania/
+  ambient workers) keep their stock intros — not "characters we interacted with".
+
 ### NEXT / OPEN
-- **Verify:** finale reveal now frames the lobby (not a wall); light still good.
+- **Verify:** finale reveal now frames the lobby (not a wall); light still good;
+  post-finale, talk to NPCs → fresh arc-aware lines.
 - If under-glowy anywhere, relax the bloom clamp in composer.js.
   Floor M reveal (on a Floor-M visit); run the finale to check the ceremony +
   to tune the deferred cast staging together.
