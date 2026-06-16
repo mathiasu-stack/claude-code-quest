@@ -3128,6 +3128,25 @@ function buildFloorOffice(floorIdx) {
   addBox(0.08, baseH, FULL, -baseInset, baseH / 2, 0, baseMat);
   addBox(0.08, baseH, FULL,  baseInset, baseH / 2, 0, baseMat);
 
+  // Perimeter cove lighting — a recessed soffit lip near the top of each wall
+  // with a warm emissive strip tucked above it, uplighting the ceiling edge.
+  // Reads as modern office indirect lighting and catches the post-fx bloom.
+  // Overhead/wall-hug only, so no collision. Shared materials.
+  const coveLipMat = new THREE.MeshStandardMaterial({ color: 0xd9d2c4, roughness: 0.85 });
+  const coveGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xfff2d8, emissive: 0xffdca6, emissiveIntensity: 1.2, roughness: 0.5,
+  });
+  const coveInset = H - 0.45, coveY = wallH - 0.5, glowY = wallH - 0.34, span = FULL - 1.2;
+  // lip (solid shelf) + glow strip (above, emissive) per wall
+  addBox(span, 0.16, 0.34, 0, coveY, -coveInset, coveLipMat);
+  addBox(span, 0.06, 0.12, 0, glowY, -coveInset + 0.02, coveGlowMat);
+  addBox(span, 0.16, 0.34, 0, coveY,  coveInset, coveLipMat);
+  addBox(span, 0.06, 0.12, 0, glowY,  coveInset - 0.02, coveGlowMat);
+  addBox(0.34, 0.16, span, -coveInset, coveY, 0, coveLipMat);
+  addBox(0.12, 0.06, span, -coveInset + 0.02, glowY, 0, coveGlowMat);
+  addBox(0.34, 0.16, span,  coveInset, coveY, 0, coveLipMat);
+  addBox(0.12, 0.06, span,  coveInset - 0.02, glowY, 0, coveGlowMat);
+
   // Distant skyline so the new windows look onto a city, not the void.
   buildOfficeSkyline(floorIdx);
 

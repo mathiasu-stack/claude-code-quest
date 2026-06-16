@@ -22,12 +22,18 @@ import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
 
-// Combined vignette + film-grain shader. One pass to keep cost down on mobile.
+// Combined colour-grade + vignette + film-grain shader. One pass to keep cost
+// down on mobile. The grade (contrast/saturation/temperature) turns flat ACES
+// output into a subtly more cinematic image; defaults are deliberately gentle
+// so they polish rather than restyle. Each is per-zone tunable via applyPreset.
 const VignetteGrainShader = {
   uniforms: {
     tDiffuse:  { value: null },
     uVignette: { value: 0.4 },
     uGrain:    { value: 0.0 },
+    uContrast:    { value: 1.05 },   // 1 = neutral
+    uSaturation:  { value: 1.06 },   // 1 = neutral
+    uTemperature: { value: 0.012 },  // 0 = neutral; + = warmer
     uTime:     { value: 0.0 },
     uResolution: { value: new THREE.Vector2(1, 1) },
   },
@@ -42,6 +48,9 @@ const VignetteGrainShader = {
     uniform sampler2D tDiffuse;
     uniform float uVignette;
     uniform float uGrain;
+    uniform float uContrast;
+    uniform float uSaturation;
+    uniform float uTemperature;
     uniform float uTime;
     uniform vec2  uResolution;
     varying vec2  vUv;
@@ -53,6 +62,16 @@ const VignetteGrainShader = {
 
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
+
+      // ── colour grade ──
+      // contrast around mid-grey
+      c.rgb = (c.rgb - 0.5) * uContrast + 0.5;
+      // saturation around luma
+      float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      c.rgb = mix(vec3(luma), c.rgb, uSaturation);
+      // temperature (warm up reds, cool down blues — or vice-versa)
+      c.rgb *= vec3(1.0 + uTemperature, 1.0, 1.0 - uTemperature);
+      c.rgb = clamp(c.rgb, 0.0, 1.0);
 
       // vignette (smooth radial darkening from corners)
       vec2 d = vUv - 0.5;
@@ -107,6 +126,12 @@ export class PostFxPipeline {
     if (typeof postfx.bloomRadius === 'number')    this.bloom.radius    = postfx.bloomRadius;
     if (typeof postfx.bloomThreshold === 'number') this.bloom.threshold = postfx.bloomThreshold;
     if (typeof postfx.vignette === 'number')       this.vignettePass.material.uniforms.uVignette.value = postfx.vignette;
+    // Colour-grade keys are optional per zone; absent → keep the gentle global
+    // defaults set in the shader uniforms.
+    const u = this.vignettePass.material.uniforms;
+    if (typeof postfx.contrast === 'number')    u.uContrast.value = postfx.contrast;
+    if (typeof postfx.saturation === 'number')  u.uSaturation.value = postfx.saturation;
+    if (typeof postfx.temperature === 'number') u.uTemperature.value = postfx.temperature;
     if (typeof postfx.grain === 'number') {
       const g = this.mobile ? 0.0 : postfx.grain; // perf: no grain on mobile
       this.vignettePass.material.uniforms.uGrain.value = g;
