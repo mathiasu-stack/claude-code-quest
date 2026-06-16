@@ -3088,7 +3088,7 @@ function buildFloorOffice(floorIdx) {
   // Recessed light panels — a 4×4 grid of slightly-dropped emissive troffers.
   // Emissive so the post-fx bloom gives them a soft glow; cheap flat quads.
   const panelMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff, emissive: 0xfff4e0, emissiveIntensity: 0.9, roughness: 0.6,
+    color: 0xffffff, emissive: 0xfff4e0, emissiveIntensity: 0.4, roughness: 0.6,
   });
   const panelGeo = new THREE.PlaneGeometry(1.6, 1.6);
   for (let gx = -1.5; gx <= 1.5; gx++) {
@@ -3184,7 +3184,7 @@ function buildFloorOffice(floorIdx) {
   // Overhead/wall-hug only, so no collision. Shared materials.
   const coveLipMat = new THREE.MeshStandardMaterial({ color: 0xd9d2c4, roughness: 0.85 });
   const coveGlowMat = new THREE.MeshStandardMaterial({
-    color: 0xfff2d8, emissive: 0xffdca6, emissiveIntensity: 1.2, roughness: 0.5,
+    color: 0xfff2d8, emissive: 0xffdca6, emissiveIntensity: 0.45, roughness: 0.5,
   });
   const coveInset = H - 0.45, coveY = wallH - 0.5, glowY = wallH - 0.34, span = FULL - 1.2;
   // lip (solid shelf) + glow strip (above, emissive) per wall
