@@ -613,6 +613,11 @@ let liveAgents = null;
 // CURTAIN-01: while performance.now() < curtainUntil, visible floor-1
 // NPCs turn to face the elevator (first F1→F2 ride only).
 let curtainUntil = 0;
+// One-shot spawn override consumed by spawnPlayerOnFloor — lets the finale
+// land the player at a lobby vantage (facing the cast/portrait) instead of the
+// default east-elevator exit, which faces the short window wall the camera
+// occlusion can't catch (so the chase cam would otherwise show that wall).
+let _spawnOverride = null;
 let nameTags = null;
 let occluderWalls = [];
 // Wall meshes collected after build, used by the camera to clamp distance
@@ -5263,6 +5268,11 @@ function _removeFinaleCast() {
 // requestFloorChange resolves before its inner ride timeout (1600ms for
 // M-rides) flips the floor, so the ceremony is staged on a padded delay.
 async function _startFinaleChain() {
+  // Land in the lobby at a central vantage facing north (toward the cast +
+  // portrait), so the ceremony reveal frames the crowd — not the short east
+  // window wall the chase camera would otherwise back into. Consumed by
+  // spawnPlayerOnFloor inside the ride below (under the fade, so no teleport).
+  _spawnOverride = { x: 1.0, z: 2.5, yaw: Math.PI };
   await requestFloorChange(1);
   setTimeout(() => {
     _spawnFinaleCast();
@@ -7284,11 +7294,16 @@ async function requestFloorChange(targetFloor) {
 // stepping west into the office. Also snaps the camera.
 function spawnPlayerOnFloor(f) {
   if (!player) return;
-  player.position.set(10.0, floorBaseY(f), -7.6);
+  let ex = 10.0, ez = -7.6, eyaw = -Math.PI / 2; // default: east elevator, face west
+  if (_spawnOverride) {
+    ex = _spawnOverride.x; ez = _spawnOverride.z; eyaw = _spawnOverride.yaw;
+    _spawnOverride = null;
+  }
+  player.position.set(ex, floorBaseY(f), ez);
   player.userData.velocityY = 0;
   player.userData.grounded = true;
-  player.rotation.y = -Math.PI / 2; // face west (into the floor)
-  cameraYaw = -Math.PI / 2;
+  player.rotation.y = eyaw;
+  cameraYaw = eyaw;
   if (camera) {
     const camDist = cameraDist;
     camera.position.x = player.position.x - Math.sin(cameraYaw) * camDist;
