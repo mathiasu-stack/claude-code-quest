@@ -199,7 +199,11 @@ const AZ_VOICES = {
   'en-NG': { male: ['en-NG-AbeoNeural'], female: ['en-NG-EzinneNeural'] },
   'en-HK': { male: ['en-HK-SamNeural'], female: ['en-HK-YanNeural'] },
 };
+// Azure's only child neural voice is the en-US girl 'Ana' — used for Ines
+// regardless of accent bucket (no child voices exist in the other locales).
+const AZ_CHILD_VOICE = 'en-US-AnaNeural';
 function azureVoiceFor(opts) {
+  if (opts.child) return AZ_CHILD_VOICE;
   const bucket = AZ_VOICES[opts.lang] || AZ_VOICES['en-US'];
   const g = opts.gender === 'male' ? 'male' : 'female'; // unknown → female
   const list = bucket[g] || bucket.female || bucket.male;
@@ -334,7 +338,11 @@ function speakLocal(spoken, opts = {}) {
     //    only a GENTLE shift; these voices stay natural through ±0.15.
     //  • No gender match AND a low-quality local voice → last-resort stronger
     //    shift so a male at least reads male (accept some artificiality).
-    if (opts.gender && !matchedGender) {
+    if (opts.child) {
+      // No on-device child voices exist — raise pitch decisively so the local
+      // fallback at least reads as a young girl rather than a grown woman.
+      u.pitch = quality >= 4 ? 1.5 : 1.7;
+    } else if (opts.gender && !matchedGender) {
       const gentle = quality >= 4; // neural / network voice tolerates less shift
       if (opts.gender === 'male')   u.pitch = gentle ? 0.82 : 0.6;
       else                          u.pitch = gentle ? 1.18 : 1.32;
@@ -344,7 +352,8 @@ function speakLocal(spoken, opts = {}) {
     }
     // Slight per-character rate variation so same-voice characters differ.
     const rateJitter = (((hashSeed(opts.id || '') % 14)) - 7) / 100; // -0.07..+0.06
-    u.rate = Math.max(0.9, Math.min(1.08, (opts.whisper ? 0.94 : 1.0) + rateJitter));
+    const baseRate = (opts.whisper ? 0.94 : 1.0) + (opts.child ? 0.06 : 0);
+    u.rate = Math.max(0.9, Math.min(1.12, baseRate + rateJitter));
     // Follow the Voice slider (× master). Whisper lines a touch quieter.
     u.volume = effectiveVoiceVolume() * (opts.whisper ? 0.75 : 1.0);
 

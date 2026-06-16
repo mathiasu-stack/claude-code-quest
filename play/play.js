@@ -3,6 +3,7 @@ import { LightingManager } from './lighting/manager.js?v=20260615a';
 import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
+import { buildSkyEnvTexture, disposeEnv } from './lighting/envProbe.js?v=20260616a';
 import { audio } from './audio/AudioManager.js?v=20260615b';
 import {
   playFootstep, playJumpGrunt, playLandThud,
@@ -605,6 +606,7 @@ let skyDome = null;
 let receptionWindows = null;
 let libraryWindow = null;
 let receptionHallway = null;
+let _envTexture = null;   // IBL environment map (scene.environment)
 let timeOfDay = null;
 let liveAgents = null;
 // CURTAIN-01: while performance.now() < curtainUntil, visible floor-1
@@ -2196,6 +2198,63 @@ function makeWallMaterial(color = 0xf4ecd8, metal = 0) {
   });
 }
 
+// Shared tinted glass for the office curtain-wall windows. Low opacity so
+// the skyline reads through; high envMapIntensity so it picks up the IBL
+// reflection once scene.environment is set.
+let _officeGlassMat = null;
+function officeGlassMaterial() {
+  if (!_officeGlassMat) {
+    _officeGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xbcd6ee, transparent: true, opacity: 0.16,
+      metalness: 0.3, roughness: 0.04, envMapIntensity: 1.0,
+      depthWrite: false, side: THREE.DoubleSide,
+    });
+  }
+  return _officeGlassMat;
+}
+
+// Distant city ring + ground far below, so the office windows look onto a
+// skyline instead of empty skydome. Tagged with the floor so single-floor
+// culling hides it on other floors. Buildings sit on absolute world ground
+// (y≈0); the office plate is several metres up, so the view reads as "high
+// in a tower".
+let _officeSkylineMats = null;
+function buildOfficeSkyline(floorIdx) {
+  if (!_officeSkylineMats) {
+    _officeSkylineMats = [0x2c3e50, 0x34495e, 0x29333f, 0x3d4d5d].map((c) =>
+      new THREE.MeshStandardMaterial({
+        color: c, roughness: 0.7, metalness: 0.25,
+        emissive: c, emissiveIntensity: 0.14,
+      }));
+  }
+  const group = new THREE.Group();
+  group.userData.floor = floorIdx;
+  // Hazy ground far below the tower.
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(120, 40),
+    new THREE.MeshStandardMaterial({ color: 0x4a5a52, roughness: 0.96 }),
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  group.add(ground);
+  const N = isMobile() ? 22 : 34;
+  for (let i = 0; i < N; i++) {
+    const ang = (i / N) * Math.PI * 2 + (Math.random() - 0.5) * 0.18;
+    const rad = 44 + Math.random() * 26;          // 44..70 m out
+    const w = 3 + Math.random() * 6;
+    const d = 3 + Math.random() * 6;
+    const h = 12 + Math.random() * 40;            // 12..52 m tall
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      _officeSkylineMats[i % _officeSkylineMats.length],
+    );
+    m.position.set(Math.cos(ang) * rad, h / 2, Math.sin(ang) * rad);
+    m.rotation.y = ang;
+    group.add(m);
+  }
+  scene.add(group);
+}
+
 function registerRoomBuilders() {
   if (_roomBuildersRegistered) return;
   _roomBuildersRegistered = true;
@@ -2939,15 +2998,67 @@ function buildFloorOffice(floorIdx) {
     m.userData.floor = floorIdx;
     scene.add(m);
   }
+  // Box helper with an explicit y-CENTER (relative to the floor base), used
+  // by the curtain-wall builder below where pieces don't sit on the floor.
+  function addBox(w, h, d, x, yCenter, z, mat = wallMat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y0 + yCenter, z);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData.floor = floorIdx;
+    scene.add(m);
+    return m;
+  }
 
   // ── Outer perimeter — 36 m per side ────────────────────────────────
-  // North, south, west walls — solid.
-  addWall(FULL, wallH, 0.3, 0, -H);
-  addWall(FULL, wallH, 0.3, 0,  H);
-  addWall(0.3, wallH, FULL, -H, 0);
-  // East wall — solid (elevator no longer punches through it; the
-  // shaft is now an interior column).
+  // North, south, west walls are CURTAIN WALLS: a solid sill + header band
+  // with 5 transparent window openings each, so upper floors look out onto
+  // the skyline (built below) instead of a flat opaque wall. The old opaque
+  // GLB `window` decorations in data/rooms.js are removed in favour of this.
+  // Player containment is the ±17.5 clamp in clampMove, so the openings
+  // carry NO collision risk.
+  const WIN_OFFSETS = [-15, -7.5, 0, 7.5, 15];
+  const WIN_W = 2.4, WIN_H = 2.0, WIN_CY = 1.4;   // matches the former decorations
+  const SILL_TOP = WIN_CY - WIN_H / 2;            // 0.4
+  const HEAD_BOT = WIN_CY + WIN_H / 2;            // 2.4
+  const WALL_T = 0.3;
+  function addCurtainWall(axis, fixed) {
+    // axis 'x' → wall runs along X at z=fixed (north/south);
+    // axis 'z' → wall runs along Z at x=fixed (west).
+    const horiz = axis === 'x';
+    // Sill (floor→0.4) and header (2.4→top) run the full length.
+    const band = (h, yc, w, c) => horiz
+      ? addBox(w, h, WALL_T, c, yc, fixed)
+      : addBox(WALL_T, h, w, fixed, yc, c);
+    band(SILL_TOP, SILL_TOP / 2, FULL, 0);
+    band(wallH - HEAD_BOT, HEAD_BOT + (wallH - HEAD_BOT) / 2, FULL, 0);
+    // Solid pillars in the gaps between window openings.
+    let prev = -H;
+    for (const o of WIN_OFFSETS) {
+      const left = o - WIN_W / 2;
+      if (left > prev + 0.01) band(WIN_H, WIN_CY, left - prev, (prev + left) / 2);
+      prev = o + WIN_W / 2;
+    }
+    if (H > prev + 0.01) band(WIN_H, WIN_CY, H - prev, (prev + H) / 2);
+    // Transparent glass + a thin centre mullion per opening.
+    for (const o of WIN_OFFSETS) {
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W, WIN_H), officeGlassMaterial());
+      const gx = horiz ? o : fixed, gz = horiz ? fixed : o;
+      glass.position.set(gx, y0 + WIN_CY, gz);
+      if (!horiz) glass.rotation.y = Math.PI / 2;
+      glass.renderOrder = 2;            // after the skyline (renderOrder 0)
+      glass.userData.floor = floorIdx;
+      scene.add(glass);
+      band(WIN_H, WIN_CY, 0.06, o);     // slim mullion through the glass
+    }
+  }
+  addCurtainWall('x', -H);   // south
+  addCurtainWall('x',  H);   // north
+  addCurtainWall('z', -H);   // west
+  // East wall — solid (elevator shaft sits as an interior column near it).
   addWall(0.3, wallH, FULL,  H, 0);
+
+  // Distant skyline so the new windows look onto a city, not the void.
+  buildOfficeSkyline(floorIdx);
 
   // Internal walls are now per-floor and live in data/rooms.js as
   // `wall` entries under each office_floor{N} room. That lets each
@@ -5398,7 +5509,10 @@ function voiceProfileFor(npc) {
   else if (/african/.test(r)) lang = 'en-NG';
   else if (/easian/.test(r)) lang = 'en-HK';
   else if (/arab|hijab/.test(r)) lang = 'en-GB';
-  return { gender, lang, id };
+  // Ines is a 9-year-old — she gets a child voice (cloud child-neural, or a
+  // raised-pitch on-device fallback) instead of an adult woman's.
+  const child = /\bines\b/.test(s);
+  return { gender, lang, id, child };
 }
 
 function startTypewriter(el, text, pitch = 1.0, onDone = null) {
@@ -5407,7 +5521,7 @@ function startTypewriter(el, text, pitch = 1.0, onDone = null) {
   // Guarded so any SpeechSynthesis failure never breaks the dialogue.
   const vp = _currentVoiceProfile || {};
   _currentVoiceProfile = null;   // one-shot
-  try { speakLine(text, { pitch, gender: vp.gender, lang: vp.lang, id: vp.id }); } catch {}
+  try { speakLine(text, { pitch, gender: vp.gender, lang: vp.lang, id: vp.id, child: vp.child }); } catch {}
   el.textContent = '';
   let i = 0;
   let blipCounter = 0;
@@ -6632,6 +6746,14 @@ export async function start(host) {
   // Time-of-day modulates the current preset (intensity, sun, sky, exposure).
   timeOfDay = new TimeOfDay({ lighting, skyDome, renderer, receptionWindows });
   timeOfDay.tick(performance.now());
+  // Image-based lighting (Phase 1): a prefiltered sky env map so every
+  // MeshStandardMaterial gains real reflections (marble, glass, brass, metal).
+  // Baked once at a moderate brightness — see envProbe.js for why no light
+  // rebalance is needed. Guarded so a PMREM failure never breaks world entry.
+  try {
+    if (!_envTexture && renderer) _envTexture = buildSkyEnvTexture(renderer);
+    if (_envTexture) scene.environment = _envTexture;
+  } catch (e) { console.warn('IBL env build failed', e); }
   // Live world: routines for Marcus/Aisha/Linda + a few ambient workers.
   // The ambient workers double as E-to-talk flavor NPCs (SYS-04) — they
   // get name tags + act-gated lines and register into npcMeshes.
@@ -7087,6 +7209,8 @@ export function stop() {
   lastZoneIdx = -1;
   footstepAccum = 0;
   decoTickers = [];
+  try { disposeEnv(_envTexture); } catch {}
+  _envTexture = null;
   renderer = null; scene = null; camera = null;
   _objRing = null; // disposed with the scene above; rebuilt on next start()
   clearInteractables();
