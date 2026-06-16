@@ -5425,6 +5425,10 @@ function openDialogue(npc) {
       const doneOv = resolveByTier(story?.doneIntroByTier, tier);
       if (doneOv) {
         introText = normLine(doneOv.value);
+      } else if (tier >= 7) {
+        // Post-finale: every completed NPC without a bespoke T7 line still gets
+        // a fresh, topical acknowledgment of what we did together.
+        introText = postFinaleLineFor(npc);
       } else if (introText === npc.intro) {
         const first = (npc.name || '').split(' ')[0] || 'Hey';
         introText = `"Good to see you again, friend. You've already got the ${npc.kind === 'test' ? 'assessment' : 'lesson'} behind you — what's next?" — ${first}`;
@@ -5547,6 +5551,38 @@ function getLessonTitle(npc) {
   const ch = window.CURRICULUM?.find(c => c.id === npc.chapterId);
   const l = ch?.lessons.find(x => x.id === npc.lessonId);
   return l?.title || '';
+}
+
+// Post-finale (T7) catch-up line for any completed lesson/test NPC without a
+// bespoke doneIntroByTier T7 in story_lines.js. References what they taught /
+// assessed so the revisit lands as "we did this together", varied by id so the
+// ~80 generated NPCs don't all say the same sentence. Named-cast lines in
+// story_lines.js override this for arc-specific resonance.
+const _POSTFINALE_LESSON = [
+  (lt, n) => `"VP of AI — and to think we started with ${lt}." (a real grin) "You kept every small thing we practised. That was the whole trick." — ${n}`,
+  (lt, n) => `"People keep saying you changed this place. I just remember teaching you ${lt} and watching it land. Proud of you, genuinely." — ${n}`,
+  (lt, n) => `"Look at that badge. The ${lt} work? One brick in it — and you laid every brick yourself." — ${n}`,
+  (lt, n) => `"Most folks forget ${lt} the week after. You built on it. That's why you're up there and we're down here, cheering." — ${n}`,
+  (lt, n) => `"We worked through ${lt} when you were brand new. Different building now. Same you, though — good to see you back down here." — ${n}`,
+];
+const _POSTFINALE_TEST = [
+  (ct, n) => `"I signed off your ${ct} practical. Didn't realise I was signing off a future VP of AI." (shakes head, grinning) "Earned, every bit." — ${n}`,
+  (ct, n) => `"You passed ${ct} clean, and never coasted after. That's the whole difference. Congratulations — truly." — ${n}`,
+  (ct, n) => `"The ${ct} assessment was just one gate. You walked through all of them. Go on — you've earned the spin chair." — ${n}`,
+];
+function _idHash(s) {
+  let h = 0;
+  for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function postFinaleLineFor(npc) {
+  const first = (npc.name || 'A friend').split(' ')[0] || 'A friend';
+  if (npc.kind === 'test') {
+    const ct = window.CURRICULUM?.find(c => c.id === npc.chapterId)?.title || 'that chapter';
+    return _POSTFINALE_TEST[_idHash(npc.id) % _POSTFINALE_TEST.length](ct, first);
+  }
+  const lt = getLessonTitle(npc) || 'those early lessons';
+  return _POSTFINALE_LESSON[_idHash(npc.id) % _POSTFINALE_LESSON.length](lt, first);
 }
 
 // PORT-01 — swap a dlg-portrait's emoji for the rendered face. No-op (emoji

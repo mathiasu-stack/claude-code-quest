@@ -46,6 +46,7 @@ window.STORY_LINES = {
       T0: '"Settling in, sweetheart? Don\'t forget — first lesson done, hundreds of small wins ahead. Drop by anytime you need the company line."',
       T2: '"Three weeks in and not one of your colleagues has remembered to thank me for the badge. I keep score, you know."',
       T6: '"You\'re showing me you\'re different. I like that. Don\'t change."',
+      T7: '"I printed your very first badge. I\'d like to reprint this one myself — \'VP of AI\' is a lot of letters, but I\'ll make them fit." (and for once she isn\'t joking) "I knew the day the ink dried, sweetheart. Knowing is the entire job."',
     },
   },
 
@@ -59,6 +60,7 @@ window.STORY_LINES = {
     doneIntroByTier: {
       T0: '"You got the tour down. Cool. Cool cool cool." (he\'s tapping a rhythm I haven\'t heard before.)',
       T3: '"You\'ve been asking the right questions. Most people don\'t. Or they ask once and stop." (the tapping stops.)',
+      T7: '"You went all the way to the top. And you came back down to the IT bench to say hi to me." (the tapping stops for good) "Nobody who made it ever did that. That\'s how I knew it was finally gonna be you."',
     },
   },
 
@@ -68,6 +70,9 @@ window.STORY_LINES = {
         text: '"You did better than the last one." (she straightens, badge catching the light) "Don\'t mention this. To anyone. Especially not to me."',
         heroThought: 'The last one. People here keep almost saying a name.',
       },
+    },
+    doneIntroByTier: {
+      T7: '"I told you never to mention the \'last one.\' I can finally say it: there was one. Six, actually. You\'re the one who stayed long enough to be the last." (she lets herself smile, fully, for the first time) "Better than all of them. I can say that part out loud now too."',
     },
   },
 
@@ -111,6 +116,7 @@ window.STORY_LINES = {
     doneIntroByTier: {
       T0: '"You\'ve got the basics down. The fancy stuff is just more of the basics, stacked." (she pats the monitor like it\'s a horse.)',
       T2: '"You\'re using shortcuts I haven\'t shown you yet. That\'s either talent or familiarity. I love talent."',
+      T7: '"The keybindings you inherited pre-worn? They\'re yours now — worn in by you. Leave them strange for whoever sits here next." (a pause, a real smile) "...if there\'s a next. Feels like maybe there doesn\'t have to be one anymore."',
     },
   },
 
@@ -147,6 +153,9 @@ window.STORY_LINES = {
     },
     nextHintByTier: {
       T2: '"Did I call you something? I teach the same chapter to a lot of bright young people. The names compost. The *material* keeps."',
+    },
+    doneIntroByTier: {
+      T7: '"I called you Dana, that first day. I remember your real name now." (a beat — no glitch this time) "Everyone\'s, actually. The names stopped composting the moment you fixed what this place was doing to them."',
     },
   },
 
@@ -333,6 +342,9 @@ window.STORY_LINES = {
         heroReply: '"That\'s the calmest terrifying thing anyone has ever said to me. Let\'s begin."',
       },
     },
+    doneIntroByTier: {
+      T7: '"You knew when to spend Opus and when Haiku would do. That was the whole interview, and you passed it cheaply — exactly as instructed. The founder only ever wanted the one who\'d be boring on purpose. Congratulations, VP." (the smallest nod) "Now be boring for a very long time."',
+    },
   },
 
   'auto-ch10-l04': {
@@ -373,6 +385,9 @@ window.STORY_LINES = {
         heroThought: 'Forty people. She wrote every one of them down.',
       },
     },
+    doneIntroByTier: {
+      T7: '"Forty people lived on that board once; one woman wrote them all down and vanished into the result. You\'re the first who learned to delegate without disappearing into it. The hidden dependency isn\'t hidden anymore — it\'s you, and you keep showing up." (he moves a card to DONE) "That\'s the whole thesis. Well done, VP."',
+    },
   },
 
   'auto-ch14-l03': {
@@ -385,6 +400,9 @@ window.STORY_LINES = {
     introByTier: {
       // Rena Vasquez. Verbatim §3 ch15.
       T5: '"Vasquez. No relation to the library Vasquez — the casting budget ran out of surnames, yes, hilarious, moving on. Three settings files, strict precedence. Learn the precedence. Everything that has ever gone wrong in this building was a precedence problem: what she allowed, what she should have asked about, what she never denied herself."',
+    },
+    doneIntroByTier: {
+      T7: '"Your precedence held. Allow, ask, deny — you wrote yours like it was the last one, and it was. Six candidates couldn\'t, and this building remembers every one of them. You were the seventh. You\'re the last." (she closes the card she always reads from) "The allowlist was worth it. It usually isn\'t. This time it was."',
     },
   },
 
@@ -425,6 +443,16 @@ window.STORY_LINES = {
         text: '"Last lesson I\'ve got. When you write the CLAUDE.md for a machine nobody watches, write it like a letter to a stranger who\'ll find it in three years. Because that is *exactly* what it is. Trust me on this one. I found hers."',
         heroReply: '"I read hers too. Let\'s write one nobody has to find."',
       },
+    },
+    doneIntroByTier: {
+      T7: '"We wrote one nobody has to find — and somebody will, in three years, and it\'ll still be true. That\'s the job now." (he means the whole job.) "Go on, VP. The NAS\'ll keep the lights on while you sleep. First time that\'s been true for anyone here."',
+    },
+  },
+
+  // ——— Reception IT bench (Marcus) — post-finale only ———
+  marcus: {
+    doneIntroByTier: {
+      T7: '"That box in the corner I dust every week? It outlived everyone who said it wouldn\'t. So will the letter you wrote it in week sixteen." (he almost smiles) "VP of AI — and you still know the server by name. That\'s the part that actually matters, kid."',
     },
   },
 
