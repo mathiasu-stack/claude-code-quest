@@ -26,6 +26,70 @@ function noteToMidi(name) {
   return (parseInt(m[3], 10) + 1) * 12 + _NOTE_BASE[m[1]] + (m[2] ? 1 : 0);
 }
 
+// ── Real instrument samples (multisampled, pitch-shifted) ───────────────────
+// A handful of recorded notes per instrument, played at the nearest sample plus
+// a playbackRate pitch shift. Loaded once, lazily, on first start(). If they
+// fail to load (offline / 404), the oscillator voices below are used instead —
+// so the music never breaks (the "no 404s" principle, as graceful degradation).
+// Samples: gleitz/midi-js-soundfonts (MusyngKite), MIT-licensed, vendored under
+// play/assets/audio/instruments/.
+const SAMPLE_ROOT = '/play/assets/audio/instruments';
+const SAMPLE_NOTES = {
+  piano:  ['A1', 'C2', 'E2', 'G2', 'C3', 'E3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'],
+  violin: ['G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'],
+};
+// Relative gain so sampled levels roughly match the old synth mix (tune here).
+const SAMPLE_GAIN = { piano: 0.8, violin: 1.3 };
+let _bank = null;          // { piano: Map<midi,buf>, violin: Map<midi,buf> } when ready
+let _bankState = 'idle';   // 'idle' | 'loading' | 'ready' | 'failed'
+async function loadInstrumentBank(ctx) {
+  if (_bankState === 'loading' || _bankState === 'ready') return;
+  _bankState = 'loading';
+  try {
+    const loadInst = async (inst) => {
+      const map = new Map();
+      await Promise.all(SAMPLE_NOTES[inst].map(async (n) => {
+        const res = await fetch(`${SAMPLE_ROOT}/${inst}/${n}.mp3`);
+        if (!res.ok) throw new Error(`sample ${inst}/${n} ${res.status}`);
+        const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+        map.set(noteToMidi(n), buf);
+      }));
+      return map;
+    };
+    const [piano, violin] = await Promise.all([loadInst('piano'), loadInst('violin')]);
+    _bank = { piano, violin };
+    _bankState = 'ready';
+  } catch (e) {
+    _bank = null;
+    _bankState = 'failed';   // synth fallback stays in effect
+  }
+}
+function _nearestSampleMidi(map, midi) {
+  let best = null, bestD = Infinity;
+  for (const k of map.keys()) { const d = Math.abs(k - midi); if (d < bestD) { bestD = d; best = k; } }
+  return best;
+}
+// Play a real sample for `midi`: nearest recorded note + pitch shift, a velocity
+// gain, and a gentle release at note end so it doesn't ring forever.
+function playSampleNote(ctx, dest, map, gainScale, midi, when, dur, velocity) {
+  const sm = _nearestSampleMidi(map, midi);
+  if (sm == null) return when + dur;
+  const src = ctx.createBufferSource();
+  src.buffer = map.get(sm);
+  src.playbackRate.value = Math.pow(2, (midi - sm) / 12);
+  const g = ctx.createGain();
+  const peak = Math.max(0.0001, velocity * gainScale);
+  const sus = Math.max(0.05, dur);
+  const rel = 0.18;
+  g.gain.setValueAtTime(peak, when);
+  g.gain.setValueAtTime(peak, when + sus);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + sus + rel);
+  src.connect(g).connect(dest);
+  src.start(when);
+  src.stop(when + sus + rel + 0.05);
+  return when + dur;
+}
+
 // ── Track specs ─────────────────────────────────────────────────────────────
 // Each spec: a key center + a 4-chord progression. Chords are arrays of
 // scale-degree pitch names in a comfortable register. The melody is
@@ -192,6 +256,17 @@ export function createPianoPlayer(ctx, destination, spec) {
   let stopped = false;
   let scaleMidi = cfg.scale.map(noteToMidi);
 
+  // Route each note to the real sample when the bank is loaded, else the
+  // oscillator voice. Take MIDI (not Hz) so the sampler can pitch-shift.
+  function notePiano(midi, when, dur, vel) {
+    if (_bank && _bank.piano) return playSampleNote(ctx, out, _bank.piano, SAMPLE_GAIN.piano, midi, when, dur, vel);
+    return playPianoNote(ctx, out, mtof(midi), when, dur, vel);
+  }
+  function noteViolin(midi, when, dur, vel) {
+    if (_bank && _bank.violin) return playSampleNote(ctx, out, _bank.violin, SAMPLE_GAIN.violin, midi, when, dur, vel);
+    return playViolinNote(ctx, out, mtof(midi), when, dur, vel);
+  }
+
   // Schedule one bar: a soft bass + left-hand arpeggio of the chord, plus
   // a sparse right-hand melody. Deliberately leaves rests so it breathes.
   function scheduleBar(barStart) {
@@ -200,8 +275,8 @@ export function createPianoPlayer(ctx, destination, spec) {
     const bassMidi = noteToMidi(chord.bass);
 
     // Bass note on beat 1 (and a soft re-strike on beat 3).
-    playPianoNote(ctx, out, mtof(bassMidi), barStart, barDur * 0.9, 0.22);
-    playPianoNote(ctx, out, mtof(bassMidi), barStart + beatDur * 2, barDur * 0.5, 0.13);
+    notePiano(bassMidi, barStart, barDur * 0.9, 0.22);
+    notePiano(bassMidi, barStart + beatDur * 2, barDur * 0.5, 0.13);
 
     // Left-hand arpeggio: chord tones rolled across the bar's eighth notes.
     const arpPattern = [0, 1, 2, 1, 0, 2, 1, 2];
@@ -210,7 +285,7 @@ export function createPianoPlayer(ctx, destination, spec) {
       if (i === 3 || i === 6) continue;
       const t = barStart + i * (beatDur / 2);
       const m = chordMidi[arpPattern[i] % chordMidi.length];
-      playPianoNote(ctx, out, mtof(m), t, beatDur * 1.1, 0.085 + (i === 0 ? 0.03 : 0));
+      notePiano(m, t, beatDur * 1.1, 0.085 + (i === 0 ? 0.03 : 0));
     }
 
     // Right-hand melody: 2–3 notes per bar from the scale, biased to chord
@@ -227,7 +302,7 @@ export function createPianoPlayer(ctx, destination, spec) {
       } else {
         m = scaleMidi[Math.floor(Math.random() * scaleMidi.length)] + 12;
       }
-      playPianoNote(ctx, out, mtof(m), t, beatDur * 1.6, 0.13);
+      notePiano(m, t, beatDur * 1.6, 0.13);
     }
 
     // Violin counter-melody — same chords + meter, its own sustained line a
@@ -236,10 +311,10 @@ export function createPianoPlayer(ctx, destination, spec) {
     // piano), plus a stepwise neighbour on alternate bars for counter-motion.
     const vi = VIOLIN_PHRASE[barIndex % VIOLIN_PHRASE.length];
     const vMain = chordMidi[vi % chordMidi.length] + 12;
-    playViolinNote(ctx, out, mtof(vMain), barStart + beatDur * 0.5, barDur * 0.72, 0.075);
+    noteViolin(vMain, barStart + beatDur * 0.5, barDur * 0.72, 0.075);
     if (barIndex % 2 === 1) {
       const vNext = chordMidi[(vi + 1) % chordMidi.length] + 12;
-      playViolinNote(ctx, out, mtof(vNext), barStart + beatDur * 2.5, beatDur * 1.5, 0.062);
+      noteViolin(vNext, barStart + beatDur * 2.5, beatDur * 1.5, 0.062);
     }
 
     barIndex++;
@@ -259,6 +334,9 @@ export function createPianoPlayer(ctx, destination, spec) {
     name: 'piano',
     start(fadeMs = 2500) {
       if (stopped) return;
+      // Kick off the real-instrument sample load (cached module-wide). Bars
+      // play the synth voices until it resolves, then upgrade to samples.
+      try { loadInstrumentBank(ctx); } catch {}
       const now = ctx.currentTime;
       nextBarTime = now + 0.1;
       barIndex = 0;
