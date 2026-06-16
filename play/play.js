@@ -1891,9 +1891,9 @@ function buildCeoPortrait(targetScene) {
   // FORWARD (+z local) so they clear the back wall behind. Group-local coords:
   // the group sits at world y≈2, so the floor is local y≈-2.
   const stoneMat = new THREE.MeshStandardMaterial({
-    color: 0xe6ddc8, roughness: 0.55, metalness: 0.15, envMapIntensity: 1.0,
+    color: 0xe6ddc8, roughness: 0.85, metalness: 0.05, envMapIntensity: 0.3,
   });
-  const baseMat = new THREE.MeshStandardMaterial({ color: 0x6d5a3f, roughness: 0.5, metalness: 0.25 });
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x6d5a3f, roughness: 0.7, metalness: 0.1, envMapIntensity: 0.3 });
   // Flanking pilasters (floor → above the frame).
   for (const sx of [-1.55, 1.55]) {
     const pil = new THREE.Mesh(bevelBox(0.24, 3.6, 0.42, 0.03), stoneMat);
@@ -1913,10 +1913,10 @@ function buildCeoPortrait(targetScene) {
   group.add(plinth);
 
   // Warm accent light so the portrait reads as "lit with care" — a small
-  // story beat (PROP-04): someone keeps this corner of reception warm. Bumped
-  // to a wider, slightly stronger pool now that the niche frames it.
-  const warmLight = new THREE.PointLight(0xffd9a0, 0.75, 5.5);
-  warmLight.position.set(0, 0.4, 1.1);
+  // story beat (PROP-04): someone keeps this corner of reception warm. Kept
+  // modest so it doesn't blow out the niche under bloom.
+  const warmLight = new THREE.PointLight(0xffd9a0, 0.55, 4.5);
+  warmLight.position.set(0, 0.4, 1.0);
   group.add(warmLight);
 
   // Floating hearts once the finale has been seen (the building's owner
@@ -2253,14 +2253,17 @@ function _buildWallTextures() {
 }
 function makeWallMaterial(color = 0xf4ecd8, metal = 0) {
   if (!_wallMapTex) _buildWallTextures();
+  // Walls stay matte (flat roughness) and only weakly pick up the IBL — a
+  // roughnessMap here created glossy patches that reflected the bright sky and
+  // blew out to white under bloom. envMapIntensity kept low for the same reason.
   return new THREE.MeshStandardMaterial({
     color,
     map: _wallMapTex,
     bumpMap: _wallBumpTex,
     bumpScale: 0.04,
-    roughnessMap: _wallRoughTex,
     metalness: (metal || 0) * 0.2,
-    roughness: 1.0,            // modulated down by roughnessMap (~0.66..0.94)
+    roughness: 0.92,
+    envMapIntensity: 0.5,
   });
 }
 // Shared accessor so floor plates can borrow the wall roughness variation.
@@ -3077,18 +3080,13 @@ function buildFloorOffice(floorIdx) {
   const themeIdx = (floorIdx - 1) * CHAPTERS_PER_FLOOR;
   const theme = ZONE_THEMES[themeIdx] || { floor: 0xa1887f, wall: 0xefebe9, accent: '#5d4037', metal: 0.1, title: floorThemeName(floorIdx) };
 
-  // Floor plate — 36×36. A roughness map (tiled wall-gloss variation) gives the
-  // floor buffed/scuffed patches so it catches the IBL as a real polished floor
-  // rather than one flat sheen.
-  const floorRough = wallRoughnessTexture().clone();
-  floorRough.needsUpdate = true;
-  floorRough.wrapS = floorRough.wrapT = THREE.RepeatWrapping;
-  floorRough.repeat.set(FULL / 6, FULL / 6);
+  // Floor plate — 36×36. Matte-ish; envMapIntensity kept low so the IBL can't
+  // turn a low-roughness floor into a mirror that blooms the bright sky to white.
   const floorMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(FULL, FULL),
     new THREE.MeshStandardMaterial({
       color: theme.floor, metalness: theme.metal,
-      roughness: Math.max(0.15, 0.85 - theme.metal), roughnessMap: floorRough,
+      roughness: Math.max(0.35, 0.85 - theme.metal), envMapIntensity: 0.4,
     }),
   );
   floorMesh.rotation.x = -Math.PI / 2;

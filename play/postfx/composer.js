@@ -122,9 +122,13 @@ export class PostFxPipeline {
 
   applyPreset(postfx) {
     if (!postfx) return;
-    if (typeof postfx.bloomStrength === 'number')  this.bloom.strength  = postfx.bloomStrength;
+    // Bloom safety clamp: only genuinely bright HIGHLIGHTS should bloom, not
+    // merely-bright walls/sky/reflections (which were washing whole scenes to
+    // white and hiding content). Scale strength down and floor the threshold so
+    // a sunny exterior or an IBL reflection can't bloom into a white sheet.
+    if (typeof postfx.bloomStrength === 'number')  this.bloom.strength  = postfx.bloomStrength * 0.6;
     if (typeof postfx.bloomRadius === 'number')    this.bloom.radius    = postfx.bloomRadius;
-    if (typeof postfx.bloomThreshold === 'number') this.bloom.threshold = postfx.bloomThreshold;
+    if (typeof postfx.bloomThreshold === 'number') this.bloom.threshold = Math.max(postfx.bloomThreshold, 0.9);
     if (typeof postfx.vignette === 'number')       this.vignettePass.material.uniforms.uVignette.value = postfx.vignette;
     // Colour-grade keys are optional per zone; absent → keep the gentle global
     // defaults set in the shader uniforms.
