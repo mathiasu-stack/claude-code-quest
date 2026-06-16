@@ -79,9 +79,36 @@ finale coupling. Deterministic, mobile-cheap (shared geo/mat).
   temperature` in `zone-presets.js`; set 1/1/0 to disable. `applyPreset` reads
   them if present, else keeps the global defaults.
 
+### Increment 5 — Phase 2 roughness maps + Phase 3 bevels (`c7b0b6a`, `?v=20260616d`)
+- Wall material + office floor plates gained low-frequency `roughnessMap`s
+  (`_wallRoughTex`, NoColorSpace, roughness set to 1.0 and modulated) so big
+  surfaces catch the IBL with buffed/matte variation, not one flat sheen.
+- Vendored `three@0.169 RoundedBoxGeometry` (play/vendor/addons/geometries/) +
+  new `bevelBox(w,h,d,r?)` drop-in (1 seg = small rounded chamfer; same dims →
+  colliders/proportions unchanged). Applied to procedural furniture FALLBACKS
+  (chair/desk/couch/cabinet/table) + the always-procedural `buildLibraryCounter`.
+  Caveat: furniture mostly renders as GLBs at runtime, so bevels mainly show
+  during the two-phase load / when GLBs are absent — lower ROI than hoped.
+
 ### NEXT / OPEN
-- **IBL look CONFIRMED GOOD by user** ("looking great") → Phase 2 materials
-  unblocked. (Tuning knobs still available: envProbe gradient; grade uniforms.)
+- **IBL CONFIRMED GOOD** → Phase 2 done (roughness maps + color grade). Optional
+  remainder: desktop 512px texture tiering (minor); normal maps (deferred —
+  bump already present; colorSpace care needed).
+- **Most safe/deterministic blind wins are now harvested** (windows, IBL,
+  ceiling/cove/baseboard, grade, roughness, bevels). Remaining work needs the
+  user:
+  - **Per-zone cinematic lighting mood** (zone-presets.js) — high impact, but
+    subjective: best tuned WITH the user (warm reception / cool offices / amber
+    library / cold lab / intimate Floor M; also fixes dark-library debt).
+  - **FINALE-COUPLED Phase 4** (needs user to run finale playtest after): spine
+    corridor + NPC waypoint repath (liveAgents), CEO-portrait niche + ceremony
+    staging, Floor M reveal composition.
+- **Phase 0 gltfpack still BLOCKED** (no gltfpack/npm on NAS). curl works on the
+  box (used it to vendor RoundedBoxGeometry), so a gltfpack static binary COULD
+  be fetched if the user wants the ~150MB rig-compression win.
+- All tuning knobs: envProbe gradient (`buildSkyEnvTexture` opts), grade
+  uniforms (`composer.js` defaults or per-zone `zone-presets.js`), cove/panel
+  `emissiveIntensity` (play.js).
 - **Phase 0 gltfpack BLOCKED**: gltfpack not on the NAS and project is npm-free.
   Needs a tooling decision (install gltfpack binary, or compress off-box). NOT
   required for other phases — just the biggest perf win.
