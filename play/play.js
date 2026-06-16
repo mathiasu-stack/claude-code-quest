@@ -5390,6 +5390,15 @@ function openDialogue(npc) {
       const appendText = normLine(append.value);
       introText = introText ? `${introText} ${appendText}` : appendText;
     }
+    // Post-finale: flavor / background NPCs (no lesson, so never "done") get a
+    // generic catch-up line too — UNLESS they have a bespoke T7 intro (ines,
+    // maya). Reset any sting/hero beat carried from the lower-tier line we're
+    // replacing so it can't fire against the generic text.
+    if (isFlavor && tier >= 7 && (!introOv || introOv.key !== 'T7')) {
+      introText = genericFlavorPostFinaleLine(npc);
+      stingArmed = false;
+      heroBeat = null;
+    }
     // One-shot post-pass beat: shown the first time the player talks to a
     // test NPC after newly passing its test (shown-state lives in ccq_story).
     if (done && npc.kind === 'test') {
@@ -5583,6 +5592,20 @@ function postFinaleLineFor(npc) {
   }
   const lt = getLessonTitle(npc) || 'those early lessons';
   return _POSTFINALE_LESSON[_idHash(npc.id) % _POSTFINALE_LESSON.length](lt, first);
+}
+
+// Generic post-finale line for FLAVOR / background NPCs (no lesson to name) —
+// warm ambient reactions to the building having quietly become real.
+const _POSTFINALE_FLAVOR = [
+  (n) => `"You\'re the one who runs the place now, aren\'t you? And you still stop to say hi to people like me. ...Huh." — ${n}`,
+  (n) => `"They fixed the coffee this week. The actual coffee. Things change around here now, apparently. Congratulations, by the way — we all heard." — ${n}`,
+  (n) => `"VP of AI, walking the floor like a regular person. Place feels different lately. Lighter. Real, almost." — ${n}`,
+  (n) => `"I don\'t know exactly what you did up there. But it\'s been calmer since — like the building finally exhaled. Whatever it was: thanks." — ${n}`,
+  (n) => `"Heard it was you. The whole floor did." (a small, genuine nod) "Good. It should\'ve been someone who came back down to talk to us." — ${n}`,
+];
+function genericFlavorPostFinaleLine(npc) {
+  const first = (npc.name || 'A colleague').split(' ')[0] || 'A colleague';
+  return _POSTFINALE_FLAVOR[_idHash(npc.id || first) % _POSTFINALE_FLAVOR.length](first);
 }
 
 // PORT-01 — swap a dlg-portrait's emoji for the rendered face. No-op (emoji

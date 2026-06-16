@@ -122,6 +122,59 @@ function playPianoNote(ctx, dest, freq, when, dur, velocity) {
   return when + a + d;
 }
 
+// ── Violin voice ─────────────────────────────────────────────────────────────
+// A bowed-string timbre: two slightly-detuned sawtooths through a warm lowpass,
+// a slow (bowed) attack, a sustain hold, and a gentle vibrato on the detune.
+// Quieter than the piano so it sits as a harmony layer, not a lead.
+function playViolinNote(ctx, dest, freq, when, dur, velocity) {
+  const vca = ctx.createGain();
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = Math.min(5000, freq * 5 + 800);
+  lp.Q.value = 0.6;
+  vca.connect(lp).connect(dest);
+
+  const peak = Math.max(0.0001, velocity);
+  const a = 0.13;                    // ~130 ms bowed swell
+  const rel = 0.4;
+  const sus = Math.max(0.3, dur);
+  vca.gain.setValueAtTime(0.0001, when);
+  vca.gain.exponentialRampToValueAtTime(peak, when + a);
+  vca.gain.setValueAtTime(peak, when + sus);
+  vca.gain.exponentialRampToValueAtTime(0.0001, when + sus + rel);
+
+  // Vibrato LFO → detune (cents) of both saws.
+  const vib = ctx.createOscillator();
+  vib.type = 'sine';
+  vib.frequency.value = 5.3;
+  const vibGain = ctx.createGain();
+  vibGain.gain.value = 8;            // ±8 cents
+  vib.connect(vibGain);
+
+  const ends = when + sus + rel + 0.05;
+  for (let i = 0; i < 2; i++) {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.value = freq;
+    o.detune.value = i === 0 ? -5 : 5;   // slight chorus between the two saws
+    vibGain.connect(o.detune);
+    const g = ctx.createGain();
+    g.gain.value = 0.5;
+    o.connect(g).connect(vca);
+    o.start(when);
+    o.stop(ends);
+  }
+  vib.start(when);
+  vib.stop(ends);
+  return when + sus + rel;
+}
+
+// Violin counter-melody contour — a chord-tone index (0=root, 1=3rd, 2=5th)
+// per bar. Always a chord tone, so it harmonises with the piano by
+// construction; the contour gives it a gentle, repeatable shape distinct from
+// the piano's randomised right hand.
+const VIOLIN_PHRASE = [2, 1, 2, 0];
+
 export function createPianoPlayer(ctx, destination, spec) {
   const track = (typeof spec === 'string') ? PIANO_TRACKS[spec] : spec;
   const cfg = track || PIANO_TRACKS.reception;
@@ -175,6 +228,18 @@ export function createPianoPlayer(ctx, destination, spec) {
         m = scaleMidi[Math.floor(Math.random() * scaleMidi.length)] + 12;
       }
       playPianoNote(ctx, out, mtof(m), t, beatDur * 1.6, 0.13);
+    }
+
+    // Violin counter-melody — same chords + meter, its own sustained line a
+    // register above the piano so the two voices harmonise. One long bowed
+    // chord tone per bar (entering just after the downbeat so it answers the
+    // piano), plus a stepwise neighbour on alternate bars for counter-motion.
+    const vi = VIOLIN_PHRASE[barIndex % VIOLIN_PHRASE.length];
+    const vMain = chordMidi[vi % chordMidi.length] + 12;
+    playViolinNote(ctx, out, mtof(vMain), barStart + beatDur * 0.5, barDur * 0.72, 0.075);
+    if (barIndex % 2 === 1) {
+      const vNext = chordMidi[(vi + 1) % chordMidi.length] + 12;
+      playViolinNote(ctx, out, mtof(vNext), barStart + beatDur * 2.5, beatDur * 1.5, 0.062);
     }
 
     barIndex++;
