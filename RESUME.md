@@ -200,6 +200,19 @@ plays 'resolution' in the lobby (zone 0) post-finale (most reliably heard on a
 post-finale reload in reception). NOT verified by ear — melodies are
 chord-tone-consonant by construction; tune `SAMPLE_GAIN`/velocities if needed.
 
+### Increment 14 — fix office-floor music restart + lag (`7608861`, `?v=20260617c`)
+Office floors (2–4) are one open 36×36 room, but the lighting/sky/music
+zone-change handler used `zoneIndexAt(player.z)` which fell through to floor-1's
+22 m z-bands → flipped zone 0↔1 at z=11 mid-floor → re-applied preset + sky +
+RESTARTED the procedural music (atrium↔vault, both Canon so "same music") + lag.
+Plan War Room straddles z=11. New `currentZoneIndex()`: floor 1 + Floor M keep
+the z-band/room lookup; office floors return ONE stable zone `(floor-1)*4`
+(matches wall theme). Used by the zone-change handler + initial start. Result:
+no mid-floor zone change → no preset churn, no music restart, no lag; each office
+floor now has one coherent mood (F2 atrium / F3 vault / F4 anomaly).
+NOTE: office-floor lighting now uses the floor's base-zone preset (was flipping
+0/1) — a visible-but-correct change; verify the floors look right.
+
 ### NEXT / OPEN
 - **Verify:** the 5 tracks sound good (atrium=reception, vault=library/study,
   ascent=workshop floors, anomaly=atrium/labs/server, resolution=lobby
