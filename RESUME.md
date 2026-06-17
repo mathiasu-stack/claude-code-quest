@@ -186,7 +186,24 @@ harmonica) with real recorded samples, pitch-shifted to nearest.
   DESIGN NOTE: hint fires ON the doc's floor (contextual / findable) rather than
   at the exact unlock moment — switchable if the user prefers at-unlock.
 
+### Increment 13 — 5 original Canon-inspired soundtracks (`24bef46`, `?v=20260617b`)
+A 5-composer team (parallel subagents) wrote 5 original pieces rooted in
+Pachelbel's Canon in D. Engine (`proceduralMusic.js`) now supports COMPOSED
+melodies (note events over an 8-bar phrase, `cfg.melody`) + a true CANON: the
+violin replays the same melody delayed `cfg.canonDelayBars` bars, wrapping
+across the loop. Piano keeps ground-bass + continuo arpeggio. Old algorithmic
+path kept as fallback (specs without `melody`). `PIANO_TRACKS` = 5 new specs:
+atrium (D maj warm), vault (Bm pensive), ascent (A maj forward), anomaly (Dm
+uncanny), resolution (D maj homecoming). Old mood-names kept as ALIASES →
+new tracks, so `zoneConfig.ZONE_PROC` is unchanged. `play.js procTrackFor(idx)`
+plays 'resolution' in the lobby (zone 0) post-finale (most reliably heard on a
+post-finale reload in reception). NOT verified by ear — melodies are
+chord-tone-consonant by construction; tune `SAMPLE_GAIN`/velocities if needed.
+
 ### NEXT / OPEN
+- **Verify:** the 5 tracks sound good (atrium=reception, vault=library/study,
+  ascent=workshop floors, anomaly=atrium/labs/server, resolution=lobby
+  post-finale). Canon = violin echoing the piano melody ~2 bars later.
 - **Verify:** locked clipboards/files are now invisible (no "locked" prompt);
   reaching the unlock tier + being on the floor pops a colleague hint toast, then
   the note appears (glowing) to read.
