@@ -173,7 +173,23 @@ harmonica) with real recorded samples, pitch-shifted to nearest.
   velocity × SAMPLE_GAIN regardless of recording level — same loudness as the old
   synth. If still off, tune SAMPLE_GAIN.
 
+### Increment 12 — hide locked collectibles + unlock hint (`34b6834`, `?v=20260617a`)
+- Locked story collectibles (Cycle Reports / learnings fragments / client ledger)
+  are now HIDDEN entirely (was "Locked — internal" prompt). `tickReadableNotes()`
+  shows a note's group + glow only when `tier >= unlockTier && currentFloor ===
+  note._floor`; called from `applyFloorVisibility` + the 1 Hz tier poll.
+  `registerReadableNotes` stashes `_glow/_floor/_doc`; locked → '' prompt + no-op.
+- On unlock: one-shot "overheard colleague" toast (`READABLE_HINTS`, NPC-quote
+  style) names the doc + location, fired the first time the player is on its
+  floor post-unlock; persisted per-doc Story flag (`notehint:<id>`); queued one
+  at a time via `_hintToastActive`. New `.play-toast-hint` CSS.
+  DESIGN NOTE: hint fires ON the doc's floor (contextual / findable) rather than
+  at the exact unlock moment — switchable if the user prefers at-unlock.
+
 ### NEXT / OPEN
+- **Verify:** locked clipboards/files are now invisible (no "locked" prompt);
+  reaching the unlock tier + being on the floor pops a colleague hint toast, then
+  the note appears (glowing) to read.
 - **Verify:** music now sounds like real piano + violin (a few sec after it
   starts, once samples load); balance ok? (tune SAMPLE_GAIN). Finale reveal
   frames the lobby; post-finale every NPC has a fresh line.
