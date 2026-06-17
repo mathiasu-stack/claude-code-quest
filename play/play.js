@@ -6191,6 +6191,14 @@ function updateNormalcyMeter(tier) {
   });
 }
 
+// Which procedural soundtrack to play for a zone. Normally the zone's mood
+// (zoneConfig.procForZone), but POST-FINALE the lobby (zone 0) plays the 5th
+// composition, 'resolution' — the Canon finally arriving home.
+function procTrackFor(idx) {
+  try { if (idx === 0 && Story.sceneSeen('finale')) return 'resolution'; } catch {}
+  return procForZone(idx);
+}
+
 function update(dt) {
   // Dance animation
   if (performance.now() < danceUntil) {
@@ -6577,7 +6585,7 @@ function update(dt) {
       if (currentFloor !== FLOOR_M_INDEX) {
         // Procedural piano per zone (no audio files). 4 moods spread
         // across the zones — see zoneConfig.procForZone + proceduralMusic.js.
-        try { audio.startProceduralMusic(`zone-${procForZone(idx)}`, procForZone(idx), 2500); } catch {}
+        try { const _t = procTrackFor(idx); audio.startProceduralMusic(`zone-${_t}`, _t, 2500); } catch {}
         try { startAmbience(idx); } catch {}
       } else {
         try { stopAmbience(1200); } catch {}
@@ -7035,7 +7043,7 @@ export async function start(host) {
     lighting.applyPreset(idx >= 0 ? idx : 0);
     lastZoneIdx = idx >= 0 ? idx : 0;
     // Initial zone music — procedural piano (no audio file dependency).
-    try { audio.startProceduralMusic(`zone-${procForZone(lastZoneIdx)}`, procForZone(lastZoneIdx), 2500); } catch {}
+    try { const _t = procTrackFor(lastZoneIdx); audio.startProceduralMusic(`zone-${_t}`, _t, 2500); } catch {}
     // Initial ambience bed. If the audio context is still locked (no
     // gesture yet) this records the pending zone; the 1 Hz tickAmbience
     // poll in update() starts the bed after the unlock.

@@ -103,58 +103,148 @@ function playSampleNote(ctx, dest, map, gainScale, midi, when, dur, velocity) {
 }
 
 // ── Track specs ─────────────────────────────────────────────────────────────
-// Each spec: a key center + a 4-chord progression. Chords are arrays of
-// scale-degree pitch names in a comfortable register. The melody is
-// generated from chord tones at schedule time (sparse, with rests) so it
-// never sounds like a fixed loop even though the harmony repeats.
-//
-// Progressions are classic "chill classical" shapes:
-//   reception  — C major  I–V–vi–IV   (warm, welcoming)
-//   library    — A minor  i–VI–III–VII (pensive)
-//   andante    — D minor  i–VII–VI–V   (andalusian, a touch uncanny)
-//   workshop   — G major  I–vi–IV–V    (gentle, optimistic)
+// FIVE original soundtracks composed by the music team, all rooted in
+// Pachelbel's Canon in D. Each is an 8-bar ground-bass progression (one chord
+// per bar, arpeggiated as the continuo) with a COMPOSED melody; the violin
+// plays that same melody in CANON (delayed canonDelayBars) — Pachelbel's
+// canonic imitation. Per-track credits in `title`/`artist`.
+//   atrium     — D major,  warm welcome           (Marisol Vega)
+//   vault      — B minor,  pensive / memory        (Edran Vale)
+//   ascent     — A major,  optimistic forward drive (Marek Sundgren)
+//   anomaly    — D minor,  uncanny / unresolved     (Voss Marlowe)
+//   resolution — D major,  full homecoming          (Elin Vasquez-Hart)
 export const PIANO_TRACKS = {
-  reception: {
-    bpm: 64,
+  atrium: {
+    bpm: 64, phraseBars: 8, canonDelayBars: 2, canonTranspose: 0,
+    title: 'Good Morning, Welcome In', artist: 'Marisol Vega',
     chords: [
-      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
-      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
-      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // Am
-      { bass: 'F2', notes: ['F3', 'A3', 'C4'] },   // F
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'A1', notes: ['A3', 'C#4', 'E4'] },
+      { bass: 'B1', notes: ['B3', 'D4', 'F#4'] },
+      { bass: 'F#1', notes: ['F#3', 'A3', 'C#4'] },
+      { bass: 'G1', notes: ['G3', 'B3', 'D4'] },
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'G1', notes: ['G3', 'B3', 'D4'] },
+      { bass: 'A1', notes: ['A3', 'C#4', 'E4'] },
     ],
-    scale: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'E5'],
+    melody: [
+      { at: 0, note: 'F#5', dur: 2 }, { at: 2, note: 'A5', dur: 1.5 }, { at: 3.5, note: 'G5', dur: 0.5 },
+      { at: 4, note: 'E5', dur: 2 }, { at: 6, note: 'A5', dur: 1 }, { at: 7, note: 'G5', dur: 1 },
+      { at: 8, note: 'F#5', dur: 1.5 }, { at: 9.5, note: 'E5', dur: 0.5 }, { at: 10, note: 'D5', dur: 2 },
+      { at: 12, note: 'C#5', dur: 2 }, { at: 14, note: 'E5', dur: 1 }, { at: 15, note: 'F#5', dur: 1 },
+      { at: 16, note: 'G5', dur: 2 }, { at: 18, note: 'F#5', dur: 1 }, { at: 19, note: 'E5', dur: 1 },
+      { at: 20, note: 'D5', dur: 1.5 }, { at: 21.5, note: 'E5', dur: 0.5 }, { at: 22, note: 'F#5', dur: 2 },
+      { at: 24, note: 'B4', dur: 2 }, { at: 26, note: 'D5', dur: 1 }, { at: 27, note: 'F#5', dur: 1 },
+      { at: 28, note: 'E5', dur: 2 }, { at: 30, note: 'D5', dur: 2 },
+    ],
+    scale: ['D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'],
   },
-  library: {
-    bpm: 58,
+  vault: {
+    bpm: 56, phraseBars: 8, canonDelayBars: 2, canonTranspose: 0,
+    title: 'What the Stacks Remember', artist: 'Edran Vale',
     chords: [
-      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // Am
-      { bass: 'F2', notes: ['F3', 'A3', 'C4'] },   // F
-      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
-      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
+      { bass: 'B1', notes: ['B3', 'D4', 'F#4'] },
+      { bass: 'F#2', notes: ['F#3', 'A3', 'C#4'] },
+      { bass: 'G1', notes: ['G3', 'B3', 'D4'] },
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'E2', notes: ['E3', 'G3', 'B3'] },
+      { bass: 'B1', notes: ['B3', 'D4', 'F#4'] },
+      { bass: 'E2', notes: ['E3', 'G3', 'B3'] },
+      { bass: 'F#2', notes: ['F#3', 'A3', 'C#4'] },
     ],
-    scale: ['A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+    melody: [
+      { at: 0, note: 'F#5', dur: 3 }, { at: 3, note: 'E5', dur: 1 }, { at: 4, note: 'D5', dur: 2.5 },
+      { at: 6.5, note: 'C#5', dur: 1.5 }, { at: 8, note: 'B4', dur: 2 }, { at: 10, note: 'D5', dur: 2 },
+      { at: 12, note: 'A4', dur: 3 }, { at: 15, note: 'F#4', dur: 1 }, { at: 16, note: 'B4', dur: 2 },
+      { at: 18, note: 'C#5', dur: 1.5 }, { at: 19.5, note: 'D5', dur: 0.5 }, { at: 20, note: 'E5', dur: 3 },
+      { at: 23, note: 'D5', dur: 1 }, { at: 24, note: 'B4', dur: 2 }, { at: 26, note: 'D5', dur: 1.5 },
+      { at: 27.5, note: 'E5', dur: 0.5 }, { at: 28, note: 'F#5', dur: 2 }, { at: 30, note: 'C#5', dur: 1.5 },
+      { at: 31.5, note: 'B4', dur: 0.5 },
+    ],
+    scale: ['B3', 'C#4', 'D4', 'E4', 'F#4', 'A4', 'B4', 'C#5', 'D5', 'E5', 'F#5'],
   },
-  andante: {
-    bpm: 60,
+  ascent: {
+    bpm: 72, phraseBars: 8, canonDelayBars: 2, canonTranspose: 0,
+    title: 'Upward, Lightly', artist: 'Marek Sundgren',
     chords: [
-      { bass: 'D2', notes: ['D3', 'F3', 'A3'] },   // Dm
-      { bass: 'C2', notes: ['C3', 'E3', 'G3'] },   // C
-      { bass: 'A1', notes: ['A2', 'C3', 'E3'] },   // Am (low)
-      { bass: 'A2', notes: ['A3', 'C4', 'E4'] },   // A (resolve)
+      { bass: 'A1', notes: ['A3', 'C#4', 'E4'] },
+      { bass: 'E2', notes: ['E3', 'G#3', 'B3'] },
+      { bass: 'F#2', notes: ['F#3', 'A3', 'C#4'] },
+      { bass: 'C#2', notes: ['C#3', 'E3', 'G#3'] },
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'A1', notes: ['A3', 'C#4', 'E4'] },
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'E2', notes: ['E3', 'G#3', 'B3'] },
     ],
-    scale: ['D4', 'E4', 'F4', 'A4', 'C5', 'D5'],
+    melody: [
+      { at: 0, note: 'C#5', dur: 1 }, { at: 1, note: 'E5', dur: 0.5 }, { at: 1.5, note: 'C#5', dur: 0.5 },
+      { at: 2, note: 'B4', dur: 1 }, { at: 3, note: 'A4', dur: 1 }, { at: 4, note: 'B4', dur: 1 },
+      { at: 5, note: 'G#4', dur: 0.5 }, { at: 5.5, note: 'B4', dur: 0.5 }, { at: 6, note: 'E5', dur: 1.5 },
+      { at: 8, note: 'A5', dur: 1 }, { at: 9, note: 'G#5', dur: 0.5 }, { at: 9.5, note: 'F#5', dur: 0.5 },
+      { at: 10, note: 'E5', dur: 1 }, { at: 11, note: 'C#5', dur: 1 }, { at: 12, note: 'G#4', dur: 1 },
+      { at: 13, note: 'B4', dur: 0.5 }, { at: 13.5, note: 'C#5', dur: 0.5 }, { at: 14, note: 'E5', dur: 1.5 },
+      { at: 16, note: 'F#5', dur: 1 }, { at: 17, note: 'E5', dur: 0.5 }, { at: 17.5, note: 'C#5', dur: 0.5 },
+      { at: 18, note: 'D5', dur: 1 }, { at: 19, note: 'A4', dur: 1 }, { at: 20, note: 'C#5', dur: 1 },
+      { at: 21, note: 'E5', dur: 0.5 }, { at: 21.5, note: 'D5', dur: 0.5 }, { at: 22, note: 'C#5', dur: 1.5 },
+      { at: 24, note: 'E5', dur: 1 }, { at: 25, note: 'D5', dur: 0.5 }, { at: 25.5, note: 'B4', dur: 0.5 },
+      { at: 26, note: 'A4', dur: 1 }, { at: 27, note: 'F#4', dur: 1 }, { at: 28, note: 'D5', dur: 1 },
+      { at: 29, note: 'C#5', dur: 0.5 }, { at: 29.5, note: 'B4', dur: 0.5 }, { at: 30, note: 'A4', dur: 2 },
+    ],
+    scale: ['A4', 'B4', 'C#5', 'D5', 'E5', 'F#5', 'G#5', 'A5'],
   },
-  workshop: {
-    bpm: 66,
+  anomaly: {
+    bpm: 58, phraseBars: 8, canonDelayBars: 2, canonTranspose: 0,
+    title: 'The Smile Behind the Glass', artist: 'Voss Marlowe',
     chords: [
-      { bass: 'G2', notes: ['G3', 'B3', 'D4'] },   // G
-      { bass: 'E2', notes: ['E3', 'G3', 'B3'] },   // Em
-      { bass: 'C2', notes: ['C4', 'E4', 'G4'] },   // C
-      { bass: 'D2', notes: ['D4', 'F4', 'A4'] },   // D (suspended-ish)
+      { bass: 'D2', notes: ['D3', 'F3', 'A3'] },
+      { bass: 'A1', notes: ['A3', 'C#4', 'E4'] },
+      { bass: 'A#1', notes: ['A#3', 'D4', 'F4'] },
+      { bass: 'F2', notes: ['F3', 'A3', 'C4'] },
+      { bass: 'G2', notes: ['G3', 'A#3', 'D4'] },
+      { bass: 'D2', notes: ['D3', 'F3', 'A3'] },
+      { bass: 'G2', notes: ['G3', 'A#3', 'E4'] },
+      { bass: 'A2', notes: ['A3', 'C#4', 'E4'] },
     ],
-    scale: ['G4', 'A4', 'B4', 'D5', 'E5', 'G5'],
+    melody: [
+      { at: 0, note: 'A4', dur: 3 }, { at: 3, note: 'F4', dur: 1 }, { at: 4, note: 'E4', dur: 3.5 },
+      { at: 8, note: 'F4', dur: 2 }, { at: 10, note: 'D4', dur: 2 }, { at: 12, note: 'C4', dur: 4 },
+      { at: 16, note: 'A#4', dur: 3 }, { at: 19, note: 'A4', dur: 1 }, { at: 20, note: 'F4', dur: 4 },
+      { at: 24, note: 'D5', dur: 2.5 }, { at: 27, note: 'C5', dur: 1 }, { at: 28, note: 'A4', dur: 2 },
+      { at: 30, note: 'E4', dur: 2 },
+    ],
+    scale: ['D4', 'E4', 'F4', 'G4', 'A4', 'A#4', 'C5', 'D5'],
+  },
+  resolution: {
+    bpm: 63, phraseBars: 8, canonDelayBars: 2, canonTranspose: 0,
+    title: 'Coming Home', artist: 'Elin Vasquez-Hart',
+    chords: [
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'A1', notes: ['C#3', 'E3', 'A3'] },
+      { bass: 'B1', notes: ['D3', 'F#3', 'B3'] },
+      { bass: 'F#1', notes: ['C#3', 'F#3', 'A3'] },
+      { bass: 'G1', notes: ['D3', 'G3', 'B3'] },
+      { bass: 'D2', notes: ['D3', 'F#3', 'A3'] },
+      { bass: 'G1', notes: ['D3', 'G3', 'B3'] },
+      { bass: 'A1', notes: ['C#3', 'E3', 'A3'] },
+    ],
+    melody: [
+      { at: 0, note: 'F#5', dur: 2 }, { at: 2, note: 'E5', dur: 2 }, { at: 4, note: 'E5', dur: 2 },
+      { at: 6, note: 'C#5', dur: 1.5 }, { at: 7.5, note: 'D5', dur: 0.5 }, { at: 8, note: 'D5', dur: 2 },
+      { at: 10, note: 'C#5', dur: 2 }, { at: 12, note: 'B4', dur: 1.5 }, { at: 13.5, note: 'C#5', dur: 0.5 },
+      { at: 14, note: 'A4', dur: 2 }, { at: 16, note: 'B4', dur: 2 }, { at: 18, note: 'D5', dur: 1.5 },
+      { at: 19.5, note: 'C#5', dur: 0.5 }, { at: 20, note: 'B4', dur: 2 }, { at: 22, note: 'A4', dur: 2 },
+      { at: 24, note: 'D5', dur: 2 }, { at: 26, note: 'F#5', dur: 1.5 }, { at: 27.5, note: 'E5', dur: 0.5 },
+      { at: 28, note: 'E5', dur: 1 }, { at: 29, note: 'C#5', dur: 1 }, { at: 30, note: 'D5', dur: 2 },
+    ],
+    scale: ['D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5', 'E5', 'F#5'],
   },
 };
+// Zone-mood aliases (zoneConfig's existing names → the new compositions) so the
+// zone map keeps working without edits; 'resolution' is wired post-finale.
+PIANO_TRACKS.reception = PIANO_TRACKS.atrium;
+PIANO_TRACKS.library   = PIANO_TRACKS.vault;
+PIANO_TRACKS.andante   = PIANO_TRACKS.anomaly;
+PIANO_TRACKS.workshop  = PIANO_TRACKS.ascent;
 
 // ── Piano voice ──────────────────────────────────────────────────────────────
 // A piano-ish strike: a few harmonic partials with a fast attack and a
@@ -300,33 +390,48 @@ export function createPianoPlayer(ctx, destination, spec) {
       notePiano(m, t, beatDur * 1.1, 0.085 + (i === 0 ? 0.03 : 0));
     }
 
-    // Right-hand melody: 2–3 notes per bar from the scale, biased to chord
-    // tones, with gentle randomness so the loop never feels mechanical.
-    const melodyBeats = (barIndex % 2 === 0) ? [0, 2.5] : [1, 2, 3.5];
-    for (const b of melodyBeats) {
-      // 35% chance to rest on any melody slot — keeps it sparse/chill.
-      if (Math.random() < 0.35) continue;
-      const t = barStart + b * beatDur;
-      // Prefer a chord tone up an octave; sometimes a neighbouring scale note.
-      let m;
-      if (Math.random() < 0.6) {
-        m = chordMidi[Math.floor(Math.random() * chordMidi.length)] + 12;
-      } else {
-        m = scaleMidi[Math.floor(Math.random() * scaleMidi.length)] + 12;
+    if (cfg.melody && cfg.melody.length) {
+      // COMPOSED track: a fixed melodic phrase over the ground bass, with the
+      // violin playing the SAME melody in CANON (delayed by canonDelayBars) —
+      // Pachelbel's canonic imitation. Schedule the events that land in THIS
+      // bar of the looping phrase; the canon wraps across the loop seam.
+      const pBars = cfg.phraseBars || cfg.chords.length;
+      const totalBeats = pBars * 4;
+      const barBeat0 = (barIndex % pBars) * 4;
+      const delayBeats = (cfg.canonDelayBars || 2) * 4;
+      const transpose = cfg.canonTranspose || 0;
+      for (const ev of cfg.melody) {
+        const midi = noteToMidi(ev.note);
+        const durB = (typeof ev.dur === 'number' ? ev.dur : 1);
+        // Lead voice (piano).
+        if (ev.at >= barBeat0 && ev.at < barBeat0 + 4) {
+          notePiano(midi, barStart + (ev.at - barBeat0) * beatDur, durB * beatDur, 0.14);
+        }
+        // Canon voice (violin), same melody delayed + wrapped, quieter.
+        const cAt = (ev.at + delayBeats) % totalBeats;
+        if (cAt >= barBeat0 && cAt < barBeat0 + 4) {
+          noteViolin(midi + transpose, barStart + (cAt - barBeat0) * beatDur, Math.max(durB, 1.1) * beatDur, 0.085);
+        }
       }
-      notePiano(m, t, beatDur * 1.6, 0.13);
-    }
-
-    // Violin counter-melody — same chords + meter, its own sustained line a
-    // register above the piano so the two voices harmonise. One long bowed
-    // chord tone per bar (entering just after the downbeat so it answers the
-    // piano), plus a stepwise neighbour on alternate bars for counter-motion.
-    const vi = VIOLIN_PHRASE[barIndex % VIOLIN_PHRASE.length];
-    const vMain = chordMidi[vi % chordMidi.length] + 12;
-    noteViolin(vMain, barStart + beatDur * 0.5, barDur * 0.72, 0.075);
-    if (barIndex % 2 === 1) {
-      const vNext = chordMidi[(vi + 1) % chordMidi.length] + 12;
-      noteViolin(vNext, barStart + beatDur * 2.5, beatDur * 1.5, 0.062);
+    } else {
+      // Fallback (no composed melody): the original algorithmic right hand +
+      // a sustained violin counter-melody.
+      const melodyBeats = (barIndex % 2 === 0) ? [0, 2.5] : [1, 2, 3.5];
+      for (const b of melodyBeats) {
+        if (Math.random() < 0.35) continue;
+        const t = barStart + b * beatDur;
+        let m;
+        if (Math.random() < 0.6) m = chordMidi[Math.floor(Math.random() * chordMidi.length)] + 12;
+        else m = scaleMidi[Math.floor(Math.random() * scaleMidi.length)] + 12;
+        notePiano(m, t, beatDur * 1.6, 0.13);
+      }
+      const vi = VIOLIN_PHRASE[barIndex % VIOLIN_PHRASE.length];
+      const vMain = chordMidi[vi % chordMidi.length] + 12;
+      noteViolin(vMain, barStart + beatDur * 0.5, barDur * 0.72, 0.075);
+      if (barIndex % 2 === 1) {
+        const vNext = chordMidi[(vi + 1) % chordMidi.length] + 12;
+        noteViolin(vNext, barStart + beatDur * 2.5, beatDur * 1.5, 0.062);
+      }
     }
 
     barIndex++;
