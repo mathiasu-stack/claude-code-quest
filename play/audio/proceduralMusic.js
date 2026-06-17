@@ -39,7 +39,18 @@ const SAMPLE_NOTES = {
   violin: ['G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'],
 };
 // Relative gain so sampled levels roughly match the old synth mix (tune here).
-const SAMPLE_GAIN = { piano: 0.8, violin: 1.3 };
+// Soundfont samples are recorded very quietly, so each is PEAK-NORMALISED at
+// load (below) and then scaled by these + the per-note velocity.
+const SAMPLE_GAIN = { piano: 1.1, violin: 1.3 };
+// Peak amplitude of a decoded buffer (sampled sparsely for speed) → a
+// normalisation factor that brings its peak up to ~1.0, clamped so a near-
+// silent sample can't blow up.
+function _bufferNormGain(buf) {
+  let peak = 0;
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < ch.length; i += 64) { const a = Math.abs(ch[i]); if (a > peak) peak = a; }
+  return peak > 0.0015 ? Math.min(16, 1.0 / peak) : 1;
+}
 let _bank = null;          // { piano: Map<midi,buf>, violin: Map<midi,buf> } when ready
 let _bankState = 'idle';   // 'idle' | 'loading' | 'ready' | 'failed'
 async function loadInstrumentBank(ctx) {
@@ -52,7 +63,7 @@ async function loadInstrumentBank(ctx) {
         const res = await fetch(`${SAMPLE_ROOT}/${inst}/${n}.mp3`);
         if (!res.ok) throw new Error(`sample ${inst}/${n} ${res.status}`);
         const buf = await ctx.decodeAudioData(await res.arrayBuffer());
-        map.set(noteToMidi(n), buf);
+        map.set(noteToMidi(n), { buf, norm: _bufferNormGain(buf) });
       }));
       return map;
     };
@@ -74,11 +85,12 @@ function _nearestSampleMidi(map, midi) {
 function playSampleNote(ctx, dest, map, gainScale, midi, when, dur, velocity) {
   const sm = _nearestSampleMidi(map, midi);
   if (sm == null) return when + dur;
+  const entry = map.get(sm);
   const src = ctx.createBufferSource();
-  src.buffer = map.get(sm);
+  src.buffer = entry.buf;
   src.playbackRate.value = Math.pow(2, (midi - sm) / 12);
   const g = ctx.createGain();
-  const peak = Math.max(0.0001, velocity * gainScale);
+  const peak = Math.max(0.0001, velocity * gainScale * entry.norm);
   const sus = Math.max(0.05, dur);
   const rel = 0.18;
   g.gain.setValueAtTime(peak, when);
