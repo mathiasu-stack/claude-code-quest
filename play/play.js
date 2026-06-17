@@ -2638,8 +2638,8 @@ function registerReadableNotes() {
       glowColor: 0xc9a44c,
       parent: scene,
       getPromptText: () => {
-        if (currentFloor !== noteFloor) return '';
-        if (!unlocked()) return 'Locked — internal';
+        // Locked notes are hidden entirely (tickReadableNotes), so no prompt.
+        if (currentFloor !== noteFloor || !unlocked()) return '';
         const read = Story.collectibleRead?.(docId);
         return `${read ? 'Re-read' : 'Read'} — ${doc.title || 'document'} — press E`;
       },
@@ -2656,9 +2656,71 @@ function registerReadableNotes() {
       it.glow.userData.floor = noteFloor;
       it.glow.position.y = floorBaseY(noteFloor) + 0.02;
     }
+    // Stash refs so tickReadableNotes can hide/show the note + its glow as the
+    // tier (and floor) changes, and fire the unlock hint.
+    note._glow = it?.glow || null;
+    note._floor = noteFloor;
+    note._doc = doc;
     // Same editor-compat trick as registerStoryInspectables: these are
     // ROOM entries; keep the editor routing drags to rooms.js.
     delete group.userData._isInteractable;
+  }
+  tickReadableNotes();   // hide any locked notes immediately on (re)build
+}
+
+// One-shot "a colleague mentions it" hint per collectible, delivered the first
+// time it's unlocked AND the player is on its floor (so the location is
+// reachable). Phrased as overheard chatter naming the doc + where it is.
+const READABLE_HINTS = {
+  cycle_report_01:    '💬 Diana: “Has anyone seen the Cycle 01 folder? Pretty sure it’s still out in Reception.”',
+  cycle_report_06:    '💬 Linda: “That old Cycle 06 report turned up by the front desk. Someone ought to file it, sweetheart.”',
+  cycle_report_02:    '💬 Raj: “The Cycle 02 file? Last I saw, it was in the Knowledge Library, gathering dust.”',
+  cycle_report_03:    '💬 Priya: “I’ve been hunting for Cycle 03 all week — think I left it lying around Floor 3.”',
+  cycle_report_04:    '💬 Rena: “Cycle 04’s report is up here on Floor 4. …That one’s a hard read. Fair warning.”',
+  cycle_report_05:    '💬 Marcus: “Cycle 05 file’s kicking around Floor 4 somewhere. Mind the coffee stains.”',
+  learnings_fragment_1: '💬 Sam: “There’s a torn page of someone’s learnings.md floating around Floor 3. Worth a read.”',
+  learnings_fragment_2: '💬 Maya: “The last page of learnings.md is up in the loft. I kept it for you.”',
+  client_profiles:    '💬 Engelhardt: “The client ledger is out on Floor 3. You’re cleared for it now. Read it.”',
+};
+let _hintToastActive = false;
+function showHintToast(text) {
+  if (!container) return;
+  _hintToastActive = true;
+  const toast = document.createElement('div');
+  toast.className = 'play-toast play-toast-hint';
+  toast.textContent = text;
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add('visible'), 50);
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => { toast.remove(); _hintToastActive = false; }, 400);
+  }, 5200);
+}
+
+// Per-tick: hide locked collectibles entirely (option 1), show unlocked ones on
+// their floor, and fire each note's one-shot unlock hint (at most one at a time
+// so they queue instead of stacking). Called from applyFloorVisibility (floor
+// changes) + the 1 Hz tier poll (tier changes).
+function tickReadableNotes() {
+  let tier = 0;
+  try { tier = Story.getTier(); } catch { return; }
+  let firedThisTick = false;
+  for (const note of readableNotes) {
+    if (!note.group || !note.group.userData._noteRegistered) continue;
+    const doc = note._doc || window.STORY_DOCS?.[note.docId] || {};
+    const unlocked = tier >= (doc.unlockTier || 0);
+    const onFloor = currentFloor === (note._floor || 1);
+    const show = unlocked && onFloor;
+    note.group.visible = show;
+    if (note._glow) note._glow.visible = show;
+    if (show && !firedThisTick && !_hintToastActive) {
+      const flag = `notehint:${note.docId}`;
+      if (!Story.getFlag?.(flag) && READABLE_HINTS[note.docId]) {
+        Story.setFlag?.(flag);
+        showHintToast(READABLE_HINTS[note.docId]);
+        firedThisTick = true;
+      }
+    }
   }
 }
 
@@ -3366,6 +3428,8 @@ function applyFloorVisibility() {
     if (f === undefined) return;
     obj.visible = (f === currentFloor);
   });
+  // Re-hide locked collectibles (option 1) after the floor cull re-shows them.
+  try { tickReadableNotes(); } catch {}
 }
 
 // Register AABBs for the chest-height+ static furniture so the player
@@ -6596,6 +6660,7 @@ function update(dt) {
       applyStoryTierAudio(_tier);
       tickAmbience();
       updateNormalcyMeter(_tier);
+      tickReadableNotes();   // hide-until-unlocked + fire unlock hints
     } catch { /* story/progress not ready yet — retried next second */ }
   }
   // Update audio listener position so PannerNode sources track the camera.

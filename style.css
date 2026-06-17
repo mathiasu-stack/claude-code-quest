@@ -1893,6 +1893,25 @@ body.in-play #mobile-header { display: none !important; }
   transform: translate(-50%, 0);
 }
 
+/* Overheard-chatter hint toast (collectible unlock) — a wider navy card with
+   room for an NPC quote, sat lower so it doesn't clash with the top HUD. */
+.play-toast.play-toast-hint {
+  top: 132px;
+  background: linear-gradient(135deg, #1a2744, #243456);
+  color: #eef2fb;
+  font-weight: 500;
+  font-size: 14px;
+  font-style: italic;
+  max-width: min(78vw, 420px);
+  text-align: center;
+  line-height: 1.35;
+  border: 1px solid rgba(201,164,76,0.5);
+  border-radius: 14px;
+}
+@media (max-width: 768px) {
+  .play-toast.play-toast-hint { top: 150px; font-size: 13px; padding: 10px 16px; }
+}
+
 /* Intro modal */
 .play-intro-overlay {
   position: absolute;
