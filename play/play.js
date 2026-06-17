@@ -347,6 +347,22 @@ function zoneIndexAt(z, x) {
   }
   return -1;
 }
+// Effective zone for the lighting/sky/music/ambience zone-change handler.
+// Floor 1 uses the room-aware z-band lookup. The office floors (2–4) are a
+// SINGLE open 36×36 room, so they get ONE stable zone — the floor's base
+// chapter (matching the wall theme) — instead of falling through to floor-1's
+// z-bands, which flipped zone 0↔1 at z=11 mid-floor and needlessly restarted
+// the music + re-applied presets (the "music stops/resumes + lag" when crossing
+// a room like the Plan War Room). Floor M keeps the raw lookup (music is off
+// there anyway).
+function currentZoneIndex() {
+  if (!player) return 0;
+  if (currentFloor === 1 || currentFloor === FLOOR_M_INDEX) {
+    const z = zoneIndexAt(player.position.z);
+    return z >= 0 ? z : 0;
+  }
+  return Math.min(ZONE_COUNT - 1, (currentFloor - 1) * CHAPTERS_PER_FLOOR);
+}
 // Zone N is "open" when the test of the chapter at CURRICULUM[N-1]
 // is passed. Uses the CURRICULUM array position so the unlock chain
 // matches the dashboard order after reshuffles.
@@ -6566,7 +6582,7 @@ function update(dt) {
 
   // Detect zone change → swap lighting, post-fx, sky, and music together.
   if (lighting && player) {
-    const idx = zoneIndexAt(player.position.z);
+    const idx = currentZoneIndex();
     if (idx >= 0 && idx !== lastZoneIdx) {
       lastZoneIdx = idx;
       lighting.applyPreset(idx);              // starts a ~1.2 s lerp
@@ -7039,7 +7055,7 @@ export async function start(host) {
   // Apply the initial zone preset so the first frame renders with proper
   // lighting; subsequent transitions are picked up by update().
   if (lighting) {
-    const idx = zoneIndexAt(player.position.z);
+    const idx = currentZoneIndex();
     lighting.applyPreset(idx >= 0 ? idx : 0);
     lastZoneIdx = idx >= 0 ? idx : 0;
     // Initial zone music — procedural piano (no audio file dependency).
