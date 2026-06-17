@@ -165,8 +165,13 @@ harmonica) with real recorded samples, pitch-shifted to nearest.
   env). `notePiano`/`noteViolin` route to samples when loaded ELSE the original
   oscillator voices (graceful fallback — never breaks on 404/offline). Synth
   plays until bank resolves (~a few sec), then upgrades to samples.
-- Tuning knobs: `SAMPLE_GAIN = { piano: 0.8, violin: 1.3 }`. NOT verified by ear
-  (can't hear) — adjust if balance is off. Module is no-cache (loads fresh).
+- Tuning knobs: `SAMPLE_GAIN = { piano: 1.1, violin: 1.3 }`. Module is no-cache.
+- **FIXED near-silent samples (`ec67a31`)**: MusyngKite samples are recorded very
+  quietly → at synth velocities they were almost inaudible (user: "extremely low,
+  almost silent"). Now each decoded buffer is PEAK-NORMALISED at load
+  (`_bufferNormGain`, ≤16x) and folded into the note gain, so output peak ≈
+  velocity × SAMPLE_GAIN regardless of recording level — same loudness as the old
+  synth. If still off, tune SAMPLE_GAIN.
 
 ### NEXT / OPEN
 - **Verify:** music now sounds like real piano + violin (a few sec after it
