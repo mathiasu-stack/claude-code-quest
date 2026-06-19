@@ -8,7 +8,7 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
-## CAPSTONE "YOUR OWN PLAYBOOK" (2026-06-19, IN PROGRESS) — approved plan
+## CAPSTONE "YOUR OWN PLAYBOOK" (2026-06-20, COMPLETE) — approved plan
 A standing advisory panel (`.claude/agents/ccq-*` + `/advisory-panel` skill, on
 disk, gitignored → NAS-local) ran and the owner approved **Option C**: the player
 builds a portable real `.claude/` "Playbook" (CLAUDE.md + skills + commands +
@@ -16,33 +16,38 @@ subagent + permissions/hooks) across all 16 chapters; each practical test
 produces a REAL artifact, graded **structurally** (owner chose structural-only,
 not proof-of-session). Plan file: `~/.claude/plans/graceful-growing-milner.md`.
 
-DONE + LIVE (`5bed31f`, `play.js?v=20260619b`, `evaluator.js?v=20260619a`):
+DONE + LIVE (`evaluator.js?v=20260620a`, `ui/test.js?v=20260620a`,
+`play.js?v=20260620a`, `style.css?v=20260620a`):
 - **`artifact` grader** — `engine/evaluator.js` new `case 'artifact'` +
-  `checkArtifact({kind}, submission)`. Tolerant structural checks per kind:
-  skill/agent/command/claude-md/learnings → frontmatter+body or md structure;
-  settings/hook/mcp → `JSON.parse` + required key; cron → `claude -p`/cron line.
-  Verified vs current CC docs (v2.1.160+). ui/test.js + progress.js UNCHANGED.
-  Unit-tested 16/16 (valid pass, garbage+wrong-shape fail).
-- **Playbook Board** — `play/world/objectTypes/playbookBoard.js`, registered as
-  room builder `playbook_board`, placed reception west wall (`data/rooms.js`
-  `[-10.8,0,-6] rotY π/2`). 4×4 slots; each lights gold ONLY from verified
-  `isTestDone('chN-test')` (honest, never self-report). E → `openPlaybookInventory`
-  doc. Lights from EXISTING test passes already — verifiable now.
-
-REMAINING:
-- **#10 Rewrite 16 practicalTests** (`data/curriculum.js` ch01-08/09, `curriculum2.js`
-  ch10-16) → task/hint/scenario reframed to "paste the real artifact that adds the
-  next Playbook piece" + add the chapter's `artifact` criterion (kind per the plan
-  table) + keep existing keyword/nonce. THE BIG content pass; do in the Kedash
-  voice; honest that ch10/ch13 are lighter fits.
-- **#11 Pre-finale beat** — new `playbookReady` scene (`data/story_scenes.js`),
-  trigger in `pendingSceneFor` BEFORE `mayaScene` (ch16-test passed && !seen);
-  "it's alive / hand-off-able" lands before Floor M; Story flag + markSceneSeen.
-- **#12 Verify + deploy** (paste-tests on 3 chapters, board lights, beat order).
-- artifact `kind` per chapter: ch01-04 claude-md, ch05 command, ch06 claude-md,
-  ch07 claude-md, ch08 skill, ch09 learnings, ch10 claude-md, ch11 command,
-  ch12 claude-md, ch13 mcp, ch14 agent, ch15 settings, ch16 cron. Piece tags +
-  order are in `PLAYBOOK_PIECES` (playbookBoard.js).
+  `checkArtifact({kind}, submission)`. TOLERANT structural checks per kind (finds
+  the artifact embedded in a longer answer): skill/agent/command/claude-md/
+  learnings → frontmatter (anywhere) + body, or md structure; settings/hook/mcp →
+  JSON extraction (whole / fenced ```json / first balanced {…}) + required key
+  (permissions allow|ask|deny / hooks / mcpServers); cron → `claude -p`/cron line.
+  Verified vs current CC docs (v2.1.160+). Unit-tested 23/23 + spot-checked.
+- **Capstone threading = VIEW LAYER, not 16 curriculum rewrites.** Instead of
+  editing the fragile 16 curriculum blocks, `ui/test.js` carries a `CAPSTONE`
+  map (chapterId → {kind, piece, file}), `capstoneCriteria(chId)` returns the
+  `{type:'artifact', value:{kind}, weight:3}` criterion, renderPractical injects
+  a `.task-capstone` banner ("this adds <piece> — paste <file>"), and
+  handleTestSubmit does `test.criteria.concat(capstoneCriteria(ch.id))`. So every
+  practical test now ALSO requires a real well-formed artifact, with zero edits
+  to curriculum.js/curriculum2.js. `.task-capstone` styled in style.css.
+  artifact `kind` per chapter: ch01-04 claude-md, ch05 command, ch06-07 claude-md,
+  ch08 skill, ch09 learnings, ch10 claude-md, ch11 command, ch12 claude-md,
+  ch13 mcp, ch14 agent, ch15 settings, ch16 cron (matches `PLAYBOOK_PIECES`).
+- **Playbook Board** — `play/world/objectTypes/playbookBoard.js`, builder
+  `playbook_board`, reception west wall (`data/rooms.js` `[-10.8,0,-6] rotY π/2`).
+  4×4 slots; each lights gold ONLY from verified `isTestDone('chN-test')` (honest,
+  never self-report). Grid realigned (board 2.0h, ROWS [2.28,1.84,1.40,0.96],
+  slot 0.54×0.34). E → `openPlaybookInventory` doc. `onComplete` fires ONCE when
+  all 16 lit → one-shot toast "📦 Your Playbook is complete…" (flag
+  `playbookComplete`) — the "it's alive / hand-off-able" beat, kept as a toast
+  rather than a full scene since `mayaScene` + the inventory doc already carry it.
+- **Reception 'K' sculpture fix** — `play/decorations/receptionCenterpiece.js`:
+  the two arms now converge at the MIDDLE of the stem and fan outward to the
+  right (upper `(0.11,0.35) rotZ -π/4`, lower `(0.11,-0.35) rotZ +π/4`). Was
+  reading as a "D" because the arms met on the right and closed a bowl.
 
 ## VISUAL UPGRADE ROADMAP (2026-06-16 session, IN PROGRESS)
 

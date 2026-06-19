@@ -40,7 +40,7 @@ export const PLAYBOOK_PIECES = [
   ['ch13', 'MCP'], ['ch14', 'Subagent'], ['ch15', 'Settings'], ['ch16', 'Schedule'],
 ];
 
-export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isChapterDone, onInteract }) {
+export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isChapterDone, onInteract, onComplete }) {
   const g = new THREE.Group();
   g.position.set(position[0], 0, position[2]);
   g.rotation.y = rotY;
@@ -109,27 +109,32 @@ export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isCha
   if (it?.glow) it.glow.userData.floor = floor;   // glow ring follows floor culling
 
   let _t = 0;
+  let _completeFired = false;
   return {
     group: g,
     update(dt) {
       _t += dt;
       const k = 1 - Math.exp(-dt * 4);
-      let anyChanged = false;
+      let litCount = 0;
       for (const s of slots) {
         const done = !!(isChapterDone && isChapterDone(s.chId));
+        if (done) litCount++;
         if (done !== s.lit) {            // re-paint the label once on transition
           s.lit = done;
           if (s.mat.map) s.mat.map.dispose();
           s.mat.map = slotLabelTexture(s.tag, done);
           s.mat.map.colorSpace = THREE.SRGBColorSpace;
           s.mat.needsUpdate = true;
-          anyChanged = true;
         }
         const tgt = done ? 0.85 : 0.06;
         s.mat.emissiveIntensity += (tgt - s.mat.emissiveIntensity) * k;
       }
+      // "It's alive" beat — fire once the moment the whole pack is lit.
+      if (litCount === slots.length && !_completeFired) {
+        _completeFired = true;
+        if (onComplete) { try { onComplete(); } catch {} }
+      }
       ledMat.emissiveIntensity = 0.7 + Math.sin(_t * 2.4) * 0.25;
-      return anyChanged;
     },
   };
 }

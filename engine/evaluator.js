@@ -44,15 +44,30 @@ function checkCriterion(type, value, submission, context) {
 // `---` frontmatter with a description; subagents need name+description;
 // settings.json carries permissions(allow/ask/deny arrays) and/or a hooks
 // object; .mcp.json has a top-level mcpServers object; headless = `claude -p`.
+// Tolerant: find a `---` … `---` frontmatter block ANYWHERE in the paste (so a
+// learner can wrap the file in explanation), not only at the very start.
 function _frontmatterBody(s) {
-  const m = s.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?([\s\S]*)$/);
+  const m = s.match(/(?:^|\n)---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?([\s\S]*)$/);
   return m ? { fm: m[1], body: (m[2] || '').trim() } : null;
 }
 function _fmHasKey(fm, key) {
   return new RegExp('^\\s*' + key + '\\s*:\\s*\\S', 'mi').test(fm);
 }
-function _parseJsonLoose(s) {
-  try { return JSON.parse(s); } catch { return null; }
+// Tolerant JSON extraction: whole-string parse, else a fenced ```json block,
+// else the first balanced {…} object found in the paste.
+function _extractJson(s) {
+  try { return JSON.parse(s); } catch { /* try harder */ }
+  const fence = s.match(/```(?:json)?\s*\r?\n([\s\S]*?)```/i);
+  if (fence) { try { return JSON.parse(fence[1]); } catch { /* fall through */ } }
+  const start = s.indexOf('{');
+  if (start >= 0) {
+    let depth = 0;
+    for (let i = start; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') { depth--; if (depth === 0) { try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; } } }
+    }
+  }
+  return null;
 }
 function checkArtifact(spec, submission) {
   const kind = (spec && spec.kind) || 'claude-md';
@@ -69,18 +84,18 @@ function checkArtifact(spec, submission) {
       return !!fb && _fmHasKey(fb.fm, 'name') && _fmHasKey(fb.fm, 'description') && fb.body.length > 10;
     }
     case 'settings': {
-      const j = _parseJsonLoose(s);
+      const j = _extractJson(s);
       if (!j || typeof j !== 'object') return false;
       const permsOk = j.permissions && ['allow', 'ask', 'deny'].some(k => Array.isArray(j.permissions[k]));
       const hooksOk = j.hooks && typeof j.hooks === 'object' && Object.keys(j.hooks).length > 0;
       return !!(permsOk || hooksOk);
     }
     case 'hook': {
-      const j = _parseJsonLoose(s);
+      const j = _extractJson(s);
       return !!(j && j.hooks && typeof j.hooks === 'object' && Object.keys(j.hooks).length > 0);
     }
     case 'mcp': {
-      const j = _parseJsonLoose(s);
+      const j = _extractJson(s);
       return !!(j && j.mcpServers && typeof j.mcpServers === 'object' && Object.keys(j.mcpServers).length > 0);
     }
     case 'cron':

@@ -12,6 +12,39 @@ const TEST_MODE_KEY_PREFIX = 'ccq_test_mode_';
 const TEST_MODE_PRACTICAL = 'practical';
 const TEST_MODE_THEORETICAL = 'theoretical';
 
+// ── Capstone "Your Own Playbook" ─────────────────────────────────────────────
+// Each chapter's practical test also adds one REAL piece to the player's
+// portable .claude/ Playbook. Threaded here (not by editing 16 curriculum
+// blocks): a per-chapter framing banner + an `artifact` criterion appended at
+// grade time, so passing means producing a well-formed Claude Code artifact.
+// `kind` matches engine/evaluator.js checkArtifact; `file` is what to paste.
+const CAPSTONE = {
+  ch01: { kind: 'claude-md', piece: 'a starter CLAUDE.md', file: '`CLAUDE.md` (start it with a `# My Playbook` header)' },
+  ch02: { kind: 'claude-md', piece: 'your "About my work" context', file: 'the `## About my work` section of your `CLAUDE.md`' },
+  ch03: { kind: 'claude-md', piece: 'your conventions', file: 'your lean `CLAUDE.md` (headers + bullet conventions)' },
+  ch04: { kind: 'claude-md', piece: 'your memory map', file: 'a `## Memory` section in `CLAUDE.md` mapping the layers' },
+  ch05: { kind: 'command', piece: 'a reusable command', file: 'a `.claude/commands/<name>.md` (frontmatter with a `description:` + the prompt body)' },
+  ch06: { kind: 'claude-md', piece: 'a safe-edit convention', file: 'a `## Editing` convention block in `CLAUDE.md`' },
+  ch07: { kind: 'claude-md', piece: 'your lean context doc', file: 'your trimmed `CLAUDE.md`' },
+  ch08: { kind: 'skill', piece: 'a SKILL', file: 'a `SKILL.md` (`---` frontmatter with a `description:` + a body)' },
+  ch09: { kind: 'learnings', piece: 'your learnings loop', file: 'a `learnings.md` (a `##` header + a real bullet you learned)' },
+  ch10: { kind: 'claude-md', piece: 'your model preferences', file: 'a `## Models` block in `CLAUDE.md` (which model for which task)' },
+  ch11: { kind: 'command', piece: 'a custom slash command', file: 'a `.claude/commands/<name>.md` (frontmatter `description:` + body)' },
+  ch12: { kind: 'claude-md', piece: 'a plan-first rule', file: 'a `## Plan first` convention in `CLAUDE.md`' },
+  ch13: { kind: 'mcp', piece: 'an MCP connection', file: 'your `.mcp.json` (a `mcpServers` object with one server)' },
+  ch14: { kind: 'agent', piece: 'a subagent', file: 'a `.claude/agents/<name>.md` (frontmatter `name:` + `description:` + a body)' },
+  ch15: { kind: 'settings', piece: 'your guardrails', file: 'a `settings.json` block (a `permissions` allow/ask/deny and/or a `hooks` object)' },
+  ch16: { kind: 'cron', piece: 'a scheduled job', file: 'a scheduled `claude -p "…"` command (or a cron line that runs it)' },
+};
+function capstoneCriteria(chapterId) {
+  const c = CAPSTONE[chapterId];
+  return c ? [{
+    type: 'artifact', value: { kind: c.kind }, weight: 3,
+    description: `Real artifact for your Playbook (${c.piece})`,
+    improvement: `Include ${c.file} in your answer — paste the real file, not a description of it.`,
+  }] : [];
+}
+
 function getStoredTestMode(chapterId) {
   try {
     const v = localStorage.getItem(TEST_MODE_KEY_PREFIX + chapterId);
@@ -164,6 +197,7 @@ function renderTest(chapterId, targetEl = null) {
         <div class="task-label">Your Task</div>
         <p class="task-description">${test.task}</p>
         <div class="task-hint">💡 ${test.hint}</div>
+        ${CAPSTONE[ch.id] ? `<div class="task-capstone">📦 <strong>Your Playbook</strong> — this adds ${CAPSTONE[ch.id].piece}. Include ${CAPSTONE[ch.id].file} in your answer (paste the real file, not a description).</div>` : ''}
       </div>
 
       <div class="test-input-area">
@@ -315,7 +349,10 @@ function handleTestSubmit(ch, test) {
   const textarea = document.getElementById('test-submission');
   const submission = textarea.value;
   let progress = window.App.progress;
-  const result = Evaluator.evaluate(submission, test.criteria, test.minLength, test.passThreshold, {
+  // Capstone: append the chapter's artifact criterion so passing requires a
+  // real Playbook piece (threaded here, not in the 16 curriculum blocks).
+  const gradedCriteria = test.criteria.concat(capstoneCriteria(ch.id));
+  const result = Evaluator.evaluate(submission, gradedCriteria, test.minLength, test.passThreshold, {
     nonce: Progress.getTestNonce(progress, test.id),
   });
 

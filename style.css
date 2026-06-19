@@ -657,6 +657,18 @@ body {
 .task-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #d97706; margin-bottom: 8px; }
 .task-description { font-size: 14px; font-weight: 500; color: var(--gray-800); margin-bottom: 8px; }
 .task-hint { font-size: 13px; color: var(--gray-600); }
+/* Capstone "Your Playbook" framing on each practical test. */
+.task-capstone {
+  margin-top: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #5a4a1e;
+  background: linear-gradient(135deg, rgba(201,164,76,0.14), rgba(201,164,76,0.06));
+  border: 1px solid rgba(201,164,76,0.45);
+  border-radius: 8px;
+}
+.task-capstone strong { color: #8a6d2b; }
 
 .test-input-area { margin-bottom: 16px; }
 .input-label { display: block; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }

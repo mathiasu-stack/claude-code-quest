@@ -77,15 +77,19 @@ export function buildReceptionCenterpiece(scene, decoTickers) {
   stem.position.set(-0.35, 0, 0);
   stem.castShadow = true;
   kPivot.add(stem);
-  // Upper diagonal of the K
+  // The two arms of the K converge at the MIDDLE of the stem (its right
+  // face, ~x=-0.24) and fan OUTWARD to the right — upper arm up-right, lower
+  // arm down-right. (Previously they met on the right and splayed back to the
+  // stem top/bottom, closing a bowl that read as a "D".)
+  // Upper diagonal of the K — vertex at stem middle, tip up-right.
   const upper = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.0, 0.18), kMat);
-  upper.position.set(0.05, 0.4, 0);
-  upper.rotation.z = Math.PI / 4;
+  upper.position.set(0.11, 0.35, 0);
+  upper.rotation.z = -Math.PI / 4;
   kPivot.add(upper);
-  // Lower diagonal of the K
+  // Lower diagonal of the K — vertex at stem middle, tip down-right.
   const lower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.0, 0.18), kMat);
-  lower.position.set(0.05, -0.4, 0);
-  lower.rotation.z = -Math.PI / 4;
+  lower.position.set(0.11, -0.35, 0);
+  lower.rotation.z = Math.PI / 4;
   kPivot.add(lower);
 
   // Brand name plate facing the entrance (south-facing). Previously

@@ -32,7 +32,7 @@ import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
 import { decorateReception } from './decorations/reception.js?v=20260611c';
 import { decorateLibrary, decorateLibraryAnomalies } from './decorations/library.js?v=20260610i';
-import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260528n';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260620a';
 import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
 import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260528j';
 import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260528g';
@@ -60,7 +60,7 @@ import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { buildModelConsole } from './world/objectTypes/modelConsole.js';
 import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
-import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js?v=20260619a';
+import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js?v=20260620a';
 import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
 import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
 import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js?v=20260610h';
@@ -2488,6 +2488,15 @@ function registerRoomBuilders() {
       floor: 1,
       isChapterDone: (chId) => isTestDone(`${chId}-test`),
       onInteract: (pieces) => openPlaybookInventory(pieces),
+      onComplete: () => {
+        // "It's alive" beat — the whole pack lit. One-shot, before the finale.
+        try {
+          if (!Story.getFlag?.('playbookComplete')) {
+            Story.setFlag?.('playbookComplete');
+            showHintToast('📦 Your Playbook is complete — a real .claude/ pack you built across 16 chapters. It runs without you in the room. That was the whole point.');
+          }
+        } catch {}
+      },
     });
     ctx.decoTickers.push((dt) => pb.update(dt));
     return null;   // self-added to scene
