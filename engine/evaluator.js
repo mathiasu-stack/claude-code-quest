@@ -25,8 +25,75 @@ function checkCriterion(type, value, submission, context) {
     case 'structure': {
       return checkStructure(value, submission);
     }
+    case 'artifact': {
+      // Capstone "Playbook" grading: the learner pastes a REAL Claude Code
+      // artifact and we validate its SHAPE (frontmatter / parseable JSON /
+      // invocation) — not keywords. Structural-only by design: it proves the
+      // paste is a well-formed artifact of the right kind, not that a live
+      // session produced it. value = { kind: 'skill'|'agent'|'command'|
+      // 'claude-md'|'learnings'|'settings'|'hook'|'mcp'|'cron' }.
+      return checkArtifact(value, submission);
+    }
     default:
       return false;
+  }
+}
+
+// Tolerant structural validation of a pasted Claude Code artifact. Verified
+// against current Claude Code docs (v2.1.160+): SKILL.md/command need
+// `---` frontmatter with a description; subagents need name+description;
+// settings.json carries permissions(allow/ask/deny arrays) and/or a hooks
+// object; .mcp.json has a top-level mcpServers object; headless = `claude -p`.
+function _frontmatterBody(s) {
+  const m = s.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?([\s\S]*)$/);
+  return m ? { fm: m[1], body: (m[2] || '').trim() } : null;
+}
+function _fmHasKey(fm, key) {
+  return new RegExp('^\\s*' + key + '\\s*:\\s*\\S', 'mi').test(fm);
+}
+function _parseJsonLoose(s) {
+  try { return JSON.parse(s); } catch { return null; }
+}
+function checkArtifact(spec, submission) {
+  const kind = (spec && spec.kind) || 'claude-md';
+  const s = String(submission || '').trim();
+  if (s.length < 15) return false;
+  switch (kind) {
+    case 'skill':
+    case 'command': {
+      const fb = _frontmatterBody(s);
+      return !!fb && (_fmHasKey(fb.fm, 'description') || _fmHasKey(fb.fm, 'name')) && fb.body.length > 10;
+    }
+    case 'agent': {
+      const fb = _frontmatterBody(s);
+      return !!fb && _fmHasKey(fb.fm, 'name') && _fmHasKey(fb.fm, 'description') && fb.body.length > 10;
+    }
+    case 'settings': {
+      const j = _parseJsonLoose(s);
+      if (!j || typeof j !== 'object') return false;
+      const permsOk = j.permissions && ['allow', 'ask', 'deny'].some(k => Array.isArray(j.permissions[k]));
+      const hooksOk = j.hooks && typeof j.hooks === 'object' && Object.keys(j.hooks).length > 0;
+      return !!(permsOk || hooksOk);
+    }
+    case 'hook': {
+      const j = _parseJsonLoose(s);
+      return !!(j && j.hooks && typeof j.hooks === 'object' && Object.keys(j.hooks).length > 0);
+    }
+    case 'mcp': {
+      const j = _parseJsonLoose(s);
+      return !!(j && j.mcpServers && typeof j.mcpServers === 'object' && Object.keys(j.mcpServers).length > 0);
+    }
+    case 'cron':
+      // a `claude -p/--print` headless invocation OR a 5–6 field cron line.
+      return /\bclaude\s+(-p|--print)\b/.test(s) || /(^|\n)\s*([0-9*/,\-]+\s+){4,5}\S/.test(s);
+    case 'learnings':
+      // a markdown doc with at least a header or a list, plus real content.
+      return (/^#{1,6}\s/m.test(s) || /^\s*[-*]\s/m.test(s)) && s.length > 30;
+    case 'claude-md':
+    default:
+      // CLAUDE.md piece: markdown structure (header / list / a key: convention
+      // line) so it's a real doc fragment, not one loose sentence.
+      return /^#{1,6}\s/m.test(s) || /^\s*[-*]\s/m.test(s) || /^\s*[\w .'-]+:\s*\S/m.test(s) || s.length > 60;
   }
 }
 

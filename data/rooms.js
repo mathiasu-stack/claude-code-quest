@@ -35,6 +35,7 @@ window.ROOMS = [
       { type: 'ceo_portrait', pos: [-6.3233, 2, -10.7723], rotY: 0 },
       { type: 'builder', fn: 'badge_printer', pos: [-3.4, 0, -10.3], rotY: 0 },
       { type: 'builder', fn: 'house_rules', pos: [5.2, 0, -10.8], rotY: 0 },
+      { type: 'builder', fn: 'playbook_board', pos: [-10.8, 0, -6], rotY: 1.5708 },
       { type: 'builder', fn: 'readable_note', pos: [7.6, 0, 2.2], rotY: 0.4, args: { doc: 'cycle_report_01', label: 'CYCLE 01', variant: 'folder' } },
       { type: 'builder', fn: 'readable_note', pos: [1.5, 0, -10.3], rotY: -0.3, args: { doc: 'cycle_report_06', label: 'CYCLE 06', variant: 'paper' } },
       { type: 'builder', fn: 'plant', pos: [-10.2, 0, -10.2] },

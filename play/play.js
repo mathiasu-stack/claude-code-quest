@@ -60,6 +60,7 @@ import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { buildModelConsole } from './world/objectTypes/modelConsole.js';
 import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
+import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js?v=20260619a';
 import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
 import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
 import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js?v=20260610h';
@@ -2477,6 +2478,20 @@ function registerRoomBuilders() {
     group.rotation.y = rotY || 0;
     return group;
   });
+  // Capstone — "Your Own Playbook" board. Self-adds + self-registers its
+  // interactable; lights one slot per chapter from verified test-pass state.
+  registerRoomBuilder('playbook_board', (pos, rotY, args, ctx) => {
+    const pb = buildPlaybookBoard({
+      scene: ctx.scene,
+      position: pos,
+      rotY: rotY || 0,
+      floor: 1,
+      isChapterDone: (chId) => isTestDone(`${chId}-test`),
+      onInteract: (pieces) => openPlaybookInventory(pieces),
+    });
+    ctx.decoTickers.push((dt) => pb.update(dt));
+    return null;   // self-added to scene
+  });
   // PROP-08 — open filing-cabinet drawer, CX-13 — CX-18.
   registerRoomBuilder('cx_folder', (pos, rotY) => {
     const group = buildCxFolder();
@@ -2738,6 +2753,27 @@ function tickReadableNotes() {
       }
     }
   }
+}
+
+// Capstone inventory — opened from the Playbook Board (E). Shows which real
+// `.claude/` pieces the player has added (verified test-pass) and which remain.
+function openPlaybookInventory(pieces) {
+  const done = pieces.filter(p => p.done).length;
+  const rows = pieces.map((p) => {
+    const ch = window.CURRICULUM?.find(c => c.id === p.chId);
+    const title = ch?.title || p.chId;
+    return `${p.done ? '✅' : '⬜'}  ${p.tag.padEnd(11)}  —  ${title}`;
+  }).join('\n');
+  const body =
+    `YOUR PLAYBOOK   ·   ${done}/16 pieces forged\n` +
+    `A portable .claude/ pack you built for your own real work — CLAUDE.md,\n` +
+    `skills, commands, a subagent, a permissions profile. The one unstaged\n` +
+    `thing you carry out of this building. Someone else could pick it up.\n\n` +
+    rows +
+    (done < 16
+      ? `\n\nForge the rest by passing each chapter's practical — every one adds\na real piece to the pack.`
+      : `\n\nComplete. It runs without you in the room. That was the whole point.`);
+  try { openDocument({ title: 'Your Playbook', body }); } catch {}
 }
 
 // ─── World construction ──────────────────────────────────────────────────────
