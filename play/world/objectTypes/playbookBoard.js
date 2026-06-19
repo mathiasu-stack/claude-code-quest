@@ -49,13 +49,13 @@ export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isCha
 
   // Backboard + frame.
   const board = new THREE.Mesh(
-    new THREE.BoxGeometry(2.7, 1.9, 0.05),
+    new THREE.BoxGeometry(2.7, 2.0, 0.05),
     new THREE.MeshStandardMaterial({ color: 0x222a35, roughness: 0.8 }),
   );
   board.position.set(0, 1.75, 0);
   g.add(board);
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(2.86, 2.06, 0.04),
+    new THREE.BoxGeometry(2.86, 2.16, 0.04),
     new THREE.MeshStandardMaterial({ color: 0x12161d, metalness: 0.4, roughness: 0.5 }),
   );
   frame.position.set(0, 1.75, -0.02);
@@ -71,7 +71,7 @@ export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isCha
   // 4×4 slot grid. Each slot = a labelled plane whose emissive ramps to lit
   // when its chapter is done.
   const COLS = [-0.93, -0.31, 0.31, 0.93];
-  const ROWS = [2.30, 1.78, 1.26, 0.74];
+  const ROWS = [2.28, 1.84, 1.40, 0.96];   // centred in the band below the header
   const slots = [];
   for (let i = 0; i < 16; i++) {
     const [chId, tag] = PLAYBOOK_PIECES[i];
@@ -81,7 +81,7 @@ export function buildPlaybookBoard({ scene, position, rotY = 0, floor = 1, isCha
       emissiveIntensity: 0.06,
       roughness: 0.45,
     });
-    const slot = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.40), mat);
+    const slot = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.34), mat);
     slot.position.set(COLS[i % 4], ROWS[Math.floor(i / 4)], 0.05);
     g.add(slot);
     slots.push({ chId, tag, mat, lit: false });
