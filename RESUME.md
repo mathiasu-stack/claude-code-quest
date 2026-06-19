@@ -8,6 +8,42 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## CAPSTONE "YOUR OWN PLAYBOOK" (2026-06-19, IN PROGRESS) — approved plan
+A standing advisory panel (`.claude/agents/ccq-*` + `/advisory-panel` skill, on
+disk, gitignored → NAS-local) ran and the owner approved **Option C**: the player
+builds a portable real `.claude/` "Playbook" (CLAUDE.md + skills + commands +
+subagent + permissions/hooks) across all 16 chapters; each practical test
+produces a REAL artifact, graded **structurally** (owner chose structural-only,
+not proof-of-session). Plan file: `~/.claude/plans/graceful-growing-milner.md`.
+
+DONE + LIVE (`5bed31f`, `play.js?v=20260619b`, `evaluator.js?v=20260619a`):
+- **`artifact` grader** — `engine/evaluator.js` new `case 'artifact'` +
+  `checkArtifact({kind}, submission)`. Tolerant structural checks per kind:
+  skill/agent/command/claude-md/learnings → frontmatter+body or md structure;
+  settings/hook/mcp → `JSON.parse` + required key; cron → `claude -p`/cron line.
+  Verified vs current CC docs (v2.1.160+). ui/test.js + progress.js UNCHANGED.
+  Unit-tested 16/16 (valid pass, garbage+wrong-shape fail).
+- **Playbook Board** — `play/world/objectTypes/playbookBoard.js`, registered as
+  room builder `playbook_board`, placed reception west wall (`data/rooms.js`
+  `[-10.8,0,-6] rotY π/2`). 4×4 slots; each lights gold ONLY from verified
+  `isTestDone('chN-test')` (honest, never self-report). E → `openPlaybookInventory`
+  doc. Lights from EXISTING test passes already — verifiable now.
+
+REMAINING:
+- **#10 Rewrite 16 practicalTests** (`data/curriculum.js` ch01-08/09, `curriculum2.js`
+  ch10-16) → task/hint/scenario reframed to "paste the real artifact that adds the
+  next Playbook piece" + add the chapter's `artifact` criterion (kind per the plan
+  table) + keep existing keyword/nonce. THE BIG content pass; do in the Kedash
+  voice; honest that ch10/ch13 are lighter fits.
+- **#11 Pre-finale beat** — new `playbookReady` scene (`data/story_scenes.js`),
+  trigger in `pendingSceneFor` BEFORE `mayaScene` (ch16-test passed && !seen);
+  "it's alive / hand-off-able" lands before Floor M; Story flag + markSceneSeen.
+- **#12 Verify + deploy** (paste-tests on 3 chapters, board lights, beat order).
+- artifact `kind` per chapter: ch01-04 claude-md, ch05 command, ch06 claude-md,
+  ch07 claude-md, ch08 skill, ch09 learnings, ch10 claude-md, ch11 command,
+  ch12 claude-md, ch13 mcp, ch14 agent, ch15 settings, ch16 cron. Piece tags +
+  order are in `PLAYBOOK_PIECES` (playbookBoard.js).
+
 ## VISUAL UPGRADE ROADMAP (2026-06-16 session, IN PROGRESS)
 
 A 4-discipline art team (Environment Artist, Level Designer, Hard-Surface
