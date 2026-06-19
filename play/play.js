@@ -6867,9 +6867,36 @@ function update(dt) {
 // the loop keeps running, and rendering still happens so the world stays
 // visible even if a subsystem update is failing.
 let _loopErrLogged = false;
+let _playStartMs = 0;
+// Temporary frame-spike profiler — when a frame runs long, report the
+// update-vs-render split + context to /errlog so a remote lag (e.g. entering a
+// specific room) can be pinpointed. Capped per session. Remove once diagnosed.
+let _perfReports = 0;
+function _reportFrameSpike(updateMs, renderMs, frameMs) {
+  if (_perfReports >= 12) return;
+  _perfReports++;
+  try {
+    let nearNpcs = 0;
+    if (player) for (const m of npcMeshes) {
+      if ((m.userData.floor || 1) !== currentFloor) continue;
+      if (Math.hypot(player.position.x - m.position.x, player.position.z - m.position.z) < 12) nearNpcs++;
+    }
+    const body = JSON.stringify({
+      kind: 'perf',
+      frameMs: Math.round(frameMs), updateMs: Math.round(updateMs), renderMs: Math.round(renderMs),
+      floor: currentFloor, zone: lastZoneIdx,
+      px: player ? Math.round(player.position.x) : null, pz: player ? Math.round(player.position.z) : null,
+      npcs: npcMeshes.length, nearNpcs,
+      ua: navigator.userAgent.slice(0, 60),
+    });
+    if (navigator.sendBeacon) navigator.sendBeacon('/errlog', body);
+  } catch {}
+}
+
 function loop() {
   raf = requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
+  const _t0 = performance.now();
   try {
     update(dt);
   } catch (e) {
@@ -6878,11 +6905,17 @@ function loop() {
       console.error('[play] update() threw — continuing render loop:', e);
     }
   }
+  const _t1 = performance.now();
   try {
     if (postfx) postfx.render();
     else renderer.render(scene, camera);
   } catch (e) {
     if (renderer && scene && camera) renderer.render(scene, camera);
+  }
+  const _t2 = performance.now();
+  // Ignore the warm-up frames (first ~1.5s) and report only real spikes.
+  if (_t2 - _t0 > 55 && performance.now() > _playStartMs + 1500) {
+    _reportFrameSpike(_t1 - _t0, _t2 - _t1, _t2 - _t0);
   }
 }
 
@@ -7290,6 +7323,7 @@ export async function start(host) {
     onSavePermanently: () => savePermanentlyEdits(),
   });
 
+  _playStartMs = performance.now();
   loop();
 }
 
