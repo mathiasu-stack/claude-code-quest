@@ -1759,6 +1759,16 @@ body.in-play #mobile-header { display: none !important; }
   font-size: 13px;
 }
 .play-audio-panel .aud-close:hover { background: var(--gold); color: var(--navy); }
+.play-audio-panel .aud-credits {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 10px;
+  line-height: 1.4;
+  color: #8a8f98;
+}
+.play-audio-panel .aud-credits a { color: var(--gold); text-decoration: none; }
+.play-audio-panel .aud-credits a:hover { text-decoration: underline; }
 
 /* Customization — button + popover. Anchored top-LEFT (below the back
    button) so it doesn't compete with the audio gear / tier badge. */

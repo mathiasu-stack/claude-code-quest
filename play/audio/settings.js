@@ -115,6 +115,13 @@ export function mountAudioSettings(parent) {
       (on) => setCloudVoiceEnabled(on),
     ));
 
+    // Footstep SFX attribution (CC-BY 3.0 requires a visible credit).
+    panel.appendChild(el('div', { class: 'aud-credits' }, [
+      'Footstep SFX: “Footsteps on different surfaces” by congusbongus (',
+      el('a', { href: 'https://opengameart.org/content/footsteps-on-different-surfaces', target: '_blank', rel: 'noopener' }, ['OpenGameArt']),
+      ', CC-BY 3.0) — from freesound recordings by swuing, ceberation & Eelke.',
+    ]));
+
     const close = el('button', { class: 'aud-close', type: 'button' }, ['Close']);
     close.addEventListener('click', () => panel.classList.add('hidden'));
     panel.appendChild(close);

@@ -77,7 +77,46 @@ const SURFACE_PROFILES = {
   metal:  { thumpHz: 130, thumpPeak: 0.26, swishFreq: 2400, swishQ: 2.2, swishPeak: 0.18, dur: 0.13, jitter: 0.3  },
 };
 
+// ── Real recorded footstep samples (CC-BY 3.0 — see
+// play/assets/audio/sfx/footsteps/CREDITS.md). We prefer real recordings and
+// keep the synth below as a fallback: samples decode lazily on first need per
+// surface, so until they're ready (or if a file is missing / offline) the
+// procedural step plays instead. Never silent.
+const FOOT_BASE = 'play/assets/audio/sfx/footsteps';
+const FOOT_VARIANTS = 5;
+// Per-surface playback gain — recordings differ in level, and carpet should
+// read softer than tile/metal. Tuned to sit near the old synth loudness.
+const FOOT_GAIN = { carpet: 0.5, wood: 0.62, tile: 0.6, metal: 0.62 };
+const _footBuffers = {};   // surface -> [AudioBuffer, ...] (only successes)
+const _footRequested = {}; // surface -> true once loading kicked off
+
+function ensureFootstepSamples(surface) {
+  if (_footRequested[surface]) return;
+  _footRequested[surface] = true;
+  _footBuffers[surface] = [];
+  for (let i = 0; i < FOOT_VARIANTS; i++) {
+    const url = `${FOOT_BASE}/${surface}/${i}.mp3`;
+    audio.loadBuffer(url)
+      .then((buf) => { if (buf) _footBuffers[surface].push(buf); })
+      .catch(() => {});
+  }
+}
+
+// Returns true if a real recorded step was played for this surface.
+function playFootstepSample(surface) {
+  const bank = _footBuffers[surface];
+  if (!bank || bank.length === 0) return false;
+  const buf = bank[(Math.random() * bank.length) | 0];
+  const gain = (FOOT_GAIN[surface] || 0.6) * (0.85 + Math.random() * 0.3);
+  const rate = 0.92 + Math.random() * 0.16; // ±8% pitch per step → no machine-gun
+  return !!audio.playBuffer('sfx', buf, { gain, rate });
+}
+
 export function playFootstep(surface = 'carpet') {
+  ensureFootstepSamples(surface);
+  if (playFootstepSample(surface)) return; // real recording when decoded
+  // Fallback: synthesized footfall (also covers the first few steps before
+  // the samples finish decoding, and any missing-file / offline case).
   const prof = SURFACE_PROFILES[surface] || SURFACE_PROFILES.carpet;
   audio.play('sfx', (ctx, output) => {
     const dur = prof.dur * (1 - prof.jitter * 0.5 + Math.random() * prof.jitter);

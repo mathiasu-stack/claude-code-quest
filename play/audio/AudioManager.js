@@ -84,6 +84,11 @@ export class AudioManager {
     this.voicePool = []; // [{node, channel, t}]
     this._missingMusicLogged = new Set();
 
+    // Decoded one-shot sample cache (real recorded SFX like footsteps).
+    // url -> AudioBuffer | null (null = negative cache so we don't retry).
+    this.sampleBuffers = new Map();
+    this._sampleLoading = new Map(); // url -> in-flight Promise
+
     // Master limiter + tier-shift state (built lazily with the context)
     this.limiter = null;
     this.musicTierShelf = null;
@@ -332,6 +337,67 @@ export class AudioManager {
     } else if (L.setPosition) {
       L.setPosition(x, y, z);
     }
+  }
+
+  // ── Decoded sample cache (one-shot recorded SFX) ─────────────────────────
+  // Fetch + decode a short audio file ONCE and cache the AudioBuffer by url.
+  // Resolves to the buffer, or null on failure / before the context exists.
+  // Concurrent calls for the same url share one in-flight fetch.
+  async loadBuffer(url) {
+    if (!url) return null;
+    if (this.sampleBuffers.has(url)) return this.sampleBuffers.get(url);
+    if (this._sampleLoading.has(url)) return this._sampleLoading.get(url);
+    if (!this.ctx) { this._buildContext(); }
+    if (!this.ctx) return null; // context not up yet — caller can retry later
+    const p = (async () => {
+      try {
+        const res = await fetch(url, { credentials: 'omit' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const arr = await res.arrayBuffer();
+        const buf = await this.ctx.decodeAudioData(arr);
+        this.sampleBuffers.set(url, buf);
+        return buf;
+      } catch {
+        this.sampleBuffers.set(url, null); // negative-cache; don't hammer
+        return null;
+      } finally {
+        this._sampleLoading.delete(url);
+      }
+    })();
+    this._sampleLoading.set(url, p);
+    return p;
+  }
+
+  // Play an already-decoded buffer as a one-shot on `channel`.
+  // opts: { gain = 1, rate = 1 (playbackRate) }. Returns a { stop } handle or
+  // null. Integrates with the voice pool so mobile voice-stealing still works.
+  playBuffer(channel, buffer, opts = {}) {
+    if (!buffer) return null;
+    if (!this.unlocked) { this._buildContext(); }
+    if (!this.ctx) return null;
+    const bus = this.channels[channel];
+    if (!bus) return null;
+    if (this.voicePool.length >= this.voiceCap) {
+      const oldest = this.voicePool.shift();
+      try { oldest.handle.stop?.(); } catch {}
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = opts.rate || 1;
+    const g = this.ctx.createGain();
+    g.gain.value = (opts.gain == null ? 1 : opts.gain);
+    src.connect(g).connect(bus.gain);
+    src.start();
+    const handle = { stop: () => { try { src.stop(); } catch {} } };
+    const entry = { handle, channel, t: this.ctx.currentTime };
+    this.voicePool.push(entry);
+    const ttlMs = ((buffer.duration / (opts.rate || 1)) + 0.2) * 1000;
+    setTimeout(() => {
+      const idx = this.voicePool.indexOf(entry);
+      if (idx >= 0) this.voicePool.splice(idx, 1);
+      try { src.disconnect(); g.disconnect(); } catch {}
+    }, ttlMs);
+    return handle;
   }
 
   // ── Music ────────────────────────────────────────────────────────────────

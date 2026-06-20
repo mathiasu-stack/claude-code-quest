@@ -49,6 +49,31 @@ DONE + LIVE (`evaluator.js?v=20260620a`, `ui/test.js?v=20260620a`,
   right (upper `(0.11,0.35) rotZ -π/4`, lower `(0.11,-0.35) rotZ +π/4`). Was
   reading as a "D" because the arms met on the right and closed a bowl.
 
+## REALISTIC FOOTSTEP SFX (2026-06-20, DONE + LIVE)
+Footsteps were 100% synthesized (`play/audio/procedural.js` `playFootstep` —
+sine thump + bandpass-noise swish), which read as fake. Swapped in REAL recorded
+samples with the synth kept as fallback:
+- **Samples**: `play/assets/audio/sfx/footsteps/{carpet,wood,tile,metal}/0-4.mp3`
+  (5 variants/surface, mono MP3, ~80 KB total, COMMITTED like the instrument
+  soundfont). Source: OpenGameArt "Footsteps on different surfaces" by
+  congusbongus, **CC-BY 3.0** (from freesound recordings by swuing, ceberation,
+  Eelke). Pack had no carpet → carpet set is the concrete/"boots" samples
+  low-passed ~560 Hz to a soft muffled tread. Full attribution in that folder's
+  `CREDITS.md`. All 4 surfaces are live in `zoneConfig.js` (carpet = reception/
+  fallback, the first floor walked).
+- **Engine**: `AudioManager` gained `loadBuffer(url)` (cached fetch+decode,
+  shared in-flight, negative-cache) + `playBuffer(channel, buf, {gain,rate})`
+  (voice-pool integrated). `playFootstep(surface)` lazy-loads that surface's 5
+  buffers on first need, then plays a random variant with per-step gain + ±8%
+  playbackRate jitter (no machine-gun); falls back to the synth until decoded /
+  if a file is missing / offline. Per-surface gain `FOOT_GAIN` (carpet softer).
+- **Credit (CC-BY visible req)**: small `.aud-credits` line added to the audio
+  settings popover (`play/audio/settings.js` + `.aud-credits` in style.css).
+- No `?v=` bumps needed — `save_server.py` serves `.js`/`.css` `no-cache`
+  (revalidate), which "replaces the manual ?v= cache-bust discipline".
+- If the user says steps still sound off: tune `FOOT_GAIN` / the carpet lowpass,
+  or pull more variants from `/tmp/fs_pack` (or a fresh pack download).
+
 ## VISUAL UPGRADE ROADMAP (2026-06-16 session, IN PROGRESS)
 
 A 4-discipline art team (Environment Artist, Level Designer, Hard-Surface
