@@ -3367,3 +3367,86 @@ body.is-admin .lesson-todo-shot {
   font-size: 12px;
 }
 .lesson-todo-shot strong { color: #f1d484; }
+
+/* ── Chapter 17 template picker (in the practical test view) ────────────── */
+.test-template-picker { margin: 18px 0; }
+.test-template-picker .ptpl-intro { font-size: 13px; color: #4a5568; margin: 4px 0 12px; line-height: 1.5; }
+.ptpl-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 720px) { .ptpl-list { grid-template-columns: 1fr; } }
+.ptpl-option {
+  display: grid; grid-template-columns: auto 1fr; grid-auto-rows: auto;
+  gap: 2px 10px; align-items: start;
+  border: 1px solid #d9dee8; border-radius: 8px; padding: 10px 12px;
+  cursor: pointer; background: #fbfcfe; transition: border-color .12s, background .12s;
+}
+.ptpl-option:hover { border-color: var(--gold); }
+.ptpl-option input { grid-row: 1 / span 3; align-self: center; margin: 0; }
+.ptpl-option:has(input:checked) { border-color: var(--gold); background: #fff7e9; box-shadow: 0 0 0 1px var(--gold) inset; }
+.ptpl-head { display: flex; align-items: center; gap: 8px; }
+.ptpl-name { font-weight: 700; color: var(--navy); font-size: 14px; }
+.ptpl-aud { font-size: 11px; color: #7a828f; text-transform: uppercase; letter-spacing: .03em; }
+.ptpl-blurb { font-size: 12.5px; color: #4a5568; line-height: 1.45; }
+.ptpl-badge { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.ptpl-kit { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #fff7e9; border: 1px solid #f0d9a8; font-size: 13px; color: #5a4a22; }
+
+/* ── Product Lab overlay ────────────────────────────────────────────────── */
+.product-lab-overlay {
+  position: absolute; inset: 0; z-index: 32;
+  background: rgba(10, 18, 35, 0.62);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto; opacity: 0; transition: opacity .14s;
+}
+.product-lab-overlay.visible { display: flex; opacity: 1; }
+.product-lab-card {
+  position: relative; width: min(960px, 100%); margin: auto;
+  background: #fff; border-radius: 14px; padding: 26px 28px 30px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45); border-top: 4px solid var(--gold);
+}
+.plab-close, .plab-back {
+  position: absolute; top: 14px; background: none; border: none;
+  color: #98a0ac; cursor: pointer; font-size: 15px; padding: 4px 8px; border-radius: 6px;
+}
+.plab-close { right: 14px; font-size: 24px; line-height: 1; }
+.plab-back { left: 14px; font-weight: 600; }
+.plab-close:hover, .plab-back:hover { color: var(--navy); background: #f0f2f6; }
+.plab-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.plab-title { font-size: 24px; color: var(--navy); margin: 4px 0 8px; }
+.plab-intro { font-size: 13.5px; color: #4a5568; line-height: 1.55; margin: 0 0 8px; }
+.plab-count { font-weight: 700; color: var(--gold); white-space: nowrap; }
+.plab-honest { font-size: 11.5px; color: #7a828f; font-style: italic; margin-bottom: 18px; line-height: 1.5; }
+.plab-group { margin-bottom: 20px; }
+.plab-group-title { font-size: 14px; color: var(--navy); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e6e9f0; }
+.plab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .plab-grid { grid-template-columns: 1fr; } }
+.plab-card {
+  border: 1px solid #dce1ea; border-radius: 10px; padding: 13px 14px; background: #fbfcfe;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.plab-card.built { border-color: #e7c98a; background: #fffaf0; }
+.plab-card-top { display: flex; align-items: center; gap: 8px; }
+.plab-badge { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.plab-name { font-weight: 700; color: var(--navy); font-size: 14.5px; flex: 1; }
+.plab-trophy { font-size: 16px; }
+.plab-aud { font-size: 11px; color: #7a828f; text-transform: uppercase; letter-spacing: .03em; }
+.plab-blurb { font-size: 12.5px; color: #4a5568; line-height: 1.45; }
+.plab-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.plab-chip { font-size: 10.5px; background: #eef1f6; color: #5a677a; border-radius: 5px; padding: 2px 7px; }
+.plab-build-btn {
+  margin-top: 8px; align-self: flex-start; background: var(--navy); color: #fff;
+  border: none; border-radius: 6px; padding: 7px 14px; font-weight: 600; font-size: 12.5px; cursor: pointer;
+}
+.plab-build-btn:hover { background: var(--gold); color: var(--navy); }
+.plab-kit { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: #fff7e9; border: 1px solid #f0d9a8; font-size: 13px; color: #5a4a22; }
+.plab-hint { font-size: 12px; color: #6a7280; line-height: 1.5; margin-bottom: 10px; }
+.plab-hint code { background: #eef1f6; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; }
+.plab-textarea {
+  width: 100%; box-sizing: border-box; border: 1px solid #cfd6e0; border-radius: 8px;
+  padding: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; resize: vertical;
+}
+.plab-textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(245,166,35,.2); }
+.plab-warning { display: none; margin-top: 10px; padding: 9px 12px; border-radius: 7px; background: #fdeaea; color: #9b2c2c; font-size: 12.5px; }
+.plab-warning.visible { display: block; }
+.plab-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.plab-success { text-align: center; padding: 30px 10px; }
+.plab-success-trophy { font-size: 56px; }
+.plab-done { margin-top: 16px; }

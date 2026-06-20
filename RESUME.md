@@ -49,6 +49,58 @@ DONE + LIVE (`evaluator.js?v=20260620a`, `ui/test.js?v=20260620a`,
   right (upper `(0.11,0.35) rotZ -π/4`, lower `(0.11,-0.35) rotZ +π/4`). Was
   reading as a "D" because the arms met on the right and closed a bowl.
 
+## CHAPTER 17 "BUILD YOUR FIRST PRODUCT" + PRODUCT LAB (2026-06-20, DONE + LIVE) — approved plan
+The ch17 capstone: the player points the whole Playbook at one real everyday
+product and ships its **build kit**. Picks 1 of **18 templates** (🟢/🟡/🔴) to
+pass ch17; then a **Product Lab** (reception bench) unlocks the moment ch17
+passes, where the other 17 are optional builds awarding **+75 PP each**
+(idempotent). Plan: `~/.claude/plans/graceful-growing-milner.md`. Owner decisions:
+all 18 at launch; Lab unlocks on ch17 pass; bonus PP yes; **ch17 is the new
+climax** (finale re-gated ch16→ch17); structural-only **composite** grading.
+
+Build, all DONE + LIVE:
+- **`data/productTemplates.js`** — `window.PRODUCT_TEMPLATES` (18 entries:
+  id/name/complexity/form/audience/blurb/pieces/kit). Shared by the ch17 test
+  picker AND the Lab. Loaded in index.html after curriculum2.
+- **Composite `product` grader** — `engine/evaluator.js` `checkArtifact` `case
+  'product'`: counts DISTINCT shapes (frontmatter / JSON config / schedule /
+  md doc / numbered steps), requires **≥3** + len>150. Template-agnostic.
+  Unit + e2e tested (real kit 100, prose 0, 1-shape 40<70).
+- **ch17 chapter** — `data/curriculum3.js` (NEW, pushed onto CURRICULUM):
+  `capstone:true`, 3 lessons + `ch17-test` (passThreshold 70, xp 600), NO
+  theoreticalTest (test view handles that). CAPSTONE map in ui/test.js gets
+  `ch17:{kind:'product',…}`. **Template picker** (`buildTemplatePicker`) renders
+  the 18 as radios when `ch.id==='ch17'`; grading stays the generic composite.
+- **Product Lab overlay** — `play/ui/productLab.js` (`openProductLab`): rich
+  overlay (model planModeExercise), 18 cards by complexity, trophies from
+  `Progress.isProductBuilt`, Build→textarea→`Evaluator.evaluate(composite)`→
+  `onBuilt(id)`, "N/18 shipped". CSS `.product-lab-*` + `.ptpl-*` in style.css.
+- **Product Lab bench** — `play/world/objectTypes/productLabBench.js` (desk +
+  holo-emitter). Registered `product_lab` in play.js; placed `data/rooms.js`
+  reception `[-9.6,0,-2.2] rotY π/2` (beside Playbook Board). E opens the Lab
+  when `isTestDone('ch17-test')`, else a locked-hint toast; one-shot unlock
+  toast (flag `productLabOpen`). onBuilt: `recordProductBuilt(p,id,75)`+save+
+  `window.App.progress=p`+refreshSidebar.
+- **Progress** — `engine/progress.js`: `productsBuilt:[]` in DEFAULT_PROGRESS
+  (load-merge tolerant), `recordProductBuilt`(idempotent +PP)/`isProductBuilt`
+  exported. Badge-floor loop already bounded to 16 positions → ch17 (pos 16)
+  auto-excluded (no edit needed).
+- **Finale re-gated ch16→ch17** — `play.js` marcusDoor gate, the M-button
+  unlock (`mUnlocked`), promotionFor `'ch16'→'ch17'`; `storyState.js` deriveTier
+  T7. The server-rack hum (play.js ~6763) stays ch16 (zone ambiance). ch17
+  unlocks only after ch16 passes, so the side quest is still required.
+- **No-zone integration**: ch17 has no 3D zone. Exempted `ch.capstone` from the
+  4 auto-NPC spawn/lookup loops in play.js (was `HAND_BUILT_CHAPTER_IDS.has`),
+  from audit 1.5 (`data-consistency.cjs`), and added `curriculum3.js` to the
+  audit's `extract.cjs loadCurriculum`. Audit now reports **17 chapters, all
+  clean**. ch17 is taken from the 2D dashboard (renders in the MAIN grid since
+  it's `capstone` not `sideQuest`); the bench delivers builds 2–18.
+- Caches: `.js`/`.css` are `no-cache` (no `?v=` bumps needed); added the two new
+  `data/*.js` script tags (`?v=20260620a`).
+- **Honest caveats kept in copy**: build the blueprint + wiring kit, adapt the
+  channel; WhatsApp is an optional stretch (Telegram/email/file are defaults);
+  structural-only is gameable (composite raises the bar, not provenance).
+
 ## REALISTIC FOOTSTEP SFX (2026-06-20, DONE + LIVE)
 Footsteps were 100% synthesized (`play/audio/procedural.js` `playFootstep` —
 sine thump + bandpass-noise swish), which read as fake. Swapped in REAL recorded

@@ -35,6 +35,7 @@ const CAPSTONE = {
   ch14: { kind: 'agent', piece: 'a subagent', file: 'a `.claude/agents/<name>.md` (frontmatter `name:` + `description:` + a body)' },
   ch15: { kind: 'settings', piece: 'your guardrails', file: 'a `settings.json` block (a `permissions` allow/ask/deny and/or a `hooks` object)' },
   ch16: { kind: 'cron', piece: 'a scheduled job', file: 'a scheduled `claude -p "…"` command (or a cron line that runs it)' },
+  ch17: { kind: 'product', piece: 'your first real product', file: 'your build kit — a short README of the flow PLUS the real pieces it orchestrates (a skill/subagent, an `.mcp.json` or `settings.json`, the scheduled `claude -p` line, etc.). Several real shapes, not one.' },
 };
 function capstoneCriteria(chapterId) {
   const c = CAPSTONE[chapterId];
@@ -200,6 +201,8 @@ function renderTest(chapterId, targetEl = null) {
         ${CAPSTONE[ch.id] ? `<div class="task-capstone">📦 <strong>Your Playbook</strong> — this adds ${CAPSTONE[ch.id].piece}. Include ${CAPSTONE[ch.id].file} in your answer (paste the real file, not a description).</div>` : ''}
       </div>
 
+      ${buildTemplatePicker()}
+
       <div class="test-input-area">
         <label class="input-label" for="test-submission">Your Response</label>
         <div class="test-paste-tip">
@@ -224,9 +227,45 @@ function renderTest(chapterId, targetEl = null) {
       charCount.textContent = textarea.value.length;
     });
 
+    // ch17 template picker — keep the "what to paste" hint in sync with the
+    // chosen product. Grading stays the generic composite, so the pick is
+    // framing only (no per-template criteria).
+    if (ch.id === 'ch17' && Array.isArray(window.PRODUCT_TEMPLATES)) {
+      const kitEl = document.getElementById('ptpl-kit');
+      const paint = () => {
+        const idx = parseInt(document.querySelector('input[name="product-template"]:checked')?.value || '0', 10);
+        const t = window.PRODUCT_TEMPLATES[idx];
+        if (t && kitEl) kitEl.innerHTML = `📦 <strong>${t.name}</strong> — paste ${t.kit}.`;
+      };
+      document.querySelectorAll('input[name="product-template"]').forEach(r => r.addEventListener('change', paint));
+      paint();
+    }
+
     document.getElementById('submit-test').addEventListener('click', () => {
       handleTestSubmit(ch, test);
     });
+  }
+
+  // Chapter 17 only: a radio catalog of the 18 product templates, rated
+  // 🟢/🟡/🔴, sourced from window.PRODUCT_TEMPLATES. The player picks the one
+  // that fits their life; they build the rest later in the Product Lab.
+  function buildTemplatePicker() {
+    if (ch.id !== 'ch17' || !Array.isArray(window.PRODUCT_TEMPLATES)) return '';
+    const badge = { easy: '🟢 Easy', medium: '🟡 Medium', hard: '🔴 Hard' };
+    const items = window.PRODUCT_TEMPLATES.map((t, i) => `
+      <label class="ptpl-option" data-idx="${i}">
+        <input type="radio" name="product-template" value="${i}" ${i === 0 ? 'checked' : ''} />
+        <span class="ptpl-head"><span class="ptpl-badge ptpl-${t.complexity}">${badge[t.complexity] || t.complexity}</span><span class="ptpl-name">${t.name}</span></span>
+        <span class="ptpl-aud">${t.audience}</span>
+        <span class="ptpl-blurb">${t.blurb}</span>
+      </label>`).join('');
+    return `
+      <div class="test-template-picker">
+        <div class="task-label">Pick a product to build</div>
+        <p class="ptpl-intro">Choose the one that fits your life and the tools you actually have — you'll build its <strong>blueprint + wiring kit</strong>, and you can build the other 17 later at the Product Lab in reception. (WhatsApp is an optional stretch; Telegram / email-to-self / a local file are fine.)</p>
+        <div class="ptpl-list">${items}</div>
+        <div class="ptpl-kit" id="ptpl-kit"></div>
+      </div>`;
   }
 
   function renderTheoretical() {

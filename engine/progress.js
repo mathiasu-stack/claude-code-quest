@@ -31,6 +31,12 @@ const DEFAULT_PROGRESS = {
   // edits — once you've spent the PP, the spend sticks at the price
   // you paid. Guarded against double-purchase in purchaseItem.
   ownedItems: [],
+  // Product Lab (ch17 capstone): ids of product templates the player has
+  // built, e.g. ['kitchen-planner', 'money-sentinel']. Each first build
+  // awards bonus PP (idempotent — rebuilding the same template awards none).
+  // The ch17 chapter test itself is tracked in testResults like any chapter;
+  // this array is the OPTIONAL post-unlock builds in the Lab.
+  productsBuilt: [],
 };
 
 function loadProgress() {
@@ -213,6 +219,24 @@ function addBonusXP(progress, amount) {
   return { ...progress, totalXP: progress.totalXP + amount };
 }
 
+// ── Product Lab (ch17 capstone) ──────────────────────────────────────────
+// Optional product builds in the Lab. Idempotent: a template's FIRST build
+// records its id and awards `pp` bonus PP; rebuilding the same template is a
+// no-op (no double PP). The ch17 chapter test itself is recorded in
+// testResults via recordTestResult — this is only the post-unlock extras.
+function isProductBuilt(progress, productId) {
+  return (progress.productsBuilt || []).includes(productId);
+}
+
+function recordProductBuilt(progress, productId, pp = 0) {
+  if (!productId || isProductBuilt(progress, productId)) return progress;
+  const next = {
+    ...progress,
+    productsBuilt: [...(progress.productsBuilt || []), productId],
+  };
+  return pp ? addBonusXP(next, pp) : next;
+}
+
 // ── Test nonces (compliance verification codes) ───────────────────────────
 // A short per-attempt code (e.g. KDQ-7F3A) the player must have Claude echo
 // inside a real session, proving the submission came from live terminal
@@ -359,6 +383,8 @@ window.Progress = {
   recordKnowledgeCheck,
   isKnowledgeCheckPassed,
   addBonusXP,
+  isProductBuilt,
+  recordProductBuilt,
   purchaseItem,
   ownsItem,
   ownedItemIds,

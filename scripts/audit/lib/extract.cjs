@@ -38,9 +38,11 @@ function loadCurriculum() {
   const sandbox = { window: {} };
   const c1 = readFile('data/curriculum.js');
   const c2 = readFile('data/curriculum2.js');
+  const c3 = readFile('data/curriculum3.js');
   // eslint-disable-next-line no-new-func
   new Function('window', c1)(sandbox.window);
   new Function('window', c2)(sandbox.window);
+  new Function('window', c3)(sandbox.window);
   return sandbox.window.CURRICULUM || [];
 }
 

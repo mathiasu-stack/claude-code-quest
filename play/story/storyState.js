@@ -58,7 +58,7 @@ export function deriveTier(progress) {
   if (t >= 3 && passed(progress, 'ch09-test')) t = 4;
   if (t >= 4 && passed(progress, 'ch10-test') && sceneSeen('twist2')) t = 5;
   if (t >= 5 && passed(progress, 'ch15-test')) t = 6;
-  if (t >= 6 && passed(progress, 'ch16-test') && sceneSeen('finale')) t = 7;
+  if (t >= 6 && passed(progress, 'ch17-test') && sceneSeen('finale')) t = 7;
   return t;
 }
 

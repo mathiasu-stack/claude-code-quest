@@ -104,6 +104,28 @@ function checkArtifact(spec, submission) {
     case 'learnings':
       // a markdown doc with at least a header or a list, plus real content.
       return (/^#{1,6}\s/m.test(s) || /^\s*[-*]\s/m.test(s)) && s.length > 30;
+    case 'product': {
+      // Capstone (ch17 + Product Lab) composite: the learner pastes a real
+      // multi-part "build kit", not one artifact. We count DISTINCT real
+      // shapes present and require at least three, plus a non-trivial length.
+      // Structural-only by design (proves it's an assembled kit of the right
+      // shapes, not that the product runs). Reuses every shape detector above.
+      if (s.length < 150) return false;
+      const j = _extractJson(s);
+      const jsonConfig = !!(j && typeof j === 'object' && (
+        (j.permissions && ['allow', 'ask', 'deny'].some(k => Array.isArray(j.permissions[k]))) ||
+        (j.hooks && typeof j.hooks === 'object' && Object.keys(j.hooks).length > 0) ||
+        (j.mcpServers && typeof j.mcpServers === 'object' && Object.keys(j.mcpServers).length > 0)
+      ));
+      const shapes = [
+        !!_frontmatterBody(s),                                   // a skill/subagent/command
+        jsonConfig,                                              // settings/hooks/mcp JSON
+        /\bclaude\s+(-p|--print)\b/.test(s) || /(^|\n)\s*([0-9*/,\-]+\s+){4,5}\S/.test(s), // schedule
+        /^#{1,6}\s/m.test(s) || /^\s*[-*]\s/m.test(s),           // a markdown doc / README / learnings
+        /^\s*\d+[.)]/m.test(s),                                  // a numbered orchestration/build plan
+      ];
+      return shapes.filter(Boolean).length >= 3;
+    }
     case 'claude-md':
     default:
       // CLAUDE.md piece: markdown structure (header / list / a key: convention

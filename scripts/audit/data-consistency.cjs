@@ -124,6 +124,10 @@ function audit_1_5_chapter_has_npcs(npcs, curriculum) {
   }
   const orphans = [];
   for (const c of curriculum) {
+    // Capstone chapters (e.g. ch17 "Build Your First Product") are delivered
+    // via a reception prop + the dashboard, not a dedicated 3D zone, so they
+    // intentionally have no lesson/test NPCs — exempt them from this check.
+    if (c.capstone) continue;
     if (!(lessonNpcsByChapter.get(c.id) > 0)) orphans.push(`${c.id} (${c.title}) → no lesson NPCs`);
     if (!(testNpcsByChapter.get(c.id)   > 0)) orphans.push(`${c.id} (${c.title}) → no test NPC`);
   }

@@ -61,6 +61,8 @@ import { buildPhone } from './world/objectTypes/phone.js';
 import { buildModelConsole } from './world/objectTypes/modelConsole.js';
 import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
 import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js?v=20260620a';
+import { buildProductLabBench } from './world/objectTypes/productLabBench.js?v=20260620a';
+import { openProductLab, isProductLabOpen } from './ui/productLab.js?v=20260620a';
 import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
 import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
 import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js?v=20260610h';
@@ -2501,6 +2503,46 @@ function registerRoomBuilders() {
     ctx.decoTickers.push((dt) => pb.update(dt));
     return null;   // self-added to scene
   });
+  // Capstone — the "Product Lab" bench (ch17). Locked until ch17-test passes;
+  // then E opens the 18-template catalog overlay. Self-adds + self-registers.
+  registerRoomBuilder('product_lab', (pos, rotY, args, ctx) => {
+    const bench = buildProductLabBench({
+      scene: ctx.scene,
+      position: pos,
+      rotY: rotY || 0,
+      floor: 1,
+      isUnlocked: () => isTestDone('ch17-test'),
+      onInteract: () => {
+        if (!isTestDone('ch17-test')) {
+          showHintToast('🛠 The Product Lab opens once you pass Chapter 17 — build your first product to unlock the full catalog.');
+          return;
+        }
+        if (isProductLabOpen()) return;
+        inputLocked = true;
+        openProductLab({
+          getProgress: () => getProgress(),
+          onBuilt: (id) => {
+            let p = window.App?.progress || window.Progress.load();
+            p = window.Progress.recordProductBuilt(p, id, 75);
+            window.Progress.save(p);
+            window.App.progress = p;
+            try { window.App.refreshSidebar?.(); } catch {}
+          },
+          onClose: () => { inputLocked = false; },
+        });
+      },
+      onFirstUnlock: () => {
+        try {
+          if (!Story.getFlag?.('productLabOpen')) {
+            Story.setFlag?.('productLabOpen');
+            showHintToast('🛠 The Product Lab is open — build any of 18 real products at the bench in reception. Each one runs without you in the room.');
+          }
+        } catch {}
+      },
+    });
+    ctx.decoTickers.push((dt) => bench.update(dt));
+    return null;   // self-added to scene
+  });
   // PROP-08 — open filing-cabinet drawer, CX-13 — CX-18.
   registerRoomBuilder('cx_folder', (pos, rotY) => {
     const group = buildCxFolder();
@@ -4705,7 +4747,7 @@ function spawnNPCsForFloor(f) {
   const curriculum = window.CURRICULUM || [];
   for (let i = 0; i < curriculum.length; i++) {
     const ch = curriculum[i];
-    if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+    if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id) || ch.capstone) continue;
     if (floorForChapterIdx(i) !== f) continue;
     generateChapterNPCs(i).forEach(spawnNPC);
   }
@@ -5199,7 +5241,7 @@ function _stepDeliverer(ref) {
   const curriculum = window.CURRICULUM || [];
   for (let i = 0; i < curriculum.length; i++) {
     const ch = curriculum[i];
-    if (!ch || ch.id !== ref.chapterId || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+    if (!ch || ch.id !== ref.chapterId || HAND_BUILT_CHAPTER_IDS.has(ch.id) || ch.capstone) continue;
     const n = generateChapterNPCs(i).find(matchDef);
     if (n) {
       const ov = window.NPC_OVERRIDES?.[n.id];
@@ -5308,7 +5350,10 @@ function pendingSceneFor(npc) {
   // the post-finale lobby closes the loop.
   if (npc.id === 'marcus' && !Story.sceneSeen('marcusDoor')) {
     const progress = getProgress();
-    if (window.Progress?.isTestPassed?.(progress, 'ch16-test')) return 'marcusDoor';
+    // ch17 ("Build Your First Product") is now the capstone — the finale is
+    // earned by shipping a real product, not by ch16's headless-deploy. (ch17
+    // unlocks only after ch16 passes, so the side quest is still required.)
+    if (window.Progress?.isTestPassed?.(progress, 'ch17-test')) return 'marcusDoor';
   }
   if (npc.id === 'maya' && !Story.sceneSeen('mayaScene') && !Story.sceneSeen('finale')) {
     return 'mayaScene';
@@ -5803,10 +5848,11 @@ function closeDialogue() {
 function maybeRunPromotionCeremony() {
   try {
     const promotionFor = sessionStorage.getItem('ccq_promotion_for');
-    // R-6: the ch16 capstone does NOT get the generic auto-ceremony —
+    // R-6: the ch17 capstone does NOT get the generic auto-ceremony —
     // FIN-06 (the scripted finale after Maya's scene) IS the VP-of-AI
     // moment. Consume the flag silently so it can't fire later either.
-    if (promotionFor === 'ch16' && !Story.sceneSeen('finale')) {
+    // (ch16 is now a normal side quest and gets the generic ceremony.)
+    if (promotionFor === 'ch17' && !Story.sceneSeen('finale')) {
       sessionStorage.removeItem('ccq_promotion_for');
     } else if (promotionFor) {
       // Pause briefly so the scene is on screen before the spotlight.
@@ -6977,7 +7023,7 @@ window.PlayHints = {
     const curriculum = window.CURRICULUM || [];
     for (let i = 0; i < curriculum.length; i++) {
       const ch = curriculum[i];
-      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id) || ch.capstone) continue;
       if (!ch.lessons?.some(l => l.id === lessonId)) continue;
       const npc = generateChapterNPCs(i).find(n => n.lessonId === lessonId);
       if (npc) return npc.nextHint;
@@ -6991,7 +7037,7 @@ window.PlayHints = {
     const curriculum = window.CURRICULUM || [];
     for (let i = 0; i < curriculum.length; i++) {
       const ch = curriculum[i];
-      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id)) continue;
+      if (!ch || HAND_BUILT_CHAPTER_IDS.has(ch.id) || ch.capstone) continue;
       if (ch.practicalTest?.id !== testId) continue;
       const npc = generateChapterNPCs(i).find(n => n.testId === testId);
       if (npc) return npc.nextHint;
@@ -7425,7 +7471,7 @@ function openElevatorModal() {
     // FIN-01 — the blank slot below F1. Present (unlabeled, disabled)
     // from day one; lights up as 'M' once the capstone is passed AND
     // Marcus has had his word at the door. Story-gated, not badge-gated.
-    const mUnlocked = isTestDone('ch16-test') && Story.sceneSeen('marcusDoor');
+    const mUnlocked = isTestDone('ch17-test') && Story.sceneSeen('marcusDoor');
     const mBtn = document.createElement('button');
     if (mUnlocked) {
       const here = currentFloor === FLOOR_M_INDEX;
