@@ -43,11 +43,11 @@ const DEFAULT_PREFS = {
   master: 0.85,
   masterMute: false,
   channels: {
-    music:    { volume: 0.55, mute: false },
+    music:    { volume: 0.22, mute: false },
     sfx:      { volume: 0.85, mute: false },
     ui:       { volume: 0.7,  mute: false },
     voice:    { volume: 0.8,  mute: false },
-    ambience: { volume: 0.8,  mute: false },
+    ambience: { volume: 0.32, mute: false },
   },
 };
 
