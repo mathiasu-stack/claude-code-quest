@@ -8,7 +8,7 @@ cd "$REPO_ROOT"
 
 fail_total=0
 
-for script in scripts/audit/data-consistency.cjs scripts/audit/spatial.cjs; do
+for script in scripts/audit/data-consistency.cjs scripts/audit/spatial.cjs scripts/audit/smoke.cjs; do
   node "$script"
   rc=$?
   fail_total=$((fail_total + rc))
