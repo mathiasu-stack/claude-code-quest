@@ -86,6 +86,65 @@ function renderLesson(chapterId, lessonId, targetEl = null) {
   buildNavListeners(ch, lessonId);
   bindContinueCta();
   bindKnowledgeCheck(ch, lesson);
+  injectCopyButtons(main);
+}
+
+// ── Copy-to-clipboard for code blocks ────────────────────────────────────
+// Adds a "Copy" button to every <pre> in the container (skipping simulated
+// terminal mockups and pres that already have one). One delegated click
+// listener per container so re-renders don't stack handlers.
+function execCommandCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.top = '-9999px';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length); // iOS
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => execCommandCopy(text));
+  }
+  return Promise.resolve(execCommandCopy(text));
+}
+
+function injectCopyButtons(container) {
+  if (!container) return;
+  container.querySelectorAll('pre').forEach(pre => {
+    if (pre.closest('.term-shot')) return;
+    if (pre.querySelector('.copy-code-btn')) return;
+    pre._ccqCopyText = (pre.querySelector('code') || pre).innerText;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-code-btn';
+    btn.textContent = 'Copy';
+    pre.appendChild(btn);
+  });
+
+  if (container._ccqCopyBound) return;
+  container._ccqCopyBound = true;
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.copy-code-btn');
+    if (!btn) return;
+    const pre = btn.closest('pre');
+    const text = pre ? pre._ccqCopyText : '';
+    copyTextToClipboard(text || '').then(ok => {
+      btn.textContent = ok ? 'Copied ✓' : 'Copy failed — select & Ctrl+C';
+      if (ok) btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 1600);
+    });
+  });
 }
 
 function completeLesson(ch, lesson) {
@@ -376,4 +435,4 @@ function formatVerifyDate(dateStr) {
   return `${day} ${months[month - 1]} ${year}`;
 }
 
-window.Lesson = { renderLesson, showXpToast };
+window.Lesson = { renderLesson, showXpToast, injectCopyButtons };

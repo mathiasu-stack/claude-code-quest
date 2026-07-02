@@ -2,7 +2,9 @@ function renderDashboard() {
   const progress = window.App.progress;
   const main = document.getElementById('main-content');
 
-  const totalXP = CURRICULUM.reduce((sum, ch) => {
+  // Denominator = the CORE curriculum only — optional side quests would
+  // otherwise make 100% unreachable for players who skip them.
+  const totalXP = CURRICULUM.filter(ch => !Progress.isSideQuestChapter(ch)).reduce((sum, ch) => {
     const lessonXP = ch.lessons.reduce((s, l) => s + l.xpReward, 0);
     return sum + lessonXP + ch.xpReward + ch.practicalTest.xpReward;
   }, 0);
@@ -10,6 +12,12 @@ function renderDashboard() {
   const earned = progress.totalXP;
   const pct = Math.min(100, Math.round((earned / totalXP) * 100));
   const level = Scoring.getLevel(earned);
+
+  // Story banner: once the Kedash Protocol has started (tier >= 1, i.e.
+  // ch01's test passed), nudge 2D-first players toward the office where
+  // the narrative actually plays out. window.Story is only present when
+  // the 3D bundle has loaded; fall back to the tier-1 derivation.
+  const storyTier = window.Story?.getTier?.() ?? (Progress.isTestPassed(progress, 'ch01-test') ? 1 : 0);
 
   main.innerHTML = `
     <div class="dashboard">
@@ -25,14 +33,20 @@ function renderDashboard() {
           <div class="xp-progress-bar">
             <div class="xp-progress-fill" style="width:${pct}%"></div>
           </div>
-          <div class="xp-sub">${pct}% of total curriculum</div>
+          <div class="xp-sub">${pct}% of core curriculum</div>
         </div>
       </div>
 
       <div class="play-cta-row">
-        <button class="btn-primary play-cta-btn" id="play-cta-btn">🎮 Play in 3D (Beta)</button>
+        <button class="btn-primary play-cta-btn" id="play-cta-btn">🎮 Play in 3D</button>
         <span class="play-cta-sub">Walk around the office, meet your colleagues, learn lessons in person.</span>
       </div>
+
+      ${storyTier >= 1 ? `
+      <div class="story-banner">
+        <span class="story-banner-text">🏢 Something is off at Kedash Corp. Your colleagues are choosing their words carefully…</span>
+        <button class="story-banner-btn" id="story-banner-btn">Continue in the office ▸</button>
+      </div>` : ''}
 
       ${renderTrophyCabinet(progress)}
 
@@ -72,6 +86,8 @@ function renderDashboard() {
   if (fabBtn) fabBtn.addEventListener('click', () => window.App.navigate('play'));
   const trophyPlayBtn = document.getElementById('trophy-play-btn');
   if (trophyPlayBtn) trophyPlayBtn.addEventListener('click', () => window.App.navigate('play'));
+  const storyBannerBtn = document.getElementById('story-banner-btn');
+  if (storyBannerBtn) storyBannerBtn.addEventListener('click', () => window.App.navigate('play'));
 }
 
 function renderChapterCard(ch, progress) {
@@ -217,7 +233,7 @@ function renderTrophyCabinet(progress) {
 }
 
 function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 window.Dashboard = { renderDashboard, renderChapterView };

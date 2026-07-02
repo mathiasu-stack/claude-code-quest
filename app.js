@@ -4,12 +4,9 @@ const App = {
   _currentParams: {},
 
   init() {
+    maybeApplyFinaleDryRun();
     this.progress = Progress.load();
-    if (!this.progress.playerName) {
-      this.showNameModal();
-    } else {
-      this.boot();
-    }
+    this.boot();
   },
 
   touchActivity() {
@@ -41,7 +38,11 @@ const App = {
     } catch {}
   },
 
-  showNameModal() {
+  // Name capture happens lazily — the landing page renders first (cold
+  // open), and the modal only appears when the player tries to leave it.
+  // Dismissing the modal (backdrop click / Escape) cancels the exit
+  // without calling onDone, keeping the player on the landing page.
+  showNameModal(onDone) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
@@ -50,7 +51,7 @@ const App = {
         <h2>Welcome to Kedash Corp</h2>
         <p>You've been enrolled in the <strong>Claude Code Quest</strong> training programme. Before we begin, what should we call you?</p>
         <input type="text" id="name-input" class="modal-input" placeholder="Your first name" maxlength="40" autofocus>
-        <button class="btn-primary modal-btn" id="start-btn">Start Training →</button>
+        <button class="btn-primary modal-btn" id="start-btn">Continue →</button>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -64,12 +65,29 @@ const App = {
       this.progress.playerName = name;
       Progress.save(this.progress);
       overlay.remove();
-      this.boot();
+      document.removeEventListener('keydown', onKeydown);
+      this.refreshSidebar();
+      onDone();
     };
+    const dismiss = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', onKeydown);
+    };
+    const onKeydown = e => { if (e.key === 'Escape') dismiss(); };
 
     btn.addEventListener('click', submit);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    // Backdrop click (not clicks inside the modal card) dismisses.
+    overlay.addEventListener('click', e => { if (e.target === overlay) dismiss(); });
+    document.addEventListener('keydown', onKeydown);
     setTimeout(() => input.focus(), 100);
+  },
+
+  // Runs `then` immediately when the player already has a name; otherwise
+  // asks for one first and only proceeds on submit (dismissal = stay put).
+  _ensureName(then) {
+    if (this.progress.playerName) { then(); return; }
+    this.showNameModal(then);
   },
 
   navigate(view, params = {}) {
@@ -114,13 +132,16 @@ const App = {
     // The landing page is the front door — keep the sidebar tucked away
     // so the player sees the title screen, not the chapter list.
     if (sidebar) sidebar.classList.add('hidden-on-landing');
+    const hasName = !!this.progress?.playerName;
     const playerName = escHtml(this.progress?.playerName || 'New Hire');
     const isReturning = (this.progress?.totalXP || 0) > 0
       || (this.progress?.completedLessons?.length || 0) > 0;
     const ctaLabel = isReturning ? 'CONTINUE' : 'BEGIN TRAINING';
     const subline = isReturning
       ? `Welcome back, <strong>${playerName}</strong>. Kedash Corp will see you now.`
-      : `Welcome, <strong>${playerName}</strong>. Your first day at Kedash Corp begins now.`;
+      : (hasName
+        ? `Welcome, <strong>${playerName}</strong>. Your first day at Kedash Corp begins now.`
+        : 'Welcome. Your first day at Kedash Corp begins now.');
 
     main.innerHTML = `
       <div class="landing-view">
@@ -181,7 +202,7 @@ const App = {
           </button>
           ${isReturning ? `
             <div class="landing-stats">
-              <span>Tier: <strong>${escHtml(this.getCurrentTierLabel())}</strong></span>
+              <span>Level: <strong>${escHtml(this.getCurrentTierLabel())}</strong></span>
               <span>·</span>
               <span><strong>${this.progress?.totalXP || 0}</strong> PP</span>
               <span>·</span>
@@ -192,12 +213,16 @@ const App = {
     `;
 
     document.getElementById('landing-play-btn').addEventListener('click', () => {
-      if (sidebar) sidebar.classList.remove('hidden-on-landing');
-      this.navigate('play');
+      this._ensureName(() => {
+        if (sidebar) sidebar.classList.remove('hidden-on-landing');
+        this.navigate('play');
+      });
     });
     document.getElementById('landing-dashboard-btn').addEventListener('click', () => {
-      if (sidebar) sidebar.classList.remove('hidden-on-landing');
-      this.navigate('dashboard');
+      this._ensureName(() => {
+        if (sidebar) sidebar.classList.remove('hidden-on-landing');
+        this.navigate('dashboard');
+      });
     });
   },
 
@@ -225,7 +250,7 @@ const App = {
       <div class="play-view">
         <div class="play-canvas-host" id="play-canvas-host"></div>
         <button class="play-back-btn" id="play-back-btn">← Dashboard</button>
-        <div class="play-tier-badge" id="play-tier-badge">Tier: ${this.getCurrentTierLabel()}</div>
+        <div class="play-tier-badge" id="play-tier-badge">Level: ${this.getCurrentTierLabel()}</div>
         <div class="play-help">WASD or arrows to walk · E to interact</div>
         <div class="play-badge-hud" id="play-badge-hud" title="Corporate badge — elevator access">
           <span class="badge-icon">🪪</span>
@@ -277,25 +302,36 @@ const App = {
       </div>
     `;
     const tryStart = (attempts = 0) => {
+      const host = document.getElementById('play-canvas-host');
+      if (!host) return; // player navigated away mid-poll
       if (window.Play && window.Play.start) {
-        window.Play.start(document.getElementById('play-canvas-host'));
+        window.Play.start(host);
       } else if (attempts < 50) {
         setTimeout(() => tryStart(attempts + 1), 100);
       } else {
-        document.getElementById('play-canvas-host').innerHTML =
-          '<div style="padding:40px;text-align:center;color:#1a2744;">Couldn\'t load 3D engine. Check your connection and try again.</div>';
+        host.innerHTML = `
+          <div class="play-load-fail">
+            <p>The 3D engine hasn't loaded yet — this usually means a slow connection still fetching the play module.</p>
+            <button class="btn-primary" id="play-retry-btn">Try again</button>
+            <button class="btn-secondary" id="play-reload-btn">Reload page</button>
+          </div>
+        `;
+        host.querySelector('#play-retry-btn').addEventListener('click', () => {
+          host.innerHTML = '';
+          tryStart(0);
+        });
+        host.querySelector('#play-reload-btn').addEventListener('click', () => {
+          window.location.reload();
+        });
       }
     };
     tryStart();
   },
 
+  // Single progression ladder: the level label always comes from the PP
+  // (totalXP) ladder in engine/scoring.js — no parallel "tier" names.
   getCurrentTierLabel() {
-    if (!window.CURRICULUM || !this.progress) return 'Intern';
-    const tiers = ['Intern', 'Junior Hire', 'Associate', 'Engineer', 'Senior', 'Lead', 'Principal', 'Director'];
-    const completed = window.CURRICULUM.filter(ch =>
-      Progress.isChapterTestPassed(this.progress, ch)
-    ).length;
-    return tiers[Math.min(completed, tiers.length - 1)];
+    return window.Scoring ? Scoring.getLevelLabel(this.progress?.totalXP || 0) : 'New Hire';
   },
 
   renderSidebar() {
@@ -313,9 +349,10 @@ const App = {
       </div>
 
       <div class="sidebar-player" id="sidebar-player-info">
-        <div class="player-name">${escHtml(progress.playerName)}</div>
+        <div class="player-name">${escHtml(progress.playerName || 'New Hire')}</div>
         <div class="player-level">${level.label}</div>
         <div class="player-xp">${Scoring.formatXP(progress.totalXP)}</div>
+        <div class="player-pp-hint">PP = Performance Points, earned from lessons &amp; tests — your PP total sets your level.</div>
         <div class="level-bar">
           <div class="level-fill" style="width:${level.progressToNext}%"></div>
         </div>
@@ -360,8 +397,10 @@ const App = {
       </nav>
 
       <div class="sidebar-reset">
+        <button class="reset-btn backup-btn" id="export-progress-btn">Export progress</button>
+        <button class="reset-btn backup-btn" id="import-progress-btn">Import progress</button>
+        <input type="file" id="import-progress-file" accept=".json,application/json" style="display:none">
         <button class="reset-btn" id="reset-progress-btn">Reset Progress</button>
-        <button class="reset-btn admin-btn" id="admin-unlock-btn" title="Enter admin passcode">🔓 Admin</button>
       </div>
     `;
 
@@ -386,36 +425,123 @@ const App = {
       el.addEventListener('click', () => { App.navigate('chapter', { chapterId: el.dataset.chapter }); App.closeSidebar(); });
     });
 
-    document.getElementById('reset-progress-btn').addEventListener('click', () => {
-      if (confirm('Reset all progress? This cannot be undone.')) {
-        Progress.reset();
-        window.location.reload();
-      }
+    document.getElementById('export-progress-btn').addEventListener('click', () => {
+      const json = JSON.stringify(Progress.exportAllData(), null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      a.href = url;
+      a.download = `ccq-backup-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     });
 
-    document.getElementById('admin-unlock-btn').addEventListener('click', () => {
-      const entered = window.prompt('Enter admin passcode:');
-      if (entered === null) return; // user cancelled
-      if (entered === 'Kapprim') {
-        // Flag admin mode for this browser session. The 3D play view
-        // checks sessionStorage.ccq_admin to expose the "Edit Rooms"
-        // toggle that opens the room editor. Cleared automatically
-        // when the browser tab closes. Passcode is also stored so the
-        // editor's "Save Permanently" can authenticate to save.php.
+    const importInput = document.getElementById('import-progress-file');
+    document.getElementById('import-progress-btn').addEventListener('click', () => {
+      importInput.click();
+    });
+    importInput.addEventListener('change', () => {
+      const file = importInput.files && importInput.files[0];
+      importInput.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
         try {
-          sessionStorage.setItem('ccq_admin', '1');
-          sessionStorage.setItem('ccq_admin_pass', entered);
-        } catch {}
-        this._applyAdminBodyClass();
-        App.unlockEverything();
-      } else {
-        window.alert('Incorrect passcode.');
+          const parsed = JSON.parse(reader.result);
+          if (!confirm('Replace current progress with this backup?')) return;
+          if (Progress.importAllData(parsed)) {
+            window.location.reload();
+          } else {
+            window.alert('That file isn\'t a Claude Code Quest backup.');
+          }
+        } catch {
+          window.alert('Couldn\'t read that file — it isn\'t valid backup JSON.');
+        }
+      };
+      reader.onerror = () => window.alert('Couldn\'t read that file.');
+      reader.readAsText(file);
+    });
+
+    document.getElementById('reset-progress-btn').addEventListener('click', () => {
+      App.showResetModal();
+    });
+
+    // Hidden admin trigger: 5 clicks on the brand logo within a rolling
+    // 2-second window. Deliberately undiscoverable (no cursor affordance)
+    // — the visible "🔓 Admin" button used to leak the existence of admin
+    // mode to every player.
+    let logoClicks = 0, logoTimer = null;
+    sidebar.querySelector('.brand-logo')?.addEventListener('click', () => {
+      logoClicks += 1;
+      if (logoTimer) clearTimeout(logoTimer);
+      logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+      if (logoClicks >= 5) {
+        logoClicks = 0;
+        clearTimeout(logoTimer);
+        App.promptAdmin();
       }
     });
   },
 
-  // Admin-only "unlock everything" — gated by the Kapprim passcode in the
-  // sidebar. Marks every chapter unlocked, every lesson complete, every
+  // Confirmation modal for the destructive reset — requires typing RESET
+  // so a stray click can't wipe a save; points at Export as the backup.
+  showResetModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-logo">⚠️</div>
+        <h2>Reset all progress?</h2>
+        <p>This wipes <strong>everything</strong> — PP, completed lessons, test results, story progress, purchases. It cannot be undone.</p>
+        <p>Want a safety net? Use <strong>Export progress</strong> first to download a backup you can import later.</p>
+        <input type="text" id="reset-confirm-input" class="modal-input" placeholder="Type RESET to confirm" autocomplete="off">
+        <button class="modal-danger-btn" id="reset-confirm-btn" disabled>Reset everything</button>
+        <button class="btn-secondary modal-cancel-btn" id="reset-cancel-btn">Cancel</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#reset-confirm-input');
+    const confirmBtn = overlay.querySelector('#reset-confirm-btn');
+    input.addEventListener('input', () => {
+      confirmBtn.disabled = input.value.trim().toUpperCase() !== 'RESET';
+    });
+    confirmBtn.addEventListener('click', () => {
+      if (confirmBtn.disabled) return;
+      Progress.reset();
+      window.location.reload();
+    });
+    overlay.querySelector('#reset-cancel-btn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    setTimeout(() => input.focus(), 100);
+  },
+
+  // Admin unlock, reached only via the hidden brand-logo trigger. The
+  // passcode is checked against a SHA-256 hash so the plaintext never
+  // appears in shipped source; the entered plaintext is still stored in
+  // sessionStorage because the room editor's "Save Permanently" needs it
+  // to authenticate to the save server.
+  promptAdmin() {
+    const entered = window.prompt('Enter admin passcode:');
+    if (entered === null) return; // user cancelled
+    if (sha256Hex(entered) === ADMIN_PASS_HASH) {
+      try {
+        sessionStorage.setItem('ccq_admin', '1');
+        sessionStorage.setItem('ccq_admin_pass', entered);
+      } catch {}
+      this._applyAdminBodyClass();
+      this.unlockEverything();
+    } else {
+      window.alert('Incorrect passcode.');
+    }
+  },
+
+  // Admin-only "unlock everything" — gated by the hidden admin passcode
+  // prompt. Marks every chapter unlocked, every lesson complete, every
   // practical test passed, and lets applyBadgeBumpsIfDue push the badge
   // up to floor 4. Progress.* functions are idempotent and won't
   // double-award XP, so XP earned legitimately is preserved.
@@ -481,7 +607,170 @@ const App = {
 };
 
 function escHtml(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// SHA-256 of the admin passcode. The plaintext deliberately does not
+// appear in source — enter it once and it's kept for the session only.
+const ADMIN_PASS_HASH = '3708b32150ea6392c974c65fef2f0b236d0edc25ca09a8aad31ac27bfa027f7d';
+
+// Compact synchronous SHA-256 (FIPS 180-4, public-domain K constants),
+// UTF-8 encoding the input. crypto.subtle is unavailable on this
+// plain-HTTP origin, hence the pure-JS implementation. Verified against
+// the standard test vectors ('' / 'abc') and node:crypto.
+function sha256Hex(str) {
+  const bytes = (typeof TextEncoder !== 'undefined')
+    ? Array.from(new TextEncoder().encode(String(str)))
+    : (() => { // manual UTF-8 for very old engines
+        const s = String(str), out = [];
+        for (let i = 0; i < s.length; i++) {
+          let c = s.codePointAt(i);
+          if (c > 0xffff) i++;
+          if (c < 0x80) out.push(c);
+          else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+          else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+          else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+        }
+        return out;
+      })();
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ];
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const byteLen = bytes.length;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  const hi = Math.floor(byteLen / 0x20000000); // upper 32 bits of bit length
+  const lo = (byteLen << 3) >>> 0;             // lower 32 bits of bit length
+  bytes.push((hi >>> 24) & 255, (hi >>> 16) & 255, (hi >>> 8) & 255, hi & 255);
+  bytes.push((lo >>> 24) & 255, (lo >>> 16) & 255, (lo >>> 8) & 255, lo & 255);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  const w = new Array(64);
+  for (let i = 0; i < bytes.length; i += 64) {
+    for (let t = 0; t < 16; t++) {
+      w[t] = (bytes[i + t * 4] << 24) | (bytes[i + t * 4 + 1] << 16) | (bytes[i + t * 4 + 2] << 8) | bytes[i + t * 4 + 3];
+    }
+    for (let t = 16; t < 64; t++) {
+      const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+      const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let t = 0; t < 64; t++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[t] + w[t]) | 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+// ── Finale dry-run boot hook ──────────────────────────────────────────────
+// `?finaledry=1` (admin-gated) replaces the current save with an organic-
+// shaped "everything passed, finale not yet seen" save so the finale chain
+// can be play-tested end-to-end without 17 chapters of manual grinding.
+// Unlike the room editor's chapter skip, the save has varied scores,
+// failed attempts, streaks, knowledge checks — the shape a real player's
+// save would have.
+function maybeApplyFinaleDryRun() {
+  let q; try { q = new URLSearchParams(location.search); } catch { return; }
+  if (q.get('finaledry') !== '1') return;
+  if (sessionStorage.getItem('ccq_admin') !== '1') {
+    alert('finaledry: unlock admin first, then reload with ?finaledry=1'); return;
+  }
+  buildFinaleDrySave();
+  history.replaceState(null, '', location.pathname);
+}
+
+function buildFinaleDrySave() {
+  // Start from the same clean slate a reset produces (without the reload).
+  Progress.reset();
+  let p = Progress.load();
+
+  const curriculum = window.CURRICULUM || [];
+  curriculum.forEach((ch, i) => {
+    p = Progress.unlockChapter(p, ch.id);
+    for (const l of ch.lessons || []) {
+      p = Progress.markLessonComplete(p, l.id, l.xpReward || 0);
+    }
+    if (ch.practicalTest) {
+      // Some chapters get a recorded failed first attempt — organic saves
+      // aren't a wall of first-try passes.
+      if ((i * 5) % 3 > 0) {
+        p = Progress.recordTestResult(p, ch.practicalTest.id,
+          { passed: false, score: 40 + ((i * 13) % 25) },
+          ch.practicalTest.xpReward || 0);
+      }
+      p = Progress.recordTestResult(p, ch.practicalTest.id,
+        { passed: true, score: 70 + ((i * 7 + 3) % 26) },
+        ch.practicalTest.xpReward || 0);
+      // Chapter completion bonus — mirrors ui/test.js
+      // applyChapterPassSideEffects (`${ch.id}_chapter_bonus`, score 100).
+      p = Progress.recordTestResult(p, ch.id + '_chapter_bonus',
+        { passed: true, score: 100 }, ch.xpReward || 0);
+    }
+  });
+
+  // One live nonce, as if a test view had been opened and not yet re-passed.
+  p = Progress.ensureTestNonce(p, 'ch16-test').progress;
+
+  // A handful of in-lesson knowledge checks (first lesson of the first 6
+  // chapters), mixed first-try/retry.
+  curriculum.slice(0, 6).forEach((ch, idx) => {
+    const lessonId = ch.lessons && ch.lessons[0] && ch.lessons[0].id;
+    if (lessonId) p = Progress.recordKnowledgeCheck(p, lessonId, true, idx % 2 === 0);
+  });
+
+  // Two optional Product Lab builds (+75 PP each, idempotent).
+  const templates = window.PRODUCT_TEMPLATES || [];
+  for (const tpl of templates.slice(0, 2)) {
+    p = Progress.recordProductBuilt(p, tpl.id, 75);
+  }
+
+  // Streaks — lastActiveDate in the exact local YYYY-MM-DD format that
+  // engine/progress.js todayStr() writes.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  p = { ...p, currentStreak: 3, longestStreak: 6, lastActiveDate: today };
+
+  p = Progress.applyBadgeBumpsIfDue(p);
+  Progress.save(p);
+
+  // Story flags: pre-finale state — twists seen, marcusDoor/mayaScene/
+  // finale NOT seen. Shape matches play/story/storyState.js schema v1.
+  const story = {
+    schemaVersion: 1,
+    scenesSeen: ['inesAnticipates', 'twist1', 'curtain1', 'twist2', 'seventh'],
+    collectiblesRead: ['client_profiles'],
+    epilogue: false,
+    flags: { 'postpass:auto-ch04-test:T2': true, 'floor4_chime': true },
+  };
+  if (window.Story) {
+    // storyState.js is a module that caches its state in memory at eval
+    // time (it loads before DOMContentLoaded) — writing localStorage
+    // directly would be shadowed by that stale cache on the next save().
+    // Route through the public API instead; it produces the identical
+    // stored shape AND keeps the in-memory state in sync.
+    window.Story.reset();
+    story.scenesSeen.forEach(id => window.Story.markSceneSeen(id));
+    story.collectiblesRead.forEach(id => window.Story.markCollectibleRead(id));
+    Object.keys(story.flags).forEach(k => window.Story.setFlag(k));
+  } else {
+    localStorage.setItem('ccq_story', JSON.stringify(story));
+  }
 }
 
 window.App = App;

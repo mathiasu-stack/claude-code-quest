@@ -58,6 +58,156 @@ function setStoredTestMode(chapterId, mode) {
   try { localStorage.setItem(TEST_MODE_KEY_PREFIX + chapterId, mode); } catch {}
 }
 
+// ── Mobile practical banner ──────────────────────────────────────────────
+// Practical tests need a real terminal on a computer. On a phone, offer the
+// MCQ track up front instead of letting the player hit a wall.
+const MOBILE_NOTE_KEY = 'ccq_mobile_practical_note';
+
+function isProbablyMobile() {
+  try {
+    return window.matchMedia('(pointer: coarse)').matches &&
+           window.matchMedia('(max-width: 820px)').matches;
+  } catch {
+    return (navigator.maxTouchPoints || 0) > 1 && Math.min(screen.width, screen.height) < 820;
+  }
+}
+
+function isMobileNoteDismissed() {
+  try { return localStorage.getItem(MOBILE_NOTE_KEY) === '1'; } catch { return false; }
+}
+
+function dismissMobileNote() {
+  try { localStorage.setItem(MOBILE_NOTE_KEY, '1'); } catch {}
+}
+
+// ── Story surfacing (Kedash Protocol) — 2D post-pass memo ───────────────────
+// The 3D office shows a one-shot postPassOnceByTier line when the player
+// talks to the test NPC after newly passing. Players living in the 2D view
+// never see those — so after a passing PRACTICAL submission we render the
+// same line as an internal memo card, burning the SAME `postpass:` flag
+// play.js uses so a line never plays twice across the two views.
+
+// Exact replica of play.js resolveByTier: among keys T0..T7, the highest
+// TN <= tier wins.
+function storyResolveByTier(map, tier) {
+  if (!map) return null;
+  let bestN = -1, bestVal = null;
+  for (const key of Object.keys(map)) {
+    const n = parseInt(String(key).slice(1), 10);
+    if (Number.isFinite(n) && n <= tier && n > bestN) { bestN = n; bestVal = map[key]; }
+  }
+  return bestN >= 0 ? { key: `T${bestN}`, value: bestVal } : null;
+}
+
+// STORY_LINES ids for test NPCs: hand-built cast for ch01/ch02, auto-spawned
+// assessors ('auto-chNN-test') for everyone else — mirrors play.js spawning.
+function storyNpcIdForChapter(chId) {
+  if (chId === 'ch01') return 'sarah';
+  if (chId === 'ch02') return 'noor';
+  return 'auto-' + chId + '-test';
+}
+
+// Prefer the live Story module (3D bundle loaded); else a format-exact
+// read/write fallback over localStorage `ccq_story`. getTier replicates
+// play/story/storyState.js deriveTier verbatim against the same save.
+function storyApi() {
+  if (window.Story) return window.Story;
+  const KEY = 'ccq_story';
+  const load = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return { schemaVersion: 1, scenesSeen: [], collectiblesRead: [], epilogue: false, flags: {} };
+      const s = JSON.parse(raw);
+      return {
+        schemaVersion: 1,
+        scenesSeen: Array.isArray(s.scenesSeen) ? s.scenesSeen : [],
+        collectiblesRead: Array.isArray(s.collectiblesRead) ? s.collectiblesRead : [],
+        epilogue: !!s.epilogue,
+        flags: (s.flags && typeof s.flags === 'object') ? s.flags : {},
+      };
+    } catch {
+      return { schemaVersion: 1, scenesSeen: [], collectiblesRead: [], epilogue: false, flags: {} };
+    }
+  };
+  const state = load();
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+  };
+  const sceneSeen = (id) => state.scenesSeen.includes(id);
+  const passed = (progress, testId) =>
+    !!(window.Progress && progress && window.Progress.isTestPassed(progress, testId));
+  return {
+    getTier() {
+      // VERBATIM replica of storyState.js deriveTier(progress).
+      const progress = window.App?.progress || (window.Progress ? window.Progress.load() : null);
+      let t = 0;
+      if (passed(progress, 'ch01-test')) t = 1;
+      if (t >= 1 && passed(progress, 'ch12-test')) t = 2;
+      if (t >= 2 && passed(progress, 'ch04-test') && sceneSeen('twist1')) t = 3;
+      if (t >= 3 && passed(progress, 'ch09-test')) t = 4;
+      if (t >= 4 && passed(progress, 'ch10-test') && sceneSeen('twist2')) t = 5;
+      if (t >= 5 && passed(progress, 'ch15-test')) t = 6;
+      if (t >= 6 && passed(progress, 'ch17-test') && sceneSeen('finale')) t = 7;
+      return t;
+    },
+    getFlag(key) { return !!state.flags[key]; },
+    setFlag(key) {
+      if (!state.flags[key]) { state.flags[key] = true; save(); }
+    },
+  };
+}
+
+function _storyEscapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Fallback speakers when the resolved line doesn't relay one explicitly.
+const _STORY_MEMO_SPEAKERS = {
+  ch01: { name: 'Sarah Chen', role: 'Engineering Manager', portrait: '👩‍💼' },
+  ch02: { name: 'Noor Ali', role: 'Senior Librarian', portrait: '👩‍🏫' },
+};
+
+function appendStoryMemo(feedbackEl, ch) {
+  const npcId = storyNpcIdForChapter(ch.id);
+  const lines = window.STORY_LINES && window.STORY_LINES[npcId];
+  if (!lines || !lines.postPassOnceByTier) return;
+  const S = storyApi();
+  const tier = S.getTier();
+  const pp = storyResolveByTier(lines.postPassOnceByTier, tier);
+  if (!pp) return;
+  const flagKey = 'postpass:' + npcId + ':' + pp.key; // EXACT play.js format
+  if (S.getFlag(flagKey)) return;
+  S.setFlag(flagKey);
+
+  const v = pp.value;
+  const text = typeof v === 'string' ? v : (v.text || '');
+  if (!text) return;
+  const fallback = _STORY_MEMO_SPEAKERS[ch.id] || { name: `Assessor — ${ch.title}`, role: 'Kedash Corp', portrait: '🧑‍💼' };
+  const name = (typeof v === 'object' && v.speakerName) || fallback.name;
+  const role = (typeof v === 'object' && v.speakerRole) || fallback.role;
+  const portrait = (typeof v === 'object' && v.speakerPortrait) || fallback.portrait;
+  const heroText = typeof v === 'object' ? (v.heroReply || v.heroThought || '') : '';
+  const heroIsThought = typeof v === 'object' && !v.heroReply && !!v.heroThought;
+
+  const memo = document.createElement('div');
+  memo.className = 'story-memo';
+  memo.innerHTML = `
+    <div class="story-memo-eyebrow">📎 Internal — Kedash Corp</div>
+    <div class="story-memo-head">
+      <span class="story-memo-avatar">${portrait}</span>
+      <div class="story-memo-who">
+        <span class="story-memo-name">${_storyEscapeHtml(name)}</span>
+        <span class="story-memo-role">${_storyEscapeHtml(role)}</span>
+      </div>
+    </div>
+    <div class="story-memo-body">${_storyEscapeHtml(text)}</div>
+    ${heroText ? `<div class="story-memo-hero ${heroIsThought ? 'is-thought' : ''}">${_storyEscapeHtml(heroText)}</div>` : ''}
+    <div class="story-memo-foot">Your colleagues have more to say — find them in the 3D office.</div>
+  `;
+  feedbackEl.appendChild(memo);
+}
+
 // Fisher-Yates over an integer index range — mirrors the just-landed KC
 // shuffle pattern in ui/lesson.js so the visual feel matches across the
 // app. Used for both pool-sampling and per-question option-order shuffles.
@@ -135,13 +285,13 @@ function renderTest(chapterId, targetEl = null) {
     else window.App.navigate('chapter', { chapterId });
   };
 
-  function header(eyebrowSuffix, prevResult) {
+  function header(eyebrowSuffix, prevResult, scoreLabel = 'Score') {
     return `
       <div class="test-header">
         <div class="test-eyebrow">${ch.icon} ${ch.title} — ${eyebrowSuffix}</div>
         <h1 class="test-title">Final Task</h1>
         ${prevResult ? `<div class="prev-result ${prevResult.passed ? 'pass' : 'fail'}">
-          Previous attempt: ${prevResult.score}% — ${prevResult.passed ? 'Passed ✓' : 'Not yet passed'}
+          Previous attempt — ${scoreLabel}: ${prevResult.score}% — ${prevResult.passed ? 'Passed ✓' : 'Not yet passed'}
         </div>` : ''}
       </div>
     `;
@@ -162,16 +312,18 @@ function renderTest(chapterId, targetEl = null) {
     `;
   }
 
-  function renderShell(innerHtml, eyebrowSuffix, prevResult) {
+  function renderShell(innerHtml, eyebrowSuffix, prevResult, scoreLabel) {
     main.innerHTML = `
       <div class="test-view">
         <button class="back-btn" id="back-to-chapter">← ${fromPlay ? 'Back to the office' : ch.title}</button>
-        ${header(eyebrowSuffix, prevResult)}
+        ${header(eyebrowSuffix, prevResult, scoreLabel)}
         ${toggle()}
         ${innerHtml}
         <div id="test-feedback" class="test-feedback hidden"></div>
       </div>
     `;
+
+    Lesson.injectCopyButtons(main);
 
     document.getElementById('back-to-chapter').addEventListener('click', exitToWorld);
 
@@ -191,7 +343,17 @@ function renderTest(chapterId, targetEl = null) {
   }
 
   function renderPractical() {
+    const showMobileNote = isProbablyMobile() && !!theoreticalTest && !isMobileNoteDismissed();
     const innerHtml = `
+      ${showMobileNote ? `
+      <div class="mobile-practical-note">
+        <span class="mpn-icon">📱</span>
+        <div class="mpn-body">
+          <strong>On a phone?</strong> Practical tests need a computer running Claude Code in a real terminal. You can take the written (MCQ) track right now — it awards the same PP and unlocks the chapter — and do the practical later from a computer.
+          <button class="btn-primary mpn-switch" id="mpn-switch">📝 Switch to the written test</button>
+        </div>
+        <button class="mpn-dismiss" id="mpn-dismiss" aria-label="Dismiss">✕</button>
+      </div>` : ''}
       ${buildScenarioCard(test, nonce)}
 
       <div class="test-task-box">
@@ -202,6 +364,15 @@ function renderTest(chapterId, targetEl = null) {
       </div>
 
       ${buildTemplatePicker()}
+
+      <div class="terminal-seam">
+        <div class="terminal-seam-title">🖥️ You'll need a real terminal for this part</div>
+        <ol class="terminal-seam-steps">
+          <li>Keep this tab open — the task stays right here.</li>
+          <li>On your computer, open your terminal (PowerShell / Terminal), <code>cd</code> into a project, and run <code>claude</code>.</li>
+          <li>Do the task there, copy the evidence (your prompt + Claude's reply), then come back and paste it below.</li>
+        </ol>
+      </div>
 
       <div class="test-input-area">
         <label class="input-label" for="test-submission">Your Response</label>
@@ -219,7 +390,19 @@ function renderTest(chapterId, targetEl = null) {
 
       <button class="btn-primary submit-btn" id="submit-test">Submit for Review →</button>
     `;
-    renderShell(innerHtml, 'Practical Assessment', prevPracticalResult);
+    renderShell(innerHtml, 'Practical Assessment', prevPracticalResult, 'Structural score');
+
+    // Mobile banner wiring — switch hops to the MCQ track via the real
+    // mode-toggle button; dismiss persists so the note doesn't nag.
+    const mpnSwitch = document.getElementById('mpn-switch');
+    if (mpnSwitch) mpnSwitch.addEventListener('click', () => {
+      document.querySelector(`.test-mode-btn[data-mode="${TEST_MODE_THEORETICAL}"]`)?.click();
+    });
+    const mpnDismiss = document.getElementById('mpn-dismiss');
+    if (mpnDismiss) mpnDismiss.addEventListener('click', () => {
+      dismissMobileNote();
+      document.querySelector('.mobile-practical-note')?.remove();
+    });
 
     const textarea = document.getElementById('test-submission');
     const charCount = document.getElementById('char-count');
@@ -515,9 +698,10 @@ function renderFeedback(result, test, wasAlreadyPassed, ch, levelBefore) {
   feedbackEl.innerHTML = `
     <div class="feedback-banner ${passClass}">
       <div class="feedback-title">${passText}</div>
-      <div class="feedback-score">Score: ${result.score}% (pass threshold: ${test.passThreshold}%)</div>
+      <div class="feedback-score">Structural score: ${result.score}% (pass threshold: ${test.passThreshold}%)</div>
       <div class="feedback-xp">${xpText}</div>
     </div>
+    <div class="score-honesty">ℹ️ Automated structural check of your pasted evidence — it verifies the shape of what you submitted (keywords, sections, artifacts), not mastery.</div>
     ${nextHint ? `<div class="next-hint-banner">📍 <strong>Next stop:</strong> ${nextHint}</div>` : ''}
 
     <div class="score-bar-container">
@@ -557,6 +741,13 @@ function renderFeedback(result, test, wasAlreadyPassed, ch, levelBefore) {
 
     <button class="btn-primary continue-cta" id="back-to-play-from-test" style="margin-top:16px">🎮 ${window.App._currentParams?.fromPlay ? 'Return to the office' : 'Back to the 3D world'}</button>
   `;
+
+  // Story memo BEFORE the scroll target settles: practical track only, and
+  // only on a pass (Progress.save already ran in handleTestSubmit, so the
+  // derived tier reflects this pass).
+  if (result.passed) appendStoryMemo(feedbackEl, ch);
+
+  Lesson.injectCopyButtons(feedbackEl);
 
   feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -638,6 +829,8 @@ function renderMcqFeedback(result, theoreticalTest, attempt, wasAlreadyPassed, c
 
     <button class="btn-primary continue-cta" id="back-to-play-from-test" style="margin-top:16px">🎮 ${window.App._currentParams?.fromPlay ? 'Return to the office' : 'Back to the 3D world'}</button>
   `;
+
+  Lesson.injectCopyButtons(feedbackEl);
 
   feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 

@@ -364,10 +364,34 @@ function purchaseItem(progress, itemId, cost) {
   };
 }
 
+// ── Backup / restore ─────────────────────────────────────────────────────
+// Everything the app persists lives under localStorage keys prefixed
+// `ccq_` (progress, story flags, audio prefs, …). Export snapshots them
+// all into a portable JSON payload; import writes them back verbatim.
+
+function exportAllData() {
+  const keys = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('ccq_')) keys[k] = localStorage.getItem(k);
+  }
+  return { app: 'ccq-backup', version: 1, exportedAt: new Date().toISOString(), keys };
+}
+
+function importAllData(payload) {
+  if (!payload || payload.app !== 'ccq-backup' || typeof payload.keys !== 'object') return false;
+  for (const [k, v] of Object.entries(payload.keys)) {
+    if (k.startsWith('ccq_') && typeof v === 'string') localStorage.setItem(k, v);
+  }
+  return true;
+}
+
 window.Progress = {
   load: loadProgress,
   save: saveProgress,
   reset: resetProgress,
+  exportAllData,
+  importAllData,
   markLessonComplete,
   recordTestResult,
   unlockChapter,

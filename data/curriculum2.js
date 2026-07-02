@@ -543,7 +543,16 @@ Your answer becomes the next learnings.md entry."</code></pre>
         lastVerified: '2026-06-15',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/model</code> showing the interactive picker (Opus / Sonnet / Haiku rows visible with current selection highlighted) and replace this marker. Save as <code>play/assets/lessons/ch10-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch10-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /model
+
+<span class="ts-gold">Select model</span> <span class="ts-dim">current: sonnet</span>
+
+  1. Default (Recommended)   <span class="ts-dim">Sonnet for daily work</span>
+<span class="ts-sel">❯ 2. Opus                    claude-opus-4-8 · most capable · priciest</span>
+  3. Sonnet <span class="ts-ok">✓</span>                <span class="ts-dim">claude-sonnet-4-6 · balanced default</span>
+  4. Haiku                   <span class="ts-dim">claude-haiku-4-5 · fastest · cheapest</span>
+
+<span class="ts-dim">↑/↓ move · enter select · esc cancel</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
 <p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
 <h3>The Claude 4 family in Claude Code</h3>
@@ -1294,7 +1303,23 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>The Three Permission Verbs</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own screenshot of a real <code>settings.json</code> open in your editor with <code>permissions.allow</code>, <code>permissions.ask</code>, and <code>permissions.deny</code> blocks highlighted, and replace this marker. Save as <code>play/assets/lessons/ch15-l02.png</code>.</div>
+<div class="term-shot term-shot--editor" data-shot="ch15-l02"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">.claude/settings.json</span></div><div class="term-shot-body">{
+  "permissions": {
+    <span class="ts-ok">"allow"</span>: [
+      "Read",
+      "Bash(npm test:*)",
+      "Bash(git diff:*)"
+    ],
+    <span class="ts-gold">"ask"</span>: [
+      "Bash(git push:*)",
+      "WebFetch"
+    ],
+    <span class="ts-bad">"deny"</span>: [
+      "Read(./.env)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}</div><div class="term-shot-cap">Simulated editor view — the three verbs every rule resolves to.</div></div>
 <p>Every tool call Claude Code wants to make is matched against your permission rules and resolved into one of three outcomes:</p>
 <ul>
   <li><strong>allow</strong> — runs immediately, no prompt.</li>
@@ -1631,7 +1656,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         id: 'ch16-l04', title: 'Persistent Sessions with tmux', xpReward: 125, videos: [],
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
-        content: '<h2>Sessions That Survive Disconnection</h2><div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of a <code>tmux</code> session running <code>claude</code> (the green tmux status bar visible at the bottom with the session name), and replace this marker. Save as <code>play/assets/lessons/ch16-l04.png</code>.</div><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
+        content: '<h2>Sessions That Survive Disconnection</h2><div class="term-shot" data-shot="ch16-l04"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">ssh remote-dev — tmux: claude-work</span></div><div class="term-shot-body"><span class="ts-dim">$</span> tmux new-session -s claude-work\n<span class="ts-dim">$</span> cd /volume1/projects/my-app\n<span class="ts-dim">$</span> claude\n<span class="ts-gold">✻ Welcome to Claude Code!</span> <span class="ts-dim">claude-sonnet-4-6 · /volume1/projects/my-app</span>\n\n<span class="ts-cy">&gt;</span> Keep refactoring the importer — I might lose this connection.\n<span class="ts-ok">●</span> Understood. I\'ll keep working through the importer module —\nreattach whenever, this session isn\'t going anywhere.\n\n<span class="ts-tmuxbar">[claude-work] 0:claude*                                  "nas" 23:14</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you\'ll see the live version.</div></div><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
       },
       {
         id: 'ch16-l05', title: 'Remote-Box CLAUDE.md and Final Integration', xpReward: 125, videos: [],

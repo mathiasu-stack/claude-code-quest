@@ -3450,3 +3450,108 @@ body.is-admin .lesson-todo-shot {
 .plab-success { text-align: center; padding: 30px 10px; }
 .plab-success-trophy { font-size: 56px; }
 .plab-done { margin-top: 16px; }
+
+/* ==================== 2D UX FIXES (backup, hints, 3D-load fail) ==================== */
+
+/* Sidebar PP explainer under the player XP line */
+.player-pp-hint {
+  font-size: 10px;
+  color: var(--gray-400);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+/* Export/Import buttons share .reset-btn sizing; neutral (non-red) hover */
+.reset-btn.backup-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Type-to-confirm reset modal */
+.modal-danger-btn {
+  width: 100%;
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modal-danger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.modal-cancel-btn { margin-top: 10px; width: 100%; }
+
+/* 3D engine load-failure card */
+.play-load-fail {
+  padding: 40px 24px;
+  text-align: center;
+  color: #1a2744;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.play-load-fail p { max-width: 420px; font-size: 14px; line-height: 1.6; }
+
+/* ============================================================
+   NEW — Terminal mockups, copy buttons, terminal seam, mobile
+   note, structural-score disclosure, story memo & banner
+   ============================================================ */
+
+/* ── term-shot: authored fake-terminal frames (replaces lesson-todo-shot) ── */
+.term-shot { margin: 18px 0; border: 1px solid #2b3a5c; border-radius: 10px; overflow: hidden; background: #0d1526; box-shadow: var(--shadow-md); }
+.term-shot-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #1a2440; border-bottom: 1px solid #2b3a5c; }
+.ts-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.ts-r { background: #ff5f56; } .ts-y { background: #ffbd2e; } .ts-g { background: #27c93f; }
+.term-shot-title { margin-left: 8px; font-family: var(--font-mono); font-size: 11px; color: #8ea0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.term-shot-body { padding: 14px 16px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; color: #dbe4f3; white-space: pre-wrap; overflow-x: auto; }
+.term-shot-cap { padding: 6px 12px 8px; font-size: 11px; font-style: italic; color: #8091ad; background: #101a30; border-top: 1px solid #223050; }
+.ts-dim  { color: #64748b; }
+.ts-gold { color: var(--gold-light); }
+.ts-ok   { color: #4ade80; }
+.ts-bad  { color: #f87171; }
+.ts-cy   { color: #67e8f9; }
+.ts-sel  { display: inline-block; width: 100%; background: rgba(245,166,35,0.16); border-radius: 3px; }
+.term-shot--editor .term-shot-body { color: #cbd5e1; }
+.ts-tmuxbar { display: block; margin-top: 10px; padding: 1px 8px; background: #0ca678; color: #04291f; border-radius: 2px; }
+
+/* ── copy-to-clipboard buttons on <pre> blocks ── */
+.lesson-content pre, .test-view pre, .exemplar-body pre { position: relative; padding-right: 64px; }
+.copy-code-btn { position: absolute; top: 6px; right: 6px; padding: 3px 10px; font-size: 11px; font-family: var(--font-body); font-weight: 600; color: #cbd5e1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; cursor: pointer; transition: background 0.15s; }
+.copy-code-btn:hover { background: rgba(255,255,255,0.16); color: var(--white); }
+.copy-code-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.5); }
+
+/* ── terminal seam staging strip (practical test) ── */
+.terminal-seam { margin: 0 0 16px; padding: 12px 16px; background: var(--navy-dark); color: #dbe4f3; border-radius: var(--radius); border-left: 4px solid var(--gold); }
+.terminal-seam-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.terminal-seam-steps { margin: 0 0 0 20px; font-size: 13px; line-height: 1.6; }
+.terminal-seam-steps li { margin-bottom: 3px; }
+.terminal-seam code { font-family: var(--font-mono); font-size: 12px; background: rgba(255,255,255,0.1); color: var(--gold-light); padding: 1px 5px; border-radius: 3px; }
+
+/* ── mobile practical note ── */
+.mobile-practical-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 12px 14px; font-size: 13px; line-height: 1.5; color: #713f12; background: #fef3c7; border: 1px solid #fcd34d; border-radius: var(--radius); }
+.mobile-practical-note .mpn-icon { font-size: 20px; }
+.mobile-practical-note .mpn-text { flex: 1 1 240px; }
+.mobile-practical-note .mpn-actions { display: flex; align-items: center; gap: 8px; }
+.mobile-practical-note .mpn-switch { font-size: 13px; padding: 8px 14px; }
+.mobile-practical-note .mpn-dismiss { background: none; border: none; font-size: 15px; color: #92610a; cursor: pointer; padding: 4px 6px; }
+
+/* ── structural-score disclosure ── */
+.score-honesty { margin: 8px 0 14px; font-size: 12px; font-style: italic; color: var(--gray-600); }
+
+/* ── story memo card (post-pass, 2D) ── */
+.story-memo { margin-top: 18px; padding: 14px 16px; background: var(--white); border: 1px solid var(--gray-200); border-left: 4px solid var(--gold); border-radius: var(--radius); box-shadow: var(--shadow); }
+.story-memo-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 8px; }
+.story-memo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.story-memo-avatar { font-size: 26px; }
+.story-memo-name { font-size: 14px; font-weight: 700; color: var(--navy); }
+.story-memo-role { font-size: 11px; color: var(--gray-600); }
+.story-memo-body { font-size: 14px; line-height: 1.55; color: var(--gray-800); }
+.story-memo-hero { margin-top: 8px; font-size: 13px; color: var(--gray-600); }
+.story-memo-hero.is-thought { font-style: italic; color: var(--gray-400); }
+.story-memo-foot { margin-top: 10px; font-size: 11px; font-style: italic; color: var(--gray-400); border-top: 1px dashed var(--gray-200); padding-top: 8px; }
+
+/* ── dashboard story banner ── */
+.story-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding: 10px 16px; background: linear-gradient(90deg, var(--navy), var(--navy-light)); color: var(--white); border-radius: var(--radius); border: 1px solid rgba(245,166,35,0.35); }
+.story-banner-text { flex: 1; font-size: 13px; }
+.story-banner-btn { flex-shrink: 0; padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--navy); background: var(--gold); border: none; border-radius: 6px; cursor: pointer; }
+.story-banner-btn:hover { background: var(--gold-light); }
+@media (max-width: 720px) { .story-banner { flex-direction: column; align-items: flex-start; } }

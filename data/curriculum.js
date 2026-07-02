@@ -12,7 +12,21 @@ window.CURRICULUM = [
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Welcome to Kedash Corp</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>claude</code> on first run (the welcome banner with version + model + working directory) and replace this marker. Save as <code>play/assets/lessons/ch01-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch01-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-dim">$</span> mkdir kedash-support &amp;&amp; cd kedash-support
+<span class="ts-dim">$</span> claude
+
+<span class="ts-gold">✻ Welcome to Claude Code!</span>
+
+<span class="ts-dim">  model:</span> claude-sonnet-4-6 · API
+<span class="ts-dim">  cwd:</span>   ~/kedash-support
+<span class="ts-dim">  v2.1.176</span>
+
+<span class="ts-dim">Tips: /help for commands · /init to set up CLAUDE.md · shift+tab to cycle modes</span>
+
+<span class="ts-cy">&gt;</span> Hi
+<span class="ts-ok">●</span> Hello! I'm Claude Code — I can read, edit, and run things in this
+directory. It's empty right now: want me to scaffold a project, or
+shall we start with a question?</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Congratulations on your first day! You've been assigned an AI coding assistant: <strong>Claude Code</strong>. Think of it as a senior engineer who lives in your terminal — one who never sleeps, never gets annoyed at your questions, and has read every doc you've been putting off.</p>
 <p>Claude Code is Anthropic's official CLI tool that brings the Claude AI model directly into your development workflow. Unlike a chat interface, Claude Code operates <em>inside your project directory</em>. It can read your files, understand your codebase, make edits, run commands, and help you ship faster.</p>
 <h3>What Claude Code can do</h3>
@@ -152,7 +166,12 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>AI Tooling Docs Age Fast</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of the Claude Code status line in action (showing version, model, permission mode, and context usage), and replace this marker. Save as <code>play/assets/lessons/ch01-l05.png</code>.</div>
+<div class="term-shot" data-shot="ch01-l05"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-dim">$</span> claude --version
+2.1.176 (Claude Code)
+
+<span class="ts-dim"># and inside a session, the status line along the bottom reads:</span>
+
+<span class="ts-dim">⏵⏵ accept edits on (shift+tab to cycle) · <span class="ts-gold">claude-sonnet-4-6</span> · context: 62% free</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
 <h3>Why this matters</h3>
 <p>Unlike a course on SQL or Git, Claude Code is a living product. A tutorial written 6 months ago might reference a flag that no longer exists or miss a feature that would save you hours. The gap between "what the training says" and "what the tool actually does" can make you less effective, or worse, confidently wrong.</p>
@@ -350,7 +369,14 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Garbage In, Garbage Out</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of pressing <kbd>Shift+Tab</kbd> to enter Plan Mode (the cycle indicator + plan-mode banner) and replace this marker. Save as <code>play/assets/lessons/ch05-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch05-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> Redesign the FAQ page so search is front and center
+
+<span class="ts-dim">(you press shift+tab twice…)</span>
+
+<span class="ts-sel">⏸ plan mode on  (shift+tab to cycle)</span>
+
+<span class="ts-ok">●</span> I'll read the current FAQ page and the search component first, then
+propose a plan before touching any files.</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>The single biggest factor in Claude Code's output quality is how specific your prompt is. Vague instructions produce vague results. Claude Code will make reasonable guesses when information is missing, and those guesses will often be wrong for your context.</p>
 <h3>The specificity spectrum</h3>
 <table>
@@ -873,7 +899,18 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Switching Modes</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/permissions</code> showing the interactive picker (allow / ask / deny categories visible) and replace this marker. Save as <code>play/assets/lessons/ch12-l02.png</code>.</div>
+<div class="term-shot" data-shot="ch12-l02"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /permissions
+
+<span class="ts-gold">Permissions</span>
+<span class="ts-dim">Control which tools Claude can use without asking</span>
+
+ <span class="ts-ok">Allow</span>   Read · Edit · Bash(npm test:*) · Bash(git diff:*)
+ <span class="ts-gold">Ask</span>     Bash(git push:*) · WebFetch
+ <span class="ts-bad">Deny</span>    Read(./.env) · Bash(rm -rf:*)
+
+<span class="ts-sel">❯ Add a new rule…</span>
+
+<span class="ts-dim">esc to close</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: <em>default → acceptEdits → plan → default</em>. The current mode is shown in the status line.</p>
 <h3>Workflow</h3>
 <ol>
@@ -1073,7 +1110,22 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         lastVerified: '2026-06-15',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>The Command Vocabulary</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/help</code> output (the full built-in commands list, with categories visible) and replace this marker. Save as <code>play/assets/lessons/ch11-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch11-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /help
+
+<span class="ts-gold">Commands</span>
+ /clear        Clear conversation history and free up context
+ /compact      Summarize the conversation to reclaim context
+ /cost         Show token usage and cost for this session
+ /help         Show this list
+ /init         Generate a CLAUDE.md for this project
+ /mcp          Manage MCP server connections
+ /memory       Edit memory files
+ /model        Switch the active model
+ /permissions  View or update tool permissions
+ /review       Review a pull request
+ /status       Show version, model, and account status
+
+<span class="ts-dim">…plus your custom commands from .claude/commands/</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <table>
   <thead><tr><th>Command</th><th>What it does</th></tr></thead>
   <tbody>
@@ -1299,7 +1351,15 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Persistent Memory for Your Project</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>ls -la</code> in a real project showing <code>CLAUDE.md</code> and <code>.claude/</code> alongside your source, and replace this marker. Save as <code>play/assets/lessons/ch03-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch03-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — my-app</span></div><div class="term-shot-body"><span class="ts-dim">$</span> ls -la
+drwxr-xr-x   9 you  staff   288 Jun 12 09:14 .
+drwxr-xr-x  14 you  staff   448 Jun 10 17:02 ..
+<span class="ts-gold">drwxr-xr-x   4 you  staff   128 Jun 12 09:14 .claude</span>
+-rw-r--r--   1 you  staff   211 Jun 03 11:47 .gitignore
+<span class="ts-gold">-rw-r--r--   1 you  staff  1204 Jun 12 09:14 CLAUDE.md</span>
+-rw-r--r--   1 you  staff   842 Jun 03 11:47 package.json
+drwxr-xr-x  12 you  staff   384 Jun 11 15:33 src
+drwxr-xr-x   6 you  staff   192 Jun 11 15:33 tests</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Every time you start a new Claude Code session, the AI starts fresh. <strong>CLAUDE.md</strong> solves this — it's a markdown file you place in your project root that Claude Code reads automatically at the start of every session.</p>
 <h3>Where it lives</h3>
 <ul>
@@ -1586,7 +1646,22 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Folder Layout and File Conventions</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/init</code> reading your CLAUDE.md (or the just-generated draft on first run) and replace this marker. Save as <code>play/assets/lessons/ch02-l02.png</code>.</div>
+<div class="term-shot" data-shot="ch02-l02"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /init
+
+<span class="ts-ok">✓ Read package.json, src/ (14 files), tests/ (6 files)</span>
+<span class="ts-ok">✓ Detected: Node 20 · Express API · Jest</span>
+
+<span class="ts-ok">●</span> Created CLAUDE.md (34 lines). First lines:
+
+  # my-app
+  Express 5 API for customer support tickets.
+
+  ## Commands
+  - npm test — run the Jest suite
+  - npm run dev — start with hot reload
+
+  ## Business context
+  See .business-brain/ for brand voice and product facts.</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>The Business Brain folder is typically stored at the root of your project or in a shared repository accessible to all your projects. A consistent structure makes it easy for Claude Code to find and use the right context.</p>
 <h3>Recommended structure</h3>
 <pre><code>.business-brain/
@@ -2027,7 +2102,16 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Every Word Costs</h2>
-<div class="lesson-todo-shot" data-todo="screenshot"><strong>📸 TODO:</strong> Capture your own terminal screenshot of <code>/cost</code> output broken into input / cached input / output (a session with a cache hit clearly visible) and replace this marker. Save as <code>play/assets/lessons/ch07-l01.png</code>.</div>
+<div class="term-shot" data-shot="ch07-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /cost
+
+Total cost:            $0.42
+Total duration (API):  4m 12.8s
+Total code changes:    142 lines added, 38 lines removed
+
+Usage by model:
+  claude-sonnet-4-6:
+    input: 24.6k tokens · <span class="ts-ok">cache read: 289.1k tokens</span> <span class="ts-dim">← the 10% discount doing its job</span>
+    cache write: 41.2k tokens · output: 9.8k tokens</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Opus 4.7+ supports up to 1,000,000 tokens (the "1M-context" tier). That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
