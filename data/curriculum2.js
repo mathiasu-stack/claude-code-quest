@@ -43,13 +43,18 @@ window.CURRICULUM.push(
       },
       {
         id: 'ch08-l03', title: 'Writing Your First Skill', xpReward: 95, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-06-24',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>A Skill is Just a Markdown File</h2>
-<p>Creating a skill: make a directory inside <code>.claude/skills/</code> named after the command, and put a <code>SKILL.md</code> file inside it with the prompt template.</p>
+<p>Creating a skill: make a directory inside <code>.claude/skills/</code> named after the skill, and put a <code>SKILL.md</code> file inside it — a <code>---</code> frontmatter block (<code>name</code> + <code>description</code>) followed by the prompt template.</p>
 <h3>Example: changelog skill</h3>
 <p>File: <code>.claude/skills/changelog/SKILL.md</code></p>
-<pre><code>Generate a changelog entry for version $ARGUMENTS.
+<pre><code>---
+name: changelog
+description: Generate a Keep a Changelog entry for a version from the git log since the last tag.
+---
+
+Generate a changelog entry for version $ARGUMENTS.
 
 Review the git log since the last tag and summarise:
 1. New features (## Added)
@@ -61,6 +66,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
 <p>Usage: <code>/changelog v2.5.0</code></p>
 <h3>Best practices</h3>
 <ul>
+  <li>Start with a <code>---</code> frontmatter block — only the <code>name</code> and <code>description</code> load into context until the skill actually triggers (that's the progressive disclosure from the last lesson)</li>
   <li>Use <code>$ARGUMENTS</code> for dynamic input</li>
   <li>Be explicit about output format</li>
   <li>Include quality criteria ("flag breaking changes", "be concise")</li>
@@ -797,9 +803,9 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
     lessons: [
       {
         id: 'ch13-l01', title: 'What is MCP?', xpReward: 110, videos: ['<iframe src="https://www.youtube.com/embed/DfWHX7kszQI" title="Claude Code MCP: How to Add MCP Servers (Complete Guide)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Model Context Protocol</h2><p>MCP is an open standard that lets Claude Code connect to external services, databases, and tools. The community has built hundreds of MCP servers for common tools: GitHub, Postgres, Slack, Notion, Linear, Figma, and more — and Anthropic now maintains an <strong>official MCP Registry</strong> of curated servers. Add any registry server with <code>claude mcp add &lt;server-name&gt;</code>.</p><h3>How it works</h3><ol><li>An MCP server exposes tools over a standardised protocol</li><li>Claude Code connects to the server (local or remote)</li><li>Claude Code uses those tools as naturally as built-in ones</li></ol>',
+        lastVerified: '2026-06-24',
+        verifiedAgainstVersion: 'v2.1.176',
+        content: '<h2>Model Context Protocol</h2><p>MCP is an open standard that lets Claude Code connect to external services, databases, and tools. The community has built hundreds of MCP servers for common tools: GitHub, Postgres, Slack, Notion, Linear, Figma, and more — and Anthropic maintains a <strong>directory</strong> of hosted MCP servers you can browse. There is no bare-name install, though — you add a server by pointing the CLI at its URL or launch command: <code>claude mcp add --transport http &lt;name&gt; &lt;url&gt;</code> for a hosted (HTTP) server, or <code>claude mcp add &lt;name&gt; -- &lt;command&gt;</code> for a local one.</p><h3>How it works</h3><ol><li>An MCP server exposes tools over a standardised protocol</li><li>Claude Code connects to the server (local or remote)</li><li>Claude Code uses those tools as naturally as built-in ones</li></ol>',
       },
       {
         id: 'ch13-l02', title: 'Connecting MCP Servers', xpReward: 110, videos: [],
@@ -898,15 +904,15 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
         },
         {
           id: 'ch13-q06', type: 'single',
-          prompt: 'Which CLI command adds a server from the Anthropic MCP Registry?',
+          prompt: 'How do you add a hosted (HTTP) MCP server from the CLI?',
           options: [
-            '<code>claude mcp install &lt;server-name&gt;</code>',
-            '<code>claude mcp add &lt;server-name&gt;</code>',
-            '<code>claude add-mcp &lt;server-name&gt;</code>',
-            '<code>npm i -g claude-mcp-&lt;server-name&gt;</code>',
+            '<code>claude mcp add &lt;name&gt;</code> — a bare name installs it from the registry',
+            '<code>claude mcp add --transport http &lt;name&gt; &lt;url&gt;</code>',
+            '<code>claude install mcp &lt;name&gt;</code>',
+            '<code>npm i -g claude-mcp-&lt;name&gt;</code>',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "What is MCP?" — <code>claude mcp add &lt;server-name&gt;</code> pulls from the official registry.',
+          explanation: 'Lesson "Connecting MCP Servers" — there is no bare-name registry install. You add a server by URL (<code>--transport http &lt;name&gt; &lt;url&gt;</code>) or by launch command (<code>&lt;name&gt; -- &lt;command&gt;</code>).',
         },
         {
           id: 'ch13-q07', type: 'multi',
@@ -1001,8 +1007,8 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
       },
       {
         id: 'ch14-l02', title: 'Custom Subagent Types in .claude/agents/', xpReward: 115, videos: [],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-06-24',
+        verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Specialist Roles You Can Hire</h2>
 <p>Beyond the built-in <em>general-purpose</em> and <em>Explore</em> subagents, you can define your own specialists in <code>.claude/agents/</code> (per project) or <code>~/.claude/agents/</code> (global).</p>
 <h3>The agent file</h3>
@@ -1011,7 +1017,7 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
 name: code-reviewer
 description: Reviews diffs for correctness, security, and style. Use when asked for a second opinion on a PR.
 model: opus
-tools: [Read, Grep, Bash]
+tools: Read, Grep, Bash
 ---
 
 You are a senior code reviewer at Kedash Corp. Read the diff in full,
@@ -1025,7 +1031,7 @@ Be specific. Reference file:line. Don't hedge — give a verdict.</code></pre>
 <ul>
   <li><strong>name</strong> + <strong>description</strong> are how Claude Code (or you) picks this agent.</li>
   <li><strong>model</strong> pins the tier — code review gets Opus because correctness matters. A "doc-formatter" agent might pin Haiku.</li>
-  <li><strong>tools</strong> restricts what this agent can do — a reviewer doesn't need <code>Write</code> or <code>Edit</code>.</li>
+  <li><strong>tools</strong> restricts what this agent can do — a reviewer doesn't need <code>Write</code> or <code>Edit</code>. Write it as a <strong>comma-separated string</strong> (<code>tools: Read, Grep, Bash</code>), not a YAML list with brackets.</li>
 </ul>
 <h3>Listing and invoking</h3>
 <pre><code>/agents                  # opens the picker — shows all available agent types
@@ -1328,7 +1334,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       },
       {
         id: 'ch15-l03', title: 'Claude Code Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-06-15',
+        lastVerified: '2026-06-24',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Wire Shell Commands to Lifecycle Events</h2>
 <p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>more than 30 hook events</strong> covering every phase of a Claude Code session, and the set keeps growing — recent additions include <code>Setup</code>, <code>PostToolUseFailure</code>, <code>PermissionRequest</code>, <code>Elicitation</code>, and <code>SessionEnd</code>. The most useful clusters:</p>
@@ -1359,13 +1365,13 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "npx prettier --write $CLAUDE_FILE_PATHS" }
+          { "type": "command", "command": "jq -r '.tool_input.file_path' | xargs -r npx prettier --write" }
         ]
       }
     ]
   }
 }</code></pre>
-<p>Every <code>Edit</code> or <code>Write</code> tool call triggers Prettier on the affected paths. Hooks receive context via environment variables — <code>$CLAUDE_FILE_PATHS</code>, <code>$CLAUDE_TOOL_NAME</code>, <code>$CLAUDE_SESSION_ID</code>, and more.</p>
+<p>Every <code>Edit</code> or <code>Write</code> tool call triggers Prettier on the file just touched. Hooks receive their context as a <strong>JSON object on stdin</strong> — not via environment variables. Key fields: <code>tool_name</code>, <code>tool_input</code> (which carries <code>file_path</code> for <code>Edit</code>/<code>Write</code>), <code>session_id</code>, and <code>hook_event_name</code>. Parse it with a tool like <code>jq</code> (as above) to pull out what you need.</p>
 <h3>Blocking with PreToolUse</h3>
 <pre><code>{
   "hooks": {

@@ -8,6 +8,50 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## ADVISORY PANEL + ① ACCURACY THIN-SLICE (2026-06-25, DEPLOYED) — owner decision
+Ran the standing `/advisory-panel` on "what could we do better?" Five specialists
+clashed; the lead surfaced the real fork: **what is CCQ for?** Owner's answer:
+**a real training product for others.** That makes factual correctness mandatory.
+Panel-recommended sequence: thin-slice ① (fix verified copy errors) → ③ (playtest)
+→ hold ② (narrative routing) until data exists.
+
+DONE + DEPLOYED this session (`data/curriculum2.js?v=20260625a`), all verified
+against current CC docs before editing (used claude-code-guide agent + live docs):
+- **Hooks (ch15-l03)**: killed the nonexistent `$CLAUDE_FILE_PATHS` env-var example
+  (it was a silent no-op) — now reads JSON on stdin (`jq -r '.tool_input.file_path'
+  | xargs -r npx prettier --write`) and prose names the real stdin fields.
+- **Subagents (ch14-l02)**: `tools: [Read, Grep, Bash]` (YAML array, WRONG) →
+  `tools: Read, Grep, Bash` (comma-separated string) + a bullet teaching the format.
+- **MCP (ch13-l01 + ch13-q06 quiz)**: removed the false "`claude mcp add <name>`
+  pulls from the registry" claim; now shows real `--transport http <name> <url>` /
+  `<name> -- <command>` forms. Quiz question rewritten (premise was false).
+- **ch08-l03**: added `---`/`name`/`description` frontmatter to the skill example —
+  it previously CONTRADICTED ch08-test + the artifact grader (copying the lesson's
+  own canonical example would FAIL the test).
+- Bumped `lastVerified`→2026-06-25... (set to 2026-06-24 in code) on only the 4
+  re-verified lessons. Left `/fast` and `claude mcp add postgres -- npx` alone
+  (both verified CORRECT — did NOT "fix" them).
+
+### NEXT (panel backlog, NOT started — bigger than copy fixes, need owner sign-off)
+- **① judgment gap (highest-leverage LEARNING fix)**: no chapter makes the learner
+  CHOOSE skill vs command vs subagent vs hook — every test pre-decides the answer.
+  Fix = add ONE decision-fork lesson before ch17 (reuse `evaluateMcq`, zero new
+  grader code) + make ch17's `product` grader template-AWARE (check the `pieces`
+  array each template in `data/productTemplates.js` already declares, not just
+  "≥3 distinct shapes"). See `engine/evaluator.js` checkArtifact `case 'product'`.
+- **nonce gap**: the one anti-gaming mechanic (`engine/evaluator.js`) is MISSING on
+  ch13/ch14 (passThreshold 85). Extend it to the high-stakes hands-on practicals.
+- **③ THE STRATEGIC HEADLINE for "a training product for others"**: ZERO playtests
+  ever run; admin chapter-skip (`roomsEditor.js skipToChapter`) MASKS real-save
+  bugs (writes idealized save, clears ccq_story, admin-only — a state no real
+  first-session player has). QA lead: get 5 humans on a phone, non-admin save,
+  first session + finale, think-aloud — worth more than the next 10 features.
+  Lightest start = N=1 (owner, phone, fresh save, finale end-to-end). Also: make
+  `scripts/audit/run-all.sh` cover the risky surface (at minimum `node --check`
+  every JS file so the twice-occurring VERIFICATION GAP can't silently ship).
+- Panel full output (3 options: ① truth / ② feeling / ③ reality + tradeoff axis)
+  is in this session's transcript if a deeper re-read is wanted.
+
 ## CAPSTONE "YOUR OWN PLAYBOOK" (2026-06-20, COMPLETE) — approved plan
 A standing advisory panel (`.claude/agents/ccq-*` + `/advisory-panel` skill, on
 disk, gitignored → NAS-local) ran and the owner approved **Option C**: the player
