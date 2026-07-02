@@ -8,6 +8,59 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## CRITIC-REVIEW REMEDIATION (2026-07-02, DEPLOYED) — 16-point fix wave
+Owner asked for a critic-style review, then had a 3-planner + 3-implementer team
+fix every finding. All `?v=20260702a`. What shipped (by critic point):
+1. Cold open fixed — landing renders first; name asked via `_ensureName` on first
+   exit (app.js). 2. All 11 hidden `lesson-todo-shot` markers replaced with
+   authored `.term-shot` terminal mockups (curriculum.js ×8, curriculum2.js ×3;
+   greppable `data-shot="<lessonId>"` for future real screenshots). 3. Reset =
+   type-RESET modal + Export/Import progress (Progress.exportAllData/importAllData,
+   all `ccq_*` keys). 4. Admin button REMOVED — 5 clicks on sidebar brand logo in
+   2s → promptAdmin(); passcode checked via vendored sync sha256 (plaintext purged
+   from app.js; server-side PASS in save_server.py unchanged = owner decision).
+   5. ONE ladder: getCurrentTierLabel → Scoring level labels ("Level:"); the old
+   Intern→Director array deleted (3D ceremony TIER_TITLES kept as diegetic).
+   6. Terminal seam staged (`.terminal-seam` strip in practical tests), copy
+   buttons on all <pre> (Lesson.injectCopyButtons, execCommand fallback for
+   plain-http), mobile banner → offers MCQ track (`ccq_mobile_practical_note`).
+   7. Scores now "Structural score: N% (pass threshold M%)" + honesty line.
+   8. Story punctures 2D: post-pass `.story-memo` cards in ui/test.js (flag format
+   `postpass:<npcId>:<TN>` EXACTLY matches play.js — one-shot shared both ways;
+   storyApi() prefers window.Story, else format-exact ccq_story fallback) +
+   dashboard `.story-banner` at tier≥1. 9. "You're the seventh" promoted to
+   STORY_SCENES.seventh set-piece (5 beats, sting via seventh_sting action;
+   trigger in pendingSceneFor: tier≥4 + !seen + !legacy postpass flag; old
+   postPassOnceByTier under auto-ch09-test DELETED). 10. "(Beta)" dropped.
+   11. GLB "280MB" premise was STALE — live payload already optimized (~41MB
+   tracked, gltf-transform, commit 25a2744); the raw ~290MB are untracked local
+   sources only. 12. Zone presets authored: 4=F2 cool daylight, 8=F3 warm focus,
+   12=F4 clinical teal, 16=Floor M intimate warm-dim (`FLOOR_M_ZONE=16` in
+   currentZoneIndex); BLOOM CLAMP REMOVED from composer.js — all preset bloom
+   numbers are now LITERAL (old ×0.6/≥0.9 folded in; zone-presets.js is the single
+   source of truth). 13. `scripts/audit/smoke.cjs` (node --check all 97 JS incl.
+   ESM-retry, index.html script-src existence, manifest available:true files) in
+   run-all.sh — the VERIFICATION GAP class can't ship silently anymore; plus
+   `?finaledry=1` (admin-gated ACCESS, ORGANIC-shaped state: varied scores 70–95,
+   recorded fails, live nonce, real story flags, T6, ch17 passed, finale unseen)
+   for realistic finale regression tests. 14. escHtml/escapeHtml/escHtmlShop now
+   escape single quotes. 15. XP bar = "% of core curriculum" (side quests out of
+   the denominator). 16. 3D-load failure → Retry/Reload card.
+
+### PARKED FOR OWNER (from this wave)
+- Playtest: run `?finaledry=1` (unlock admin first — 5-click logo, passcode) on a
+  phone and play the finale end-to-end; also pass ch09 on a T4 save → the new
+  "seventh" set-piece should play once, with sting.
+- Eyeball floors 2/3/4/M lighting (cool/warm/teal/dim) — tune zone-presets.js
+  plain numbers if off (bloom values literal now).
+- Review 4 new connective copy strings in STORY_SCENES.seventh (promptLabel,
+  endLabel, 2 choice labels) — rest is the approved copy verbatim.
+- Decide untracked raw-GLB disk cleanup (~290MB: space-named uploads, Blender/,
+  Hijabi_*.glb; `_originals/` 634MB is the re-optimization source — keep for now).
+- Server-side passcode rotation (save_server.py PASS + save.php) if wanted.
+- The REAL playtest (5 humans, phone, non-admin save) — still the #1 strategic
+  item for "a training product for others".
+
 ## ADVISORY PANEL + ① ACCURACY THIN-SLICE (2026-06-25, DEPLOYED) — owner decision
 Ran the standing `/advisory-panel` on "what could we do better?" Five specialists
 clashed; the lead surfaced the real fork: **what is CCQ for?** Owner's answer:

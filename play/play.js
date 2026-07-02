@@ -287,6 +287,12 @@ try { if (typeof window !== 'undefined') window.__playCurrentFloor = currentFloo
 // Floor 1's zones occupy z=-11..77 (ch01-04 only). Chapters 5+ are
 // rendered on floors 2-4 in compact office rooms (see buildFloorOffice).
 const ZONE_COUNT = 16;
+// Floor M's lighting zone — deliberately past the 0..15 chapter zones so it
+// gets its own identity preset (zone-presets.js FLOORM_PRESET) instead of
+// inheriting reception's. Out-of-range consumers all fall back safely:
+// getSkyPresetForZone(16) → RECEPTION sky, procForZone(16) → 'reception'
+// (music is stopped on Floor M anyway), ambienceBedForZone(16) → 'office'.
+const FLOOR_M_ZONE = 16;
 const ZONE_BOUNDS = Array.from({ length: ZONE_COUNT }, (_, i) => ({
   startZ: i * 22 - 11,
   endZ: (i + 1) * 22 - 11,
@@ -356,11 +362,14 @@ function zoneIndexAt(z, x) {
 // chapter (matching the wall theme) — instead of falling through to floor-1's
 // z-bands, which flipped zone 0↔1 at z=11 mid-floor and needlessly restarted
 // the music + re-applied presets (the "music stops/resumes + lag" when crossing
-// a room like the Plan War Room). Floor M keeps the raw lookup (music is off
-// there anyway).
+// a room like the Plan War Room). Floor M routes to its own zone (FLOOR_M_ZONE
+// = 16) so it gets a dedicated lighting preset; music stays off there.
 function currentZoneIndex() {
   if (!player) return 0;
-  if (currentFloor === 1 || currentFloor === FLOOR_M_INDEX) {
+  // Floor M gets its own identity zone (16, past the chapter zones) instead
+  // of the raw z-band lookup, which resolved it to reception's zone 0.
+  if (currentFloor === FLOOR_M_INDEX) return FLOOR_M_ZONE;
+  if (currentFloor === 1) {
     const z = zoneIndexAt(player.position.z);
     return z >= 0 ? z : 0;
   }
@@ -5345,6 +5354,15 @@ function pendingSceneFor(npc) {
     const progress = getProgress();
     if (window.Progress?.isTestPassed?.(progress, 'ch10-test')) return 'twist2';
   }
+  // "You're the seventh" — the numbering reveal at the ch09 assessor,
+  // promoted from a postPass dialogue line to a scripted scene. The legacy
+  // flag guard skips saves that already saw the old dialogue form
+  // (postpass:<npcId>:<tierKey> was burned when that line rendered).
+  // Tier ≥ 4 implies ch09-test passed (deriveTier) — same gate as before.
+  if (npc.id === 'auto-ch09-test' && !Story.sceneSeen('seventh')
+      && !Story.getFlag('postpass:auto-ch09-test:T4')) {
+    if (Story.getTier() >= 4) return 'seventh';
+  }
   // FINALE chain (§5): Marcus at the elevator once the capstone is
   // passed → lights the M button; Maya on floor M; the new arrival in
   // the post-finale lobby closes the loop.
@@ -5367,6 +5385,15 @@ function pendingSceneFor(npc) {
 function startStoryScene(sceneId, npc) {
   const def = window.STORY_SCENES?.[sceneId];
   if (!def) return false;
+  // 'seventh' plays at whichever NPC is the ch09 assessor — pin the scene's
+  // speaker card to the live NPC so name/role match the character on screen.
+  if (sceneId === 'seventh' && npc) {
+    def.speaker = {
+      name: npc.name,
+      role: npc.role || 'Program Assessment',
+      portrait: def.speaker?.portrait || '🧑‍💼',
+    };
+  }
   return runScene(def, {
     pitch: blipPitchForNpc(npc?.id || sceneId),
     onComplete: () => {
@@ -7273,6 +7300,8 @@ export async function start(host) {
       setTimeout(() => { if (pr) showSpeechBubble(pr, 'Did you see the Q3 numbers?'); }, 6400);
       setTimeout(() => { if (tn) showSpeechBubble(tn, 'Ha! Ha ha. Haaaa.'); }, 8600);
     },
+    // "You're the seventh." — one-shot anomaly swell under the reveal beat.
+    seventh_sting: () => { try { playAnomalySting(); } catch {} },
     // TWIST 2 (TWIST2-01): "Mm. Open the file." — the annotated
     // client-profiles.md slides over the dialogue card. The delay lets
     // the line land first; the doc viewer never touches scene state.

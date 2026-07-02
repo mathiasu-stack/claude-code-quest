@@ -82,6 +82,40 @@ window.STORY_SCENES = {
     ],
   },
 
+  // "You're the seventh" — the mid-game numbering reveal, promoted from a
+  // one-line postPass beat (data/story_lines.js 'auto-ch09-test') to a
+  // scripted scene. Trigger lives in play.js pendingSceneFor: the ch09
+  // assessor NPC, tier ≥ 4, scene not seen, and the legacy postpass flag
+  // not already burned (saves that saw the old dialogue form skip this).
+  // The speaker card is pinned to the live assessor NPC in startStoryScene.
+  seventh: {
+    id: 'seventh',
+    promptLabel: 'Talk — housekeeping, apparently',
+    speaker: { name: 'Assessor', role: 'Program Assessment', portrait: '🧑‍💼' },
+    endLabel: '…Engelhardt. Floor 3.',
+    beats: [
+      {
+        text: '"Passed. Right — you\'re far enough now, so, housekeeping: officially, this is the Kedash Corp Onboarding Curriculum."',
+        choices: ['Officially?'],
+      },
+      {
+        text: '"Internally we call it the Program. One trainee per cycle."',
+        choices: ['One trainee per…?'],
+      },
+      {
+        text: '"You\'re the seventh."',
+        action: 'seventh_sting',
+      },
+      {
+        speaker: { name: 'You', role: '', portrait: '💭' },
+        text: '(The seventh. Six people sat in this chair before it was mine.)',
+      },
+      {
+        text: '"Questions? …Everyone has questions. Ask Engelhardt. Floor 3, Engine Bay. She\'s *real*, so she\'s allowed to answer."',
+      },
+    ],
+  },
+
   twist2: {
     id: 'twist2',
     promptLabel: 'Talk — Engelhardt has your file',

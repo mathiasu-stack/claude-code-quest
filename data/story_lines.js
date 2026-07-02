@@ -321,16 +321,10 @@ window.STORY_LINES = {
     introAppendByTier: {
       T3: '"PS from Alex: \'whoever taught you to observe-then-codify — that methodology has a body count of one company. Use it better than she did.\'"',
     },
-    postPassOnceByTier: {
-      // THE T4 reveal. Keyed T4 deliberately: ch09-test passing flips
-      // the derived tier instantly (T4 has no scene gate), so T4 is
-      // already live at the handoff talk. Pre-twist1 players sit below
-      // T3 and the line simply waits — spoiler-safe.
-      T4: {
-        text: '"Passed. Right — you\'re far enough now, so, housekeeping: officially, this is the Kedash Corp Onboarding Curriculum. Internally we call it the Program. One trainee per cycle. You\'re the seventh. Questions? …Everyone has questions. Ask Engelhardt. Floor 3, Engine Bay. She\'s *real*, so she\'s allowed to answer."',
-        heroThought: 'The seventh. Six people sat in this chair before it was mine.',
-      },
-    },
+    // The T4 "you're the seventh" reveal was promoted to a scripted scene —
+    // STORY_SCENES.seventh (data/story_scenes.js), triggered from play.js
+    // pendingSceneFor at this NPC. Saves that already saw the old dialogue
+    // form carry the postpass:auto-ch09-test:T4 flag and skip the scene.
   },
 
   'auto-ch10-l01': {
@@ -419,7 +413,8 @@ window.STORY_LINES = {
     postPassOnceByTier: {
       // THE T6 card line. Keyed T6 deliberately: ch15-test passing flips
       // the derived tier to 6 instantly, so T6 is live at the post-pass
-      // talk (same mechanism as the auto-ch09-test T4 reveal).
+      // talk (same timing the old auto-ch09-test T4 reveal used before it
+      // became the STORY_SCENES.seventh scene).
       T6: {
         text: '"Your settings parse. Your deny rules would have stopped Cycle 04 cold. So — formal notification, I\'m required to phrase it exactly like this:" (reads from a card) "\'Your permission tier has been updated by the building owner. The building owner thanks you for your patience.\'" (lowers card) "She\'s upstairs. She\'s been upstairs the whole time. One chapter left. Don\'t make me regret the allowlist."',
         speakerName: 'Rena Vasquez',

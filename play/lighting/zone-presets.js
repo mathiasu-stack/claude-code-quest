@@ -8,6 +8,13 @@
 // All numeric values are intentionally explicit so a designer can tweak
 // without reading the LightingManager. Colors are hex (THREE.Color
 // understands the number form).
+//
+// BLOOM VALUES ARE FINAL/LITERAL. The composer (play/postfx/composer.js)
+// applies bloomStrength/bloomThreshold verbatim — the old safety clamp
+// (strength ×0.6, threshold floored at 0.9) was folded into these numbers
+// on 2026-07-02. When authoring new presets, write the value you want on
+// screen, and keep bloomThreshold ≥ 0.90 so merely-bright walls/sky/IBL
+// reflections don't wash the scene white.
 
 export const DEFAULT_PRESET = {
   ambient: {
@@ -31,9 +38,9 @@ export const DEFAULT_PRESET = {
   fog: { color: 0xeaf3ff, near: 30, far: 70 },
   // Post-fx preset (consumed by play/postfx/composer.js).
   postfx: {
-    bloomStrength: 0.35,
+    bloomStrength: 0.21,   // was 0.35 pre-fold (×0.6)
     bloomRadius: 0.6,
-    bloomThreshold: 0.85,
+    bloomThreshold: 0.90,  // was 0.85 pre-fold (floored at 0.9)
     vignette: 0.35,        // 0 = off, 1 = heavy
     grain: 0.0,            // disabled by default
   },
@@ -84,9 +91,9 @@ const RECEPTION_PRESET = {
   background: 0xf3e7d2,
   fog: { color: 0xf3e7d2, near: 30, far: 75 },
   postfx: {
-    bloomStrength: 0.6,
+    bloomStrength: 0.36,   // was 0.60 pre-fold (×0.6)
     bloomRadius: 0.78,
-    bloomThreshold: 0.82,
+    bloomThreshold: 0.90,  // was 0.82 pre-fold (floored at 0.9)
     vignette: 0.30,
     grain: 0.03,
   },
@@ -133,9 +140,9 @@ const LIBRARY_PRESET = {
   background: 0x2c344a,
   fog: { color: 0x2c344a, near: 28, far: 75 },
   postfx: {
-    bloomStrength: 0.65,
+    bloomStrength: 0.39,    // was 0.65 pre-fold (×0.6)
     bloomRadius: 0.80,
-    bloomThreshold: 0.82,   // only true highlights bloom
+    bloomThreshold: 0.90,   // was 0.82 pre-fold; only true highlights bloom
     vignette: 0.32,         // corners were eating characters at 0.55
     grain: 0.04,
   },
@@ -173,9 +180,9 @@ const WEST_FILES_PRESET = {
   background: 0x3a3024,
   fog: { color: 0x3a3024, near: 30, far: 80 },
   postfx: {
-    bloomStrength: 0.45,
+    bloomStrength: 0.27,   // was 0.45 pre-fold (×0.6)
     bloomRadius: 0.70,
-    bloomThreshold: 0.84,
+    bloomThreshold: 0.90,  // was 0.84 pre-fold (floored at 0.9)
     vignette: 0.30,
     grain: 0.02,
   },
@@ -214,11 +221,140 @@ const WEST_PLANMODE_PRESET = {
   background: 0x2e3550,
   fog: { color: 0x2e3550, near: 30, far: 80 },
   postfx: {
-    bloomStrength: 0.45,
+    bloomStrength: 0.27,   // was 0.45 pre-fold (×0.6)
     bloomRadius: 0.70,
-    bloomThreshold: 0.84,
+    bloomThreshold: 0.90,  // was 0.84 pre-fold (floored at 0.9)
     vignette: 0.30,
     grain: 0.02,
+  },
+};
+
+// Zone 4 — Floor 2 offices. Cool neutral daylight: a working floor lit by
+// windows, cooler and flatter than the warm reception atrium so stepping
+// off the elevator reads as "different floor" immediately.
+const FLOOR2_PRESET = {
+  ambient: {
+    skyColor: 0xe9f1fb,
+    groundColor: 0x525a64,
+    intensity: 1.05,
+  },
+  directional: {
+    color: 0xf4f9ff,
+    intensity: 0.9,
+    position: [12, 16, 6],
+    castShadow: true,
+    shadowMapSize: 1024,
+    shadowBounds: 20,
+    shadowBias: -0.0005,
+  },
+  accents: [],
+  background: 0xdfe9f4,
+  fog: { color: 0xdfe9f4, near: 30, far: 85 },
+  postfx: {
+    bloomStrength: 0.26,
+    bloomRadius: 0.70,
+    bloomThreshold: 0.90,
+    vignette: 0.30,
+    grain: 0.02,
+    temperature: -0.006,
+    saturation: 1.02,
+  },
+};
+
+// Zone 8 — Floor 3 (Engine Bay / model-spend chapters). Warmer, focused
+// work-light — tungsten-leaning key from the opposite side of floor 2's.
+const FLOOR3_PRESET = {
+  ambient: {
+    skyColor: 0xf4eee0,
+    groundColor: 0x585045,
+    intensity: 1.00,
+  },
+  directional: {
+    color: 0xffedd2,
+    intensity: 0.8,
+    position: [10, 16, -6],
+    castShadow: true,
+    shadowMapSize: 1024,
+    shadowBounds: 20,
+    shadowBias: -0.0005,
+  },
+  accents: [],
+  background: 0xe9e2d2,
+  fog: { color: 0xe9e2d2, near: 30, far: 85 },
+  postfx: {
+    bloomStrength: 0.27,
+    bloomRadius: 0.72,
+    bloomThreshold: 0.90,
+    vignette: 0.32,
+    grain: 0.02,
+    temperature: 0.014,
+  },
+};
+
+// Zone 12 — Floor 4 labs. Cold clinical teal — the trust-examination floor
+// should feel a degree too sterile.
+const FLOOR4_PRESET = {
+  ambient: {
+    skyColor: 0xdff0f2,
+    groundColor: 0x46525a,
+    intensity: 0.95,
+  },
+  directional: {
+    color: 0xe8f6f6,
+    intensity: 0.75,
+    position: [8, 16, 10],
+    castShadow: true,
+    shadowMapSize: 1024,
+    shadowBounds: 20,
+    shadowBias: -0.0005,
+  },
+  accents: [],
+  background: 0xd6e6ea,
+  fog: { color: 0xd6e6ea, near: 28, far: 80 },
+  postfx: {
+    bloomStrength: 0.30,
+    bloomRadius: 0.72,
+    bloomThreshold: 0.90,
+    vignette: 0.34,
+    grain: 0.03,
+    temperature: -0.016,
+    saturation: 0.98,
+  },
+};
+
+// Zone 16 — Floor M (Maya's office). Intimate warm-dim executive: one
+// motivated desk-lamp pool in an otherwise dark room. Routed explicitly
+// from play.js currentZoneIndex (FLOOR_M_ZONE), outside the 0..15 chapter
+// zone range.
+const FLOORM_PRESET = {
+  ambient: {
+    skyColor: 0xf2e3ca,
+    groundColor: 0x342a1e,
+    intensity: 0.70,
+  },
+  directional: {
+    color: 0xffdcae,
+    intensity: 0.40,
+    position: [6, 10, 4],
+    castShadow: false,
+    shadowMapSize: 1024,
+    shadowBounds: 20,
+    shadowBias: -0.0005,
+  },
+  accents: [
+    // Warm desk-lamp pool by Maya's console.
+    { type: 'point', color: 0xffd9a0, intensity: 1.6, distance: 14, decay: 1.5, position: [4, 3.2, -7.6] },
+  ],
+  background: 0x2b2318,
+  fog: { color: 0x2b2318, near: 22, far: 60 },
+  postfx: {
+    bloomStrength: 0.33,
+    bloomRadius: 0.75,
+    bloomThreshold: 0.90,
+    vignette: 0.40,
+    grain: 0.03,
+    temperature: 0.020,
+    saturation: 1.03,
   },
 };
 
@@ -230,11 +366,19 @@ const WEST_PLANMODE_PRESET = {
 // band used to cover resolves to zone 0 (bright daytime) via the
 // fallback in zoneIndexAt, so mapping 1 → LIBRARY_PRESET no longer
 // darkens the outdoors.
+//
+// Floors 2-4 resolve to a single stable zone each (play.js
+// currentZoneIndex → (floor-1)*CHAPTERS_PER_FLOOR = 4/8/12); Floor M is
+// routed explicitly to 16 (FLOOR_M_ZONE), past the 0..15 chapter zones.
 export const ZONE_PRESETS = {
   0: RECEPTION_PRESET,
   1: LIBRARY_PRESET,
   2: WEST_FILES_PRESET,
   3: WEST_PLANMODE_PRESET,
+  4: FLOOR2_PRESET,
+  8: FLOOR3_PRESET,
+  12: FLOOR4_PRESET,
+  16: FLOORM_PRESET,
 };
 
 // Unauthored zones (chapters 3-16 on floor 1's z-axis don't represent

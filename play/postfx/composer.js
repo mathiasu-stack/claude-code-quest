@@ -122,13 +122,14 @@ export class PostFxPipeline {
 
   applyPreset(postfx) {
     if (!postfx) return;
-    // Bloom safety clamp: only genuinely bright HIGHLIGHTS should bloom, not
-    // merely-bright walls/sky/reflections (which were washing whole scenes to
-    // white and hiding content). Scale strength down and floor the threshold so
-    // a sunny exterior or an IBL reflection can't bloom into a white sheet.
-    if (typeof postfx.bloomStrength === 'number')  this.bloom.strength  = postfx.bloomStrength * 0.6;
+    // Bloom values are applied VERBATIM. The old safety clamp (strength ×0.6,
+    // threshold floored at 0.9 — which kept merely-bright walls/sky from
+    // washing scenes white) was folded into the zone-preset numbers on
+    // 2026-07-02; see play/lighting/zone-presets.js. Preset authors now own
+    // the final values: keep bloomThreshold ≥ 0.9 unless you want walls to glow.
+    if (typeof postfx.bloomStrength === 'number')  this.bloom.strength  = postfx.bloomStrength;
     if (typeof postfx.bloomRadius === 'number')    this.bloom.radius    = postfx.bloomRadius;
-    if (typeof postfx.bloomThreshold === 'number') this.bloom.threshold = Math.max(postfx.bloomThreshold, 0.9);
+    if (typeof postfx.bloomThreshold === 'number') this.bloom.threshold = postfx.bloomThreshold;
     if (typeof postfx.vignette === 'number')       this.vignettePass.material.uniforms.uVignette.value = postfx.vignette;
     // Colour-grade keys are optional per zone; absent → keep the gentle global
     // defaults set in the shader uniforms.

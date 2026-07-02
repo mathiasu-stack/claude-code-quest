@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Code Quest — Kedash Corp Training</title>
-  <link rel="stylesheet" href="style.css?v=20260620a">
+  <link rel="stylesheet" href="style.css?v=20260702a">
 </head>
 <body>
 
@@ -54,13 +54,13 @@
   <main id="main-content"></main>
 
   <!-- Engine -->
-  <script src="engine/progress.js?v=20260614a"></script>
+  <script src="engine/progress.js?v=20260702a"></script>
   <script src="engine/evaluator.js?v=20260620a"></script>
   <script src="engine/scoring.js?v=20260524d"></script>
 
   <!-- Data -->
-  <script src="data/curriculum.js?v=20260615a"></script>
-  <script src="data/curriculum2.js?v=20260625a"></script>
+  <script src="data/curriculum.js?v=20260702a"></script>
+  <script src="data/curriculum2.js?v=20260702a"></script>
   <script src="data/curriculum3.js?v=20260620a"></script>
   <script src="data/productTemplates.js?v=20260620a"></script>
   <!--
@@ -87,19 +87,19 @@
   <!-- Story layer (Kedash Protocol) — narrative copy, hand-authored (not
        editor-writable), so normal ?v= cache-busting applies. Must load
        after curriculum2.js and before app.js / play.js consume them. -->
-  <script src="data/story_lines.js?v=20260616i"></script>
+  <script src="data/story_lines.js?v=20260702a"></script>
   <script src="data/story_docs.js?v=20260612b"></script>
-  <script src="data/story_scenes.js?v=20260610e"></script>
+  <script src="data/story_scenes.js?v=20260702a"></script>
   <script src="data/story_ambient.js?v=20260610b"></script>
 
   <!-- Achievements (depends on Progress + CURRICULUM) -->
   <script src="engine/achievements.js?v=20260614a"></script>
 
   <!-- UI -->
-  <script src="ui/dashboard.js?v=20260614a"></script>
-  <script src="ui/lesson.js?v=20260613a"></script>
-  <script src="ui/test.js?v=20260620a"></script>
-  <script src="ui/shop.js?v=20260613a"></script>
+  <script src="ui/dashboard.js?v=20260702a"></script>
+  <script src="ui/lesson.js?v=20260702a"></script>
+  <script src="ui/test.js?v=20260702a"></script>
+  <script src="ui/shop.js?v=20260702a"></script>
 
   <!-- 3D Play Mode (Three.js, ES module via importmap) -->
   <!-- Vendored three.js 0.169 — no CDN dependency, no offline failure mode.
@@ -115,10 +115,10 @@
     }
   }
   </script>
-  <script type="module" src="play/play.js?v=20260620a"></script>
+  <script type="module" src="play/play.js?v=20260702a"></script>
 
   <!-- App Bootstrap -->
-  <script src="app.js?v=20260614a"></script>
+  <script src="app.js?v=20260702a"></script>
 
 </body>
 </html>
