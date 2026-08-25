@@ -1,0 +1,15 @@
+# Internal dev docs and tooling — tracked in git (for history / NAS↔WSL
+# sync) but excluded from `git archive`, which is how
+# scripts/build-offline-package.sh assembles the player-facing offline
+# download. Keeps handoff notes and build scripts out of what players
+# unzip.
+CLAUDE.md              export-ignore
+RESUME.md               export-ignore
+CURRICULUM.md            export-ignore
+NIGHT_RUN_NOTES*.md      export-ignore
+design/                  export-ignore
+save.php                 export-ignore
+scripts/                 export-ignore
+test-poses.html          export-ignore
+.gitattributes           export-ignore
+.gitignore               export-ignore

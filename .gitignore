@@ -36,3 +36,8 @@ __pycache__/
 # Neural TTS — secret key + per-line audio cache (never commit)
 tts_config.json
 tts-cache/
+
+# Generated offline-play zip (scripts/build-offline-package.sh). Rebuilt
+# from tracked files on demand — not committed, just served from disk by
+# save_server.py for the in-app "Download for offline" link.
+downloads/

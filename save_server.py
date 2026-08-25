@@ -26,7 +26,11 @@ Run:
       > /tmp/save_server.log 2>&1 < /dev/null &
 
 Optional argv:
-    save_server.py [port]              # default 8888
+    save_server.py [port] [host]       # default 8888, 0.0.0.0
+
+`host` exists for the offline download launchers, which pass 127.0.0.1 so a
+player's copy is reachable only from their own machine (and, on Windows,
+doesn't trip the Defender Firewall prompt that binding 0.0.0.0 raises).
 
 Persist across reboots: add a DSM Task Scheduler task (boot-up trigger)
 running the same command. See setup instructions in the deploy chat.
@@ -350,10 +354,15 @@ def main():
             port = int(sys.argv[1])
         except ValueError:
             print(f'[save_server] bad port arg: {sys.argv[1]!r}, using {port}', flush=True)
+    host = sys.argv[2] if len(sys.argv) > 2 else '0.0.0.0'
     # `directory` is honored by SimpleHTTPRequestHandler for GET/HEAD.
     handler_factory = lambda *a, **kw: Handler(*a, directory=PROJECT_ROOT, **kw)
-    print(f'[save_server] listening on 0.0.0.0:{port} | static root: {PROJECT_ROOT} | writes: {DATA_DIR}', flush=True)
-    server = http.server.ThreadingHTTPServer(('0.0.0.0', port), handler_factory)
+    print(f'[save_server] listening on {host}:{port} | static root: {PROJECT_ROOT} | writes: {DATA_DIR}', flush=True)
+    try:
+        server = http.server.ThreadingHTTPServer((host, port), handler_factory)
+    except OSError as exc:
+        print(f'[save_server] could not start on {host}:{port} -> {exc}', flush=True)
+        sys.exit(1)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

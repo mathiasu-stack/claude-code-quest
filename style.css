@@ -149,6 +149,7 @@ body {
 }
 .reset-btn:hover { border-color: var(--red); color: var(--red); }
 .reset-btn.admin-btn:hover { border-color: var(--gold); color: var(--gold); }
+a.reset-btn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
 
 /* ==================== MAIN CONTENT ==================== */
 

@@ -397,6 +397,7 @@ const App = {
       </nav>
 
       <div class="sidebar-reset">
+        <a class="reset-btn backup-btn" id="download-offline-btn" href="/downloads/claude-code-quest-offline.zip" download>Download for offline play</a>
         <button class="reset-btn backup-btn" id="export-progress-btn">Export progress</button>
         <button class="reset-btn backup-btn" id="import-progress-btn">Import progress</button>
         <input type="file" id="import-progress-file" accept=".json,application/json" style="display:none">

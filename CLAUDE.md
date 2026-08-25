@@ -136,3 +136,48 @@ from anywhere on the NAS — it stages, commits, and pushes.
 Web Station serves files directly from this folder, so the live game
 at http://ds925-urlacher:8888 reflects edits immediately — no separate
 deploy step is needed for visibility, only for syncing to GitHub.
+
+## Offline / downloadable play
+
+The sidebar's "Download for offline play" link serves a zip built by
+`scripts/build-offline-package.sh`, which runs `git archive` over
+tracked files (so the gitignored GLB originals never end up in it).
+`.gitattributes` marks internal docs/tooling (`CLAUDE.md`, `RESUME.md`,
+`scripts/`, `design/`, …) `export-ignore` so they're excluded from what
+players unzip, even though they stay tracked in git.
+
+The zip includes two double-click launchers at the repo root —
+`Play Offline (Mac & Linux).command` and `Play Offline (Windows).bat` —
+that start the game on a fixed local port (8899) and open the browser to
+it. No build step, no new dependencies: it's the same zero-dependency
+server the NAS itself runs, just started by the player instead of by
+`nas-deploy`.
+
+**Windows has no Python**, so `Play Offline (Windows).bat` falls back to
+`offline_server.ps1` — a read-only static server in PowerShell (built into
+every Windows) that binds 127.0.0.1 via a plain `TcpListener`: no admin, no
+HttpListener URL reservation, no firewall prompt. It serves the whole game
+(incl. `.glb` MIME + Range requests) but does NOT reimplement `/save` or
+`/tts`; both answer 503, which the client already treats as offline
+(narration falls back to browser voices, room editor unavailable — it's
+admin-only). The `.bat` prefers `save_server.py` whenever Python exists.
+Both launchers pass `127.0.0.1` as `save_server.py`'s optional 2nd argv
+`host` (default `0.0.0.0`, so the NAS is unaffected).
+
+There's no PowerShell on the NAS to test that fallback with — use the
+`mcr.microsoft.com/powershell` container via `sudo docker` (docker needs
+sudo here). Note it's PowerShell 7 on Linux, not Windows PowerShell 5.1.
+
+Progress is `localStorage`, scoped to that port, so the launcher (not a
+random `python3 -m http.server`) is what keeps a returning player's save
+reachable.
+
+**Rebuild after any change to shipped game files**: the zip is
+generated, not tracked (`downloads/` is gitignored) — re-run
+`bash scripts/build-offline-package.sh` and it's live immediately
+(same "Web Station serves from disk" model as everything else).
+Nothing currently rebuilds it automatically; if it drifts noticeably
+from what's live, that's expected until someone wires it into
+`nas-deploy`. `git archive` only sees TRACKED files, so a new game file
+that nobody `git add`-ed is silently absent from the zip — the build
+script warns about untracked non-dev files for exactly this reason.

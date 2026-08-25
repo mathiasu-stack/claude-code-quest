@@ -8,6 +8,183 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## OFFLINE DOWNLOAD (2026-08-25, NOT YET COMMITTED) — double-click-to-play zip
+Owner asked to make the game downloadable/playable offline, specifically
+"download a file, double-click it to play" (unzip-first is fine). Landed:
+- `scripts/build-offline-package.sh` — archives the game into
+  `downloads/claude-code-quest-offline.zip` (gitignored, regenerate on
+  demand — not auto-rebuilt by anything, see below). `.gitattributes`
+  (new) marks `CLAUDE.md`/`RESUME.md`/`NIGHT_RUN_NOTES*`/`CURRICULUM.md`/
+  `design/`/`save.php`/`scripts/`/`test-poses.html` `export-ignore` so
+  none of that dev-only stuff ends up in what a player unzips.
+- Two root-level double-click launchers: `Play Offline (Mac & Linux).command`
+  (chmod +x — had to force it via `git update-index --chmod=+x`, since
+  `core.fileMode=false` on this NAS meant a plain `git add` silently
+  recorded mode 644 and Finder wouldn't have been able to run it) and
+  `Play Offline (Windows).bat`. Both start `save_server.py` on a **fixed**
+  port 8899 (fixed on purpose — progress is `localStorage`, scoped to
+  origin+port, so a random free-port picker would silently orphan a
+  returning player's save) and auto-open the default browser.
+  `HOW TO PLAY OFFLINE.txt` explains this to the player.
+- Sidebar gets a new "Download for offline play" link (`app.js`, next to
+  Export/Import progress) → `/downloads/claude-code-quest-offline.zip`;
+  `style.css` got `a.reset-btn { display:block; ... }` since that button
+  row was all `<button>` before and the anchor needed the same look.
+- Why not a PWA/service-worker install instead: `save_server.py` serves
+  plain HTTP (no TLS anywhere in the stack), and service workers require
+  a secure context (HTTPS or `localhost`) — an installable-PWA offline
+  mode would need a real infra change (Tailscale HTTPS cert or a reverse
+  proxy) first. Punted; ask owner if that's wanted later.
+- Why not plain `file://` (zip → double-click `index.html` directly, no
+  server): Chrome blocks `fetch()` across `file://` origins by default,
+  which breaks GLTFLoader for the 3D Play mode's character models. The
+  server-launcher approach sidesteps that entirely and reuses
+  `save_server.py` as-is (TTS gracefully 503s → client falls back to
+  Web Speech, exactly like the live site when Azure isn't configured).
+
+### BUG FOUND + FIXED THIS SESSION: build script archived the wrong tree
+Owner tried the real download and the launchers weren't in the unzipped
+folder. Root cause: `build-offline-package.sh` originally ran
+`git archive ... HEAD` — but none of this work was committed, so `HEAD`
+was still the prior commit (`fa433d2`). Worse than just missing
+launchers: `HEAD` also predates `.gitattributes`, so the export-ignore
+rules weren't active either — that first real build may have *also*
+shipped internal dev docs (RESUME.md, scripts/, etc.) it shouldn't have.
+Fix: the script now runs `git stash create` first — snapshots staged +
+working-tree changes to tracked files into a throwaway commit object
+(touches neither HEAD, the index, nor the stash list), archives that
+tree, and only falls back to `HEAD` when nothing's pending. Means the
+zip always reflects what's actually on disk, committed or not — true
+both pre-commit (right now) and after (once someone does commit, a
+clean tree makes `stash create` a no-op and `HEAD` is correct again).
+Re-verified after the fix: rebuilt zip has 281 files, launchers present
+with the executable bit intact (`0o755`), zero dev-doc leakage
+confirmed by scanning `namelist()` for RESUME/CLAUDE.md/NIGHT_RUN/
+CURRICULUM.md/design//save.php/scripts//test-poses — none found. Did a
+full extract-and-serve smoke test twice (once before the fix showing
+the bug, once after confirming the fix): unzip to `/tmp`, run
+`save_server.py 8899` from the extracted copy, curl `/`, `/app.js`,
+`/play/play.js`, and a GLB (`/play/assets/characters/hero.glb`) — all
+200 both times, since the serving path itself was never broken, only
+which files got archived.
+
+### WINDOWS LAUNCH FAILURE FIXED (2026-08-25, later same day)
+Owner downloaded the zip on Windows, double-clicked the `.bat`, and got
+Firefox "Unable to connect" on `localhost:8899` — browser opened, server
+never came up, console window gone before it could say why. Verified the
+zip itself was fine (281 files, `save_server.py` + both launchers
+present, no dev-doc leakage), so the fault was entirely launcher-side.
+The launchers were unfalsifiable by design: any failure closed the
+window instantly. Rewrote both to fail LOUDLY and pre-empt the three
+plausible causes (couldn't reproduce on the NAS, so all three are fixed
+rather than one diagnosed):
+1. **Ran from inside the zip** — Windows Explorer's zip viewer runs a
+   double-clicked `.bat` by copying that ONE file to a temp folder, so
+   `save_server.py` isn't beside it. Both launchers now check for
+   `save_server.py` first and say "extract the zip first" + print the
+   folder they're in. `HOW TO PLAY OFFLINE.txt` leads with UNZIP FIRST.
+2. **Microsoft Store python.exe stub** — `where python` resolves the
+   WindowsApps alias, passes the old check, then opens the Store instead
+   of running Python. Detection now RUNS each candidate
+   (`py -3` → `python` → `python3`, first that executes `-c "import sys"`
+   wins) rather than just locating it.
+3. **Browser beat the server** — old `.bat` opened the browser after a
+   flat `timeout /t 2`. Both launchers now poll the port until it accepts
+   a connection (PowerShell `TcpClient` on Windows, a python socket probe
+   on Mac/Linux) and only then open the browser.
+Plus: every failure path ends in `pause` / `read -p` so the window stays
+open with the reason; a **port-in-use pre-check** refuses to start a
+second server (previously the duplicate bind-failed while the FIRST
+instance kept answering, so the new window claimed success — a real race
+caught in testing, fixed by checking before starting, not after).
+
+**`save_server.py` gained an optional 2nd argv `host`** (default
+`0.0.0.0`, so the NAS is unchanged and needs no restart); both launchers
+pass `127.0.0.1`, making the offline copy genuinely local-only and
+dodging the Windows Defender Firewall prompt that binding `0.0.0.0`
+raises. Bind failures now print the OSError and `sys.exit(1)` instead of
+a traceback.
+
+Verified on the NAS from a freshly-extracted zip: clean launch serves
+`/`, `/app.js`, `/play/play.js` and a GLB (all 200); LAN IP refuses
+(local-only confirmed); second launch prints the "already running"
+refusal and starts no process; running the launcher away from the game
+files prints the unzip message. `.command` keeps mode 0755 through the
+zip. **Still unverified: the real Windows double-click** — that's the
+open question this fix exists to answer.
+
+### ROOT CAUSE FOUND: no Python on Windows → built a no-install fallback
+The hardened launcher did its job: owner re-ran it and got "needs Python 3,
+which isn't installed". That's the real answer — and a PRODUCT problem, not
+a one-machine one: most Windows boxes have no Python, so "go install a
+programming language first" would stop most players of a training product
+meant for other people. Owner chose to **build the Python-free path first**,
+so the next download test is a true cold-start player experience.
+
+**NEW: `offline_server.ps1`** — a read-only static server in PowerShell,
+which every Windows has built in. Binds 127.0.0.1 via a plain
+`TcpListener` (no admin, no HttpListener URL reservation, no firewall
+prompt). Serves the full game: correct MIME types incl. `.glb` →
+`model/gltf-binary`, single-Range support for audio seeking, path-traversal
+guard, and `_BLOCKED_PREFIXES` mirrored from save_server.py. **Concurrency
+is load-bearing** — browsers preconnect without sending a request, so a
+single-threaded accept loop would stall the whole page behind one idle
+socket; it uses a 12-slot runspace pool. `/save` + `/tts` are NOT
+reimplemented and answer 503, which the client already treats as offline
+(narration falls back to browser voices, exactly as on the live site
+without Azure). Room editor is unavailable in this mode — acceptable, it's
+admin-only.
+
+`Play Offline (Windows).bat` now prefers `save_server.py` (full features)
+and falls back to the PowerShell server automatically, telling the player
+which it used. Only if BOTH are missing does it bail.
+
+**TESTED FOR REAL, not eyeballed** — no PowerShell on the NAS, so the
+`mcr.microsoft.com/powershell` container was used via `sudo docker` (docker
+needs sudo here). 19/19 checks pass from a freshly-extracted zip: boot,
+index/js/css/nested paths, GLB byte-exact + MIME, `Range` → 206, query
+strings, 403 on blocked paths + traversal, 404, POST → 503, 8 parallel
+1.3 MB GLB loads all 200 in ~1.0 s, server alive afterwards. The test also
+parses the embedded handler here-string separately (ParseFile can't see
+inside a string literal). **Caveat: verified on PowerShell 7.4/Linux, not
+Windows PowerShell 5.1** — every API used exists in 5.1, and paths were
+made separator-agnostic, but the real Windows double-click is still the
+open question. Group-Policy `AllSigned` would block the .ps1 (GPO beats
+`-ExecutionPolicy Bypass`); unlikely on a home machine and it fails loudly.
+
+**Build-script guard (this bug class, third time).** `git archive` sees only
+TRACKED files, so the new untracked `offline_server.ps1` was silently absent
+from the zip — the .bat would have hit `:noserver` with no clue why.
+`build-offline-package.sh` now warns loudly about untracked non-dev files
+before archiving (verified by planting a probe file). Zip is now **282
+files**. `offline_server.ps1` is `git add`-ed (staged, not committed).
+
+### PARKED FOR OWNER
+- **Not committed/pushed yet** — deliberately, per the "only commit when
+  asked" rule. `git status` still shows these as staged-but-uncommitted:
+  `.gitattributes`, `.gitignore` (added `downloads/`), `HOW TO PLAY
+  OFFLINE.txt`, both `Play Offline (...)` launchers,
+  `scripts/build-offline-package.sh`, `offline_server.ps1`, plus unstaged
+  edits to `app.js`, `style.css`, `save_server.py`, `CLAUDE.md`, `RESUME.md`. Ask before
+  committing/pushing/`nas-deploy` — and rebuild the zip
+  (`bash scripts/build-offline-package.sh`) once more right after
+  committing, since a fresh commit changes what `HEAD` resolves to (the
+  `stash create` fallback makes this safe either way, but re-running
+  costs nothing and removes any doubt).
+- `downloads/claude-code-quest-offline.zip` is rebuilt on-disk right now
+  (post-fix, verified good) so the live sidebar link is serving the
+  correct 281-file build today. Nothing regenerates it automatically —
+  re-run the build script after future changes to shipped files, or wire
+  it into `nas-deploy`.
+- Owner was about to test the real double-click flow (Finder/Explorer,
+  not curl) when this bug surfaced — that test hasn't happened yet with
+  the corrected zip. Still the #1 gap: does `Play Offline (Mac &
+  Linux).command` actually run on a real double-click (Gatekeeper may
+  warn on an unsigned script from a freshly-unzipped download — expected,
+  but see what it says), does the Windows `.bat` open a browser cleanly,
+  does 3D Play mode actually load character models offline, and does
+  progress persist across closing/reopening the browser via the launcher.
+
 ## CRITIC-REVIEW REMEDIATION (2026-07-02, DEPLOYED) — 16-point fix wave
 Owner asked for a critic-style review, then had a 3-planner + 3-implementer team
 fix every finding. All `?v=20260702a`. What shipped (by critic point):

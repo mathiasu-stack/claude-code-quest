@@ -1,0 +1,39 @@
+CLAUDE CODE QUEST — OFFLINE COPY
+=================================
+
+1. UNZIP first. Don't run anything from inside the zip - on Windows,
+   right-click the downloaded zip, choose "Extract All...", and open the
+   folder it creates. (Double-clicking straight out of the zip viewer
+   copies one lone file to a temp folder and the game won't start.)
+2. Double-click the launcher for your system, inside that folder:
+     - Mac / Linux:  "Play Offline (Mac & Linux).command"
+     - Windows:      "Play Offline (Windows).bat"
+3. A small black window opens and stays open - that's the game server.
+   Leave it running. Your browser opens to the game automatically; if it
+   doesn't, go to http://localhost:8899/ yourself.
+
+If something goes wrong, the launcher window stays open and prints why.
+
+That's it — no internet connection is required after unzipping.
+
+Requirements
+------------
+This needs Python 3 installed (most Mac and Linux computers already
+have it). If the launcher tells you Python is missing, install it from
+https://www.python.org/downloads/ — on Windows, tick "Add python.exe
+to PATH" during setup — then double-click the launcher again.
+
+Your progress
+--------------
+Progress is saved in your browser (not in this folder), tied to the
+address the launcher opens (http://localhost:8899). Always start the
+game from the launcher, in the same browser, so your save is there
+when you come back. Use the "Export progress" button in the game's
+sidebar any time to back up a copy you can re-import later or move to
+another computer.
+
+Narration voices
+-----------------
+Some character dialogue uses higher-quality narration when online;
+offline, the game automatically falls back to your browser's built-in
+voices. Everything else works exactly the same offline.
