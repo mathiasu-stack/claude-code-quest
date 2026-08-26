@@ -54,7 +54,78 @@ ch10's quiz **graded correct answers as wrong**.
   `correctIndexes` in range, no single-answer item with 2+ keys. Audit
   `run-all.sh` all clean.
 
-### NOT DONE — audit steps ③–⑥ (owner sign-off needed, see artifact)
+### PASS ③ (2026-08-26, DEPLOYED) — audit steps ③–⑥ folded into EXISTING chapters
+Owner said "continue, don't stop unless something genuinely needs my call."
+Rather than the artifact's step ⑥ ("new chapters, product decision"), every
+remaining item was folded into the chapter that already owns the subject —
+no new chapters, so no product decision was needed. Landed:
+- **Auto mode (③)** — ch12-l02 now teaches the real Shift+Tab cycle (from
+  `auto` the first press goes DOWN to `default`) + the 4 status-line strings,
+  and flags that **auto is the built-in starting mode on Pro/Max/Team**.
+  ch15-l02 replaced "Sandbox mode" with all **six** modes incl. `dontAsk`,
+  plus a section on what the classifier actually does (prompt-injection guard,
+  not a blanket yes; `ask`/`deny` still cut through), `disableAutoMode`, and
+  the `--enable-auto-mode` deprecation (v2.1.111). ch12 also gained the
+  `useAutoModeDuringPlan` behaviour. ch15-l03 gained `PermissionDenied` +
+  `InstructionsLoaded` and the 5 handler types (command/http/mcp_tool/prompt/agent).
+- **Effort (④)** — ch10-l02 retitled "Switching Models, Fast Mode and Effort",
+  new section: 5 levels, `high` is default, persistence rules, `ultracode`,
+  and the key teaching point that **Opus at low/medium effort is a different
+  option from Sonnet at high** — reach for effort before downgrading tier.
+- **⑤** — `.claude/rules/` + path-scoped `paths:` frontmatter added to
+  ch03-l03 (the "lean CLAUDE.md" lesson, its natural home). **Auto-memory was
+  ALREADY covered** in ch04 as Layer 5 with the right path + 5 quiz items —
+  the audit's "0 mentions" was a FALSE NEGATIVE (curriculum hyphenates it
+  "Auto-memory"; the grep searched "auto memory").
+- **⑥ folded in, not deferred**: `/context`, `/usage` (+ `/cost` is now just
+  an alias), `/rewind` and `/config` added to ch11-l01's table; checkpoints
+  section in ch12-l02 (incl. the limits: bash-command and subagent edits are
+  NOT tracked); NEW `ch14-l05` "Agent Teams (Experimental)" — flagged
+  experimental + off by default (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`),
+  subagents-vs-teams table, the adversarial-debate use case; NEW `ch16-l07`
+  "Remote Control" — `claude --remote-control` / `remote-control` / `/rc`,
+  plus `--cloud` and `/teleport`, framed so the chapter's SSH+tmux box is
+  still valid but no longer the only route; NEW `ch11-l05` "Sharing What You
+  Build: Plugins" — layout, the `.claude-plugin/` nesting trap, namespacing,
+  `--plugin-dir`, marketplaces.
+- **TWO MORE REMOVED COMMANDS FOUND** (not in the original audit):
+  `/output-style` was deprecated v2.1.73 and **removed v2.1.91** (feature
+  lives on via `/config` + `outputStyle`; ch15-l04 + ch11-l01 fixed, ch15-q10
+  rewritten — built-ins are now Default/Proactive/Concise/Explanatory/Learning);
+  `/reload-skills` does not exist → `/reload-plugins` (skills hot-reload live).
+- 5 new quiz items (ch10 ×2 effort, ch12 ×1 starting mode, ch15 ×2 auto/dontAsk).
+
+### ⚠️ REGRESSION CAUGHT BY THE AUDIT — read before adding lessons
+Adding lessons pushed ch16 to **7** lessons, but the auto-NPC placer in
+`play.js` had only **6** slots (`slots[i % slots.length]`), so lesson 7
+wrapped onto lesson 1's coordinates → `spatial::1.8` NPC overlap FAIL.
+Fixed by adding an overflow row at `cZ - 8` (north end — the zone runs
+cZ-11..cZ+11 and the test NPC sits at cZ+8.5, so a south row would crowd it).
+**The audit mirrors this logic in `scripts/audit/lib/extract.cjs` and its
+slots array had to be updated identically** — the two must stay in sync.
+Ceiling is now 8 lessons per auto-built chapter.
+
+### VALIDATION THIS PASS
+17 chapters / **71 lessons** / **182 quiz items**: every `correctIndexes` in
+range, no single-answer item with 2 keys, no lesson missing `lastVerified`.
+Wrote a tag-balance checker over every lesson's HTML (caught a stray `</p>`
+in the new plugins lesson). Also caught two invented CSS classes — `.callout`
+(added to style.css in pass ②) and `.ts-table` (didn't exist; switched to the
+plain `<table>` the other 5 curriculum tables use, which IS styled).
+13 lessons now carry `lastVerified: 2026-08-26 / v2.1.246`.
+
+### STILL NOT DONE (genuinely needs owner input)
+- **ch16's premise**: lessons 2–5 teach SSH + Node + tmux as *the* remote
+  story. l07 now names the built-in alternatives, but a full re-frame of the
+  chapter is a product call, not a correction.
+- `/plan` is listed once in ch11 as a built-in and appears NOWHERE in the
+  docs (plan mode = Shift+Tab or `--permission-mode plan`). Still deliberately
+  unfixed pending confirmation — the `/skills` precedent (real, but missing
+  from the published commands table) says absence there is not proof.
+- 28 lessons still sit at `lastVerified: 2026-04-22`; this pass verified the
+  surfaces the audit flagged, not the whole curriculum.
+
+### AUDIT STEPS ③–⑥ — original notes (now DONE, kept for context)
 - ③ **auto mode** — `--permission-mode auto` + `dontAsk` are missing from the
   taught permission set (ch12/ch15); brings `PermissionDenied` hook,
   `/auto-mode-setup`, `autoMode.environment`. `--enable-auto-mode` is

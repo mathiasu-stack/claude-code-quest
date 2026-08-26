@@ -571,7 +571,7 @@ Your answer becomes the next learnings.md entry."</code></pre>
 <p>On launch Claude Code runs the <strong>Default</strong> option, which resolves to Sonnet for daily work unless your organisation has set its own default. That's almost always correct. But the moment a task obviously falls outside Sonnet's sweet spot, you should switch — explicitly, every time, not as an afterthought.</p>`,
       },
       {
-        id: 'ch10-l02', title: 'Switching with /model and Fast Mode', xpReward: 110, videos: [],
+        id: 'ch10-l02', title: 'Switching Models, Fast Mode and Effort', xpReward: 110, videos: [],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Three Levers, One Session</h2>
@@ -598,7 +598,20 @@ Your answer becomes the next learnings.md entry."</code></pre>
 <p>For headless / scripted runs, pass the model explicitly:</p>
 <pre><code>claude -p "summarise this PR" --model claude-haiku-4-5
 claude -p "redesign the auth module" --model claude-opus-5</code></pre>
-<p>This bypasses whatever the interactive default is — perfect for cron jobs and CI hooks that should always run on a specific tier.</p>`,
+<p>This bypasses whatever the interactive default is — perfect for cron jobs and CI hooks that should always run on a specific tier.</p>
+<h3>4. Effort — the other half of the dial</h3>
+<p>Picking a model is only half the decision. <strong>Effort</strong> controls how much the model reasons before answering, and it moves cost and quality as much as the tier does. Every current model supports five levels:</p>
+<pre><code>/effort            # opens the picker
+/effort low        # short, scoped, latency-sensitive work
+/effort medium     # cost-sensitive work that can trade a little intelligence
+/effort high       # the default — balances spend and intelligence
+/effort xhigh      # deeper reasoning, higher spend
+/effort max        # deepest — prone to overthinking; test before adopting
+claude --effort high      # set it at launch, for scripts and CI</code></pre>
+<p><code>high</code> is the default on every model that supports effort. <code>low</code> through <code>xhigh</code> persist across sessions when you set them interactively; <code>max</code> applies to the current session only.</p>
+<p>The practical consequence is that "Opus is too expensive for this" is often the wrong conclusion. <strong>Opus at <code>low</code> or <code>medium</code> effort</strong> is a genuinely different option from Sonnet at <code>high</code>, and on reasoning-shaped work it frequently wins on both counts. Reach for the effort dial before you downgrade the tier.</p>
+<div class="callout"><strong>Also on the menu: <code>ultracode</code>.</strong> It is a Claude Code setting rather than a model effort level — it sends <code>xhigh</code> to the model <em>and</em> has Claude orchestrate a dynamic workflow for substantive tasks. Set it with <code>/effort ultracode</code> or <code>claude --effort ultracode</code>.</div>
+<p>Effort isn't only a session-wide switch. Skills and subagents can each declare their own <code>effort:</code> in frontmatter (Chapters 8 and 14), which is how you give a cheap mechanical subagent <code>low</code> while the orchestrator that dispatches it runs at <code>high</code>.</p>`,
       },
       {
         id: 'ch10-l03', title: 'Cost Economics & Prompt Caching', xpReward: 110, videos: [],
@@ -809,7 +822,26 @@ claude -p "redesign the auth module" --model claude-opus-5</code></pre>
           correctIndexes: [1],
           explanation: 'Lesson "Cost Economics & Prompt Caching" — 300 seconds straddles the 5-minute TTL, paying the miss with no amortisation.',
         },
-      ],
+              {
+          id: 'ch10-q12', type: 'single',
+          prompt: 'A reasoning-heavy task is running slowly and expensively on Opus. What does the lesson say to try before downgrading to Sonnet?',
+          options: [
+            'Lower the effort level — Opus at low or medium is a different option from Sonnet at high',
+            'Turn on Fast Mode, which makes Opus cheaper',
+            'Switch to the 1M-context tier',
+            'Nothing — model tier is the only cost dial',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — effort moves cost and quality as much as the tier does. Reach for the effort dial before downgrading. (Fast Mode raises speed and price; it is not a saving.)',
+        },
+        {
+          id: 'ch10-q13', type: 'single',
+          prompt: 'What is the default effort level on a model that supports effort?',
+          options: ['low', 'medium', 'high', 'max'],
+          correctIndexes: [2],
+          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — high is the default, balancing token spend against intelligence.',
+        },
+],
     },
   },
 
@@ -1119,6 +1151,44 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 <h3>Review rhythm</h3>
 <p>Sam's number: <em>check each pane every 15–30 minutes, or when it signals it's waiting</em>. Decisions are fast — unblock, redirect, move on. You're not reading every line of every diff; you're doing spot reviews and judgement calls.</p>`,
       },
+      {
+        id: 'ch14-l05', title: 'Agent Teams (Experimental)', xpReward: 120, videos: [],
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
+        content: `<h2>When Reporting Back Isn't Enough</h2>
+<p>Everything in this chapter so far has been about <strong>subagents</strong>: you dispatch one, it works in its own context, it reports a result back to you. That shape fits most delegation. It has one limit — subagents can't really talk to each other, so any coordination has to route through the main session.</p>
+<p><strong>Agent teams</strong> are the other shape. Teammates are full, independent Claude Code sessions that message each other directly and claim work from a shared task list. Your session becomes the team lead.</p>
+<div class="callout"><strong>Experimental, and off by default.</strong> Agent teams ship disabled. Turn them on with <code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code> in your environment or the <code>env</code> block of <code>settings.json</code>. Expect rough edges — resumed sessions don't restore in-process teammates, and shutdown can be slow. Don't build a critical workflow on this yet.</div>
+<h3>Subagents or a team?</h3>
+<table><thead><tr><th></th><th>Subagents</th><th>Agent teams</th></tr></thead><tbody>
+  <tr><td><strong>Communication</strong></td><td>Return a result to whoever called them</td><td>Teammates message each other directly</td></tr>
+  <tr><td><strong>Coordination</strong></td><td>The main agent manages all the work</td><td>Self-coordinating, via a shared task list</td></tr>
+  <tr><td><strong>Best for</strong></td><td>Focused tasks where only the result matters</td><td>Work that needs discussion and disagreement</td></tr>
+  <tr><td><strong>Token cost</strong></td><td>Lower — results are summarised back</td><td>Much higher — each teammate is a whole session</td></tr>
+</tbody></table>
+<h3>Starting one</h3>
+<p>There is no command. You ask, in plain language, and the lead spawns them:</p>
+<pre><code>Spawn three teammates to review PR #142:
+  - one focused on security implications
+  - one checking performance impact
+  - one validating test coverage
+Have them each review and report findings.</code></pre>
+<p>Teammates appear in the agent panel under your prompt. Arrow keys select one, <kbd>Enter</kbd> opens its transcript so you can message it directly, <kbd>Esc</kbd> interrupts it.</p>
+<h3>The use case that actually justifies the cost</h3>
+<p>A single agent investigating a bug tends to find one plausible explanation and stop — classic anchoring. A team can be pointed at each other instead:</p>
+<pre><code>Spawn 5 teammates to investigate different hypotheses for this outage.
+Have them talk to each other to try to disprove each other's theories,
+like a scientific debate. Update the findings doc with the consensus.</code></pre>
+<p>The theory that survives four teammates actively trying to kill it is far more likely to be the real root cause. That adversarial structure — not the parallelism — is what you're paying the extra tokens for.</p>
+<h3>Practical limits</h3>
+<ul>
+  <li><strong>Start with 3–5.</strong> Coordination overhead grows faster than throughput; three focused teammates beat five scattered ones.</li>
+  <li><strong>Give each one different files.</strong> Two teammates editing the same file overwrite each other.</li>
+  <li><strong>They don't inherit your conversation.</strong> A teammate loads CLAUDE.md, skills and MCP servers like any session, but knows nothing of what you and the lead discussed — put the context in the spawn prompt.</li>
+  <li><strong>Start with read-only work.</strong> Reviews and investigations show the value without the file-conflict problems of parallel implementation.</li>
+</ul>
+<p>Three hooks exist specifically to police a team: <code>TeammateIdle</code>, <code>TaskCreated</code> and <code>TaskCompleted</code> (Chapter 15). Exit code 2 from any of them sends feedback and blocks the transition — that's how you enforce "no task is complete until the tests pass".</p>`,
+      },
     ],
     practicalTest: {
       id: 'ch14-test',
@@ -1304,15 +1374,15 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   <li><strong>env</strong> — environment variables injected into every Bash call.</li>
   <li><strong>model</strong> — pin a default model for this project (e.g. <code>"claude-opus-5"</code>).</li>
   <li><strong>statusLine</strong> — a custom command that produces the prompt status string.</li>
-  <li><strong>outputStyle</strong> — pick an output style (concise / explanatory / etc).</li>
+  <li><strong>outputStyle</strong> — pick an output style (Concise / Explanatory / Learning / Proactive).</li>
 </ul>
 <h3>What does NOT live here</h3>
 <p>MCP server configs go in <code>.mcp.json</code>, not <code>settings.json</code>. Skills go in <code>.claude/skills/</code>. Subagents go in <code>.claude/agents/</code>. Don't try to stuff them into settings — they're separate files for a reason.</p>`,
       },
       {
         id: 'ch15-l02', title: 'Permissions: Allow, Ask, Deny', xpReward: 130, videos: [],
-        lastVerified: '2026-06-14',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>The Three Permission Verbs</h2>
 <div class="term-shot term-shot--editor" data-shot="ch15-l02"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">.claude/settings.json</span></div><div class="term-shot-body">{
   "permissions": {
@@ -1360,8 +1430,21 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   }
 }</code></pre>
 <p>Tool-only matchers (<code>"Read"</code>) cover every invocation of that tool. <code>Tool(pattern)</code> matchers restrict by argument — most common with <code>Bash</code> where the pattern is a glob on the command. <code>Read(./.env)</code> and similar restrict file access by path.</p>
-<h3>Sandbox mode</h3>
-<p>Run Claude Code with <code>--permission-mode plan</code> to allow read-only exploration but block all writes. <code>--permission-mode acceptEdits</code> auto-accepts edits but still asks for shell. <code>--permission-mode bypassPermissions</code> disables all gating (dangerous — only inside an isolated container/VM).</p>
+<h3>The six permission modes</h3>
+<p>Pass one with <code>--permission-mode</code>, or set <code>defaultMode</code> in a settings file:</p>
+<ul>
+  <li><code>default</code> — labelled <strong>Manual</strong> in the UI (<code>manual</code> works as an alias). Prompts on first use of each tool.</li>
+  <li><code>acceptEdits</code> — auto-accepts file edits and common filesystem commands (<code>mkdir</code>, <code>touch</code>, <code>mv</code>, <code>cp</code>) inside your working directories; shell still asks.</li>
+  <li><code>plan</code> — read-only exploration, no writes to your source. Chapter 12.</li>
+  <li><code>auto</code> — auto-approves tool calls, with a classifier model checking each one first.</li>
+  <li><code>dontAsk</code> — the inverse of auto: anything not pre-approved by <code>/permissions</code> or an <code>allow</code> rule is auto-<strong>denied</strong> instead of queued for you.</li>
+  <li><code>bypassPermissions</code> — disables all gating. Dangerous — isolated container/VM only.</li>
+</ul>
+<h3>Auto mode, and why it isn't "yes to everything"</h3>
+<p>Auto mode deserves real attention, because on Pro, Max and Team plans it is where your sessions <strong>start</strong>. It does not blanket-approve. A separate classifier model reviews each action before it runs and blocks anything that escalates beyond what you asked for, touches infrastructure it doesn't recognise, or looks driven by hostile content Claude read in a file or a web page. That last case is the point: it is a guard against prompt injection, not merely a convenience.</p>
+<p>Two things still cut through it — your explicit <code>ask</code> rules always force a prompt, and <code>deny</code> rules always win. So the pattern that actually works is to run in auto mode and spend your effort on a short, sharp <code>deny</code>/<code>ask</code> list, rather than on approving every <code>ls</code>.</p>
+<p>To remove it for a machine, or org-wide via managed settings, set <code>permissions.disableAutoMode</code> to <code>"disable"</code>. The matching switch for bypass is <code>permissions.disableBypassPermissionsMode</code>.</p>
+<div class="callout"><strong>Deprecated.</strong> The old <code>--enable-auto-mode</code> flag was retired in <code>v2.1.111</code> — use <code>--permission-mode auto</code>.</div>
 <h3>Managing rules live</h3>
 <pre><code>/permissions             # opens the interactive picker
 /permissions list        # show current resolved rules
@@ -1370,8 +1453,8 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
       },
       {
         id: 'ch15-l03', title: 'Claude Code Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-06-24',
-        verifiedAgainstVersion: 'v2.1.176',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Wire Shell Commands to Lifecycle Events</h2>
 <p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>more than 30 hook events</strong> covering every phase of a Claude Code session, and the set keeps growing — recent additions include <code>Setup</code>, <code>PostToolUseFailure</code>, <code>PermissionRequest</code>, <code>Elicitation</code>, and <code>SessionEnd</code>. The most useful clusters:</p>
 <h3>Tool lifecycle</h3>
@@ -1393,6 +1476,12 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 <h3>Subagent lifecycle</h3>
 <ul>
   <li><code>SubagentStart</code> / <code>SubagentStop</code> — when a subagent spawns/finishes.</li>
+</ul>
+<h3>Permissions and instructions</h3>
+<ul>
+  <li><code>PermissionRequest</code> — a tool call needs a permission decision.</li>
+  <li><code>PermissionDenied</code> — <strong>auto mode declined an action</strong>. This is how you see what the classifier is blocking; without it, auto mode is a black box.</li>
+  <li><code>InstructionsLoaded</code> — a <code>CLAUDE.md</code> or <code>.claude/rules/*.md</code> file was loaded. The documented way to answer "why isn't Claude following my CLAUDE.md" — it logs exactly which instruction files loaded, when, and why. See Chapter 3.</li>
 </ul>
 <h3>Concrete example — auto-format on save</h3>
 <pre><code>{
@@ -1422,13 +1511,15 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   }
 }</code></pre>
 <p>If <code>block-prod-db.sh</code> exits non-zero with output on stderr, the tool call is blocked and the message is shown to Claude — which can re-plan around the block.</p>
+<h3>Hooks aren't only shell commands</h3>
+<p>Every example above uses <code>"type": "command"</code>, which is the one you'll reach for most. But a handler can also be <code>http</code> (POST to a URL), <code>mcp_tool</code> (call a tool on a connected MCP server — Chapter 13), <code>prompt</code> (hand the decision to Claude), or <code>agent</code> (spawn a subagent; experimental). A <code>prompt</code> handler is the pragmatic choice when the rule you want to enforce is a judgement call rather than a pattern match.</p>
 <h3>Hook hygiene</h3>
 <p>Hooks run in your shell with your privileges. Treat them like git pre-commit hooks: keep them fast, idempotent, and clearly named under <code>.claude/hooks/</code> in the repo. A 5-second hook on <code>PostToolUse</code> turns every edit into a 5-second wait.</p>`,
       },
       {
         id: 'ch15-l04', title: 'Status Line, Output Styles & Headless Mode', xpReward: 130, videos: [],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>The Polish Layer</h2>
 <p>Three knobs that turn Claude Code from a tool into <em>your</em> tool: a status line, an output style, and a headless CLI for scripts.</p>
 <h3>Status line</h3>
@@ -1441,10 +1532,12 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 }</code></pre>
 <p>Inside the script you have access to the current model, git branch, session cost so far, and more — via environment variables. Common patterns: show the branch + a "⚠ prod" badge when the repo is the production checkout; show the running spend in £ when you want to feel the meter.</p>
 <h3>Output styles</h3>
-<p>Output styles change how Claude Code formats its replies. Built-in styles include <code>default</code>, <code>concise</code>, and <code>explanatory</code>. You can pick one persistently in settings or per-session via <code>/output-style</code>.</p>
-<pre><code>{ "outputStyle": "concise" }     // settings.json
-/output-style explanatory         // one-off, for the current session</code></pre>
-<p>You can also author custom styles in <code>.claude/output-styles/</code> — each is a markdown file with rules ("never use emoji", "always cite file:line", "end with a one-sentence summary"). Useful for matching house style on PR bodies or report drafts.</p>
+<p>Output styles change Claude Code's <em>system prompt</em> — its role, tone, and default response format. The built-ins are <code>Default</code>, <code>Proactive</code>, <code>Concise</code>, <code>Explanatory</code> and <code>Learning</code>.</p>
+<pre><code>{ "outputStyle": "Concise" }     // settings.json — the durable way
+/config                           // then pick "Output style" from the menu</code></pre>
+<div class="callout"><strong>There is no <code>/output-style</code> command.</strong> It was deprecated in <code>v2.1.73</code> and removed in <code>v2.1.91</code>. Use <code>/config</code>, or set <code>outputStyle</code> in a settings file. The feature itself is very much alive — only the standalone command went away.</div>
+<p>An output style is read once, at session start, so a change takes effect after <code>/clear</code> or in your next session — not immediately.</p>
+<p>You can also author custom styles in <code>.claude/output-styles/</code> — each a markdown file with frontmatter and rules ("never use emoji", "always cite file:line", "end with a one-sentence summary"). One field matters more than the rest: <code>keep-coding-instructions: true</code> keeps Claude Code's built-in software-engineering behaviour and layers your voice on top. Leave it out and you drop that behaviour entirely — right for a writing assistant, wrong for a coding session that just needs a house style.</p>
 <h3>Headless / CI mode</h3>
 <p><code>claude -p "..."</code> runs Claude Code in non-interactive mode: takes one prompt, returns one response, exits. This is the building block for CI hooks, cron jobs, GitHub Actions, and Synology Task Scheduler invocations.</p>
 <pre><code>claude -p "review the diff between main and HEAD" \\
@@ -1607,10 +1700,10 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         },
         {
           id: 'ch15-q10', type: 'multi',
-          prompt: 'Which built-in output styles does the lesson list?',
-          options: ['default', 'concise', 'explanatory', 'verbose'],
+          prompt: 'Which of these are built-in output styles?',
+          options: ['Concise', 'Explanatory', 'Learning', 'Verbose'],
           correctIndexes: [0, 1, 2],
-          explanation: 'Lesson "Status Line, Output Styles & Headless Mode" — the three named built-ins are default / concise / explanatory.',
+          explanation: 'Lesson "Status Line, Output Styles & Headless Mode" — the built-ins are Default, Proactive, Concise, Explanatory and Learning. There is no Verbose.',
         },
         {
           id: 'ch15-q11', type: 'multi',
@@ -1625,7 +1718,31 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
           correctIndexes: [0, 1, 2, 3],
           explanation: 'Lesson "Status Line, Output Styles & Headless Mode" — first four are the explicit recipe; <code>--allow-edits</code> would defeat the purpose.',
         },
-      ],
+              {
+          id: 'ch15-q13', type: 'single',
+          prompt: 'What does auto mode actually do when Claude wants to run a command?',
+          options: [
+            'Approves everything without checking — it is bypassPermissions under another name',
+            'A separate classifier model reviews the action and blocks anything that escalates beyond your request or looks driven by hostile content',
+            'Approves only commands already in your allow list',
+            'Queues the command until you return to the terminal',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Three Permission Verbs" — auto mode is a classifier, not a blanket yes. It is a guard against prompt injection as much as a convenience. Your ask rules still prompt and deny rules still win.',
+        },
+        {
+          id: 'ch15-q14', type: 'single',
+          prompt: 'What does <code>dontAsk</code> mode do?',
+          options: [
+            'Silently approves anything not explicitly denied',
+            'Auto-denies anything not pre-approved via /permissions or an allow rule',
+            'Suppresses notifications but still prompts',
+            'Disables hooks for the session',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "The Three Permission Verbs" — dontAsk is the inverse of auto: unapproved calls are denied rather than queued for you.',
+        },
+],
     },
   },
 
@@ -1720,6 +1837,31 @@ crontab -e
 <h3>Idle behaviour matters for cost</h3>
 <p>From Chapter 12: the prompt cache evicts after 5 minutes. Scheduled jobs spawning fresh sessions every hour pay the cache miss on every run. That's fine — the alternative (a long-lived idle session) wastes more. Just be aware of the trade-off when you design the cadence.</p>
 <p><strong>Congratulations.</strong> You've completed the Remote & Headless side quest. From first session to unattended scheduled automation on whatever box you have — you have the full toolkit: Business Brain, lean CLAUDE.md, the Memory Framework, refined skills, token efficiency, Plan Mode, model selection, subagent dispatch, MCP integration, hardened settings, and unattended scheduled automation.</p>`,
+      },
+      {
+        id: 'ch16-l07', title: 'Remote Control: Your Machine, Your Phone', xpReward: 130, videos: [],
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
+        content: `<h2>You May Not Need the Remote Box</h2>
+<p>The rest of this chapter builds a genuine remote workstation: SSH in, install Node, keep sessions alive with tmux. That is still the right answer when you want Claude Code running on hardware that is <em>always on</em> and independent of your laptop — a NAS, a VPS, a build server.</p>
+<p>But if what you actually want is "start something at my desk and check on it from the sofa", there is a built-in feature for exactly that, and it needs no SSH, no tmux and no second machine.</p>
+<h3>Remote Control</h3>
+<p><strong>Remote Control</strong> connects claude.ai/code — or the Claude app on iOS and Android — to a session running on your own machine. Claude keeps running locally the whole time, so your filesystem, your MCP servers and your project config all stay where they are. Nothing moves to the cloud; only the conversation does.</p>
+<pre><code>claude --remote-control        # a normal session, also reachable remotely (--rc works too)
+claude remote-control          # server mode: no local prompt, waits for remote connections
+/remote-control                # turn it on for the session you are already in (/rc)</code></pre>
+<p>In server mode the terminal prints a session URL and shows connection status; press <kbd>space</kbd> for a QR code to open it on your phone. Name a session with <code>--name "Billing refactor"</code> so it is findable in the list at claude.ai/code.</p>
+<p>You can drive the same session from your terminal, a browser and your phone interchangeably — messages, subagent progress and workflow state stay in sync across every connected device.</p>
+<div class="callout"><strong>Sign in first.</strong> Remote Control needs a claude.ai login (<code>/login</code>). It is available on all plans, but on Team and Enterprise an Owner must switch it on in the Claude Code admin settings before it works.</div>
+<h3>Related: sessions that don't run on your machine at all</h3>
+<p>Two neighbours worth knowing by name. <code>claude --cloud</code> starts a session on Anthropic's infrastructure rather than your box — useful when you want work to continue with your laptop shut. And <code>/teleport</code> pulls one of those cloud sessions <em>down</em> into your terminal, so you can finish locally what you started on the web.</p>
+<h3>So which do you use?</h3>
+<ul>
+  <li><strong>Remote Control</strong> — you want your own environment, reachable from another device. Your files, your tools, your machine doing the work.</li>
+  <li><strong>Cloud sessions</strong> (<code>--cloud</code>) — you want the work to happen somewhere that isn't your machine, and you don't need your local filesystem.</li>
+  <li><strong>SSH + tmux</strong> (the rest of this chapter) — you want a persistent box <em>you</em> control, running on your terms, with everything installed the way you like it. Still the answer for a NAS or a home server.</li>
+</ul>
+<p>These are not competitors so much as three different answers to "where should the work happen". The chapter's remote box is worth building; just build it because you want that box, not because you think it is the only way to reach Claude Code from your phone.</p>`,
       },
     ],
     practicalTest: {

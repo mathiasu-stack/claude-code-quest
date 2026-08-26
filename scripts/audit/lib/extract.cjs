@@ -152,6 +152,8 @@ function generateAutoNpcs(curriculum) {
       { x: -6, z: cZ - 4 }, { x: 6, z: cZ - 4 },
       { x: -6, z: cZ },     { x: 6, z: cZ },
       { x: -6, z: cZ + 4 }, { x: 6, z: cZ + 4 },
+      // Overflow row — keep in sync with the slots array in play.js.
+      { x: -6, z: cZ - 8 }, { x: 6, z: cZ - 8 },
     ];
     (ch.lessons || []).forEach((l, i) => {
       const slot = slots[i % slots.length];

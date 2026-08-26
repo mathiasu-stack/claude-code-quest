@@ -896,8 +896,8 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       },
       {
         id: 'ch12-l02', title: 'Shift+Tab: Switching Modes', xpReward: 65, videos: [],
-        lastVerified: '2026-06-14',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Switching Modes</h2>
 <div class="term-shot" data-shot="ch12-l02"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /permissions
 
@@ -911,7 +911,14 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 <span class="ts-sel">❯ Add a new rule…</span>
 
 <span class="ts-dim">esc to close</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
-<p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes: <em>default → acceptEdits → plan → default</em>. The current mode is shown in the status line.</p>
+<p>Press <kbd>Shift+Tab</kbd> to cycle through permission modes. From <code>auto</code>, the first press drops you to <code>default</code>; from there the cycle runs <em>default → acceptEdits → plan → default</em>. The status line names the active mode:</p>
+<ul>
+  <li><code>⏸ manual mode on</code> — <code>default</code>. Asks before most edits, shell commands and network calls.</li>
+  <li><code>⏵⏵ accept edits on</code> — <code>acceptEdits</code>. Edits go through; shell still asks.</li>
+  <li><code>⏸ plan mode on</code> — <code>plan</code>. Explores without touching your source.</li>
+  <li><code>⏵⏵ auto mode on</code> — <code>auto</code>. A classifier reviews each action instead of you.</li>
+</ul>
+<div class="callout"><strong>You are probably starting in auto mode.</strong> On Pro, Max and Team plans <code>auto</code> is the built-in starting mode, so your first <kbd>Shift+Tab</kbd> takes you <em>down</em> into manual rather than up into something looser. If you learned that Claude Code always asks first, that was an earlier default.</div>
 <h3>Workflow</h3>
 <ol>
   <li>Press Shift+Tab until you reach <strong>plan</strong></li>
@@ -922,7 +929,19 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 </ol>
 <p>You can iterate on the plan multiple times. The plan is part of the conversation — Claude Code remembers decisions made during planning when it executes.</p>
 <h3>Headless plan mode</h3>
-<p>For CI / automation: <code>claude -p "review this branch" --permission-mode plan</code> runs the whole invocation in read-only mode. Nothing can be mutated even by accident. Covered in depth in Chapter 15.</p>`,
+<p>For CI / automation: <code>claude -p "review this branch" --permission-mode plan</code> runs the whole invocation in read-only mode. Nothing can be mutated even by accident. Covered in depth in Chapter 15.</p>
+<h3>The undo you didn't know you had</h3>
+<p>Permission modes decide what Claude may do. <strong>Checkpoints</strong> decide what you can take back — and they are why running in a looser mode is reasonable rather than reckless. Claude Code snapshots your code before every prompt you send, automatically, keeping the 100 most recent per session.</p>
+<p>Run <code>/rewind</code>, or press <kbd>Esc</kbd> twice on an empty prompt, and pick a point to act on:</p>
+<ul>
+  <li><strong>Restore code and conversation</strong> — rewind both to that moment.</li>
+  <li><strong>Restore conversation</strong> — rewind the discussion, keep the code you have now.</li>
+  <li><strong>Restore code</strong> — revert the files, keep everything you have discussed.</li>
+  <li><strong>Summarize from / up to here</strong> — compress part of the conversation to free context, without touching files.</li>
+</ul>
+<div class="callout"><strong>Know its edges.</strong> Checkpoints track edits made by Claude's <em>file-editing tools</em> only. Files changed by a bash command (<code>rm</code>, <code>mv</code>, <code>cp</code>) are <strong>not</strong> tracked and cannot be rewound, and neither are most subagent edits. It is session-level undo, not version control — it complements git, it does not replace it.</div>
+<h3>What plan mode lets through now</h3>
+<p>Plan mode never edits your source. But it no longer prompts you for every shell command: when auto mode is available and <code>useAutoModeDuringPlan</code> is on — the default — the classifier reviews commands during planning instead of stopping to ask. Approved commands run, rejected ones are blocked. Turn the setting off if you want planning strictly hands-off.</p>`,
       },
       {
         id: 'ch12-l03', title: 'When to Use Plan Mode', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/7LWl3EbcFTc" title="Claude Code Plan Mode: The Senior Engineer\'s Workflow" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
@@ -1093,7 +1112,19 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
           correctIndexes: [1],
           explanation: 'Lesson "Shift+Tab: Switching Modes" — the plan stays in conversation context, so the same session\'s execution honours the decisions made during planning.',
         },
-      ],
+              {
+          id: 'ch12-q12', type: 'single',
+          prompt: 'On a Pro, Max or Team plan, which permission mode does a session start in?',
+          options: [
+            'default (Manual) — it asks before everything',
+            'auto — a classifier reviews each action instead of you',
+            'plan — it must be told explicitly to act',
+            'acceptEdits',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Switching Modes" — auto is the built-in starting mode on those plans, so your first Shift+Tab press moves down into manual rather than up.',
+        },
+],
     },
   },
 
@@ -1107,8 +1138,8 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     lessons: [
       {
         id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-06-15',
-        verifiedAgainstVersion: 'v2.1.176',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>The Command Vocabulary</h2>
 <div class="term-shot" data-shot="ch11-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /help
 
@@ -1140,13 +1171,15 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     <tr><td><code>/mcp</code></td><td>List connected MCP servers and their tools</td></tr>
     <tr><td><code>/permissions</code></td><td>View, add, or manage tool permission rules</td></tr>
     <tr><td><code>/memory</code></td><td>View and edit Claude Code memory files</td></tr>
-    <tr><td><code>/output-style</code></td><td>Switch the output style (default / concise / explanatory / custom)</td></tr>
-    <tr><td><code>/cost</code></td><td>Show token usage and cost for the current session</td></tr>
+    <tr><td><code>/config</code></td><td>Open Settings — including output style (the old <code>/output-style</code> command was removed in v2.1.91)</td></tr>
+    <tr><td><code>/usage</code></td><td>Show tokens and estimated cost for the session. <code>/cost</code> is an alias for it</td></tr>
+    <tr><td><code>/context</code></td><td>Visualise what is filling the context window, as a coloured grid — including which memory files loaded</td></tr>
+    <tr><td><code>/rewind</code></td><td>Roll code and/or conversation back to an earlier checkpoint (or press <kbd>Esc</kbd> twice)</td></tr>
     <tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr>
     <tr><td><code>/review</code></td><td>Built-in code review against the current diff</td></tr>
     <tr><td><code>/simplify</code></td><td>Run a cleanup-only review and apply the fixes</td></tr>
     <tr><td><code>/cd</code></td><td>Move the session to a new directory without breaking the prompt cache</td></tr>
-    <tr><td><code>/reload-skills</code></td><td>Re-scan skill directories without restarting the session</td></tr>
+    <tr><td><code>/reload-plugins</code></td><td>Reload active plugins. Plain <code>SKILL.md</code> edits are picked up live and need no reload</td></tr>
     <tr><td><code>/exit</code></td><td>End the session</td></tr>
   </tbody>
 </table>
@@ -1179,6 +1212,36 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: '<h2>Keeping Sessions Healthy</h2><ul><li>One task per session</li><li>Start with a clear, specific first message</li><li>/clear when switching tasks</li><li>/compact on long sessions before context degrades</li><li>Read every diff before accepting</li></ul><h3>Opening message pattern</h3><pre><code>I\'m adding rate limiting to `/api/auth/login` in `src/routes/auth.js`.\nProject uses express-rate-limit. Don\'t modify any other routes.</code></pre><p>This front-loaded context saves multiple clarification turns and reduces wasted tokens.</p>',
+      },
+      {
+        id: 'ch11-l05', title: 'Sharing What You Build: Plugins', xpReward: 100, videos: [],
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
+        content: `<h2>From "Works On My Machine" to "Works On The Team's"</h2>
+<p>By now you have skills, maybe a subagent, maybe a hook — all living in <code>.claude/</code>. That is exactly right for personal workflows and quick experiments. It has one problem: the only way to give it to a colleague is to tell them which files to copy.</p>
+<p>A <strong>plugin</strong> is the packaged version. One directory that can bundle skills, agents, hooks, MCP servers and settings, installable and versioned.</p>
+<h3>What goes in one</h3>
+<pre><code>my-plugin/
+├── .claude-plugin/
+│   └── plugin.json     # name, description, version
+├── skills/             # &lt;name&gt;/SKILL.md
+├── agents/             # subagent definitions
+├── hooks/hooks.json    # the hooks block from settings.json
+└── .mcp.json           # MCP servers</code></pre>
+<div class="callout"><strong>The classic mistake.</strong> Only <code>plugin.json</code> goes inside <code>.claude-plugin/</code>. Every other directory — <code>skills/</code>, <code>agents/</code>, <code>hooks/</code> — sits at the plugin root, beside it. Nesting them inside is the most common reason a plugin loads with nothing in it.</div>
+<h3>Try one without installing it</h3>
+<pre><code>claude --plugin-dir ./my-plugin      # load it for this session only
+/reload-plugins                       # pick up edits without restarting</code></pre>
+<p>Plugin skills are <strong>namespaced</strong>: a <code>hello</code> skill in a plugin named <code>my-plugin</code> is invoked as <code>/my-plugin:hello</code>, not <code>/hello</code>. That is deliberate — it means two plugins can each ship a <code>deploy</code> skill without colliding.</p>
+<h3>Standalone or plugin?</h3>
+<table><thead><tr><th></th><th><code>.claude/</code></th><th>Plugin</th></tr></thead><tbody>
+  <tr><td><strong>Invoked as</strong></td><td><code>/hello</code></td><td><code>/my-plugin:hello</code></td></tr>
+  <tr><td><strong>Reach</strong></td><td>This project, or your user account</td><td>Any project, any teammate</td></tr>
+  <tr><td><strong>Best for</strong></td><td>Personal workflows, experiments</td><td>Sharing, versioned releases</td></tr>
+</tbody></table>
+<p>The recommended path is exactly the order you have learned things: build it standalone in <code>.claude/</code> where iteration is fast, and convert it to a plugin when someone else wants it. Converting is mostly copying directories — with one wrinkle: hooks move out of <code>settings.json</code> and into <code>hooks/hooks.json</code>, though the JSON block itself is unchanged.</p>
+<h3>Distribution</h3>
+<p>Plugins are installed from <strong>marketplaces</strong>, which are just repositories with a catalog file. Anthropic runs two: <code>claude-plugins-official</code> (curated, registered automatically) and <code>claude-community</code>. For a team, host a marketplace in a private repository and nobody outside sees it. Browse and install with <code>/plugin</code>; validate your own work with <code>claude plugin validate ./my-plugin</code> before you share it.</p>`,
       },
     ],
     practicalTest: {
@@ -1401,8 +1464,8 @@ drwxr-xr-x   6 you  staff   192 Jun 11 15:33 tests</div><div class="term-shot-ca
       },
       {
         id: 'ch03-l03', title: 'Writing a Lean CLAUDE.md', xpReward: 75, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Less is More</h2>
 <p>A well-written CLAUDE.md is concise, declarative, and always relevant. Every line should earn its place — if it's not going to affect Claude Code's behaviour in a meaningful way, cut it.</p>
 <h3>What belongs in CLAUDE.md</h3>
@@ -1423,7 +1486,28 @@ drwxr-xr-x   6 you  staff   192 Jun 11 15:33 tests</div><div class="term-shot-ca
 <pre><code>## Brand & Product Context
 See .business-brain/ for brand voice, client profiles, and product strategy.
 Load the relevant file when the task requires it.</code></pre>
-<p>This is far better than pasting the full brand voice guide into CLAUDE.md. The guide gets loaded only when relevant, not on every session.</p>`,
+<p>This is far better than pasting the full brand voice guide into CLAUDE.md. The guide gets loaded only when relevant, not on every session.</p>
+<h3>When one file isn't enough: <code>.claude/rules/</code></h3>
+<p>The pointer pattern relies on Claude choosing to follow the pointer. For instructions that must apply automatically — but only sometimes — there is a better tool. Put markdown files in <code>.claude/rules/</code>, one topic per file:</p>
+<pre><code>your-project/
+├── .claude/
+│   ├── CLAUDE.md           # always loaded
+│   └── rules/
+│       ├── code-style.md
+│       ├── testing.md
+│       └── api-design.md</code></pre>
+<p>A rule with no frontmatter loads at launch, exactly like <code>.claude/CLAUDE.md</code> — useful for organising a large file into topics, but it costs the same context. The real win is <strong>path-scoped rules</strong>, which load only when Claude touches matching files:</p>
+<pre><code>---
+paths:
+  - "src/api/**/*.ts"
+---
+
+# API rules
+- Every endpoint validates its input
+- Use the standard error envelope</code></pre>
+<p>Now the API conventions cost nothing on a session that never opens <code>src/api/</code>, and appear automatically on one that does. This is the answer to the tension the whole lesson is about: you no longer have to choose between "always loaded and often irrelevant" and "relevant but easily missed".</p>
+<p>Personal rules go in <code>~/.claude/rules/</code> and apply to every project. Project rules load after them, so project rules win.</p>
+<div class="callout"><strong>Debugging what actually loaded.</strong> Run <code>/context</code> and look under <strong>Memory files</strong> to see which instruction files made it into the session. If a rule isn't there, Claude cannot see it — and a path-scoped rule legitimately won't appear until Claude reads a file it matches.</div>`,
       },
       {
         id: 'ch03-l04', title: 'CLAUDE.md as a Team Document', xpReward: 75, videos: [],

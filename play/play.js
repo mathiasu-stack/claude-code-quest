@@ -540,6 +540,11 @@ function generateChapterNPCs(chapterIdx) {
     { x:  6, z: cZ + 0, face: -Math.PI / 2 },
     { x: -6, z: cZ + 4, face: Math.PI / 2 },
     { x:  6, z: cZ + 4, face: -Math.PI / 2 },
+    // Overflow row for chapters with more than six lessons. Placed at the
+    // north end (the zone runs cZ-11..cZ+11) rather than south, because the
+    // test NPC sits at cZ+8.5 and a row at cZ+8 would crowd it.
+    { x: -6, z: cZ - 8, face: Math.PI / 2 },
+    { x:  6, z: cZ - 8, face: -Math.PI / 2 },
   ];
   const npcs = [];
   ch.lessons.forEach((l, i) => {
