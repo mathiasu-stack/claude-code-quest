@@ -540,70 +540,81 @@ Your answer becomes the next learnings.md entry."</code></pre>
     lessons: [
       {
         id: 'ch10-l01', title: 'Meet the Engines', xpReward: 110, videos: [],
-        lastVerified: '2026-06-15',
-        verifiedAgainstVersion: 'v2.1.176',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
 <div class="term-shot" data-shot="ch10-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /model
 
 <span class="ts-gold">Select model</span> <span class="ts-dim">current: sonnet</span>
 
   1. Default (Recommended)   <span class="ts-dim">Sonnet for daily work</span>
-<span class="ts-sel">❯ 2. Opus                    claude-opus-4-8 · most capable · priciest</span>
-  3. Sonnet <span class="ts-ok">✓</span>                <span class="ts-dim">claude-sonnet-4-6 · balanced default</span>
+<span class="ts-sel">❯ 2. Opus                    claude-opus-5 · most capable · priciest</span>
+  3. Sonnet <span class="ts-ok">✓</span>                <span class="ts-dim">claude-sonnet-5 · balanced default</span>
   4. Haiku                   <span class="ts-dim">claude-haiku-4-5 · fastest · cheapest</span>
+  5. Fable                   <span class="ts-dim">claude-fable-5 · hardest, longest-running work</span>
 
 <span class="ts-dim">↑/↓ move · enter select · esc cancel</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
 <p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
-<h3>The Claude 4 family in Claude Code</h3>
-<p>Three model tiers are available, each with a different cost/intelligence trade-off:</p>
-<p>Above Opus sits <strong>Claude Fable 5</strong> (<code>claude-fable-5</code>) — Anthropic's most capable widely-released model, with a 1M-token context, for the most demanding reasoning and long-horizon agentic work.</p>
+<h3>The Claude 5 family in Claude Code</h3>
+<p>Three tiers cover almost everything, each with a different cost/intelligence trade-off:</p>
 <ul>
-  <li><strong>Claude Opus 4.8</strong> — the smartest model. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest cost per token; slowest output.</li>
-  <li><strong>Claude Sonnet 4.6</strong> — the balanced default. Most coding work, day-to-day prompts, skill execution, code review. Strong intelligence at ~⅕ the cost of Opus.</li>
-  <li><strong>Claude Haiku 4.5</strong> — the fast lane. Quick edits, log triage, short summaries, scripted hook actions. Sub-second time-to-first-token; cheapest tier.</li>
+  <li><strong>Claude Opus 5</strong> (<code>claude-opus-5</code>) — the smartest of the three. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest cost per token; slowest output. 1M-token context.</li>
+  <li><strong>Claude Sonnet 5</strong> (<code>claude-sonnet-5</code>) — the balanced default. Most coding work, day-to-day prompts, skill execution, code review. Strong intelligence at a fraction of Opus's cost, and also a 1M-token context.</li>
+  <li><strong>Claude Haiku 4.5</strong> (<code>claude-haiku-4-5</code>) — the fast lane. Quick edits, log triage, short summaries, scripted hook actions. Sub-second time-to-first-token; cheapest tier. 200k context.</li>
 </ul>
+<p>Above all three sits <strong>Claude Fable 5</strong> (<code>claude-fable-5</code>) — Anthropic's most capable widely-released model, for the most demanding reasoning and long-horizon agentic work. It is <em>not</em> the default: you select it with <code>/model fable</code>, and in an interactive session Claude Code asks you to confirm before a Fable 5 request spends usage credits.</p>
+<div class="callout"><strong>Version note.</strong> Opus 5 needs Claude Code <code>v2.1.219</code> or later; Sonnet 5 needs <code>v2.1.197</code>. Run <code>claude update</code> if <code>/model</code> doesn't offer them.</div>
 <h3>Why this matters</h3>
 <p>The wrong model for the job costs you either money (Opus on a one-line typo fix) or time and quality (Haiku on a multi-file architectural change). The first habit of a senior Claude Code user is matching the engine to the workload.</p>
 <h3>What Claude Code picks by default</h3>
-<p>On launch Claude Code uses Sonnet. That's almost always correct. But the moment a task obviously falls outside Sonnet's sweet spot, you should switch — explicitly, every time, not as an afterthought.</p>`,
+<p>On launch Claude Code runs the <strong>Default</strong> option, which resolves to Sonnet for daily work unless your organisation has set its own default. That's almost always correct. But the moment a task obviously falls outside Sonnet's sweet spot, you should switch — explicitly, every time, not as an afterthought.</p>`,
       },
       {
         id: 'ch10-l02', title: 'Switching with /model and Fast Mode', xpReward: 110, videos: [],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Three Levers, One Session</h2>
-<p>Claude Code exposes three switches that change which model executes your next prompt. Learning all three keeps you in control instead of letting defaults silently drive your bill.</p>
+<p>Claude Code exposes three switches that change which model executes your next prompt — plus one thing that used to be a switch and isn't any more. Learning all of them keeps you in control instead of letting defaults silently drive your bill.</p>
 <h3>1. /model — pick the tier</h3>
-<pre><code>/model opus       # Opus 4.8
-/model sonnet     # Sonnet 4.6  (default)
+<pre><code>/model opus       # latest Opus  — Opus 5 on the Anthropic API
+/model sonnet     # latest Sonnet — Sonnet 5 (the usual default)
 /model haiku      # Haiku 4.5
+/model fable      # Fable 5 — hardest, longest-running work
+/model best       # Fable 5 where you have access, else latest Opus
+/model opusplan   # Opus while planning, Sonnet to execute
+/model default    # clear any override, back to your account default
 /model            # opens an interactive picker</code></pre>
 <p>The choice persists for the rest of the session (or until you switch again). You'll see the active model in the status line.</p>
+<p><code>opusplan</code> is the one worth knowing about: it pairs directly with plan mode (Chapter 12) — you get Opus's judgement while the plan is being written, then Sonnet's speed and price for the mechanical work of carrying it out.</p>
+<div class="callout"><strong>Aliases are not fixed mappings.</strong> They resolve to the recommended version <em>for your provider</em>, and that moves over time. On the Anthropic API <code>sonnet</code> is Sonnet 5; on Amazon Bedrock or Google Cloud it may still be Sonnet 4.5. To pin a version, use the full model name — <code>/model claude-opus-5</code>.</div>
 <h3>2. /fast — Fast Mode for Opus</h3>
-<p><code>/fast</code> toggles <strong>Fast Mode</strong> while on Opus. It does <em>not</em> downgrade you to Sonnet or Haiku — you stay on Opus, but output streams much faster. Worth it when you're paired with Opus on a long refactor and don't want to watch tokens drip out.</p>
-<h3>3. The 1M-context window</h3>
-<p>Opus 4.7 and 4.8 support a <strong>1,000,000-token context</strong> tier. The model is the same engine; the only difference is that very large repos, transcripts, or doc bundles fit in one session. When 1M context is active, the model ID reads <code>claude-opus-4-8[1m]</code>. Switch on automatically when your context starts to approach the standard 200k limit — or proactively when you know you're about to load a full codebase.</p>
+<p><code>/fast</code> toggles <strong>Fast Mode</strong> while on Opus (5 or 4.8). It does <em>not</em> downgrade you to Sonnet or Haiku — you stay on Opus, but output streams much faster. Worth it when you're paired with Opus on a long refactor and don't want to watch tokens drip out.</p>
+<h3>3. Context size — the lever that retired</h3>
+<p>Opus 5 and Sonnet 5 both carry a <strong>1,000,000-token context window natively</strong> — there is nothing to switch on. Very large repos, transcripts, or doc bundles fit in one session by default.</p>
+<p>You may still see the <code>opus[1m]</code> and <code>sonnet[1m]</code> aliases. These are leftovers from when the big window was an opt-in tier on top of a 200k model, and they matter in only two places today: selecting the 1M window for Sonnet 5 from behind an LLM gateway, and pinning an older Opus that didn't have it natively. On a normal Anthropic API session, <code>sonnet[1m]</code> does nothing that <code>sonnet</code> doesn't already do.</p>
+<p>Haiku 4.5 is the exception — it stays at 200k. If you send Haiku on a whole-codebase read, that is where you'll hit the wall.</p>
 <h3>One-shot override per command</h3>
 <p>For headless / scripted runs, pass the model explicitly:</p>
 <pre><code>claude -p "summarise this PR" --model claude-haiku-4-5
-claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
+claude -p "redesign the auth module" --model claude-opus-5</code></pre>
 <p>This bypasses whatever the interactive default is — perfect for cron jobs and CI hooks that should always run on a specific tier.</p>`,
       },
       {
         id: 'ch10-l03', title: 'Cost Economics & Prompt Caching', xpReward: 110, videos: [],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Where Your Money Actually Goes</h2>
 <p>Priya pulls up last month's bill on a wall display. "This team spent £4,200 on Claude Code. Half of it was avoidable. Let me show you why."</p>
 <h3>The order-of-magnitude rule</h3>
 <p>As a rough mental model, per million tokens:</p>
 <ul>
-  <li><strong>Opus</strong>: ~15× the cost of Haiku</li>
-  <li><strong>Sonnet</strong>: ~3× the cost of Haiku</li>
-  <li><strong>Haiku</strong>: the cheap reference point</li>
+  <li><strong>Opus 5</strong>: ~5× the cost of Haiku ($5 / $25 per million tokens in / out)</li>
+  <li><strong>Sonnet 5</strong>: ~2× the cost of Haiku ($2 / $10)</li>
+  <li><strong>Haiku 4.5</strong>: the cheap reference point ($1 / $5)</li>
 </ul>
-<p>Running Opus on a task Haiku could handle is throwing 15× the money at the same answer.</p>
+<p>Running Opus on a task Haiku could handle is throwing 5× the money at the same answer.</p>
+<div class="callout"><strong>This gap has narrowed.</strong> On the previous generation Opus cost roughly 15× Haiku, which made "always reach for the cheapest model that can do it" the dominant advice. At 5×, the calculation is genuinely different: a task Opus gets right first time can easily beat three Haiku attempts plus your time reviewing them. Spend deliberately still holds — but "deliberately" now means weighing the retry cost, not reflexively picking the cheap tier.</div>
 <h3>Prompt caching — your biggest lever</h3>
 <p>Claude has automatic <strong>prompt caching</strong>: stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side. Cached tokens cost roughly <strong>10% of the normal input rate</strong>.</p>
 <h3>The 5-minute TTL</h3>
@@ -676,23 +687,23 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
         {
           id: 'ch10-q01', type: 'single',
           prompt: 'Which model does Claude Code use by default on launch?',
-          options: ['Opus 4.8', 'Sonnet 4.6', 'Haiku 4.5', 'It asks every time'],
+          options: ['Opus 5', 'Sonnet 5', 'Haiku 4.5', 'Fable 5'],
           correctIndexes: [1],
-          explanation: 'Lesson "Meet the Engines" — Sonnet 4.6 is the default and the recommended ~80% choice.',
+          explanation: 'Lesson "Meet the Engines" — the Default option resolves to Sonnet (Sonnet 5 on the Anthropic API) unless your organisation sets its own default. It is the recommended ~80% choice.',
         },
         {
           id: 'ch10-q02', type: 'multi',
-          prompt: 'Which of the following are the three model tiers in the Claude 4 family available in Claude Code?',
-          options: ['Claude Opus 4.8', 'Claude Sonnet 4.6', 'Claude Haiku 4.5', 'Claude Lite 3.5'],
+          prompt: 'Which of these are the three everyday model tiers in Claude Code?',
+          options: ['Claude Opus 5', 'Claude Sonnet 5', 'Claude Haiku 4.5', 'Claude Lite 3.5'],
           correctIndexes: [0, 1, 2],
-          explanation: 'Lesson "Meet the Engines" — three tiers: Opus 4.8, Sonnet 4.6, Haiku 4.5.',
+          explanation: 'Lesson "Meet the Engines" — three everyday tiers: Opus 5, Sonnet 5, Haiku 4.5. Fable 5 sits above them for the hardest work, and there is no "Lite" tier.',
         },
         {
           id: 'ch10-q03', type: 'single',
           prompt: 'What does <code>/fast</code> do?',
           options: [
             'Downgrades to Haiku',
-            'Toggles Fast Mode while on Opus — you stay on Opus, but output streams much faster',
+            'Toggles Fast Mode while on Opus (5 or 4.8) — you stay on Opus, but output streams much faster',
             'Disables prompt caching',
             'Sends a single one-shot prompt',
           ],
@@ -701,22 +712,22 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
         },
         {
           id: 'ch10-q04', type: 'single',
-          prompt: 'You\'re about to ingest a huge codebase in a single session. Which feature does the lesson recommend?',
+          prompt: 'You\'re about to ingest a huge codebase in a single session. What does the lesson tell you to do?',
           options: [
-            'Spin up multiple sessions',
-            'Run Opus 4.7+ which supports a 1,000,000-token context — model ID shows as <code>claude-opus-4-8[1m]</code>',
-            'Switch to Haiku — it has the most context',
+            'Enable the 1M-context tier with the <code>opus[1m]</code> alias — it is off by default',
+            'Nothing special: Opus 5 and Sonnet 5 already have a 1,000,000-token context natively',
+            'Switch to Haiku 4.5 — it has the largest context window',
             'There\'s no way; split the codebase manually',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Switching with /model and Fast Mode" — the 1M-context tier on Opus 4.7/4.8 fits whole codebases in one session.',
+          explanation: 'Lesson "Switching with /model and Fast Mode" — the big window is native on Opus 5 and Sonnet 5, so there is nothing to switch on. The <code>[1m]</code> aliases are leftovers from when it was opt-in. Haiku 4.5 is the one that stays at 200k.',
         },
         {
           id: 'ch10-q05', type: 'single',
           prompt: 'For headless / scripted runs, how do you pin a specific model per command?',
           options: [
             'Edit <code>~/.claude/CLAUDE.md</code>',
-            'Pass <code>--model claude-haiku-4-5</code> (or similar) to <code>claude -p "..."</code>',
+            'Pass <code>--model claude-opus-5</code> (or any model name/alias) to <code>claude -p "..."</code>',
             'Use an environment variable <code>CLAUDE_MODEL</code>',
             'It always uses Sonnet for headless runs',
           ],
@@ -732,8 +743,8 @@ claude -p "redesign the auth module" --model claude-opus-4-8</code></pre>
             'Opus ≈ 100×, Sonnet ≈ 10× Haiku',
             'All tiers identical',
           ],
-          correctIndexes: [1],
-          explanation: 'Lesson "Cost Economics & Prompt Caching" — Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku.',
+          correctIndexes: [0],
+          explanation: 'Lesson "Cost Economics & Prompt Caching" — Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2×. The 15× figure was the previous generation; the gap has narrowed a lot.',
         },
         {
           id: 'ch10-q07', type: 'multi',
@@ -1291,7 +1302,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
   <li><strong>permissions</strong> — which tools / which commands are auto-allowed, asked, or denied.</li>
   <li><strong>hooks</strong> — shell commands wired to lifecycle events.</li>
   <li><strong>env</strong> — environment variables injected into every Bash call.</li>
-  <li><strong>model</strong> — pin a default model for this project (e.g. <code>"claude-opus-4-8"</code>).</li>
+  <li><strong>model</strong> — pin a default model for this project (e.g. <code>"claude-opus-5"</code>).</li>
   <li><strong>statusLine</strong> — a custom command that produces the prompt status string.</li>
   <li><strong>outputStyle</strong> — pick an output style (concise / explanatory / etc).</li>
 </ul>
@@ -1437,7 +1448,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 <h3>Headless / CI mode</h3>
 <p><code>claude -p "..."</code> runs Claude Code in non-interactive mode: takes one prompt, returns one response, exits. This is the building block for CI hooks, cron jobs, GitHub Actions, and Synology Task Scheduler invocations.</p>
 <pre><code>claude -p "review the diff between main and HEAD" \\
-       --model claude-opus-4-8 \\
+       --model claude-opus-5 \\
        --permission-mode plan \\
        --output-format json \\
        &gt; review.json</code></pre>
@@ -1470,7 +1481,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         { type: 'keyword', value: ['statusLine', 'status line'], description: 'statusLine block present', weight: 1 },
         { type: 'nonce', description: 'Compliance verification code echoed in the live session', improvement: 'Ask Claude to echo the KDQ verification code shown above, then paste the session output containing it.', weight: 3 },
       ],
-      exemplar: '<p>Strong answer: a valid <code>.claude/settings.json</code> with permissions buckets (allow Read/Edit/safe bash; ask for git push and rm; deny rm -rf, curl-pipe-sh, and .env reads), a PostToolUse hook matching Edit|Write that calls a project-local format script, a CI command like <code>claude -p &quot;review diff&quot; --model claude-opus-4-8 --permission-mode plan --output-format json</code>, and a 4-line statusline script that prints branch + model + running cost.</p>',
+      exemplar: '<p>Strong answer: a valid <code>.claude/settings.json</code> with permissions buckets (allow Read/Edit/safe bash; ask for git push and rm; deny rm -rf, curl-pipe-sh, and .env reads), a PostToolUse hook matching Edit|Write that calls a project-local format script, a CI command like <code>claude -p &quot;review diff&quot; --model claude-opus-5 --permission-mode plan --output-format json</code>, and a 4-line statusline script that prints branch + model + running cost.</p>',
     },
     theoreticalTest: {
       id: 'ch15-test-mcq', passThreshold: 80, xpReward: 725, drawCount: 6,
@@ -1607,7 +1618,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
           options: [
             '<code>--permission-mode plan</code> so CI can\'t accidentally mutate anything',
             '<code>--output-format json</code> for parseable cost+duration',
-            '<code>--model claude-opus-4-8</code> (explicit model pin)',
+            '<code>--model claude-opus-5</code> (explicit model pin)',
             '<code>ANTHROPIC_API_KEY</code> in env (no interactive login)',
             '<code>--allow-edits</code> for fix-ups',
           ],
@@ -1656,7 +1667,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
         id: 'ch16-l04', title: 'Persistent Sessions with tmux', xpReward: 125, videos: [],
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
-        content: '<h2>Sessions That Survive Disconnection</h2><div class="term-shot" data-shot="ch16-l04"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">ssh remote-dev — tmux: claude-work</span></div><div class="term-shot-body"><span class="ts-dim">$</span> tmux new-session -s claude-work\n<span class="ts-dim">$</span> cd /volume1/projects/my-app\n<span class="ts-dim">$</span> claude\n<span class="ts-gold">✻ Welcome to Claude Code!</span> <span class="ts-dim">claude-sonnet-4-6 · /volume1/projects/my-app</span>\n\n<span class="ts-cy">&gt;</span> Keep refactoring the importer — I might lose this connection.\n<span class="ts-ok">●</span> Understood. I\'ll keep working through the importer module —\nreattach whenever, this session isn\'t going anywhere.\n\n<span class="ts-tmuxbar">[claude-work] 0:claude*                                  "nas" 23:14</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you\'ll see the live version.</div></div><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
+        content: '<h2>Sessions That Survive Disconnection</h2><div class="term-shot" data-shot="ch16-l04"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">ssh remote-dev — tmux: claude-work</span></div><div class="term-shot-body"><span class="ts-dim">$</span> tmux new-session -s claude-work\n<span class="ts-dim">$</span> cd /volume1/projects/my-app\n<span class="ts-dim">$</span> claude\n<span class="ts-gold">✻ Welcome to Claude Code!</span> <span class="ts-dim">claude-sonnet-5 · /volume1/projects/my-app</span>\n\n<span class="ts-cy">&gt;</span> Keep refactoring the importer — I might lose this connection.\n<span class="ts-ok">●</span> Understood. I\'ll keep working through the importer module —\nreattach whenever, this session isn\'t going anywhere.\n\n<span class="ts-tmuxbar">[claude-work] 0:claude*                                  "nas" 23:14</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you\'ll see the live version.</div></div><p>tmux is the same on every Unix-y box — NAS, cloud VM, Pi, WSL, Codespace. The flow:</p><pre><code>ssh remote-dev               # whatever you named yours\ntmux new-session -s claude-work\ncd ~/projects/my-app         # or /volume1/projects/my-app on Synology\nclaude\n# Detach: Ctrl+B then D\n\n# Reconnect from any machine:\nssh remote-dev\ntmux attach -t claude-work</code></pre><p>Your laptop can sleep, crash, or close its lid — the Claude session keeps running. Open your laptop the next morning and reattach.</p><h3>Install if not already present</h3><pre><code># Debian / Ubuntu / Pi OS / WSL\nsudo apt install tmux\n# Synology DSM (already installed on 7.x; if not, via Entware)\n# macOS\nbrew install tmux</code></pre><h3>Multi-Goal Command Center</h3><pre><code>tmux new-session -s work\n# Ctrl+B C = new window\n# Window 1: auth refactor\n# Window 2: documentation\n# Window 3: test generation\n# Switch: Ctrl+B N / Ctrl+B P</code></pre>',
       },
       {
         id: 'ch16-l05', title: 'Remote-Box CLAUDE.md and Final Integration', xpReward: 125, videos: [],
@@ -1684,7 +1695,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 cd ~/projects/kedash-support     # or /volume1/projects/... on Synology
 export ANTHROPIC_API_KEY="sk-ant-..."
 claude -p "Run the /weekly-status skill. Save the draft to reports/draft.md." \\
-  --model claude-sonnet-4-6 \\
+  --model claude-sonnet-5 \\
   --permission-mode plan \\
   --output-format json &gt; reports/last-run.json
 </code></pre>
@@ -1833,7 +1844,7 @@ crontab -e
           id: 'ch16-q09', type: 'multi',
           prompt: 'For the weekly-report example, which flags does the launcher script pass to <code>claude -p</code>?',
           options: [
-            '<code>--model claude-sonnet-4-6</code>',
+            '<code>--model claude-sonnet-5</code>',
             '<code>--permission-mode plan</code>',
             '<code>--output-format json</code>',
             '<code>--accept-all-edits</code>',

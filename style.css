@@ -462,6 +462,23 @@ a.reset-btn { display: block; box-sizing: border-box; text-align: center; text-d
 .lesson-content p  { margin-bottom: 12px; }
 .lesson-content ul, .lesson-content ol { margin: 0 0 12px 20px; }
 .lesson-content li { margin-bottom: 6px; }
+/* Callout — a version note or gotcha set apart from the lesson's prose.
+   Gold rail on a tinted ground, matching the .term-shot treatment's weight
+   without competing with it. */
+.lesson-content .callout {
+  margin: 16px 0;
+  padding: 12px 14px;
+  background: var(--gray-50);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--gray-800);
+}
+.lesson-content .callout strong { color: var(--navy); }
+.lesson-content .callout code { background: var(--gray-100); }
+.lesson-content .callout :last-child { margin-bottom: 0; }
+
 .lesson-content pre {
   background: var(--navy-dark);
   color: #e2e8f0;

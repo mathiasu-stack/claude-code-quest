@@ -8,6 +8,78 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## CURRICULUM ACCURACY PASS ② (2026-08-26, DEPLOYED) — model generation sweep
+Owner asked for an audit of whether the lessons are still true against current
+Claude Code. Full findings published as an artifact:
+https://claude.ai/code/artifact/52ede671-194d-4bb4-af37-cde073ce9178
+Verified against LIVE docs (commands, cli-reference, memory, hooks,
+model-config, skills pages) + the bundled claude-api skill — NOT from model
+memory (training cutoff is Jan 2026; it is now Aug 2026).
+
+### FIXED + DEPLOYED (audit steps ① and ②)
+The headline: the curriculum taught **one full model generation behind**, and
+ch10's quiz **graded correct answers as wrong**.
+- **Model IDs swept globally**: `claude-opus-4-8`→`claude-opus-5` (×8),
+  `claude-sonnet-4-6`→`claude-sonnet-5` (×7) across curriculum.js +
+  curriculum2.js.
+- **ch10 rewritten** (l01/l02/l03 + q01–q06): "Claude 4 family"→Claude 5
+  family; Opus 5 / Sonnet 5 / Haiku 4.5 tiers with correct context sizes;
+  Fable 5 repositioned (not default, `/model fable`, credit-consent prompt);
+  picker mockup gained a Fable row; **full alias list added** (`fable`,
+  `best`, `opusplan`, `default` — `opusplan` explicitly tied to ch12 plan
+  mode); a callout that **aliases resolve per provider** (Bedrock/GCloud may
+  still be Sonnet 4.5).
+- **1M context de-levered**: was taught as an opt-in tier you switch on via
+  `claude-opus-4-8[1m]`. Now native on Opus 5 + Sonnet 5; the `[1m]` aliases
+  only matter behind an LLM gateway. Haiku 4.5 stays 200k. Section retitled
+  "the lever that retired" and the lesson's "three levers" intro reworded to
+  stay coherent.
+- **COST RATIOS were wrong and the audit missed them** (found while editing):
+  lessons taught Opus ≈15× Haiku / Sonnet ≈3×. Real today: Opus 5 $5/$25,
+  Sonnet 5 $2/$10, Haiku 4.5 $1/$5 → **5× and 2×**. Fixed in ch10-l03,
+  ch07-l01 prose, ch10-q06, ch07-q06. ch10-q06 already listed the right
+  ratio as option 0 — only the answer key pointed at the old one. Added a
+  callout that the narrowed gap **changes the advice** (retry cost can now
+  beat reflexively picking the cheap tier).
+- **ch07 context-window lesson + q01** rewritten (premise was "what does Opus
+  4.7+ support").
+- **NEW `.callout` CSS** in style.css (`.lesson-content .callout`, gold rail)
+  — there was NO callout convention before; the class had zero styling and
+  would have rendered as a bare div.
+- `lastVerified`/`verifiedAgainstVersion` bumped to `2026-08-26` / `v2.1.246`
+  on ONLY the 4 lessons re-read end-to-end (ch07-l01, ch10-l01/l02/l03).
+  Lessons that merely had a model string swept keep their old date on
+  purpose — the string is right, the lesson wasn't re-verified.
+- Validated: `node -e` walk of all 17 chapters / **177 quiz items** — every
+  `correctIndexes` in range, no single-answer item with 2+ keys. Audit
+  `run-all.sh` all clean.
+
+### NOT DONE — audit steps ③–⑥ (owner sign-off needed, see artifact)
+- ③ **auto mode** — `--permission-mode auto` + `dontAsk` are missing from the
+  taught permission set (ch12/ch15); brings `PermissionDenied` hook,
+  `/auto-mode-setup`, `autoMode.environment`. `--enable-auto-mode` is
+  DEPRECATED (v2.1.111).
+- ④ **effort levels** — 0 mentions anywhere. `low`→`max` via `--effort`,
+  `/status`, skill + subagent frontmatter. ch10 teaches half the dial without it.
+- ⑤ **auto memory + `.claude/rules/`** — 0 mentions; belong in ch04 ("The
+  Memory Framework") and ch03. `InstructionsLoaded` hook is the documented
+  way to debug "why isn't Claude following CLAUDE.md" (ch03's subject).
+- ⑥ **New chapters, not edits** (product decision / advisory panel): background
+  agents (`--bg`, `claude agents`), agent teams + `SendMessage`, plugins,
+  Remote Control / `--cloud` / `/teleport`, checkpoints `/rewind`,
+  `/context` + `/usage` (ch07 teaches `/cost`, now just an alias for `/usage`).
+- ch15 covers 15 of **31** hook events.
+
+### METHOD NOTE FOR THE NEXT AUDIT
+The published commands table is **not exhaustive** — `/skills` is real but
+absent from it. An absence there is a reason to check the topic page, not
+proof of removal. `/init`, `/skills`, subagent `tools:` comma-string, the
+commands→skills merge, hook config shape, and `/fast` were all re-verified
+CORRECT and must not be "fixed". `/plan` is listed once in the curriculum as
+a built-in and appears NOWHERE in the docs (plan mode = Shift+Tab or
+`--permission-mode plan`) — likely wrong, deliberately left unfixed pending
+confirmation.
+
 ## OFFLINE DOWNLOAD (2026-08-25, NOT YET COMMITTED) — double-click-to-play zip
 Owner asked to make the game downloadable/playable offline, specifically
 "download a file, double-click it to play" (unzip-first is fine). Landed:

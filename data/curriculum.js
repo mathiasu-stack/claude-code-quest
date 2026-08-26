@@ -17,7 +17,7 @@ window.CURRICULUM = [
 
 <span class="ts-gold">✻ Welcome to Claude Code!</span>
 
-<span class="ts-dim">  model:</span> claude-sonnet-4-6 · API
+<span class="ts-dim">  model:</span> claude-sonnet-5 · API
 <span class="ts-dim">  cwd:</span>   ~/kedash-support
 <span class="ts-dim">  v2.1.176</span>
 
@@ -171,7 +171,7 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
 
 <span class="ts-dim"># and inside a session, the status line along the bottom reads:</span>
 
-<span class="ts-dim">⏵⏵ accept edits on (shift+tab to cycle) · <span class="ts-gold">claude-sonnet-4-6</span> · context: 62% free</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
+<span class="ts-dim">⏵⏵ accept edits on (shift+tab to cycle) · <span class="ts-gold">claude-sonnet-5</span> · context: 62% free</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
 <h3>Why this matters</h3>
 <p>Unlike a course on SQL or Git, Claude Code is a living product. A tutorial written 6 months ago might reference a flag that no longer exists or miss a feature that would save you hours. The gap between "what the training says" and "what the tool actually does" can make you less effective, or worse, confidently wrong.</p>
@@ -2099,8 +2099,8 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     lessons: [
       {
         id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-06-14',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-08-26',
+        verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Every Word Costs</h2>
 <div class="term-shot" data-shot="ch07-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /cost
 
@@ -2109,10 +2109,10 @@ Total duration (API):  4m 12.8s
 Total code changes:    142 lines added, 38 lines removed
 
 Usage by model:
-  claude-sonnet-4-6:
+  claude-sonnet-5:
     input: 24.6k tokens · <span class="ts-ok">cache read: 289.1k tokens</span> <span class="ts-dim">← the 10% discount doing its job</span>
     cache write: 41.2k tokens · output: 9.8k tokens</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
-<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. The standard context window is 200,000 tokens; Opus 4.7+ supports up to 1,000,000 tokens (the "1M-context" tier). That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
+<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. Opus 5 and Sonnet 5 carry a 1,000,000-token context window natively; Haiku 4.5 stays at 200,000. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
   <li>Your full conversation history from session start</li>
@@ -2131,7 +2131,7 @@ Usage by model:
   <li>Run <code>/cost</code> to see input / cached input / output broken out. If cached input is small, you have idle time eating cache windows.</li>
 </ul>
 <h3>Model cost asymmetry</h3>
-<p>Across tiers, per million tokens: Opus ≈ 15× Haiku; Sonnet ≈ 3× Haiku. Chapter 12 covers picking the right tier per task — the same word costs an order of magnitude more on Opus than on Haiku, so cheap tiers belong on mechanical work.</p>
+<p>Across tiers, per million tokens: Opus 5 ≈ 5× Haiku 4.5; Sonnet 5 ≈ 2× Haiku. Chapter 12 covers picking the right tier per task — the same word costs an order of magnitude more on Opus than on Haiku, so cheap tiers belong on mechanical work.</p>
 <h3>The practical implication</h3>
 <p>Leaner context = better results AND cheaper bills. Not because Claude Code gets smarter when lean, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
@@ -2216,15 +2216,15 @@ Usage by model:
       questionPool: [
         {
           id: 'ch07-q01', type: 'single',
-          prompt: 'What is the standard context window size in Claude Code, and what does Opus 4.7+ support?',
+          prompt: 'How much context window do the current Claude Code models give you?',
           options: [
-            '100k tokens; 500k on Opus 4.7+',
-            '200k tokens; up to 1,000,000 tokens on Opus 4.7+ (the "1M-context" tier)',
-            '50k tokens; 256k on Opus 4.7+',
-            '500k tokens; unlimited on Opus 4.7+',
+            '200k tokens on every model — there is no larger tier',
+            '1,000,000 tokens natively on Opus 5 and Sonnet 5; Haiku 4.5 stays at 200k',
+            '100k tokens, extendable to 500k as a paid add-on',
+            'Unlimited — Claude Code streams files in and out as needed',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Understanding the Context Window Budget" — 200k standard, 1M on Opus 4.7+.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — Opus 5 and Sonnet 5 carry a native 1M window; Haiku 4.5 stays at 200k. A big window is not a licence to ignore the budget.',
         },
         {
           id: 'ch07-q02', type: 'multi',
@@ -2280,12 +2280,12 @@ Usage by model:
           prompt: 'Across model tiers, how does cost compare per million tokens?',
           options: [
             'All tiers cost the same',
-            'Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku',
+            'Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2× Haiku',
             'Opus ≈ 2× Haiku, Sonnet ≈ 1.5× Haiku',
             'Sonnet is cheaper than Haiku',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Understanding the Context Window Budget" — Opus ≈ 15× Haiku, Sonnet ≈ 3× Haiku.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2× Haiku.',
         },
         {
           id: 'ch07-q07', type: 'multi',
