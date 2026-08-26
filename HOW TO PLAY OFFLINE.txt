@@ -5,12 +5,16 @@ CLAUDE CODE QUEST — OFFLINE COPY
    right-click the downloaded zip, choose "Extract All...", and open the
    folder it creates. (Double-clicking straight out of the zip viewer
    copies one lone file to a temp folder and the game won't start.)
-2. Double-click the launcher for your system, inside that folder:
-     - Mac / Linux:  "Play Offline (Mac & Linux).command"
-     - Windows:      "Play Offline (Windows).bat"
+2. Double-click the launcher for your computer:
+     - Windows:     "Claude Code Quest (Windows).bat"
+     - Mac / Linux: "Claude Code Quest (Mac).command"
 3. A small black window opens and stays open - that's the game server.
    Leave it running. Your browser opens to the game automatically; if it
    doesn't, go to http://localhost:8899/ yourself.
+
+Keep the launchers next to the "claude-code-quest" folder they came
+with - that folder holds the game itself, and you never need to open
+it. Moving a launcher away from it is the one thing that breaks this.
 
 If something goes wrong, the launcher window stays open and prints why.
 
@@ -18,10 +22,13 @@ That's it — no internet connection is required after unzipping.
 
 Requirements
 ------------
-This needs Python 3 installed (most Mac and Linux computers already
-have it). If the launcher tells you Python is missing, install it from
-https://www.python.org/downloads/ — on Windows, tick "Add python.exe
-to PATH" during setup — then double-click the launcher again.
+On Windows: nothing to install. If Python 3 happens to be there the
+launcher uses it; otherwise it falls back to a server built into
+Windows itself.
+
+On Mac and Linux: needs Python 3, which these systems normally ship
+with. If the launcher says it's missing, install it from
+https://www.python.org/downloads/ and double-click the launcher again.
 
 Your progress
 --------------

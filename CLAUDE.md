@@ -146,10 +146,21 @@ tracked files (so the gitignored GLB originals never end up in it).
 `scripts/`, `design/`, …) `export-ignore` so they're excluded from what
 players unzip, even though they stay tracked in git.
 
-The zip includes two double-click launchers at the repo root —
-`Play Offline (Mac & Linux).command` and `Play Offline (Windows).bat` —
+The zip includes two double-click launchers, tracked at the repo root as
+`Claude Code Quest (Windows).bat` and `Claude Code Quest (Mac).command`,
 that start the game on a fixed local port (8899) and open the browser to
-it. No build step, no new dependencies: it's the same zero-dependency
+it.
+
+**The zip's layout is not the repo's.** `git archive` can't split one
+tree across two destinations, so the build emits a tar and repacks it:
+the launchers and `HOW TO PLAY OFFLINE.txt` land at the top level and
+everything else goes under `claude-code-quest/`, so what a player is
+meant to click isn't buried among 240 game files. The launchers `cd`
+into that subfolder. There's deliberately no wrapper folder inside the
+zip — Explorer's "Extract All" and macOS Archive Utility each create one
+named after the archive, so adding our own would nest it twice. The
+repack is also what carries the `.command`'s executable bit through
+(Finder won't run it otherwise). No build step, no new dependencies: it's the same zero-dependency
 server the NAS itself runs, just started by the player instead of by
 `nas-deploy`.
 

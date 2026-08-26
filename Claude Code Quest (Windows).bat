@@ -7,26 +7,33 @@ REM saved in that browser via localStorage, tied to this launcher's port -
 REM always start the game from this file so your save is where you left it.
 
 title Claude Code Quest - Offline
-cd /d "%~dp0"
 set "PORT=8899"
 
 REM ---------------------------------------------------------------- unzipped?
-REM Windows lets you double-click a .bat straight out of a zip via Explorer's
-REM built-in zip viewer. It extracts only that one file to a temp folder, so
-REM the game is not next to it and the server cannot start.
-if not exist "save_server.py" (
-  echo.
-  echo   Claude Code Quest can't find its game files.
-  echo.
-  echo   This usually means the launcher is being run from INSIDE the zip.
-  echo   Right-click the downloaded zip, choose "Extract All...", open the
-  echo   folder it creates, and double-click this launcher in there.
-  echo.
-  echo   Current folder: %CD%
-  echo.
-  pause
-  exit /b 1
-)
+REM The game itself lives in the claude-code-quest subfolder, so this launcher
+REM can sit alone at the top level. Windows also lets you double-click a .bat
+REM straight out of a zip via Explorer's built-in zip viewer, which extracts
+REM only that one file to a temp folder - the subfolder won't be there either.
+cd /d "%~dp0claude-code-quest" 2>nul
+if errorlevel 1 goto :nogame
+if not exist "save_server.py" goto :nogame
+goto :havegame
+
+:nogame
+echo.
+echo   Claude Code Quest can't find its game files.
+echo.
+echo   This launcher needs to sit next to the "claude-code-quest" folder
+echo   that came with it. If you double-clicked it from inside the zip,
+echo   right-click the downloaded zip instead, choose "Extract All...",
+echo   open the folder it creates, and run the launcher in there.
+echo.
+echo   Launcher folder: %~dp0
+echo.
+pause
+exit /b 1
+
+:havegame
 
 REM ------------------------------------------------------------------ python?
 REM Each candidate is actually RUN, not just located: Windows ships a

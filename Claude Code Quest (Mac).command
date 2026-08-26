@@ -6,6 +6,8 @@
 # saved in that browser via localStorage, tied to this launcher's port —
 # always start the game from this file so your save is where you left it.
 
+# The game itself lives in the claude-code-quest subfolder, so this launcher
+# can sit alone at the top level.
 cd "$(dirname "$0")" || exit 1
 PORT=8899
 
@@ -18,11 +20,15 @@ die() {
   exit 1
 }
 
-if [ ! -f save_server.py ]; then
-  die "Claude Code Quest can't find its game files. Unzip the download
-  first, then double-click this launcher inside the extracted folder.
-  (Current folder: $PWD)"
+if [ ! -d claude-code-quest ] || [ ! -f claude-code-quest/save_server.py ]; then
+  die "Claude Code Quest can't find its game files.
+
+  This launcher needs to sit next to the \"claude-code-quest\" folder that
+  came with it. Unzip the whole download, keep the two together, and run
+  the launcher from there.
+  (Looked in: $PWD)"
 fi
+cd claude-code-quest || exit 1
 
 if ! command -v python3 >/dev/null 2>&1; then
   die "Claude Code Quest needs Python 3, which wasn't found on this computer.

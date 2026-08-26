@@ -113,6 +113,34 @@ files prints the unzip message. `.command` keeps mode 0755 through the
 zip. **Still unverified: the real Windows double-click** — that's the
 open question this fix exists to answer.
 
+### LAUNCHER RENAME + SPLIT LAYOUT (2026-08-26, DEPLOYED)
+Owner unzipped the real download and asked for two things: rename the
+launchers to "Claude Code Quest (Windows)" / "Claude Code Quest (Mac)",
+and lift them out of the pile of game files (screenshot showed the
+wanted end state). Both done.
+- `git mv` to `Claude Code Quest (Windows).bat` / `Claude Code Quest
+  (Mac).command` (note: "(Mac)", not "(Mac & Linux)" — owner's wording;
+  the readme still tells Linux users to use it).
+- **Zip layout now differs from the repo layout**: launchers + `HOW TO
+  PLAY OFFLINE.txt` at top level, all 238 game files under
+  `claude-code-quest/`. `git archive` can't split a tree, so
+  `build-offline-package.sh` now emits a **tar** and repacks it in Python
+  into that shape. Both launchers `cd` into the subfolder first and fail
+  loudly if it's missing. No wrapper folder inside the zip on purpose —
+  Explorer/Archive Utility already create one from the archive name.
+- The repack is also what preserves the `.command` exec bit (0775 in the
+  zip; Finder needs it) — `git archive`'s own zip writer was doing that
+  before, so this had to be carried over deliberately.
+- **File count went 282 → 241 and that is NOT a loss**: git archive's zip
+  included 41 directory entries, the repack writes only regular files.
+  Verified equal to the tar's regular-file count.
+- Verified from a freshly-extracted zip: top level shows exactly the 2
+  launchers + readme + `claude-code-quest/`; the Mac launcher serves `/`,
+  `/app.js`, `/play/play.js`, a GLB (all 200); the PowerShell fallback
+  serves the same from the subfolder (docker container); and a launcher
+  moved away from the game folder prints the "needs to sit next to" error
+  instead of failing silently.
+
 ### ROOT CAUSE FOUND: no Python on Windows → built a no-install fallback
 The hardened launcher did its job: owner re-ran it and got "needs Python 3,
 which isn't installed". That's the real answer — and a PRODUCT problem, not
