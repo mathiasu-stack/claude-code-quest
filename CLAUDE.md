@@ -137,6 +137,20 @@ Web Station serves files directly from this folder, so the live game
 at http://ds925-urlacher:8888 reflects edits immediately — no separate
 deploy step is needed for visibility, only for syncing to GitHub.
 
+## Graphics quality tier
+
+`play/lighting/quality.js` owns the render-cost decisions. `isMobile()` means
+"touch device" (input, layout); `isLowGraphics()` means "should we spend GPU" —
+they are different questions and only agree on phones. Mode lives in
+localStorage `ccq_graphics` (`auto` | `high` | `low`), exposed under ⚙ →
+Graphics, and `auto` downgrades either from an up-front WebGL probe (software
+renderers, ≤2 cores) or from a frame sampler in the render loop.
+
+When adding anything expensive to the 3D scene, gate it on `isLowGraphics()`,
+not `isMobile()`. Both importers must keep importing it **without** a `?v=`
+query — the module holds the sampler verdict in module state and forks under
+mismatched URLs.
+
 ## Offline / downloadable play
 
 The sidebar's "Download for offline play" link serves a zip built by

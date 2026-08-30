@@ -1764,6 +1764,41 @@ body.in-play #mobile-header { display: none !important; }
   padding: 0;
 }
 .play-audio-panel .aud-mute.on { background: #ffe8ea; border-color: #d77; }
+
+/* Graphics quality — a three-way segmented control. The base .aud-row is a
+   3-column grid built for slider + mute button; this row has two children,
+   so it re-declares its own columns rather than inheriting a dead 36px gap. */
+.play-audio-panel .aud-row-choice { grid-template-columns: 64px 1fr; }
+.play-audio-panel .aud-choice { display: flex; gap: 4px; }
+.play-audio-panel .aud-choice-btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  color: var(--gray-800);
+  cursor: pointer;
+}
+.play-audio-panel .aud-choice-btn:hover { border-color: var(--gold); }
+.play-audio-panel .aud-choice-btn.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--navy);
+}
+.play-audio-panel .aud-title-sub {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
+}
+.play-audio-panel .aud-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--gray-600);
+  margin-top: 6px;
+}
+.play-audio-panel .aud-note em { color: var(--gray-800); font-style: normal; font-weight: 600; }
 .play-audio-panel .aud-close {
   margin-top: 10px;
   width: 100%;

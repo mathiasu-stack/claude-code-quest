@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { LightingManager } from './lighting/manager.js?v=20260615a';
-import { isMobile, effectivePixelRatio } from './lighting/mobile.js';
+import { isMobile } from './lighting/mobile.js';
+import {
+  isLowGraphics, effectivePixelRatio, noteFrameTime, resetSampler, probeHardware,
+} from './lighting/quality.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
 import { buildSkyEnvTexture, disposeEnv } from './lighting/envProbe.js?v=20260616a';
@@ -1500,11 +1503,13 @@ function buildLamp(x, z, opts = {}, y = null) {
   // the data Y (where the lamp base should rest, e.g. a table top ~0.78),
   // defaulting to 0.78 when the data leaves Y at 0.
   //
-  // MOBILE: skip the PointLight entirely (point lights are the single
+  // LOW GRAPHICS: skip the PointLight entirely (point lights are the single
   // biggest per-fragment cost on weak GPUs) and compensate by boosting
-  // emissive on the shade so the lamp still reads as "on".
+  // emissive on the shade so the lamp still reads as "on". Keyed to the
+  // quality tier rather than to touch input — an integrated-GPU laptop pays
+  // this cost just as dearly as a phone does.
   const baseY = hasY ? y : 0.78;
-  const mob = isMobile();
+  const mob = isLowGraphics();
   const glb = makeDecoration('table_lamp', { width: 0.35, height: 0.55, depth: 0.35 });
   if (glb) {
     glb.position.set(x, baseY, z);
@@ -2388,7 +2393,7 @@ function buildOfficeSkyline(floorIdx) {
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = 0;
   group.add(ground);
-  const N = isMobile() ? 22 : 34;
+  const N = isLowGraphics() ? 22 : 34;
   for (let i = 0; i < N; i++) {
     const ang = (i / N) * Math.PI * 2 + (Math.random() - 0.5) * 0.18;
     const rad = 44 + Math.random() * 26;          // 44..70 m out
@@ -2636,14 +2641,14 @@ function registerRoomBuilders() {
   });
   registerRoomBuilder('atrium', (pos, rotY, args, ctx) => {
     try {
-      const atrium = buildAtrium(ctx.scene, { mobile: isMobile() });
+      const atrium = buildAtrium(ctx.scene, { mobile: isLowGraphics() });
       if (atrium?.tickers) for (const t of atrium.tickers) ctx.decoTickers.push(t);
     } catch (e) { console.warn('atrium failed', e); }
     return null;
   });
   registerRoomBuilder('elevator', (pos, rotY, args, ctx) => {
     try {
-      const elev = buildElevator(ctx.scene, { mobile: isMobile() });
+      const elev = buildElevator(ctx.scene, { mobile: isLowGraphics() });
       if (elev?.tick) ctx.decoTickers.push((dt, now) => elev.tick(dt, now));
       elevatorRef = elev;
     } catch (e) { console.warn('elevator failed', e); }
@@ -2852,7 +2857,7 @@ function buildWorld() {
 
   // All scene lighting is now driven by LightingManager + per-zone presets.
   // See play/lighting/zone-presets.js to author/tune zones (incl. 3-16).
-  lighting = new LightingManager(scene, { mobile: isMobile() });
+  lighting = new LightingManager(scene, { mobile: isLowGraphics() });
 
   // Skydome — gradient + sun. Per-zone preset applied alongside lighting.
   skyDome = new SkyDome(scene);
@@ -4863,10 +4868,13 @@ function refreshCameraWalls() {
 
 // ─── Renderer & camera ───────────────────────────────────────────────────────
 function setupRenderer() {
-  renderer = new THREE.WebGLRenderer({ antialias: !isMobile() });
+  const lowGfx = isLowGraphics();
+  renderer = new THREE.WebGLRenderer({ antialias: !lowGfx });
   renderer.setPixelRatio(effectivePixelRatio());
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Shadow maps cost an extra depth pass per casting light, and there are 52
+  // castShadow sites in the scene. Off is the single cheapest correct answer.
+  renderer.shadowMap.enabled = !lowGfx;
+  renderer.shadowMap.type = lowGfx ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   // Pin to legacy lighting so our preset intensity values (calibrated for
   // pre-r163 lighting) render predictably. Tone-mapping gives bloom +
@@ -7016,6 +7024,36 @@ function _reportFrameSpike(updateMs, renderMs, frameMs) {
   } catch {}
 }
 
+// Applied when the sampler decides this machine can't hold a playable rate.
+// Only the levers that are genuinely safe to flip mid-session are touched:
+// pixel ratio and the composer are pure render-path state, and shadows just
+// need the materials recompiled once. Light counts, dust motes and skyline
+// density are baked into the built scene, so those wait for the next entry —
+// which is what the toast is telling the player.
+function applyLiveDowngrade() {
+  try {
+    if (renderer) {
+      renderer.setPixelRatio(effectivePixelRatio());
+      if (renderer.shadowMap.enabled) {
+        renderer.shadowMap.enabled = false;
+        // Materials were compiled with shadow sampling; without a recompile
+        // they keep reading a map nothing updates any more.
+        scene?.traverse((o) => {
+          if (!o.material) return;
+          for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+            if (m) m.needsUpdate = true;
+          }
+        });
+      }
+      resize();
+    }
+    if (postfx) { postfx.dispose(); postfx = null; }
+    showHintToast('Graphics turned down to keep things smooth — change this any time under ⚙ Graphics.');
+  } catch (e) {
+    console.warn('[play] live graphics downgrade failed', e);
+  }
+}
+
 function loop() {
   raf = requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
@@ -7040,6 +7078,9 @@ function loop() {
   if (_t2 - _t0 > 55 && performance.now() > _playStartMs + 1500) {
     _reportFrameSpike(_t1 - _t0, _t2 - _t1, _t2 - _t0);
   }
+  // Separate question from the spike report above: not "was this frame slow"
+  // but "is this machine consistently unable to keep up".
+  if (noteFrameTime(_t2 - _t0, _t2)) applyLiveDowngrade();
 }
 
 // ─── Cross-view hints ────────────────────────────────────────────────────────
@@ -7160,6 +7201,14 @@ export async function start(host) {
   clock = new THREE.Clock();
   danceUntil = 0;
   jumpRequested = false;
+  // Ask the hardware before building anything: `antialias` is fixed at
+  // renderer construction and the scene bakes in light counts, so a verdict
+  // that arrives later can only be half-applied. Returns a reason string when
+  // it downgrades, null when it leaves the decision to the frame sampler.
+  try {
+    const why = probeHardware();
+    if (why) console.info('[play] starting in low graphics mode —', why);
+  } catch {}
   setupRenderer();
   // Preload Meshy decoration GLBs FIRST. buildWorld() calls every
   // procedural builder (buildDesk, buildChair, buildPlant, …) which now
@@ -7230,15 +7279,19 @@ export async function start(host) {
   // MeshStandardMaterial gains real reflections (marble, glass, brass, metal).
   // Baked once at a moderate brightness — see envProbe.js for why no light
   // rebalance is needed. Guarded so a PMREM failure never breaks world entry.
+  // Skipped entirely in low mode: the PMREM bake is a one-off cost, but the
+  // env lookup it enables is per-fragment in every MeshStandardMaterial.
   try {
-    if (!_envTexture && renderer) _envTexture = buildSkyEnvTexture(renderer);
-    if (_envTexture) scene.environment = _envTexture;
+    if (!isLowGraphics()) {
+      if (!_envTexture && renderer) _envTexture = buildSkyEnvTexture(renderer);
+      if (_envTexture) scene.environment = _envTexture;
+    }
   } catch (e) { console.warn('IBL env build failed', e); }
   // Live world: routines for Marcus/Aisha/Linda + a few ambient workers.
   // The ambient workers double as E-to-talk flavor NPCs (SYS-04) — they
   // get name tags + act-gated lines and register into npcMeshes.
   liveAgents = new LiveAgents({
-    scene, npcMeshes, makeCharacter, isMobile: isMobile(),
+    scene, npcMeshes, makeCharacter, isMobile: isLowGraphics(),
     makeNameTag: makeNpcNameTag,
     ambientLineForSlot,
   });
@@ -7328,16 +7381,23 @@ export async function start(host) {
   // (wall meshes aren't tagged for raycast — see notes file). Distance
   // fade + closest-NPC emphasis still apply.
   nameTags = new NameTagSystem({
-    camera, npcMeshes, walls: [], mobile: isMobile(),
+    camera, npcMeshes, walls: [], mobile: isLowGraphics(),
   });
   // Build the post-fx pipeline AFTER renderer/scene/camera exist; sync
   // initial bloom/vignette values to the current zone preset.
-  postfx = new PostFxPipeline(renderer, scene, camera, { mobile: isMobile() });
-  if (lighting) postfx.applyPreset(lighting.getPostFx());
-  // Re-sync size in case container has actual dimensions now.
-  if (container) postfx.resize(container.clientWidth, container.clientHeight);
+  // In low mode there is no composer at all — the loop falls through to a
+  // plain renderer.render(). Bloom alone is a bright-pass plus five blur
+  // mip levels plus a composite, every frame, at full resolution.
+  if (isLowGraphics()) {
+    postfx = null;
+  } else {
+    postfx = new PostFxPipeline(renderer, scene, camera, { mobile: isMobile() });
+    if (lighting) postfx.applyPreset(lighting.getPostFx());
+    // Re-sync size in case container has actual dimensions now.
+    if (container) postfx.resize(container.clientWidth, container.clientHeight);
+  }
   // Dust motes (desktop only — mobile gets count=0 and renders nothing).
-  dust = new DustMotes(scene, { mobile: isMobile() });
+  dust = new DustMotes(scene, { mobile: isLowGraphics() });
   // Audio: attach unlock listeners (no-op once unlocked) and start zone music.
   audio.ensureUnlocked(document.body);
   // Mount the audio settings gear inside the play container so it lives
@@ -7689,6 +7749,9 @@ export function stop() {
   if (dust) { dust.dispose(); dust = null; }
   if (postfx) { postfx.dispose(); postfx = null; }
   if (lighting) { lighting.dispose(); lighting = null; }
+  // Let the next session measure this machine again rather than carrying a
+  // verdict that may have been a one-off (a build hogging the GPU, say).
+  resetSampler();
   try { audio.stopMusic(800); } catch {}
   try { updateServerHum(false); } catch {}
   try { unmountAudioSettings(); } catch {}

@@ -8,6 +8,79 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## GRAPHICS QUALITY TIER (2026-08-30, DEPLOYED) — for constrained work laptops
+Owner: "the game is very slow on my company's laptops due to constrained GPU
+resources, can we make the offline version less graphics intensive?"
+
+**Root cause: the reduced tier already existed, but every switch hung off
+`isMobile()`.** A locked-down work laptop reads as a *desktop* by that test, so
+it got DPR up to 2 (4× the fragments), MSAA, a full-res bloom chain, soft
+shadows, IBL reflections, every accent point light and the dust motes.
+
+**Deliberately NOT forked per-build.** The offline zip is a `git archive` of the
+same tree (verified byte-identical), so a build-time difference would be drift.
+One codebase, one setting, works hosted and offline.
+
+### `play/lighting/quality.js` (NEW)
+`isMobile()` keeps meaning "touch device" (input/layout); new `isLowGraphics()`
+means "should we spend GPU". Mode in localStorage `ccq_graphics`:
+`auto` (default) | `high` | `low`. Three ways it resolves:
+1. **Up-front probe** (`probeHardware()`, called BEFORE `setupRenderer()`
+   because `antialias` is fixed at construction): a 1×1 throwaway WebGL context
+   reads `WEBGL_debug_renderer_info`. **Software renderers** (SwiftShader,
+   Microsoft Basic Render Driver, llvmpipe) → low immediately; that's a
+   no-GPU-driver corporate machine and no tuning saves it. Also ≤2 cores, and
+   no-WebGL-at-all. Probe context is released via `WEBGL_lose_context`.
+   Deliberately narrow — it never upgrades, and an ordinary Intel iGPU is left
+   to the sampler rather than pre-judged.
+2. **Frame sampler** (`noteFrameTime()` in the render loop): 6s warm-up (shader
+   compiles/GLB decodes would condemn a good machine), then ≥60% of a 120-frame
+   window over 40ms → downgrade. Fires ONCE, never reverses (flapping is worse
+   than either tier). Distinct from the existing `_reportFrameSpike` telemetry.
+3. **Manual**, via ⚙ → Graphics (Auto/High/Low). An explicit choice clears the
+   sampler verdict in BOTH directions.
+
+### What low mode turns off
+`renderer` antialias + `shadowMap.enabled` (52 castShadow sites) + shadow type;
+**pixel ratio → 1** (the single biggest lever); **the whole PostFx composer**
+(`postfx = null`, loop already falls through to `renderer.render`); **the IBL
+env probe** (per-fragment env lookup in every MeshStandardMaterial); lamp
+PointLights (the code comment already called these "the single biggest
+per-fragment cost on weak GPUs"); dust motes; skyline 34→22; LiveAgents
+ambient cap 4→2; atrium/elevator/nameTags reduced paths.
+
+`applyLiveDowngrade()` applies only what's safe mid-session — pixel ratio,
+composer teardown, and shadows-off *with a material `needsUpdate` traverse*
+(without it, materials keep sampling a map nothing updates). Light counts and
+scene density are baked at build time, so the toast tells the player the rest
+lands next time they enter.
+
+**Finale safety**: `LightingManager`'s `mobile` flag only halves shadow-map
+sizes and drops `castShadow` on accents — it does NOT remove accent lights, so
+Floor-M's warm key light on Maya still pools and the reveal still reads.
+
+### GOTCHA that nearly shipped broken
+`quality.js` was **untracked**, so `git archive` left it out of the zip — the
+offline `play.js` would have 404'd on its import and Play mode would not have
+loaded AT ALL. The build script's untracked-file warning (added 2026-08-25)
+caught it; I had piped it past `tail`. **Read the build output, not its tail.**
+Zip is now **242 files**.
+
+Also load-bearing: both importers use a bare path with **no `?v=`**
+(`./lighting/quality.js` from play.js, `../lighting/quality.js` from
+settings.js) so they resolve to ONE module instance — `_autoLow` is module
+state and would fork under mismatched query strings (same trap as AudioManager).
+
+### VERIFIED / NOT VERIFIED
+Verified: quality module logic under simulated browsers (defaults, forced
+modes, sampler fires exactly once, manual High beats the sampler, fast frames
+never trigger); probe against 7 hardware signatures incl. SwiftShader / MS
+Basic Render Driver / llvmpipe / 2-core / normal iGPU / RTX / no-WebGL; all 98
+JS files parse; audit clean; offline zip serves the whole module graph 200.
+**NOT verified: actual FPS on real hardware** — there is no browser automation
+in this environment (Claude-in-Chrome is not connected here). The owner needs
+to confirm the gain on the actual laptops.
+
 ## CURRICULUM ACCURACY PASS ② (2026-08-26, DEPLOYED) — model generation sweep
 Owner asked for an audit of whether the lessons are still true against current
 Claude Code. Full findings published as an artifact:

@@ -1,5 +1,9 @@
-// Audio settings panel — small floating gear button + popover with
-// master / per-channel volume sliders + mute toggles.
+// Settings panel — small floating gear button + popover with master /
+// per-channel volume sliders + mute toggles, and the graphics quality tier.
+//
+// It stopped being audio-only when graphics quality landed here, but the
+// gear is the one settings surface players already know, and a second gear
+// would be worse than a slightly misnamed module.
 //
 // Mounts on demand via mountAudioSettings(parent). Idempotent (safe to
 // call repeatedly — re-uses existing DOM if already present).
@@ -7,6 +11,7 @@
 import { audio } from './AudioManager.js?v=20260615b';
 import { stopAmbience } from './ambience.js?v=20260615b';
 import { isVoiceEnabled, setVoiceEnabled, isCloudVoiceEnabled, setCloudVoiceEnabled } from './voice.js?v=20260615h';
+import { getGraphicsMode, setGraphicsMode, isLowGraphics, isAutoDowngraded } from '../lighting/quality.js';
 
 const PANEL_ID = 'play-audio-panel';
 const BUTTON_ID = 'play-audio-gear';
@@ -65,6 +70,26 @@ function toggleRow(labelText, isOn, onToggle) {
   ]);
 }
 
+// Three-way choice, styled to sit alongside the ON/OFF rows without
+// pretending to be one — quality isn't a binary and shouldn't look like it.
+function choiceRow(labelText, options, current, onPick) {
+  const wrap = el('div', { class: 'aud-choice' });
+  const paint = (val) => {
+    for (const b of wrap.children) b.classList.toggle('on', b.dataset.value === val);
+  };
+  for (const [value, text] of options) {
+    const b = el('button', { class: 'aud-choice-btn', type: 'button' }, [text]);
+    b.dataset.value = value;
+    b.addEventListener('click', () => { paint(value); onPick(value); });
+    wrap.appendChild(b);
+  }
+  paint(current);
+  return el('div', { class: 'aud-row aud-row-choice' }, [
+    el('div', { class: 'aud-label' }, [labelText]),
+    wrap,
+  ]);
+}
+
 export function mountAudioSettings(parent) {
   if (!parent) parent = document.body;
   if (document.getElementById(PANEL_ID) || document.getElementById(BUTTON_ID)) return;
@@ -114,6 +139,25 @@ export function mountAudioSettings(parent) {
       isCloudVoiceEnabled(),
       (on) => setCloudVoiceEnabled(on),
     ));
+
+    // ── Graphics ─────────────────────────────────────────────────────────
+    // Here rather than in a panel of its own: on a constrained machine the
+    // player is already reaching for the gear when things feel wrong.
+    panel.appendChild(el('div', { class: 'aud-title aud-title-sub' }, ['Graphics']));
+    panel.appendChild(choiceRow(
+      '🎚 Quality',
+      [['auto', 'Auto'], ['high', 'High'], ['low', 'Low']],
+      getGraphicsMode(),
+      (mode) => { setGraphicsMode(mode); rebuild(); },
+    ));
+    const gfxNote = isAutoDowngraded()
+      ? 'Auto turned quality down — this machine was dropping frames. Pick High to override.'
+      : (isLowGraphics()
+        ? 'Low: no bloom, shadows or reflections, and a 1× buffer. Best on laptops with shared graphics.'
+        : 'High: full lighting, bloom and shadows. Switch to Low if the office feels sluggish.');
+    panel.appendChild(el('div', { class: 'aud-note' }, [
+      gfxNote, ' ', el('em', {}, ['Takes full effect next time you enter the office.']),
+    ]));
 
     // Footstep SFX attribution (CC-BY 3.0 requires a visible credit).
     panel.appendChild(el('div', { class: 'aud-credits' }, [
