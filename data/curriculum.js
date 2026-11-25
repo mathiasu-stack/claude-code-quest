@@ -1,3 +1,6 @@
+// Volatile facts (model names, prices, defaults) come from data/facts.js.
+// `var` (not const) so the same binding can be declared by each curriculum file.
+var FACTS = window.FACTS;
 window.CURRICULUM = [
   // ── Chapter 1 ─────────────────────────────────────────────────────────────
   {
@@ -17,7 +20,7 @@ window.CURRICULUM = [
 
 <span class="ts-gold">✻ Welcome to Claude Code!</span>
 
-<span class="ts-dim">  model:</span> claude-sonnet-5 · API
+<span class="ts-dim">  model:</span> ${FACTS[FACTS.defaultModelKey].id} · API
 <span class="ts-dim">  cwd:</span>   ~/kedash-support
 <span class="ts-dim">  v2.1.176</span>
 
@@ -102,8 +105,8 @@ winget install Anthropic.ClaudeCode</code></pre>
       },
       {
         id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/ntDIxaeo3Wg" title="Claude Code - Full Tutorial for Beginners" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>Starting Your First Session</h2>
 <p>You need to be <em>inside</em> the folder of the project you want Claude to work on. In your terminal (PowerShell / Command Prompt on Windows, Terminal on macOS/Linux), use the <code>cd</code> ("change directory") command followed by the folder path.</p>
 <pre><code># Examples — pick whichever matches where your project lives
@@ -121,17 +124,24 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
   <li>Results appear in the terminal; you give the next instruction</li>
 </ol>
 <h3>Ending a session</h3>
-<p>Type <code>/exit</code> or press <kbd>Ctrl+C</kbd> twice. If you need to resume complex work, use <code>/compact</code> before exiting to create a summary you can hand back in your next session.</p>`,
+<p>Type <code>/exit</code> or press <kbd>Ctrl+C</kbd> twice. You don't need to save anything first: <strong>every session is saved automatically</strong>, in full, on your machine.</p>
+<h3>Picking up where you left off</h3>
+<pre><code>claude --continue          # (-c) reopen the most recent session in this folder
+claude --resume            # (-r) pick any earlier session from a list
+claude --resume auth-fix   # resume a named session directly
+/resume                    # switch sessions from inside Claude Code</code></pre>
+<p>Give a session a memorable name with <code>/rename auth-fix</code> (or start it with <code>claude -n auth-fix</code>) so it's easy to find later. Resuming restores the whole conversation, so Claude remembers what it was doing and why.</p>
+<p><code>/compact</code> is a different tool: it <em>summarises</em> a long conversation to free up context while you keep working (Chapter 7). It is not how you save work between sessions.</p>`,
         check: {
           question: 'You\'ve been working on a complex refactor for 30 minutes and need to step away. You want to pick up exactly where you left off in the next session. What\'s the right move before exiting?',
           options: [
             'Just close the terminal — Claude Code remembers everything automatically',
-            'Run `/compact` to generate a summary you can hand back next session',
+            'Nothing special — exit, then run `claude --continue` (or `/resume`) when you are back',
             'Copy the entire conversation into a Google Doc',
             'Press Ctrl+C three times to save state',
           ],
           correctIndex: 1,
-          explanation: '`/compact` summarises the session into something compact enough to fit back into context next time — that\'s how you preserve work across sessions.',
+          explanation: 'Sessions are saved automatically. `claude --continue` reopens the most recent one in this folder; `claude --resume` (or `/resume`) lets you pick any earlier session. `/compact` summarises context — it is not a save button.',
         },
       },
       {
@@ -171,7 +181,7 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
 
 <span class="ts-dim"># and inside a session, the status line along the bottom reads:</span>
 
-<span class="ts-dim">⏵⏵ accept edits on (shift+tab to cycle) · <span class="ts-gold">claude-sonnet-5</span> · context: 62% free</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
+<span class="ts-dim">⏵⏵ accept edits on (shift+tab to cycle) · <span class="ts-gold">${FACTS[FACTS.defaultModelKey].id}</span> · context: 62% free</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p>Claude Code ships updates frequently. Commands get renamed, new features appear, old workflows change. This training was accurate when written — but parts of it will become outdated over time.</p>
 <h3>Why this matters</h3>
 <p>Unlike a course on SQL or Git, Claude Code is a living product. A tutorial written 6 months ago might reference a flag that no longer exists or miss a feature that would save you hours. The gap between "what the training says" and "what the tool actually does" can make you less effective, or worse, confidently wrong.</p>
@@ -260,13 +270,13 @@ cd /volume1/projects/my-project                 # NAS</code></pre>
           id: 'ch01-q04', type: 'single',
           prompt: 'You\'ve been working on a complex refactor for 30 minutes and need to step away. What\'s the right move before exiting so you can pick up where you left off?',
           options: [
-            'Just close the terminal — Claude Code restores prior sessions automatically',
-            'Run <code>/compact</code> to summarise the session so it fits back into context next time',
+            'Exit normally, then resume with <code>claude --continue</code> or <code>/resume</code>',
+            'Run <code>/compact</code> before exiting — sessions are lost otherwise',
             'Press Ctrl+C three times to save state',
             'Copy the conversation into a Google Doc',
           ],
-          correctIndexes: [1],
-          explanation: 'Lesson "Your First Session" — <code>/compact</code> produces a summary you can hand back to the next session; sessions do not persist on their own.',
+          correctIndexes: [0],
+          explanation: 'Lesson "Your First Session" — sessions are saved automatically; <code>claude --continue</code> reopens the most recent one and <code>/resume</code> picks any earlier one. <code>/compact</code> frees context mid-session; it is not how you save work.',
         },
         {
           id: 'ch01-q05', type: 'single',
@@ -1166,17 +1176,20 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     <tr><td><code>/compact</code></td><td>Summarise and compress the session (optional focus hint)</td></tr>
     <tr><td><code>/model</code></td><td>Pick the model tier (opus / sonnet / haiku) for this session</td></tr>
     <tr><td><code>/fast</code></td><td>Toggle Fast Mode while on Opus (faster output, same model)</td></tr>
-    <tr><td><code>/agents</code></td><td>Open the subagent picker — built-in plus everything under <code>.claude/agents/</code></td></tr>
+    <tr><td><code>/agents</code></td><td>Explains how to create or manage subagents — ask Claude, or edit <code>.claude/agents/</code> directly (it no longer opens a picker)</td></tr>
     <tr><td><code>/skills</code></td><td>List available skills (the progressive-disclosure index)</td></tr>
     <tr><td><code>/mcp</code></td><td>List connected MCP servers and their tools</td></tr>
     <tr><td><code>/permissions</code></td><td>View, add, or manage tool permission rules</td></tr>
     <tr><td><code>/memory</code></td><td>View and edit Claude Code memory files</td></tr>
-    <tr><td><code>/config</code></td><td>Open Settings — including output style (the old <code>/output-style</code> command was removed in v2.1.91)</td></tr>
+    <tr><td><code>/config</code></td><td>Open Settings (<code>/config key=value</code> sets one directly)</td></tr>
+    <tr><td><code>/output-style</code></td><td>List output styles or switch to one, e.g. <code>/output-style concise</code></td></tr>
+    <tr><td><code>/resume</code></td><td>Switch to an earlier session (alias <code>/continue</code>)</td></tr>
+    <tr><td><code>/diff</code></td><td>Review the changes in your working tree, including Claude's edits</td></tr>
     <tr><td><code>/usage</code></td><td>Show tokens and estimated cost for the session. <code>/cost</code> is an alias for it</td></tr>
     <tr><td><code>/context</code></td><td>Visualise what is filling the context window, as a coloured grid — including which memory files loaded</td></tr>
     <tr><td><code>/rewind</code></td><td>Roll code and/or conversation back to an earlier checkpoint (or press <kbd>Esc</kbd> twice)</td></tr>
     <tr><td><code>/status</code></td><td>Open Settings UI — version, model, account, connectivity</td></tr>
-    <tr><td><code>/review</code></td><td>Built-in code review against the current diff</td></tr>
+    <tr><td><code>/code-review</code></td><td>Review your branch and uncommitted changes for bugs (<code>/review</code> is an alias; <code>--fix</code> applies findings)</td></tr>
     <tr><td><code>/simplify</code></td><td>Run a cleanup-only review and apply the fixes</td></tr>
     <tr><td><code>/cd</code></td><td>Move the session to a new directory without breaking the prompt cache</td></tr>
     <tr><td><code>/reload-plugins</code></td><td>Reload active plugins. Plain <code>SKILL.md</code> edits are picked up live and need no reload</td></tr>
@@ -1202,7 +1215,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 <ul>
   <li><code>/help</code> — every built-in slash command, with descriptions.</li>
   <li><code>/skills</code> — every available skill (built-in + user + project), with their one-line descriptions. This is the progressive-disclosure index from Chapter 10. Run it on any new project to discover team workflows like <code>/deploy-staging</code> or <code>/security-review</code>.</li>
-  <li><code>/agents</code> — every available subagent type, including custom ones in <code>.claude/agents/</code>. Pick from the list to dispatch a specialist (see Chapter 14).</li>
+  <li><code>/agents</code> — a reminder of where subagents live (<code>.claude/agents/</code> and <code>~/.claude/agents/</code>). You dispatch them by asking Claude, not from a menu (see Chapter 14).</li>
 </ul>
 <h3>Make discovery a habit</h3>
 <p>The first 30 seconds in any unfamiliar project: run <code>/skills</code> and <code>/agents</code>. You'll find existing tools the team has already built rather than reinventing them. The cost is two keypresses; the savings can be hours.</p>`,
@@ -1363,39 +1376,39 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         },
         {
           id: 'ch11-q09', type: 'single',
-          prompt: 'Which command opens the subagent picker (built-in agents plus everything in <code>.claude/agents/</code>)?',
+          prompt: 'Where do custom subagent definitions live, and how do you use one?',
           options: [
-            '<code>/skills</code>',
-            '<code>/agents</code>',
-            '<code>/mcp</code>',
-            '<code>/permissions</code>',
+            'In <code>.claude/skills/</code>; pick them from <code>/skills</code>',
+            'In <code>.claude/agents/</code> (or <code>~/.claude/agents/</code>); ask Claude to use or create one — <code>/agents</code> just reminds you of this',
+            'In <code>.mcp.json</code>; they appear under <code>/mcp</code>',
+            'In <code>settings.json</code> under <code>permissions</code>',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Essential Slash Commands" + "/help, /skills and /agents — Discoverability" — <code>/agents</code> is the subagent picker.',
+          explanation: 'Lesson "/help, /skills and /agents — Discoverability" — subagents are files under <code>.claude/agents/</code>; since v2.1.197 <code>/agents</code> no longer opens a picker.',
         },
         {
           id: 'ch11-q10', type: 'single',
           prompt: 'Which command shows token usage and cost for the current session?',
           options: [
-            '<code>/cost</code>',
+            '<code>/usage</code> (or its alias <code>/cost</code>)',
             '<code>/status</code>',
             '<code>/memory</code>',
             '<code>/model</code>',
           ],
           correctIndexes: [0],
-          explanation: 'Lesson "Essential Slash Commands" — <code>/cost</code> is the per-session token-and-cost readout.',
+          explanation: 'Lesson "Essential Slash Commands" — <code>/usage</code> is the per-session token-and-cost readout; <code>/cost</code> is an alias.',
         },
         {
           id: 'ch11-q11', type: 'single',
-          prompt: 'Which slash command runs Claude\'s built-in code review against the current diff?',
+          prompt: 'Which slash command reviews your branch and uncommitted changes for bugs?',
           options: [
-            '<code>/review</code>',
+            '<code>/code-review</code> (alias <code>/review</code>)',
             '<code>/diff</code>',
             '<code>/scan</code>',
             '<code>/lint</code>',
           ],
           correctIndexes: [0],
-          explanation: 'Lesson "Essential Slash Commands" — <code>/review</code> is the built-in diff review.',
+          explanation: 'Lesson "Essential Slash Commands" — <code>/code-review</code> reviews for bugs; <code>/diff</code> only shows the changes.',
         },
       ],
     },
@@ -1454,7 +1467,7 @@ drwxr-xr-x   6 you  staff   192 Jun 11 15:33 tests</div><div class="term-shot-ca
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Your Context Window is Finite</h2>
-<p>Claude Code's context window is 200,000 tokens on standard plans, with a 1 million token extended window available on Max, Team, and Enterprise plans. Every word in your conversation — your messages, Claude's responses, files it reads, your CLAUDE.md — counts against this limit. Understanding this limit is not optional; it directly impacts the quality of output you get.</p>
+<p>Claude Code's current models (${FACTS.opus.name}, ${FACTS.sonnet.name}, ${FACTS.haiku.name}) all have a ${FACTS.opus.context}-token context window, on every plan. Every word in your conversation — your messages, Claude's responses, files it reads, your CLAUDE.md — counts against this limit. Understanding this limit is not optional; it directly impacts the quality of output you get.</p>
 <h3>What "context rot" looks like</h3>
 <p>As a session grows and approaches the limit, something subtle happens: earlier context gets compressed or dropped. The AI starts "forgetting" instructions from earlier in the session. You get responses that ignore constraints you set at the start. Output quality degrades — not dramatically, but consistently.</p>
 <h3>The CLAUDE.md trap</h3>
@@ -1685,15 +1698,15 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
         },
         {
           id: 'ch03-q11', type: 'single',
-          prompt: 'What is the standard context window on Claude Code\'s default plan, and which plans add the 1M extended window?',
+          prompt: 'How large is the context window on Claude Code\'s current models, and is it plan-gated?',
           options: [
-            '100k tokens; 1M on Pro and Team',
-            '200k tokens; 1M on Max, Team, and Enterprise plans',
+            '200k tokens; 1M only on Max, Team, and Enterprise plans',
+            '1M tokens on every current model, on every plan',
             '64k tokens; 1M on Enterprise only',
             '500k tokens; 1M is not yet available',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "The Context Window and Context Rot" — 200k standard; 1M on Max / Team / Enterprise.',
+          explanation: 'Lesson "The Context Window and Context Rot" — the current models all carry a 1M window natively; plan gating only applied to the older Opus 4.6 / Sonnet 4.6 <code>[1m]</code> variants. A bigger window still rots: the budget discipline is the same.',
         },
       ],
     },
@@ -2193,10 +2206,10 @@ Total duration (API):  4m 12.8s
 Total code changes:    142 lines added, 38 lines removed
 
 Usage by model:
-  claude-sonnet-5:
-    input: 24.6k tokens · <span class="ts-ok">cache read: 289.1k tokens</span> <span class="ts-dim">← the 10% discount doing its job</span>
+  ${FACTS[FACTS.defaultModelKey].id}:
+    input: 24.6k tokens · <span class="ts-ok">cache read: 289.1k tokens</span> <span class="ts-dim">← the cache discount doing its job</span>
     cache write: 41.2k tokens · output: 9.8k tokens</div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
-<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. Opus 5 and Sonnet 5 carry a 1,000,000-token context window natively; Haiku 4.5 stays at 200,000. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
+<p>Every word in your conversation with Claude Code — your messages, its responses, file contents it reads, your CLAUDE.md — consumes tokens. ${FACTS.opus.name}, ${FACTS.sonnet.name} and ${FACTS.haiku.name} all carry a 1,000,000-token context window natively. That sounds large until you realise a mid-size codebase file can be 2,000 tokens, and a long session can accumulate tens of thousands of tokens in conversation history alone.</p>
 <h3>What eats your budget</h3>
 <ul>
   <li>Your full conversation history from session start</li>
@@ -2208,14 +2221,14 @@ Usage by model:
 <h3>Why compacting degrades output</h3>
 <p>When a session approaches the limit, Claude Code compresses older context. This compression is lossy — nuance, specific instructions, and edge cases from early in the session can be dropped. You'll notice it as "forgetting" earlier constraints or producing output that ignores decisions you made earlier. This is not a bug; it's physics.</p>
 <h3>Prompt caching — your discount</h3>
-<p>Stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side automatically. Cached tokens cost roughly <strong>10% of the normal input rate</strong>. The cache has a <strong>5-minute TTL</strong> — every follow-up prompt within 5 minutes reads the cached prefix cheaply; longer idle gaps evict it and the next prompt pays full freight.</p>
+<p>Stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side automatically. Cached reads cost roughly <strong>${FACTS.cache.readPct} of the normal input rate</strong>. The cache lives for <strong>${FACTS.cache.subscriptionTtl}</strong> on a Claude subscription's main conversation and <strong>${FACTS.cache.otherTtl}</strong> for subagents and for API-key, usage-credit or cloud-provider sessions (Chapter 10 has the details) — every follow-up prompt inside that window reads the cached prefix cheaply; longer idle gaps evict it and the next prompt pays full freight.</p>
 <ul>
   <li>Tight bursts of work are dramatically cheaper than the same work spread across the day.</li>
-  <li>Scheduled scripts: either poll &lt; 5 minutes (stay cached) or commit to a much longer wait (one eviction amortised). 300 seconds is the worst of both — you pay the cache miss without amortising it.</li>
+  <li>Scheduled scripts: either poll comfortably inside the TTL (stay cached) or commit to a much longer wait (one eviction amortised). On a 5-minute TTL, a 300-second poll is the worst of both — you pay the cache miss without amortising it.</li>
   <li>Run <code>/cost</code> to see input / cached input / output broken out. If cached input is small, you have idle time eating cache windows.</li>
 </ul>
 <h3>Model cost asymmetry</h3>
-<p>Across tiers, per million tokens: Opus 5 ≈ 5× Haiku 4.5; Sonnet 5 ≈ 2× Haiku. Chapter 12 covers picking the right tier per task — the same word costs an order of magnitude more on Opus than on Haiku, so cheap tiers belong on mechanical work.</p>
+<p>Across tiers, per million input tokens: ${FACTS.opus.name} ≈ ${FACTS.ratio.opusToHaiku}× ${FACTS.haiku.name}; ${FACTS.sonnet.name} ≈ ${FACTS.ratio.sonnetToHaiku}×. Chapter 10 covers picking the right tier per task — the same word costs more than an order of magnitude more on Opus than on Haiku, and Opus is the default, so cheap tiers belong on mechanical work.</p>
 <h3>The practical implication</h3>
 <p>Leaner context = better results AND cheaper bills. Not because Claude Code gets smarter when lean, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
@@ -2303,12 +2316,12 @@ Usage by model:
           prompt: 'How much context window do the current Claude Code models give you?',
           options: [
             '200k tokens on every model — there is no larger tier',
-            '1,000,000 tokens natively on Opus 5 and Sonnet 5; Haiku 4.5 stays at 200k',
+            '1,000,000 tokens natively on every current model (' + FACTS.opus.name + ', ' + FACTS.sonnet.name + ', ' + FACTS.haiku.name + ')',
             '100k tokens, extendable to 500k as a paid add-on',
             'Unlimited — Claude Code streams files in and out as needed',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Understanding the Context Window Budget" — Opus 5 and Sonnet 5 carry a native 1M window; Haiku 4.5 stays at 200k. A big window is not a licence to ignore the budget.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — every current model carries a native 1M window. A big window is not a licence to ignore the budget.',
         },
         {
           id: 'ch07-q02', type: 'multi',
@@ -2339,17 +2352,17 @@ Usage by model:
           id: 'ch07-q04', type: 'single',
           prompt: 'What discount does prompt caching give you on stable prefixes of your context?',
           options: [
-            'Cached tokens cost roughly 10% of the normal input rate',
+            'Cached reads cost roughly ' + FACTS.cache.readPct + ' of the normal input rate',
             'Cached tokens are free',
             'Cached tokens cost roughly 50% of the normal input rate',
             'Cached tokens cost roughly 90% of the normal input rate',
           ],
           correctIndexes: [0],
-          explanation: 'Lesson "Understanding the Context Window Budget" — ~10% of normal input cost on cache hits.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — cache hits cost ~' + FACTS.cache.readPct + ' of normal input (5% on the 5.5 Opus/Sonnet models).',
         },
         {
           id: 'ch07-q05', type: 'single',
-          prompt: 'What is the TTL on the prompt cache, and what does that mean for scheduled scripts?',
+          prompt: 'A CI job runs <code>claude -p</code> with an API key. What is its default prompt-cache TTL, and what does that mean for scheduled scripts?',
           options: [
             '60 minutes; idle gaps under an hour stay cached',
             '5 minutes; tight bursts stay cached, but 300-second gaps are "the worst of both worlds" — you pay the eviction without amortising it',
@@ -2357,19 +2370,19 @@ Usage by model:
             'There is no TTL — caches live until session end',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Understanding the Context Window Budget" — 5-minute TTL; 300-second polling is the named worst-case.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — API-key sessions get a 5-minute TTL (a subscription\'s main conversation gets 1 hour); on 5 minutes, 300-second polling is the named worst case.',
         },
         {
           id: 'ch07-q06', type: 'single',
           prompt: 'Across model tiers, how does cost compare per million tokens?',
           options: [
             'All tiers cost the same',
-            'Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2× Haiku',
+            'Opus ≈ ' + FACTS.ratio.opusToHaiku + '× Haiku, Sonnet ≈ ' + FACTS.ratio.sonnetToHaiku + '× Haiku',
             'Opus ≈ 2× Haiku, Sonnet ≈ 1.5× Haiku',
             'Sonnet is cheaper than Haiku',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Understanding the Context Window Budget" — Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2× Haiku.',
+          explanation: 'Lesson "Understanding the Context Window Budget" — ' + FACTS.opus.name + ' ≈ ' + FACTS.ratio.opusToHaiku + '× ' + FACTS.haiku.name + ', ' + FACTS.sonnet.name + ' ≈ ' + FACTS.ratio.sonnetToHaiku + '×.',
         },
         {
           id: 'ch07-q07', type: 'multi',

@@ -1,3 +1,6 @@
+// Volatile facts (model names, prices, defaults) come from data/facts.js.
+// `var` (not const) so the same binding can be declared by each curriculum file.
+var FACTS = window.FACTS;
 // Chapters 10–16 — appended after curriculum.js loads
 window.CURRICULUM.push(
 
@@ -20,7 +23,7 @@ window.CURRICULUM.push(
 <h3>With skills</h3>
 <p>You run <code>/pr-description</code> or <code>/security-review</code> and get consistent, high-quality output every time — without burning context on the prompt instructions themselves.</p>
 <h3>Built-in commands vs bundled skills</h3>
-<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/review</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>
+<p>Some slash commands are <strong>built-in</strong> (coded behaviour, not prompt templates): <code>/init</code>, <code>/security-review</code>, <code>/clear</code>, <code>/compact</code>, <code>/plan</code>. Others are <strong>bundled skills</strong> (prompt-based, same progressive disclosure rules): <code>/simplify</code>, <code>/batch</code>, <code>/debug</code>. Your custom skills work exactly like bundled skills — the difference is location.</p>
 <h3>Update: commands and skills have converged</h3>
 <p>Custom commands and skills are now the same concept — a file at <code>.claude/commands/deploy.md</code> and a skill at <code>.claude/skills/deploy/SKILL.md</code> both create <code>/deploy</code> and work the same way. Existing <code>.claude/commands/</code> files keep working; skills simply add optional features (a directory for supporting files, frontmatter for invocation control, and automatic loading when relevant).</p>`,
       },
@@ -111,7 +114,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
     practicalTest: {
       id: 'ch08-test',
       scenarioType: 'slack', scenarioFrom: 'Alex Rivera', scenarioRole: 'Senior Support Agent', scenarioAvatar: '🧑‍💻',
-      scenario: 'OK we need a SKILL for this. Every agent writes replies differently — some forget the greeting, some skip the "next step", some over-explain. Write a Claude Code skill (`.claude/skills/support-reply.md`) that enforces our 4-part format every time:\n\n1. Greeting (their first name, warm but professional)\n2. Direct answer\n3. Next step (link, button, dashboard location)\n4. Sign-off (`— Kedash Support`)\n\nDrop it in Claude, then run a sample question through it ("How do I add a teammate?"). Paste BOTH the skill file content AND the reply Claude produced — `## Skill` and `## Sample reply` markers.\n\nAnd before you ask around the floor for me — I\'m remote. Very remote. Focus on the skill.',
+      scenario: 'OK we need a SKILL for this. Every agent writes replies differently — some forget the greeting, some skip the "next step", some over-explain. Write a Claude Code skill (`.claude/skills/support-reply/SKILL.md`) that enforces our 4-part format every time:\n\n1. Greeting (their first name, warm but professional)\n2. Direct answer\n3. Next step (link, button, dashboard location)\n4. Sign-off (`— Kedash Support`)\n\nDrop it in Claude, then run a sample question through it ("How do I add a teammate?"). Paste BOTH the skill file content AND the reply Claude produced — `## Skill` and `## Sample reply` markers.\n\nAnd before you ask around the floor for me — I\'m remote. Very remote. Focus on the skill.',
       task: 'Paste your skill file content AND a sample reply Claude generated using it.',
       hint: 'Skill needs `name:` / `description:` frontmatter + body describing each part. Sample reply should hit the 4 sections explicitly.',
       minLength: 0, passThreshold: 75, xpReward: 525,
@@ -207,13 +210,13 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
           prompt: 'Which of these are described as built-in commands (coded behavior, not prompt templates)?',
           options: [
             '<code>/init</code>',
-            '<code>/review</code>',
+            '<code>/code-review</code>',
             '<code>/security-review</code>',
             '<code>/clear</code>',
             '<code>/simplify</code>',
           ],
-          correctIndexes: [0, 1, 2, 3],
-          explanation: 'Lesson "What Are Skills?" — first four are built-ins; <code>/simplify</code> is named as a bundled prompt-based skill.',
+          correctIndexes: [0, 2, 3],
+          explanation: 'Lesson "What Are Skills?" — <code>/init</code>, <code>/security-review</code> and <code>/clear</code> are built-ins; <code>/code-review</code> (alias <code>/review</code>) and <code>/simplify</code> are bundled prompt-based skills.',
         },
         {
           id: 'ch08-q08', type: 'multi',
@@ -540,111 +543,115 @@ Your answer becomes the next learnings.md entry."</code></pre>
     lessons: [
       {
         id: 'ch10-l01', title: 'Meet the Engines', xpReward: 110, videos: [],
-        lastVerified: '2026-08-26',
-        verifiedAgainstVersion: 'v2.1.246',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>Dr. Priya Engelhardt — AI Operations</h2>
 <div class="term-shot" data-shot="ch10-l01"><div class="term-shot-bar"><span class="ts-dot ts-r"></span><span class="ts-dot ts-y"></span><span class="ts-dot ts-g"></span><span class="term-shot-title">Terminal — claude</span></div><div class="term-shot-body"><span class="ts-cy">&gt;</span> /model
 
-<span class="ts-gold">Select model</span> <span class="ts-dim">current: sonnet</span>
+<span class="ts-gold">Select model</span> <span class="ts-dim">current: ${FACTS.defaultModelKey}</span>
 
-  1. Default (Recommended)   <span class="ts-dim">Sonnet for daily work</span>
-<span class="ts-sel">❯ 2. Opus                    claude-opus-5 · most capable · priciest</span>
-  3. Sonnet <span class="ts-ok">✓</span>                <span class="ts-dim">claude-sonnet-5 · balanced default</span>
-  4. Haiku                   <span class="ts-dim">claude-haiku-4-5 · fastest · cheapest</span>
-  5. Fable                   <span class="ts-dim">claude-fable-5 · hardest, longest-running work</span>
+  1. Default (Recommended)   <span class="ts-dim">${FACTS[FACTS.defaultModelKey].name} for your account</span>
+  2. Opus <span class="ts-ok">✓</span>                  <span class="ts-dim">${FACTS.opus.id} · most capable everyday tier</span>
+<span class="ts-sel">❯ 3. Sonnet                  ${FACTS.sonnet.id} · half the price of Opus</span>
+  4. Haiku                   <span class="ts-dim">${FACTS.haiku.id} · fastest · cheapest</span>
+  5. Fable                   <span class="ts-dim">${FACTS.fable.id} · hardest, longest-running work</span>
 
-<span class="ts-dim">↑/↓ move · enter select · esc cancel</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
+<span class="ts-dim">↑/↓ move · ←/→ effort · enter select · esc cancel</span></div><div class="term-shot-cap">Simulated terminal — run it yourself and you'll see the live version.</div></div>
 <p><em>You step out of the Library balancing a stack of refined skills. Dr. Priya Engelhardt — Head of AI Operations — is waiting at the AI Ops console with her arms folded.</em></p>
-<p><em>"Most engineers here run Sonnet for everything and rack up surprise bills. The other half run Opus for everything and rack up bigger ones. I'm going to teach you to spend deliberately. Sit down."</em></p>
-<h3>The Claude 5 family in Claude Code</h3>
-<p>Three tiers cover almost everything, each with a different cost/intelligence trade-off:</p>
+<p><em>"Claude Code starts everyone on ${FACTS[FACTS.defaultModelKey].name}. Most engineers never touch the dial again and pay top-tier prices for typo fixes. The rest switch to the cheapest model for everything and pay in rework. I'm going to teach you to spend deliberately. Sit down."</em></p>
+<h3>The current family in Claude Code</h3>
+<p>Three everyday tiers cover almost everything, each with a different cost/intelligence trade-off. All three now carry a <strong>${FACTS.opus.context}-token context window</strong>.</p>
 <ul>
-  <li><strong>Claude Opus 5</strong> (<code>claude-opus-5</code>) — the smartest of the three. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest cost per token; slowest output. 1M-token context.</li>
-  <li><strong>Claude Sonnet 5</strong> (<code>claude-sonnet-5</code>) — the balanced default. Most coding work, day-to-day prompts, skill execution, code review. Strong intelligence at a fraction of Opus's cost, and also a 1M-token context.</li>
-  <li><strong>Claude Haiku 4.5</strong> (<code>claude-haiku-4-5</code>) — the fast lane. Quick edits, log triage, short summaries, scripted hook actions. Sub-second time-to-first-token; cheapest tier. 200k context.</li>
+  <li><strong>${FACTS.opus.full}</strong> (<code>${FACTS.opus.id}</code>) — the smartest everyday tier and <strong>Claude Code's default</strong>. Multi-step reasoning, long refactors, ambiguous architectural calls, hard debugging. Highest everyday cost per token.</li>
+  <li><strong>${FACTS.sonnet.full}</strong> (<code>${FACTS.sonnet.id}</code>) — the balanced tier at about half Opus's price. Well-scoped coding, executing a known plan or skill, moderate code review.</li>
+  <li><strong>${FACTS.haiku.full}</strong> (<code>${FACTS.haiku.id}</code>) — the fast lane, and by far the cheapest. Mechanical edits, log triage, short summaries, high-volume batches, scripted hook actions.</li>
 </ul>
-<p>Above all three sits <strong>Claude Fable 5</strong> (<code>claude-fable-5</code>) — Anthropic's most capable widely-released model, for the most demanding reasoning and long-horizon agentic work. It is <em>not</em> the default: you select it with <code>/model fable</code>, and in an interactive session Claude Code asks you to confirm before a Fable 5 request spends usage credits.</p>
-<div class="callout"><strong>Version note.</strong> Opus 5 needs Claude Code <code>v2.1.219</code> or later; Sonnet 5 needs <code>v2.1.197</code>. Run <code>claude update</code> if <code>/model</code> doesn't offer them.</div>
+<p>Above all three sits <strong>${FACTS.fable.full}</strong> (<code>${FACTS.fable.id}</code>) — the most capable model in the family, for the most demanding reasoning and long-horizon agentic work, at twice Opus's per-token price. It is <em>never</em> the default: you select it with <code>/model fable</code>.</p>
+<div class="callout"><strong>Version note.</strong> The <code>opus</code>, <code>sonnet</code> and <code>haiku</code> aliases resolve to the 5.5 models from Claude Code <code>v2.1.280</code>, <code>v2.1.284</code> and <code>v2.1.293</code> respectively. Run <code>claude update</code> if <code>/model</code> shows an older generation.</div>
 <h3>Why this matters</h3>
 <p>The wrong model for the job costs you either money (Opus on a one-line typo fix) or time and quality (Haiku on a multi-file architectural change). The first habit of a senior Claude Code user is matching the engine to the workload.</p>
 <h3>What Claude Code picks by default</h3>
-<p>On launch Claude Code runs the <strong>Default</strong> option, which resolves to Sonnet for daily work unless your organisation has set its own default. That's almost always correct. But the moment a task obviously falls outside Sonnet's sweet spot, you should switch — explicitly, every time, not as an afterthought.</p>`,
+<p>On launch Claude Code runs the <strong>Default</strong> option, which resolves to <strong>${FACTS[FACTS.defaultModelKey].name}</strong> on every Claude plan and on the Anthropic API, unless your organisation has set its own default. (Some cloud providers resolve it differently — Microsoft Foundry defaults to Sonnet 4.5.) That's a strong choice for hard work, and an expensive one for easy work. The skill this chapter builds is <em>stepping down</em> as deliberately as you step up.</p>`,
       },
       {
         id: 'ch10-l02', title: 'Switching Models, Fast Mode and Effort', xpReward: 110, videos: [],
-        lastVerified: '2026-08-26',
-        verifiedAgainstVersion: 'v2.1.246',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>Three Levers, One Session</h2>
-<p>Claude Code exposes three switches that change which model executes your next prompt — plus one thing that used to be a switch and isn't any more. Learning all of them keeps you in control instead of letting defaults silently drive your bill.</p>
+<p>Claude Code exposes three switches that change how your next prompt is executed — plus one thing that used to be a switch and isn't any more. Learning all of them keeps you in control instead of letting defaults silently drive your bill.</p>
 <h3>1. /model — pick the tier</h3>
-<pre><code>/model opus       # latest Opus  — Opus 5 on the Anthropic API
-/model sonnet     # latest Sonnet — Sonnet 5 (the usual default)
-/model haiku      # Haiku 4.5
-/model fable      # Fable 5 — hardest, longest-running work
-/model best       # Fable 5 where you have access, else latest Opus
+<pre><code>/model opus       # latest Opus   — ${FACTS.opus.name} on the Anthropic API
+/model sonnet     # latest Sonnet — ${FACTS.sonnet.name}
+/model haiku      # latest Haiku  — ${FACTS.haiku.name}
+/model fable      # ${FACTS.fable.name} — hardest, longest-running work
+/model best       # the same model as opus
 /model opusplan   # Opus while planning, Sonnet to execute
 /model default    # clear any override, back to your account default
-/model            # opens an interactive picker</code></pre>
+/model            # interactive picker (←/→ adjusts effort)</code></pre>
 <p>The choice persists for the rest of the session (or until you switch again). You'll see the active model in the status line.</p>
-<p><code>opusplan</code> is the one worth knowing about: it pairs directly with plan mode (Chapter 12) — you get Opus's judgement while the plan is being written, then Sonnet's speed and price for the mechanical work of carrying it out.</p>
-<div class="callout"><strong>Aliases are not fixed mappings.</strong> They resolve to the recommended version <em>for your provider</em>, and that moves over time. On the Anthropic API <code>sonnet</code> is Sonnet 5; on Amazon Bedrock or Google Cloud it may still be Sonnet 4.5. To pin a version, use the full model name — <code>/model claude-opus-5</code>.</div>
-<h3>2. /fast — Fast Mode for Opus</h3>
-<p><code>/fast</code> toggles <strong>Fast Mode</strong> while on Opus (5 or 4.8). It does <em>not</em> downgrade you to Sonnet or Haiku — you stay on Opus, but output streams much faster. Worth it when you're paired with Opus on a long refactor and don't want to watch tokens drip out.</p>
+<p><code>opusplan</code> is the one worth knowing about: it pairs directly with plan mode (Chapter 12) — you get Opus's judgement while the plan is being written, then Sonnet's price for the mechanical work of carrying it out.</p>
+<div class="callout"><strong>Aliases are not fixed mappings.</strong> They resolve to the recommended version <em>for your provider</em>, and that moves over time. On the Anthropic API <code>sonnet</code> is ${FACTS.sonnet.name}; on Amazon Bedrock it may still be Sonnet 4.5. To pin a version, use the full model name — <code>/model ${FACTS.opus.id}</code>.</div>
+<h3>2. /fast — Fast Mode</h3>
+<p><code>/fast</code> toggles <strong>Fast Mode</strong> on ${FACTS.fastModeModels}. It does <em>not</em> downgrade you — you stay on the same model and quality, but output streams up to about 2.5× faster at a <strong>higher</strong> per-token price, billed from usage credits on subscription plans. It is not available on Sonnet or Haiku. Worth it when you're paired with Opus on a long refactor and your time is the scarce resource; never a cost saving.</p>
 <h3>3. Context size — the lever that retired</h3>
-<p>Opus 5 and Sonnet 5 both carry a <strong>1,000,000-token context window natively</strong> — there is nothing to switch on. Very large repos, transcripts, or doc bundles fit in one session by default.</p>
-<p>You may still see the <code>opus[1m]</code> and <code>sonnet[1m]</code> aliases. These are leftovers from when the big window was an opt-in tier on top of a 200k model, and they matter in only two places today: selecting the 1M window for Sonnet 5 from behind an LLM gateway, and pinning an older Opus that didn't have it natively. On a normal Anthropic API session, <code>sonnet[1m]</code> does nothing that <code>sonnet</code> doesn't already do.</p>
-<p>Haiku 4.5 is the exception — it stays at 200k. If you send Haiku on a whole-codebase read, that is where you'll hit the wall.</p>
+<p>Every current model — Opus, Sonnet, Haiku and Fable — carries a <strong>${FACTS.opus.context}-token context window natively</strong>. There is nothing to switch on: very large repos, transcripts, or doc bundles fit in one session by default.</p>
+<p>You may still see the <code>opus[1m]</code> and <code>sonnet[1m]</code> aliases. They are leftovers from when the big window was an opt-in tier, and today they only matter if you pin the older Opus 4.6 or Sonnet 4.6. One cost wrinkle remains: <strong>${FACTS.haiku.name} charges more on prompts longer than ${FACTS.haiku.longPromptThreshold} tokens</strong>, so "send Haiku on the whole codebase" is possible but no longer the bargain it looks like.</p>
 <h3>One-shot override per command</h3>
 <p>For headless / scripted runs, pass the model explicitly:</p>
-<pre><code>claude -p "summarise this PR" --model claude-haiku-4-5
-claude -p "redesign the auth module" --model claude-opus-5</code></pre>
-<p>This bypasses whatever the interactive default is — perfect for cron jobs and CI hooks that should always run on a specific tier.</p>
+<pre><code>claude -p "summarise this PR" --model ${FACTS.haiku.alias}
+claude -p "redesign the auth module" --model ${FACTS.opus.id}</code></pre>
+<p>This bypasses whatever the interactive default is — perfect for cron jobs and CI that should always run on a specific tier.</p>
 <h3>4. Effort — the other half of the dial</h3>
-<p>Picking a model is only half the decision. <strong>Effort</strong> controls how much the model reasons before answering, and it moves cost and quality as much as the tier does. Every current model supports five levels:</p>
-<pre><code>/effort            # opens the picker
+<p>Picking a model is only half the decision. <strong>Effort</strong> controls how much the model reasons before answering, and it moves cost and quality as much as the tier does. The current models support five levels:</p>
+<pre><code>/effort            # opens the slider
 /effort low        # short, scoped, latency-sensitive work
-/effort medium     # cost-sensitive work that can trade a little intelligence
-/effort high       # the default — balances spend and intelligence
+/effort medium     # the default on the current models
+/effort high       # harder problems — more reasoning, more spend
 /effort xhigh      # deeper reasoning, higher spend
 /effort max        # deepest — prone to overthinking; test before adopting
 claude --effort high      # set it at launch, for scripts and CI</code></pre>
-<p><code>high</code> is the default on every model that supports effort. <code>low</code> through <code>xhigh</code> persist across sessions when you set them interactively; <code>max</code> applies to the current session only.</p>
-<p>The practical consequence is that "Opus is too expensive for this" is often the wrong conclusion. <strong>Opus at <code>low</code> or <code>medium</code> effort</strong> is a genuinely different option from Sonnet at <code>high</code>, and on reasoning-shaped work it frequently wins on both counts. Reach for the effort dial before you downgrade the tier.</p>
-<div class="callout"><strong>Also on the menu: <code>ultracode</code>.</strong> It is a Claude Code setting rather than a model effort level — it sends <code>xhigh</code> to the model <em>and</em> has Claude orchestrate a dynamic workflow for substantive tasks. Set it with <code>/effort ultracode</code> or <code>claude --effort ultracode</code>.</div>
-<p>Effort isn't only a session-wide switch. Skills and subagents can each declare their own <code>effort:</code> in frontmatter (Chapters 8 and 14), which is how you give a cheap mechanical subagent <code>low</code> while the orchestrator that dispatches it runs at <code>high</code>.</p>`,
+<p><code>${FACTS.defaultEffort}</code> is the default on ${FACTS.opus.name}, ${FACTS.sonnet.name}, ${FACTS.haiku.name} and ${FACTS.fable.name} (older models default to <code>high</code>). Saving a level from the picker makes it your default; <code>max</code> applies to the current session only.</p>
+<p>The practical consequence is that "Opus is too expensive for this" is often the wrong conclusion. <strong>Opus at <code>low</code></strong> is a genuinely different option from Sonnet at <code>high</code>, and on reasoning-shaped work it frequently wins on both counts. Reach for the effort dial before you change the tier — in both directions.</p>
+<div class="callout"><strong>Also on the menu: <code>ultracode</code>.</strong> It is a Claude Code setting rather than a model effort level — it requests <code>xhigh</code> <em>and</em> has Claude orchestrate a multi-step workflow for substantive tasks, so each request uses more tokens and takes longer. Set it with <code>/effort ultracode</code> or <code>claude --effort ultracode</code>.</div>
+<p>Effort isn't only a session-wide switch. Skills and subagents can each declare their own <code>effort:</code> in frontmatter (Chapters 8 and 14), which is how you give a cheap mechanical subagent <code>low</code> while the orchestrator that dispatches it runs higher.</p>`,
       },
       {
         id: 'ch10-l03', title: 'Cost Economics & Prompt Caching', xpReward: 110, videos: [],
-        lastVerified: '2026-08-26',
-        verifiedAgainstVersion: 'v2.1.246',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>Where Your Money Actually Goes</h2>
 <p>Priya pulls up last month's bill on a wall display. "This team spent £4,200 on Claude Code. Half of it was avoidable. Let me show you why."</p>
 <h3>The order-of-magnitude rule</h3>
-<p>As a rough mental model, per million tokens:</p>
+<p>Per million tokens (input / output), on normal-length prompts:</p>
 <ul>
-  <li><strong>Opus 5</strong>: ~5× the cost of Haiku ($5 / $25 per million tokens in / out)</li>
-  <li><strong>Sonnet 5</strong>: ~2× the cost of Haiku ($2 / $10)</li>
-  <li><strong>Haiku 4.5</strong>: the cheap reference point ($1 / $5)</li>
+  <li><strong>${FACTS.opus.name}</strong>: $${FACTS.opus.priceIn} / $${FACTS.opus.priceOut} — roughly <strong>${FACTS.ratio.opusToHaiku}×</strong> Haiku</li>
+  <li><strong>${FACTS.sonnet.name}</strong>: $${FACTS.sonnet.priceIn} / $${FACTS.sonnet.priceOut} — roughly ${FACTS.ratio.sonnetToHaiku}× Haiku, half of Opus</li>
+  <li><strong>${FACTS.haiku.name}</strong>: from $${FACTS.haiku.priceIn.toFixed(2)} / $${FACTS.haiku.priceOut.toFixed(2)} — the cheap reference point (prompts over ${FACTS.haiku.longPromptThreshold} tokens: $${FACTS.haiku.longPriceIn.toFixed(2)} / $${FACTS.haiku.longPriceOut.toFixed(2)})</li>
+  <li><strong>${FACTS.fable.name}</strong>: $${FACTS.fable.priceIn} / $${FACTS.fable.priceOut} — twice Opus</li>
 </ul>
-<p>Running Opus on a task Haiku could handle is throwing 5× the money at the same answer.</p>
-<div class="callout"><strong>This gap has narrowed.</strong> On the previous generation Opus cost roughly 15× Haiku, which made "always reach for the cheapest model that can do it" the dominant advice. At 5×, the calculation is genuinely different: a task Opus gets right first time can easily beat three Haiku attempts plus your time reviewing them. Spend deliberately still holds — but "deliberately" now means weighing the retry cost, not reflexively picking the cheap tier.</div>
+<p>Running the default Opus on a batch Haiku could handle is throwing about ${FACTS.ratio.opusToHaiku}× the money at the same answer.</p>
+<div class="callout"><strong>The gap is wide again.</strong> In the previous generation Opus cost only about 5× Haiku, so "a first-time-right Opus answer beats three Haiku retries" was often true. With Haiku this cheap, high-volume mechanical work belongs on Haiku almost by default. The retry argument still holds for <em>reasoning</em> work — just remember that the default model is the expensive one, so doing nothing is itself a choice.</div>
 <h3>Prompt caching — your biggest lever</h3>
-<p>Claude has automatic <strong>prompt caching</strong>: stable prefixes of your context (CLAUDE.md, large file reads, system prompts) get cached server-side. Cached tokens cost roughly <strong>10% of the normal input rate</strong>.</p>
-<h3>The 5-minute TTL</h3>
-<p>The cache has a <strong>5-minute lifetime</strong> from last access. While you're actively working, every follow-up prompt reads the cached prefix cheaply. The moment a gap exceeds 5 minutes — a long lunch, an idle background process — the cache evicts and the next prompt pays full freight to repopulate it.</p>
+<p>Claude Code uses automatic <strong>prompt caching</strong>: stable prefixes of your context (system prompt, CLAUDE.md, earlier conversation, large file reads) get cached server-side. Cached reads cost roughly <strong>${FACTS.cache.readPct} of the normal input rate</strong> (5% on ${FACTS.opus.name} and ${FACTS.sonnet.name}).</p>
+<h3>The TTL depends on how you're billed</h3>
+<ul>
+  <li><strong>Claude subscription, within plan usage:</strong> the main conversation gets a <strong>${FACTS.cache.subscriptionTtl}</strong> cache lifetime; subagents get ${FACTS.cache.otherTtl}.</li>
+  <li><strong>API key, usage credits, or a cloud provider:</strong> everything gets <strong>${FACTS.cache.otherTtl}</strong> by default.</li>
+  <li>You can choose with the <code>${FACTS.cache.ttlSetting}</code> setting (or <code>CLAUDE_CODE_PROMPT_CACHE_TTL</code>): <code>5m</code> or <code>1h</code>. One-hour cache <em>writes</em> cost more (2× the input price vs 1.25×), so the long TTL pays off only when you really do come back within the hour.</li>
+</ul>
+<p>Whatever the TTL, the rule is the same: while you're inside it, follow-up prompts read the cached prefix cheaply; once a gap exceeds it, the cache evicts and the next prompt pays full price to repopulate it.</p>
 <h3>Practical consequences</h3>
 <ul>
   <li>Tight bursts of work are dramatically cheaper than the same work spread across the day.</li>
-  <li>Idle sleeps in scheduled scripts should be either &lt;5 minutes (stay cached) or much longer (commit to the eviction). 300 seconds is the worst-of-both — you pay the cache miss without amortising it.</li>
-  <li>A long-running tmux session that touches the same project repeatedly is cheaper than spawning a fresh <code>claude -p</code> each time.</li>
+  <li>Idle sleeps in scheduled scripts should be either comfortably inside the TTL or much longer than it. On a 5-minute TTL (typical for API-key CI jobs), a 300-second sleep is the worst of both — you pay the cache miss without amortising it.</li>
+  <li>Check <code>/usage</code> (alias <code>/cost</code>) for the session's token and cost breakdown; the status line can also show cache state (Chapter 15).</li>
 </ul>
-<h3>Reading the cost panel</h3>
-<p>Run <code>/cost</code> to see the running total for the current session, broken down by input / cached input / output. If cached input isn't a large chunk of your bill, you have idle time eating cache windows — or you're rotating projects faster than the TTL.</p>`,
+<p>If cached input isn't a large chunk of your bill, you have idle time eating cache windows — or you're rotating projects faster than the TTL.</p>`,
       },
       {
         id: 'ch10-l04', title: 'Matching Model to Task', xpReward: 130, videos: [],
-        lastVerified: '2026-05-30',
-        verifiedAgainstVersion: 'v2.1.130',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>The Decision Heuristic</h2>
 <p>Priya hands you a laminated card. "Pin this to your monitor. Refer to it for two weeks. After that, it's instinct."</p>
 <h3>Pick Haiku when…</h3>
@@ -659,7 +666,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
   <li>You're writing or refactoring code in a small scope (single file, well-defined function).</li>
   <li>You're executing a known skill or following a documented runbook.</li>
   <li>You're reviewing a PR of moderate size.</li>
-  <li>You don't know — this is the safe default for ~80% of work.</li>
+  <li>The scope is clear and Opus would just be paying top-tier prices for routine work — a large share of day-to-day coding.</li>
 </ul>
 <h3>Pick Opus when…</h3>
 <ul>
@@ -669,8 +676,8 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
   <li>You're running an audit, security review, or compliance check where missing something is expensive.</li>
   <li>You're orchestrating subagents (the orchestrator benefits most from intelligence).</li>
 </ul>
-<h3>Escalate mid-session</h3>
-<p>Start on Sonnet. The moment you see Sonnet thrashing — repeated wrong guesses, missing the obvious connection, asking you to re-explain — <code>/model opus</code> and re-prompt. Don't burn an hour fighting the wrong tier.</p>
+<h3>Step down first, escalate when it thrashes</h3>
+<p>Claude Code starts you on ${FACTS[FACTS.defaultModelKey].name}. For a well-scoped task, <code>/model sonnet</code> before you start. The moment you see Sonnet thrashing — repeated wrong guesses, missing the obvious connection, asking you to re-explain — <code>/model opus</code> (or raise <code>/effort</code>) and re-prompt. Don't burn an hour fighting the wrong tier.</p>
 <h3>De-escalate too</h3>
 <p>If you started on Opus for the architectural part and now you're just typing out boilerplate from the plan, drop back to Sonnet (or Haiku for pure mechanical tail-end edits). The cost difference compounds across a workday.</p>`,
       },
@@ -688,7 +695,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
         { type: 'keyword', value: ['opus'], description: 'Opus chosen for the cross-file refactor', weight: 2 },
         { type: 'keyword', value: ['sonnet'], description: 'Sonnet chosen for the small helper', weight: 2 },
         { type: 'keyword', value: ['/model'], description: 'Shows the actual /model command', weight: 2 },
-        { type: 'keyword', value: ['cache', 'caching', 'cached', 'prompt cache', '5 minute', '5-minute', 'ttl'], description: 'References prompt caching economics', weight: 2 },
+        { type: 'keyword', value: ['cache', 'caching', 'cached', 'prompt cache', 'ttl'], description: 'References prompt caching economics', weight: 2 },
         { type: 'keyword', value: ['cost', 'cheaper', 'expensive', 'per token', 'bill', '/cost'], description: 'Cost reasoning present', weight: 1 },
         { type: 'keyword', value: ['cross-file', 'multi-file', 'architectural', 'reasoning', '14 files'], description: 'Justifies Opus on scope grounds', weight: 1 },
       ],
@@ -699,48 +706,48 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
       questionPool: [
         {
           id: 'ch10-q01', type: 'single',
-          prompt: 'Which model does Claude Code use by default on launch?',
-          options: ['Opus 5', 'Sonnet 5', 'Haiku 4.5', 'Fable 5'],
-          correctIndexes: [1],
-          explanation: 'Lesson "Meet the Engines" — the Default option resolves to Sonnet (Sonnet 5 on the Anthropic API) unless your organisation sets its own default. It is the recommended ~80% choice.',
+          prompt: 'Which model does Claude Code use by default on launch (Claude plans and the Anthropic API)?',
+          options: [FACTS.opus.name, FACTS.sonnet.name, FACTS.haiku.name, FACTS.fable.name],
+          correctIndexes: [['opus', 'sonnet', 'haiku', 'fable'].indexOf(FACTS.defaultModelKey)],
+          explanation: 'Lesson "Meet the Engines" — the Default option resolves to ' + FACTS[FACTS.defaultModelKey].name + ' unless your organisation sets its own default. That makes stepping down deliberately part of the job.',
         },
         {
           id: 'ch10-q02', type: 'multi',
           prompt: 'Which of these are the three everyday model tiers in Claude Code?',
-          options: ['Claude Opus 5', 'Claude Sonnet 5', 'Claude Haiku 4.5', 'Claude Lite 3.5'],
+          options: [FACTS.opus.full, FACTS.sonnet.full, FACTS.haiku.full, 'Claude Lite 3.5'],
           correctIndexes: [0, 1, 2],
-          explanation: 'Lesson "Meet the Engines" — three everyday tiers: Opus 5, Sonnet 5, Haiku 4.5. Fable 5 sits above them for the hardest work, and there is no "Lite" tier.',
+          explanation: 'Lesson "Meet the Engines" — three everyday tiers: ' + FACTS.opus.name + ', ' + FACTS.sonnet.name + ', ' + FACTS.haiku.name + '. ' + FACTS.fable.name + ' sits above them for the hardest work, and there is no "Lite" tier.',
         },
         {
           id: 'ch10-q03', type: 'single',
           prompt: 'What does <code>/fast</code> do?',
           options: [
             'Downgrades to Haiku',
-            'Toggles Fast Mode while on Opus (5 or 4.8) — you stay on Opus, but output streams much faster',
+            'Toggles Fast Mode on ' + FACTS.fastModeModels + ' — same model and quality, faster output, higher price per token',
             'Disables prompt caching',
             'Sends a single one-shot prompt',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Switching with /model and Fast Mode" — Fast Mode keeps you on Opus and speeds output; it is not a downgrade.',
+          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — Fast Mode keeps the same model and speeds output at a higher price; it is neither a downgrade nor a saving.',
         },
         {
           id: 'ch10-q04', type: 'single',
           prompt: 'You\'re about to ingest a huge codebase in a single session. What does the lesson tell you to do?',
           options: [
             'Enable the 1M-context tier with the <code>opus[1m]</code> alias — it is off by default',
-            'Nothing special: Opus 5 and Sonnet 5 already have a 1,000,000-token context natively',
-            'Switch to Haiku 4.5 — it has the largest context window',
+            'Nothing special: every current model already has a 1,000,000-token context natively',
+            'Switch to Haiku — it is the only model with a large context window',
             'There\'s no way; split the codebase manually',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Switching with /model and Fast Mode" — the big window is native on Opus 5 and Sonnet 5, so there is nothing to switch on. The <code>[1m]</code> aliases are leftovers from when it was opt-in. Haiku 4.5 is the one that stays at 200k.',
+          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — the big window is native on every current model, so there is nothing to switch on. The <code>[1m]</code> aliases only matter for the older Opus 4.6 / Sonnet 4.6. (Haiku charges more above ' + FACTS.haiku.longPromptThreshold + '-token prompts.)',
         },
         {
           id: 'ch10-q05', type: 'single',
           prompt: 'For headless / scripted runs, how do you pin a specific model per command?',
           options: [
             'Edit <code>~/.claude/CLAUDE.md</code>',
-            'Pass <code>--model claude-opus-5</code> (or any model name/alias) to <code>claude -p "..."</code>',
+            'Pass <code>--model ' + FACTS.opus.id + '</code> (or any model name/alias) to <code>claude -p "..."</code>',
             'Use an environment variable <code>CLAUDE_MODEL</code>',
             'It always uses Sonnet for headless runs',
           ],
@@ -751,13 +758,13 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
           id: 'ch10-q06', type: 'single',
           prompt: 'The "order-of-magnitude rule" for cost per million tokens, with Haiku as the reference, is roughly…',
           options: [
+            'Opus ≈ ' + FACTS.ratio.opusToHaiku + '×, Sonnet ≈ ' + FACTS.ratio.sonnetToHaiku + '× Haiku',
             'Opus ≈ 5×, Sonnet ≈ 2× Haiku',
-            'Opus ≈ 15×, Sonnet ≈ 3× Haiku',
             'Opus ≈ 100×, Sonnet ≈ 10× Haiku',
             'All tiers identical',
           ],
           correctIndexes: [0],
-          explanation: 'Lesson "Cost Economics & Prompt Caching" — Opus 5 ≈ 5× Haiku 4.5, Sonnet 5 ≈ 2×. The 15× figure was the previous generation; the gap has narrowed a lot.',
+          explanation: 'Lesson "Cost Economics & Prompt Caching" — ' + FACTS.opus.name + ' ≈ ' + FACTS.ratio.opusToHaiku + '× ' + FACTS.haiku.name + ', ' + FACTS.sonnet.name + ' ≈ ' + FACTS.ratio.sonnetToHaiku + '× on normal-length prompts. 5×/2× was the previous generation.',
         },
         {
           id: 'ch10-q07', type: 'multi',
@@ -812,7 +819,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
         },
         {
           id: 'ch10-q11', type: 'single',
-          prompt: 'The lesson calls out one polling interval as the "worst of both worlds" for caching. What is it, and why?',
+          prompt: 'On a 5-minute cache TTL (typical for API-key CI jobs), the lesson calls out one polling interval as the "worst of both worlds". What is it, and why?',
           options: [
             'Under 60 seconds — too noisy',
             '300 seconds (5 minutes) — you pay the cache eviction without amortising it',
@@ -836,10 +843,10 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
         },
         {
           id: 'ch10-q13', type: 'single',
-          prompt: 'What is the default effort level on a model that supports effort?',
+          prompt: 'What is the default effort level on ' + FACTS.opus.name + ' and the other current models?',
           options: ['low', 'medium', 'high', 'max'],
-          correctIndexes: [2],
-          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — high is the default, balancing token spend against intelligence.',
+          correctIndexes: [['low', 'medium', 'high', 'max'].indexOf(FACTS.defaultEffort)],
+          explanation: 'Lesson "Switching Models, Fast Mode and Effort" — <code>' + FACTS.defaultEffort + '</code> is the default on the current models (older models default to <code>high</code>).',
         },
 ],
     },
@@ -873,9 +880,9 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
       },
       {
         id: 'ch13-l04', title: 'Building a Simple MCP Server', xpReward: 110, videos: [],
-        lastVerified: '2026-04-22',
-        verifiedAgainstVersion: 'v2.1.114',
-        content: '<h2>Writing Your Own MCP Server</h2><p>Anthropic provides official SDKs for TypeScript and Python. A basic server can be written in under 50 lines.</p><pre><code>import { Server } from \'@modelcontextprotocol/sdk/server/index.js\';\nimport { StdioServerTransport } from \'@modelcontextprotocol/sdk/server/stdio.js\';\n\nconst server = new Server({ name: \'acme-wiki\', version: \'1.0.0\' });\n\nserver.tool(\'search_wiki\', { query: { type: \'string\' } }, async ({ query }) => {\n  const results = await searchConfluence(query);\n  return { content: [{ type: \'text\', text: JSON.stringify(results) }] };\n});\n\nawait server.connect(new StdioServerTransport());</code></pre><p>For standard tools, use existing community MCP servers. Build your own only for internal systems without open-source alternatives.</p>',
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
+        content: '<h2>Writing Your Own MCP Server</h2><p>Anthropic provides official SDKs for TypeScript and Python. A basic server can be written in under 50 lines.</p><pre><code>import { McpServer } from \'@modelcontextprotocol/sdk/server/mcp.js\';\nimport { StdioServerTransport } from \'@modelcontextprotocol/sdk/server/stdio.js\';\nimport { z } from \'zod\';\n\nconst server = new McpServer({ name: \'acme-wiki\', version: \'1.0.0\' });\n\nserver.registerTool(\'search_wiki\', {\n  description: \'Search the internal wiki\',\n  inputSchema: { query: z.string() },\n}, async ({ query }) => {\n  const results = await searchConfluence(query);\n  return { content: [{ type: \'text\', text: JSON.stringify(results) }] };\n});\n\nawait server.connect(new StdioServerTransport());</code></pre><p>Use the high-level <code>McpServer</code> class with <code>registerTool</code> — the low-level <code>Server</code> class has no tool helper. The snippet uses the stable v1 package (<code>@modelcontextprotocol/sdk</code>); the SDK\'s v2 line splits it into <code>@modelcontextprotocol/server</code> and <code>/client</code> with the same <code>McpServer</code> API, so check which one your project depends on.</p><p>For standard tools, use existing community MCP servers. Build your own only for internal systems without open-source alternatives.</p>',
       },
     ],
     practicalTest: {
@@ -1372,7 +1379,7 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
   <li><strong>permissions</strong> — which tools / which commands are auto-allowed, asked, or denied.</li>
   <li><strong>hooks</strong> — shell commands wired to lifecycle events.</li>
   <li><strong>env</strong> — environment variables injected into every Bash call.</li>
-  <li><strong>model</strong> — pin a default model for this project (e.g. <code>"claude-opus-5"</code>).</li>
+  <li><strong>model</strong> — pin a default model for this project (e.g. <code>"${FACTS.sonnet.id}"</code>, or an alias like <code>"sonnet"</code>).</li>
   <li><strong>statusLine</strong> — a custom command that produces the prompt status string.</li>
   <li><strong>outputStyle</strong> — pick an output style (Concise / Explanatory / Learning / Proactive).</li>
 </ul>
@@ -1459,7 +1466,7 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
 <p>Hooks let you run arbitrary shell commands at specific moments. There are <strong>more than 30 hook events</strong> covering every phase of a Claude Code session, and the set keeps growing — recent additions include <code>Setup</code>, <code>PostToolUseFailure</code>, <code>PermissionRequest</code>, <code>Elicitation</code>, and <code>SessionEnd</code>. The most useful clusters:</p>
 <h3>Tool lifecycle</h3>
 <ul>
-  <li><code>PreToolUse</code> — before a tool runs. Can block by exiting non-zero with a message.</li>
+  <li><code>PreToolUse</code> — before a tool runs. Can block the call by <strong>exiting with code 2</strong> (stderr becomes the reason), or by printing JSON with <code>"permissionDecision": "deny"</code>.</li>
   <li><code>PostToolUse</code> — after a tool completes. Lint, format, type-check.</li>
 </ul>
 <h3>Conversation lifecycle</h3>
@@ -1510,7 +1517,8 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
     ]
   }
 }</code></pre>
-<p>If <code>block-prod-db.sh</code> exits non-zero with output on stderr, the tool call is blocked and the message is shown to Claude — which can re-plan around the block.</p>
+<p>If <code>block-prod-db.sh</code> <strong>exits with code 2</strong>, the tool call is blocked and its stderr is shown to Claude — which can re-plan around the block.</p>
+<div class="callout"><strong>Exit 1 does not block.</strong> Any exit code other than 0 or 2 is treated as a non-blocking <em>error</em>: Claude Code notes it and <strong>the tool call goes ahead</strong> — even though 1 is the usual Unix failure code. A policy hook that ends in <code>exit 1</code> silently enforces nothing. Use <code>exit 2</code>, return a JSON <code>permissionDecision</code> (<code>allow</code>, <code>deny</code>, <code>ask</code>, or <code>defer</code> in <code>-p</code> mode), or set <code>"onFailure": "block"</code> on the hook (v2.1.295+) so a crashing hook fails closed.</div>
 <h3>Hooks aren't only shell commands</h3>
 <p>Every example above uses <code>"type": "command"</code>, which is the one you'll reach for most. But a handler can also be <code>http</code> (POST to a URL), <code>mcp_tool</code> (call a tool on a connected MCP server — Chapter 13), <code>prompt</code> (hand the decision to Claude), or <code>agent</code> (spawn a subagent; experimental). A <code>prompt</code> handler is the pragmatic choice when the rule you want to enforce is a judgement call rather than a pattern match.</p>
 <h3>Hook hygiene</h3>
@@ -1530,18 +1538,25 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
     "command": ".claude/hooks/statusline.sh"
   }
 }</code></pre>
-<p>Inside the script you have access to the current model, git branch, session cost so far, and more — via environment variables. Common patterns: show the branch + a "⚠ prod" badge when the repo is the production checkout; show the running spend in £ when you want to feel the meter.</p>
+<p>Claude Code pipes the session state to your script as <strong>JSON on stdin</strong> — <code>model.display_name</code>, <code>workspace.current_dir</code>, <code>cost.total_cost_usd</code>, <code>context_window.used_percentage</code> and more. Whatever the script prints becomes the status line:</p>
+<pre><code>#!/bin/sh
+# .claude/hooks/statusline.sh
+input=$(cat)
+model=$(echo "$input" | jq -r '.model.display_name')
+cost=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
+echo "[$model] $(git branch --show-current 2>/dev/null) · \$$cost"</code></pre>
+<p>Common patterns: show the branch + a "⚠ prod" badge when the repo is the production checkout; show the running spend in £ when you want to feel the meter.</p>
 <h3>Output styles</h3>
 <p>Output styles change Claude Code's <em>system prompt</em> — its role, tone, and default response format. The built-ins are <code>Default</code>, <code>Proactive</code>, <code>Concise</code>, <code>Explanatory</code> and <code>Learning</code>.</p>
 <pre><code>{ "outputStyle": "Concise" }     // settings.json — the durable way
 /config                           // then pick "Output style" from the menu</code></pre>
-<div class="callout"><strong>There is no <code>/output-style</code> command.</strong> It was deprecated in <code>v2.1.73</code> and removed in <code>v2.1.91</code>. Use <code>/config</code>, or set <code>outputStyle</code> in a settings file. The feature itself is very much alive — only the standalone command went away.</div>
+<div class="callout"><strong>Switching interactively:</strong> <code>/output-style</code> lists the styles and <code>/output-style concise</code> switches (v2.1.269+). <code>/config</code> works too, and <code>outputStyle</code> in a settings file. The feature itself is very much alive — only the standalone command went away.</div>
 <p>An output style is read once, at session start, so a change takes effect after <code>/clear</code> or in your next session — not immediately.</p>
 <p>You can also author custom styles in <code>.claude/output-styles/</code> — each a markdown file with frontmatter and rules ("never use emoji", "always cite file:line", "end with a one-sentence summary"). One field matters more than the rest: <code>keep-coding-instructions: true</code> keeps Claude Code's built-in software-engineering behaviour and layers your voice on top. Leave it out and you drop that behaviour entirely — right for a writing assistant, wrong for a coding session that just needs a house style.</p>
 <h3>Headless / CI mode</h3>
 <p><code>claude -p "..."</code> runs Claude Code in non-interactive mode: takes one prompt, returns one response, exits. This is the building block for CI hooks, cron jobs, GitHub Actions, and Synology Task Scheduler invocations.</p>
 <pre><code>claude -p "review the diff between main and HEAD" \\
-       --model claude-opus-5 \\
+       --model ${FACTS.opus.id} \\
        --permission-mode plan \\
        --output-format json \\
        &gt; review.json</code></pre>
@@ -1691,12 +1706,13 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
           prompt: 'How does a <code>PreToolUse</code> hook BLOCK a dangerous tool call?',
           options: [
             'It returns <code>"block": true</code> in JSON',
-            'It exits non-zero; output on stderr is shown to Claude, which can re-plan around the block',
+            'It exits with code 2; stderr is shown to Claude, which can re-plan around the block',
+            'It exits with code 1 (any non-zero exit blocks)',
             'It restarts Claude Code',
             'It mutates the prompt',
           ],
           correctIndexes: [1],
-          explanation: 'Lesson "Claude Code Hook Events" — non-zero exit + stderr message = blocked call with Claude-visible reason.',
+          explanation: 'Lesson "Claude Code Hook Events" — exit code 2 (or a JSON <code>permissionDecision: deny</code>) blocks; exit 1 is a non-blocking error and the tool call proceeds.',
         },
         {
           id: 'ch15-q10', type: 'multi',
@@ -1711,7 +1727,7 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
           options: [
             '<code>--permission-mode plan</code> so CI can\'t accidentally mutate anything',
             '<code>--output-format json</code> for parseable cost+duration',
-            '<code>--model claude-opus-5</code> (explicit model pin)',
+            '<code>--model ' + FACTS.opus.id + '</code> (explicit model pin)',
             '<code>ANTHROPIC_API_KEY</code> in env (no interactive login)',
             '<code>--allow-edits</code> for fix-ups',
           ],
@@ -1812,10 +1828,12 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
 cd ~/projects/kedash-support     # or /volume1/projects/... on Synology
 export ANTHROPIC_API_KEY="sk-ant-..."
 claude -p "Run the /weekly-status skill. Save the draft to reports/draft.md." \\
-  --model claude-sonnet-5 \\
-  --permission-mode plan \\
+  --model ${FACTS.sonnet.id} \\
+  --permission-mode acceptEdits \\
   --output-format json &gt; reports/last-run.json
 </code></pre>
+<p><code>--permission-mode acceptEdits</code> lets the run write <code>reports/draft.md</code> without anyone at the keyboard. <strong>Plan mode would not work here</strong>: it blocks every edit until a human approves the plan, and a headless run has no human — the draft would never be written. Keep plan mode for review-only jobs whose output is the JSON on stdout (Chapter 15), and keep the Slack/send step behind the human gate below.</p>
+<div class="callout"><strong>No box at all?</strong> <code>/schedule</code> creates a cloud scheduled task that runs on Anthropic's infrastructure even with your laptop closed (it needs GitHub access to the repo, runs at most hourly, and pushes only to <code>claude/</code> branches). The script above is the self-hosted equivalent.</div>
 <h3>Scheduling it</h3>
 <p>Pick whichever scheduler your box provides — all of these run the same script:</p>
 <pre><code># Linux / cloud VM / Pi / WSL — cron
@@ -1835,7 +1853,7 @@ crontab -e
 <h3>The gate principle</h3>
 <p>Every workflow that produces external-facing output needs at least one human gate. A 2-minute skim before posting to Slack is often enough — but it must exist. The pattern: auto-draft → human approve → auto-distribute. Never auto-distribute something that hasn't been seen.</p>
 <h3>Idle behaviour matters for cost</h3>
-<p>From Chapter 12: the prompt cache evicts after 5 minutes. Scheduled jobs spawning fresh sessions every hour pay the cache miss on every run. That's fine — the alternative (a long-lived idle session) wastes more. Just be aware of the trade-off when you design the cadence.</p>
+<p>From Chapter 10: an API-key run like this one gets a ${FACTS.cache.otherTtl} prompt-cache TTL. Scheduled jobs spawning fresh sessions every hour pay the cache miss on every run. That's fine — the alternative (a long-lived idle session) wastes more. Just be aware of the trade-off when you design the cadence.</p>
 <p><strong>Congratulations.</strong> You've completed the Remote & Headless side quest. From first session to unattended scheduled automation on whatever box you have — you have the full toolkit: Business Brain, lean CLAUDE.md, the Memory Framework, refined skills, token efficiency, Plan Mode, model selection, subagent dispatch, MCP integration, hardened settings, and unattended scheduled automation.</p>`,
       },
       {
@@ -1986,13 +2004,13 @@ claude remote-control          # server mode: no local prompt, waits for remote 
           id: 'ch16-q09', type: 'multi',
           prompt: 'For the weekly-report example, which flags does the launcher script pass to <code>claude -p</code>?',
           options: [
-            '<code>--model claude-sonnet-5</code>',
-            '<code>--permission-mode plan</code>',
+            '<code>--model ' + FACTS.sonnet.id + '</code>',
+            '<code>--permission-mode acceptEdits</code>',
             '<code>--output-format json</code>',
-            '<code>--accept-all-edits</code>',
+            '<code>--permission-mode plan</code>',
           ],
           correctIndexes: [0, 1, 2],
-          explanation: 'Lesson "Scheduled Automation with Human Gates" — first three flags are explicit; --accept-all-edits is not in the example.',
+          explanation: 'Lesson "Scheduled Automation with Human Gates" — the job must write reports/draft.md, so it runs in <code>acceptEdits</code>; plan mode would block the write with no human there to approve it.',
         },
         {
           id: 'ch16-q10', type: 'single',
@@ -2011,7 +2029,7 @@ claude remote-control          # server mode: no local prompt, waits for remote 
           prompt: 'Scheduled jobs spawning a fresh Claude session every hour — what cost behaviour should you EXPECT, per the lesson?',
           options: [
             'Lower bill — fresh sessions cache fully',
-            'Each run pays the 5-minute prompt-cache miss because the cache evicts between hourly runs; the alternative (a long-lived idle session) wastes more, so it\'s usually fine',
+            'Each run pays a prompt-cache miss because the cache (5 minutes on an API key) evicts between hourly runs; the alternative (a long-lived idle session) wastes more, so it\'s usually fine',
             'No effect — caching never matters in headless mode',
             'Doubled bill — Claude pings the API twice',
           ],

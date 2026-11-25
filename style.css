@@ -422,6 +422,7 @@ a.reset-btn { display: block; box-sizing: border-box; text-align: center; text-d
   border-radius: 20px;
 }
 .lesson-title { font-size: 26px; font-weight: 700; color: var(--navy); }
+.lesson-verified { margin-top: 6px; font-size: 12px; color: var(--text-muted, #6b7280); }
 
 .video-embed {
   position: relative;

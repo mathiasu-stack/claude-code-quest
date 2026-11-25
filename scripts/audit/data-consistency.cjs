@@ -17,7 +17,7 @@
 //   2.9  Regex criteria compile
 //   2.12 Knowledge-check correctIndex in range
 
-const { loadCurriculum, loadNpcsHandBuilt, generateAutoNpcs } = require('./lib/extract.cjs');
+const { loadCurriculum, loadFacts, loadNpcsHandBuilt, generateAutoNpcs } = require('./lib/extract.cjs');
 
 const PLAYER_RANKS = [
   'Intern', 'Junior Hire', 'Associate', 'Engineer', 'Senior',
@@ -49,6 +49,7 @@ function main() {
   audit_2_8_evaluator_types(curriculum);
   audit_2_9_regex_compiles(curriculum);
   audit_2_12_knowledge_check_index(curriculum);
+  audit_2_13_facts_fresh(curriculum);
 
   report();
 }
@@ -249,6 +250,24 @@ function report() {
   const fails = findings.filter(f => f.status === 'FAIL').length;
   console.log(`\n${fails === 0 ? '\x1b[32mAll passed\x1b[0m' : `\x1b[31m${fails} audit(s) failed\x1b[0m`}.\n`);
   process.exit(Math.min(254, fails));
+}
+
+// ── 2.13 data/facts.js is re-verified monthly (owner decision 2026-11-25) ──
+function audit_2_13_facts_fresh(curriculum) {
+  const F = loadFacts();
+  const MAX_DAYS = 35;
+  const age = Math.floor((Date.now() - Date.parse(F.verifiedOn + 'T00:00:00Z')) / 86400000);
+  const ids = new Set();
+  for (const ch of curriculum) {
+    for (const l of ch.lessons) ids.add(l.id);
+    if (ch.practicalTest) ids.add(ch.practicalTest.id);
+    if (ch.theoreticalTest) ids.add(ch.theoreticalTest.id);
+  }
+  const dangling = (F.usedBy || []).filter(id => !ids.has(id));
+  if (!(age >= 0)) fail('2.13', `data/facts.js verifiedOn is not a valid date (${F.verifiedOn})`);
+  else if (age > MAX_DAYS) fail('2.13', `data/facts.js last verified ${age} days ago (${F.verifiedOn}) — monthly re-check overdue`, ['Re-verify every value against its source URL, then bump verifiedOn / cliVersion.']);
+  else if (dangling.length) fail('2.13', `data/facts.js usedBy names ${dangling.length} unknown id(s)`, dangling);
+  else pass('2.13', `data/facts.js verified ${age} day(s) ago (${F.verifiedOn}, ${F.cliVersion}); ${F.usedBy.length} dependants exist`);
 }
 
 main();

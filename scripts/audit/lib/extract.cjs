@@ -36,6 +36,8 @@ function readFile(rel) {
 // window.CURRICULUM.
 function loadCurriculum() {
   const sandbox = { window: {} };
+  // facts.js first: lessons interpolate window.FACTS at load time.
+  new Function('window', readFile('data/facts.js'))(sandbox.window);
   const c1 = readFile('data/curriculum.js');
   const c2 = readFile('data/curriculum2.js');
   const c3 = readFile('data/curriculum3.js');
@@ -44,6 +46,12 @@ function loadCurriculum() {
   new Function('window', c2)(sandbox.window);
   new Function('window', c3)(sandbox.window);
   return sandbox.window.CURRICULUM || [];
+}
+
+function loadFacts() {
+  const w = {};
+  new Function('window', readFile('data/facts.js'))(w);
+  return w.FACTS;
 }
 
 // Load play.js NPC roster (just the hand-built NPCS array). We don't
@@ -337,6 +345,7 @@ module.exports = {
   REPO,
   readFile,
   loadCurriculum,
+  loadFacts,
   loadNpcsHandBuilt,
   generateAutoNpcs,
   extractPlacements,

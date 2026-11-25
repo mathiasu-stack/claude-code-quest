@@ -27,6 +27,9 @@ function renderLesson(chapterId, lessonId, targetEl = null) {
           <span class="xp-badge">+${lesson.xpReward} PP</span>
         </div>
         <h1 class="lesson-title">${lesson.title}</h1>
+        ${lesson.lastVerified
+          ? `<div class="lesson-verified" title="Claude Code changes quickly. This is when this lesson was last checked against the official docs.">✓ Checked against Claude Code ${lesson.verifiedAgainstVersion || ''} on ${lesson.lastVerified}</div>`
+          : ''}
       </div>
 
       ${lesson.videos && lesson.videos.length > 0
