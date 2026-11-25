@@ -32,7 +32,7 @@
 // loader can push them to ctx.decoTickers.
 
 import * as THREE from 'three';
-import { makeDecoration } from '../decorations/decorationAssets.js?v=20260528j';
+import { makeDecoration } from '../decorations/decorationAssets.js';
 
 const REGISTRY = new Map();
 

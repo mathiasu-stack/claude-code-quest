@@ -16,7 +16,7 @@ import {
   brushedSilver, polishedChrome, glassClear,
   marbleDarkGreen, brass,
 } from '../materials/modernLibrary.js';
-import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
+import { placeCompoundChild } from './compoundChildren.js';
 
 const OWNER = 'elevator';
 

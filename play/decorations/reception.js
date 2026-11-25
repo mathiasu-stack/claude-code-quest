@@ -12,9 +12,9 @@ import {
   buildPaperStack, buildPlantTall, buildPlantSucculent, buildPlantHanging,
   buildClock, buildPosterTexture, buildPillow, buildDoormat,
   buildCeilingLight, buildServerTower, buildWhiteboard, buildDemoScreen,
-} from './shared.js?v=20260526d';
-import { makeDecoration } from './decorationAssets.js?v=20260528j';
-import { placeCompoundChild } from '../world/compoundChildren.js?v=20260528g';
+} from './shared.js';
+import { makeDecoration } from './decorationAssets.js';
+import { placeCompoundChild } from '../world/compoundChildren.js';
 
 const OWNER = 'decorate_reception';
 

@@ -9,7 +9,7 @@
 //   - small "KEDASH" name plate facing the entrance
 
 import * as THREE from 'three';
-import { placeCompoundChild } from '../world/compoundChildren.js?v=20260528g';
+import { placeCompoundChild } from '../world/compoundChildren.js';
 
 const OWNER = 'reception_centerpiece';
 

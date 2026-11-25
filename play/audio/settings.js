@@ -8,9 +8,9 @@
 // Mounts on demand via mountAudioSettings(parent). Idempotent (safe to
 // call repeatedly — re-uses existing DOM if already present).
 
-import { audio } from './AudioManager.js?v=20260615b';
-import { stopAmbience } from './ambience.js?v=20260615b';
-import { isVoiceEnabled, setVoiceEnabled, isCloudVoiceEnabled, setCloudVoiceEnabled } from './voice.js?v=20260615h';
+import { audio } from './AudioManager.js';
+import { stopAmbience } from './ambience.js';
+import { isVoiceEnabled, setVoiceEnabled, isCloudVoiceEnabled, setCloudVoiceEnabled } from './voice.js';
 import { getGraphicsMode, setGraphicsMode, isLowGraphics, isAutoDowngraded } from '../lighting/quality.js';
 
 const PANEL_ID = 'play-audio-panel';

@@ -4,7 +4,7 @@
 // Each builder takes (scene) and a small config and adds geometry directly.
 
 import * as THREE from 'three';
-import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
+import { placeCompoundChild } from './compoundChildren.js';
 
 // Reception ceiling — drop-tile look. Procedural canvas grid texture
 // keeps it cheap and zone-agnostic.

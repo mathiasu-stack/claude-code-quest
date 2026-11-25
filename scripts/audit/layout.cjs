@@ -11,8 +11,8 @@
 //   ✓ 4.2  No two NPCs within 0.6 m on the same floor
 //   ✓ 4.3  No NPC inside a desk/table/couch footprint (data/rooms.js)
 //   ✓ 4.4  Every chapter fits its room (lessons ≤ Layout.LESSON_CAPACITY)
-//   ✓ 4.5  No ES module imported under two different URLs (?v= mismatch
-//          forks module state — quality.js / AudioManager / interactables)
+//   ✓ 4.5  No ES module import carries a ?v= query, and none is imported
+//          under two URLs (a mismatch forks module state)
 
 const fs = require('fs');
 const path = require('path');
@@ -115,6 +115,7 @@ function audit_4_4_capacity(w) {
 
 function audit_4_5_module_forks() {
   const byModule = new Map();
+  const versioned = [];
   (function walk(dir) {
     for (const f of fs.readdirSync(dir)) {
       const p = path.join(dir, f);
@@ -124,6 +125,7 @@ function audit_4_5_module_forks() {
       const src = fs.readFileSync(p, 'utf8');
       for (const m of src.matchAll(/(?:\bfrom|\bimport\()\s*['"](\.[^'"]+)['"]/g)) {
         const [rel, q] = m[1].split('?');
+        if (q) versioned.push(`${path.relative(REPO, p)} → ${m[1]}`);
         const target = path.relative(REPO, path.normalize(path.join(path.dirname(p), rel)));
         if (!byModule.has(target)) byModule.set(target, new Map());
         const v = q || '(none)';
@@ -137,7 +139,11 @@ function audit_4_5_module_forks() {
   for (const [mod, versions] of byModule) {
     if (versions.size > 1) bad.push(`${mod}: ` + [...versions].map(([v, u]) => `${v} ← ${u.join(', ')}`).join(' | '));
   }
-  if (bad.length) fail('4.5', `${bad.length} module(s) imported under different URLs (forked module state)`, bad);
+  // Module imports carry NO ?v= at all (2026-11-25): both servers send
+  // Cache-Control: no-cache + Last-Modified, so browsers revalidate anyway,
+  // and a query string is the only way a module can fork.
+  if (versioned.length) fail('4.5', `${versioned.length} module import(s) carry a ?v= query (remove it — it can fork module state)`, versioned);
+  else if (bad.length) fail('4.5', `${bad.length} module(s) imported under different URLs (forked module state)`, bad);
   else pass('4.5', `Every ES module imported under a single URL (${byModule.size} modules)`);
 }
 

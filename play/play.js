@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { LightingManager } from './lighting/manager.js?v=20260615a';
+import { LightingManager } from './lighting/manager.js';
 import { isMobile } from './lighting/mobile.js';
 import {
   isLowGraphics, effectivePixelRatio, noteFrameTime, resetSampler, probeHardware,
 } from './lighting/quality.js';
 import { PostFxPipeline } from './postfx/composer.js';
 import { DustMotes } from './lighting/dust-motes.js';
-import { buildSkyEnvTexture, disposeEnv } from './lighting/envProbe.js?v=20260616a';
-import { audio } from './audio/AudioManager.js?v=20260615b';
+import { buildSkyEnvTexture, disposeEnv } from './lighting/envProbe.js';
+import { audio } from './audio/AudioManager.js';
 import {
   playFootstep, playJumpGrunt, playLandThud,
   playUi, playDialogueBlip, blipPitchForNpc,
@@ -15,11 +15,11 @@ import {
   playKcCorrectTone, playKcIncorrectTone, playCrowdCheer,
   playClearanceChime, playAnomalySting, playFloorMChime, updateServerHum,
   playElevatorRide,
-} from './audio/procedural.js?v=20260615b';
-import { surfaceForZone, musicForZone, procForZone } from './audio/zoneConfig.js?v=20260615b';
-import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js?v=20260615h';
-import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js?v=20260615b';
-import { speakLine, setVoiceEnabled, isVoiceEnabled } from './audio/voice.js?v=20260615h';
+} from './audio/procedural.js';
+import { surfaceForZone, musicForZone, procForZone } from './audio/zoneConfig.js';
+import { mountAudioSettings, unmountAudioSettings } from './audio/settings.js';
+import { startAmbience, stopAmbience, tickAmbience, applyStoryTierAudio } from './audio/ambience.js';
+import { speakLine, setVoiceEnabled, isVoiceEnabled } from './audio/voice.js';
 import { attachFace, updateFace, setExpression } from './characters/face.js';
 import { attachCartoonFace, updateCartoonFace, setCartoonExpression } from './characters/cartoonFace.js';
 import { attachFlatFace, updateFlatFace, setFlatExpression, talkPulse } from './characters/flatFace.js';
@@ -28,32 +28,32 @@ import { getLookForNpc } from './characters/npcLooks.js';
 import { buildPlayerLook } from './characters/playerLook.js';
 import { applyIdle } from './characters/idleAnimations.js';
 import { loadCustomization, mountCustomization, unmountCustomization } from './characters/customization.js';
-import { getAssetLoader } from './characters/assetLoader.js?v=20260612b';
-import { makeGltfCharacter } from './characters/gltfCharacter.js?v=20260615b';
-import { resolveAssetForCharacter } from './characters/npcCasting.js?v=20260610e';
+import { getAssetLoader } from './characters/assetLoader.js';
+import { makeGltfCharacter } from './characters/gltfCharacter.js';
+import { resolveAssetForCharacter } from './characters/npcCasting.js';
 import { createLoadingOverlay } from './characters/loadingOverlay.js';
-import { decorateReception } from './decorations/reception.js?v=20260611c';
-import { decorateLibrary, decorateLibraryAnomalies } from './decorations/library.js?v=20260610i';
-import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js?v=20260620a';
-import { buildPosterTexture } from './decorations/shared.js?v=20260526d';
-import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js?v=20260528j';
+import { decorateReception } from './decorations/reception.js';
+import { decorateLibrary, decorateLibraryAnomalies } from './decorations/library.js';
+import { buildReceptionCenterpiece } from './decorations/receptionCenterpiece.js';
+import { buildPosterTexture } from './decorations/shared.js';
+import { preloadDecorations, makeDecoration, hasDecoration } from './decorations/decorationAssets.js';
 import {
   bevelBox, buildChair, contactShadowTexture, addContactShadow, buildDesk, buildMonitor, buildPlant,
   buildWaterCooler, buildCouch, buildFilingCabinet, buildBookshelf, buildLibraryCounter, buildTable, buildLamp,
 } from './world/furniture.js';
-import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js?v=20260528g';
+import { loadRoom, registerRoomBuilder, registerSharedHelpers } from './world/roomsLoader.js';
 import { mountToolbar as mountEditorToolbar, enterEditMode as enterRoomEdit,
          exitEditMode as exitRoomEdit, isEditorActive as isRoomEditorActive,
          isEditorDragging as isRoomEditorDragging,
          exportLayout as exportRoomLayout,
-         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js?v=20260610c';
-import { SkyDome, getSkyPresetForZone } from './world/sky.js?v=20260615a';
-import { buildReceptionCeiling, buildLibraryCeiling, floorPatternTexture } from './world/ceilings.js?v=20260612c';
-import { buildAtrium } from './world/atrium.js?v=20260528g';
+         savePermanently as savePermanentlyEdits } from './editor/roomsEditor.js';
+import { SkyDome, getSkyPresetForZone } from './world/sky.js';
+import { buildReceptionCeiling, buildLibraryCeiling, floorPatternTexture } from './world/ceilings.js';
+import { buildAtrium } from './world/atrium.js';
 import { buildElevator } from './world/elevator.js';
-import { buildFloorM, buildCableTrays } from './world/floorM.js?v=20260616f';
-import { showTitleCard } from './ui/titleCard.js?v=20260610e';
-import { CeremonyManager } from './ceremony/ceremonyManager.js?v=20260610g';
+import { buildFloorM, buildCableTrays } from './world/floorM.js';
+import { showTitleCard } from './ui/titleCard.js';
+import { CeremonyManager } from './ceremony/ceremonyManager.js';
 import {
   registerInteractable, clearInteractables,
   updateInteractables, listInteractables,
@@ -61,34 +61,34 @@ import {
 import { buildComputer } from './world/objectTypes/computer.js';
 import { buildBook } from './world/objectTypes/book.js';
 import { buildWhiteboardObject } from './world/objectTypes/whiteboard.js';
-import { buildServerRack } from './world/objectTypes/serverRack.js?v=20260610a';
+import { buildServerRack } from './world/objectTypes/serverRack.js';
 import { buildDemoScreenObject } from './world/objectTypes/demoScreen.js';
 import { buildPhone } from './world/objectTypes/phone.js';
 import { buildModelConsole } from './world/objectTypes/modelConsole.js';
-import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js?v=20260610d';
-import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js?v=20260620a';
-import { buildProductLabBench } from './world/objectTypes/productLabBench.js?v=20260620a';
-import { openProductLab, isProductLabOpen } from './ui/productLab.js?v=20260620a';
-import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js?v=20260610d';
-import { buildReadableNote } from './world/objectTypes/readableNote.js?v=20260610d';
-import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js?v=20260610h';
-import { buildSeatsDashboard } from './world/objectTypes/seatsDashboard.js?v=20260610g';
-import { buildTokenCounter, resetTokenCounter } from './world/objectTypes/tokenCounter.js?v=20260610g';
-import { buildRecMirror } from './world/objectTypes/recMirror.js?v=20260610g';
-import { LESSON_DELIVERY } from './world/lessonRegistry.js?v=20260610a';
+import { buildDispatchBoard } from './world/objectTypes/dispatchBoard.js';
+import { buildPlaybookBoard, PLAYBOOK_PIECES } from './world/objectTypes/playbookBoard.js';
+import { buildProductLabBench } from './world/objectTypes/productLabBench.js';
+import { openProductLab, isProductLabOpen } from './ui/productLab.js';
+import { buildPermissionsPanel } from './world/objectTypes/permissionsPanel.js';
+import { buildReadableNote } from './world/objectTypes/readableNote.js';
+import { buildTeamPhotosWall, buildEotmCorkboard } from './world/objectTypes/wallDocument.js';
+import { buildSeatsDashboard } from './world/objectTypes/seatsDashboard.js';
+import { buildTokenCounter, resetTokenCounter } from './world/objectTypes/tokenCounter.js';
+import { buildRecMirror } from './world/objectTypes/recMirror.js';
+import { LESSON_DELIVERY } from './world/lessonRegistry.js';
 import { mountLessonOverlay, unmountLessonOverlay } from './lessons/overlay.js';
-import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js?v=20260612c';
-import { TimeOfDay } from './world/timeOfDay.js?v=20260615a';
-import { LiveAgents } from './world/liveAgents.js?v=20260612b';
-import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js?v=20260610b';
-import { openPlanModeExercise, isPlanModeOpen } from './ui/planModeExercise.js?v=20260613a';
-import { getPortrait, renderToCanvas as renderPortraitToCanvas } from './ui/portraitStudio.js?v=20260613b';
-import Story from './story/storyState.js?v=20260612c';
+import { buildReceptionWindows, buildLibraryArchedWindow, buildReceptionHallway } from './world/depth.js';
+import { TimeOfDay } from './world/timeOfDay.js';
+import { LiveAgents } from './world/liveAgents.js';
+import { NameTagSystem, showSpeechBubble } from './ui/nameTags.js';
+import { openPlanModeExercise, isPlanModeOpen } from './ui/planModeExercise.js';
+import { getPortrait, renderToCanvas as renderPortraitToCanvas } from './ui/portraitStudio.js';
+import Story from './story/storyState.js';
 import {
   initSceneRunner, registerSceneActions, runScene,
   isSceneActive, advanceScene, abortScene,
-} from './story/sceneRunner.js?v=20260612b';
-import { initDocViewer, openDocument, isDocumentOpen } from './story/docViewer.js?v=20260610d';
+} from './story/sceneRunner.js';
+import { initDocViewer, openDocument, isDocumentOpen } from './story/docViewer.js';
 
 // ─── Tier outfits (player) ────────────────────────────────────────────────────
 const OUTFITS = [

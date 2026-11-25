@@ -34,7 +34,7 @@
 //   • Music files load with credentials:'omit' to be safe.
 
 import { isMobile } from '../lighting/mobile.js';
-import { createPianoPlayer } from './proceduralMusic.js?v=20260615b';
+import { createPianoPlayer } from './proceduralMusic.js';
 
 const PREFS_KEY = 'ccq_audio_prefs';
 const CHANNEL_NAMES = ['music', 'sfx', 'ui', 'voice', 'ambience'];

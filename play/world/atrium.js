@@ -24,7 +24,7 @@ import {
   marbleWhite, marbleDarkGreen, brushedSilver,
   glassClear, glassFrosted, darkStone, brass, polishedChrome, coveLight,
 } from '../materials/modernLibrary.js';
-import { placeCompoundChild } from './compoundChildren.js?v=20260528g';
+import { placeCompoundChild } from './compoundChildren.js';
 
 const OWNER = 'atrium';
 

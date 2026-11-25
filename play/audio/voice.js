@@ -10,7 +10,7 @@
 // voice when the platform exposes gender hints; lower → deeper. The
 // mapping is deterministic so a character always sounds the same.
 
-import { audio } from './AudioManager.js?v=20260615b';
+import { audio } from './AudioManager.js';
 
 const LS_KEY = 'ccq_voice_enabled';
 

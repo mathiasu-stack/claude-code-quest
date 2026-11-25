@@ -80,6 +80,13 @@ Runs `engine/layout.js` (the same placement code the game uses) plus
 - `2.13` `data/facts.js` was verified within the last 35 days, and every id
          in its `usedBy` list exists. Fails monthly until someone re-verifies.
 
+### Browser smoke (`browser-smoke.sh`, not in run-all)
+
+Needs docker and the Playwright image. Loads the dashboard, two lessons, the
+ch10 test view and the 3D view on floors 1 and 4 against a running server;
+fails on page errors, failed requests or missing UI. Run it after touching
+play.js or any module under `play/`.
+
 ## What's NOT audited
 
 - **Visual rendering bugs** — texture missing, GLB doesn't fit its

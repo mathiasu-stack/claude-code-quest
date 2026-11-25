@@ -9,8 +9,8 @@ import {
   buildOpenBook, buildBookmark, buildArmchair, buildGlobe, buildLadder,
   buildGrandfatherClock, buildSidetable, buildBookStack, buildLibraryCart,
   buildMug, buildPlantHanging, buildPosterTexture,
-} from './shared.js?v=20260526d';
-import { placeCompoundChild } from '../world/compoundChildren.js?v=20260528g';
+} from './shared.js';
+import { placeCompoundChild } from '../world/compoundChildren.js';
 
 const OWNER = 'decorate_library';
 

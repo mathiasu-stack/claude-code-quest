@@ -31,7 +31,7 @@
 
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { dispatchEntry } from '../world/roomsLoader.js?v=20260528g';
+import { dispatchEntry } from '../world/roomsLoader.js';
 import { setAllGlowsVisible, syncGlowToMesh } from '../world/interactables.js';
 
 // ── Public API ───────────────────────────────────────────────────────
@@ -854,7 +854,7 @@ function rebuildSelectedMesh() {
   } else if (entry.type === 'decoration') {
     // Rebuild via makeDecoration. The wrapper group's identity changes;
     // we attach TransformControls to the new node.
-    import('../decorations/decorationAssets.js?v=20260528j').then(({ makeDecoration }) => {
+    import('../decorations/decorationAssets.js').then(({ makeDecoration }) => {
       const next = makeDecoration(entry.id, entry.size || {});
       if (!next) return;
       next.position.copy(node.position);

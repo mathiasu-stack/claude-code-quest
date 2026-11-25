@@ -50,12 +50,16 @@ ui/
 
 `index.html` loads scripts in this exact sequence:
 
-1. `engine/progress.js` → `engine/evaluator.js` → `engine/scoring.js`
-2. `data/curriculum.js` → `data/curriculum2.js`
+1. `engine/layout.js` → `engine/progress.js` → `engine/evaluator.js` → `engine/scoring.js`
+2. `data/facts.js` → `data/curriculum.js` → `data/curriculum2.js` → `data/curriculum3.js`
 3. `ui/dashboard.js` → `ui/lesson.js` → `ui/test.js`
 4. `app.js`
 
 Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULUM`). Do not reorder or introduce ES module imports without converting the whole app.
+
+- `engine/layout.js` (`window.Layout`) is the ONE chapter→floor→room→NPC-slot mapping, used by play.js, progress.js and the audits. Rooms hold 8 lesson NPCs (`LESSON_CAPACITY`); audit `layout::4.4` fails beyond that.
+- `data/facts.js` (`window.FACTS`) holds model names/ids/prices/defaults/cache TTLs. Lessons interpolate it (`${FACTS.opus.name}`; each curriculum file declares `var FACTS = window.FACTS;`). **Re-verify it monthly** — audit `data::2.13` fails 35 days after `verifiedOn`.
+- **ES module imports under `play/` carry no `?v=` query.** Both servers send `Cache-Control: no-cache`, so browsers revalidate anyway; a query string is only ever a way to fork module state. Audit `layout::4.5` enforces this.
 
 ## Adding a chapter
 
@@ -74,6 +78,10 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 | `length` | number | submission.length >= value |
 | `structure` | `"numbered-steps"` / `"question-mark"` / `"code-block"` | structural pattern detected |
 | `nonce` | (none — code comes from `progress.testNonces[testId]`) | submission contains the current per-test verification code (case-insensitive); code is minted when the test view opens and rotated on pass |
+| `artifact` | `{ kind }` (skill, agent, settings, hook, mcp, cron, product, headless-run, skill-md, …) | the paste contains a well-formed artifact of that kind |
+| `evidence` | the test's `evidence` block | built by `ui/test.js` from `practicalTest.evidence` and marked `required` |
+
+Any criterion with `required: true` gates the pass regardless of score. **Every practical test declares `evidence`** (`{ accept: ['headless-run'|'skill-md'], prompt, modelIncludes?, minSubagents?, mustMention? }`): a pass needs a real `claude -p … --output-format json` result whose `result` repeats this attempt's verification code, or a SKILL.md. Audit `evaluator::5.x` checks that keyword salad fails every test and valid evidence passes it.
 
 ## Progression model
 
@@ -86,7 +94,7 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 
 - `curriculum2.js` was missing from `index.html` script tags (fixed)
 - `isActive(view)` in `app.js` was a stub; sidebar active state was non-functional (fixed)
-- All lesson `videos` arrays are empty — placeholder text renders instead
+- Lesson `videos` are `{ title, channel, url }` YouTube links (no embeds), checked via oEmbed when added; lessons without a relevant, current video show nothing (owner decision 2026-11-25). Re-check them in the monthly facts pass.
 
 ## Deployment
 

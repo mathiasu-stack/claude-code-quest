@@ -8,7 +8,7 @@
 // decorationAssets.js would fork its GLB cache (audit layout::4.5).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { makeDecoration } from '../decorations/decorationAssets.js?v=20260528j';
+import { makeDecoration } from '../decorations/decorationAssets.js';
 import { isLowGraphics } from '../lighting/quality.js';
 
 // ─── Decor builders ──────────────────────────────────────────────────────────

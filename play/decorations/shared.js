@@ -7,7 +7,7 @@
 // failed to preload.
 
 import * as THREE from 'three';
-import { makeDecoration } from './decorationAssets.js?v=20260528j';
+import { makeDecoration } from './decorationAssets.js';
 
 const _matCache = new Map();
 function mat(key, ctor) {
