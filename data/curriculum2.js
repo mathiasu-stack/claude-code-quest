@@ -118,6 +118,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
       task: 'Paste your skill file content AND a sample reply Claude generated using it.',
       hint: 'Skill needs `name:` / `description:` frontmatter + body describing each part. Sample reply should hit the 4 sections explicitly.',
       minLength: 0, passThreshold: 75, xpReward: 525,
+      evidence: {"accept": ["skill-md", "headless-run"], "prompt": "claude -p \"/support-reply Customer Dana asks how to reset her password. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Skill', '## Sample reply'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['name:', 'description:'], description: 'Skill has frontmatter', weight: 2 },
@@ -391,6 +392,7 @@ Your answer becomes the next learnings.md entry."</code></pre>
       task: 'Paste the manual observation run (real session transcript) AND the resulting skill.',
       hint: 'Observation = the step-by-step you actually walked through; Skill = the consistent parts factored into frontmatter + instructions.',
       minLength: 0, passThreshold: 80, xpReward: 550,
+      evidence: {"accept": ["skill-md", "headless-run"], "prompt": "claude -p \"Run my refined skill on one real input. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Observation', '## Skill'], description: 'Both sections marked', weight: 1 },
         { type: 'keyword', value: ['billing', 'ticket'], description: 'Right ticket type', weight: 2 },
@@ -689,6 +691,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
       task: 'Pick a model per task with cost+capability reasoning, then show real /model switches with status-line evidence.',
       hint: 'Task 1 = high-volume short → Haiku. Task 2 = cross-file reasoning → Opus (mention 1M context if huge). Task 3 = local, well-defined → Sonnet. Proof = `/model <tier>` + status line / banner snippet.',
       minLength: 0, passThreshold: 80, xpReward: 650,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p --model haiku \"Classify this ticket as billing, bug or how-to: 'I was charged twice.' Finish with the code {nonce}.\" --output-format json", "modelIncludes": "haiku"},
       criteria: [
         { type: 'keyword', value: ['## Task 1', '## Task 2', '## Task 3', '## Proof'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['haiku'], description: 'Haiku chosen for the batch task', weight: 2 },
@@ -892,6 +895,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
       task: 'Paste `## Install`, `## Config`, `## Claude using the MCP` — full evidence the setup works end-to-end.',
       hint: 'Try `npx -y @modelcontextprotocol/server-filesystem <path>` as the server command. Config goes under `mcpServers` in your Claude config. **Restart Claude after editing config**, then ask Claude to use the filesystem tool.',
       minLength: 0, passThreshold: 85, xpReward: 600,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p --allowedTools \"mcp__filesystem\" \"Use the filesystem MCP server to list the files in its allowed folder. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Install', '## Config', '## Claude using'], description: 'Three sections present', weight: 1 },
         { type: 'keyword', value: ['npm install', 'npx', '@modelcontextprotocol', 'mcp-server', 'pip install'], description: 'Install command shown', weight: 2 },
@@ -1241,6 +1245,7 @@ claude stop &lt;id&gt;                            # stop it
       task: 'Paste the agent file, a single dispatch, and a parallel dispatch with returned summaries.',
       hint: 'Agent file needs `name:`, `description:`, ideally `model:` and `tools:`. Single dispatch = one Task/Agent call. Parallel = ≥2 Agent calls in one orchestrator turn. Mention `/agents` if you used the picker.',
       minLength: 0, passThreshold: 85, xpReward: 675,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Use a subagent to find every TODO comment in this repo and report the count per folder. Finish with the code {nonce}.\" --output-format json", "minSubagents": 1},
       criteria: [
         { type: 'keyword', value: ['## Agent file', '## Single dispatch', '## Parallel dispatch'], description: 'All three sections present', weight: 1 },
         { type: 'keyword', value: ['name:', 'description:'], description: 'Agent file has frontmatter', weight: 2 },
@@ -1637,6 +1642,7 @@ echo "[$model] $(git branch --show-current 2>/dev/null) · \$$cost"</code></pre>
       task: 'Paste settings.json, the PostToolUse hook + script, the headless run command, and the statusLine config + script.',
       hint: 'permissions has allow/ask/deny arrays. Hooks live under `hooks.PostToolUse[].hooks[].command`. Headless uses `claude -p`. statusLine has `type: command` + `command`.',
       minLength: 0, passThreshold: 85, xpReward: 725,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p --permission-mode plan --model sonnet \"Review the diff between main and HEAD and list the risks. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## settings.json', '## Hook', '## Headless', '## Status'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['allow', 'ask', 'deny'], description: 'All three permission buckets shown', weight: 2 },
@@ -1990,6 +1996,7 @@ claude remote-control          # server mode: no local prompt, waits for remote 
       task: 'Paste `## Commands` (the actual sequence you ran) and `## Remote session` (evidence the session is running on the remote box).',
       hint: 'ssh → install Node via nvm → `npm install -g @anthropic-ai/claude-code` → set `ANTHROPIC_API_KEY` → rsync/scp/git the folder → tmux or screen for persistence → `claude` inside the project. Remote evidence: hostname, paths, banner from the remote box.',
       minLength: 0, passThreshold: 85, xpReward: 675,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"On this remote box, summarise the project README in two sentences. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Commands', '## Remote session'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['ssh'], description: 'Includes SSH', weight: 2 },

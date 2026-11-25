@@ -57,6 +57,29 @@ and `addColliderAABB(...)` calls from the listed source files.
         collider has one. Interior walls aren't audited (would need a
         scene-simulation pass).
 
+### Layout (`layout.cjs`)
+
+Runs `engine/layout.js` (the same placement code the game uses) plus
+`data/npc_overrides.js`, so it checks where NPCs actually stand in game.
+
+- `4.1` Every relocated upper-floor NPC is inside the walkable floor (reachable).
+- `4.2` No two relocated NPCs within 0.6 m on the same floor.
+- `4.3` No NPC inside a desk / table / couch / bookshelf footprint (`data/rooms.js`).
+- `4.4` Every chapter fits its room (`Layout.LESSON_CAPACITY`, currently 8).
+- `4.5` No ES module imported under two different URLs (a `?v=` mismatch
+        forks module state).
+
+### Evaluator strength (`evaluator.cjs`)
+
+- `5.1` Every practical test declares an `evidence` block.
+- `5.2` A keyword-salad submission fails every practical test.
+- `5.3` Salad plus well-formed evidence passes every test (still passable).
+
+### Facts freshness (`data-consistency.cjs`)
+
+- `2.13` `data/facts.js` was verified within the last 35 days, and every id
+         in its `usedBy` list exists. Fails monthly until someone re-verifies.
+
 ## What's NOT audited
 
 - **Visual rendering bugs** — texture missing, GLB doesn't fit its

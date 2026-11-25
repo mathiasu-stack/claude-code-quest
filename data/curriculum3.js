@@ -70,6 +70,7 @@ window.CURRICULUM.push({
     task: 'Pick a template below, then paste your build kit: a short README of the four-beat flow (trigger → fetch → reason → act) PLUS the real pieces it orchestrates. Several real shapes, not one description.',
     hint: 'Write the four beats first — that README is the spine. Then paste the real artifacts: a `---` frontmatter skill/subagent, an `.mcp.json` (`mcpServers`) or `settings.json` (`permissions`/`hooks`), and the scheduled `claude -p "…"` line. The grader looks for at least three real shapes, not prose.',
     minLength: 150, passThreshold: 70, xpReward: 600,
+    evidence: {"accept": ["skill-md", "headless-run"], "prompt": "claude -p \"Run my product's main skill on one sample input. Finish with the code {nonce}.\" --output-format json"},
     criteria: [
       { type: 'structure', value: 'numbered-steps', description: 'A written flow (numbered beats / steps)', weight: 1, improvement: 'Add the four-beat flow as a numbered list: 1. Trigger 2. Fetch 3. Reason 4. Act.' },
       { type: 'keyword', value: ['skill', 'subagent', 'agent', 'mcpServers', '.mcp.json', 'permissions', 'settings.json', 'claude -p', 'cron', 'schedule'], description: 'Names the real Playbook pieces it orchestrates', weight: 1, improvement: 'Reference the actual pieces — a skill/subagent, an .mcp.json or settings.json, the scheduled claude -p line.' },

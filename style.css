@@ -3609,3 +3609,10 @@ body.is-admin .lesson-todo-shot {
 .story-banner-btn { flex-shrink: 0; padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--navy); background: var(--gold); border: none; border-radius: 6px; cursor: pointer; }
 .story-banner-btn:hover { background: var(--gold-light); }
 @media (max-width: 720px) { .story-banner { flex-direction: column; align-items: flex-start; } }
+
+/* Evidence gate (practical tests) */
+.scenario-evidence { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--gold, #c9a44c); border-radius: 6px; font-size: 0.92em; background: rgba(201,164,76,0.08); }
+.scenario-evidence pre { margin: 8px 0; white-space: pre-wrap; word-break: break-word; }
+.scenario-evidence-note { opacity: 0.75; font-size: 0.9em; }
+.criterion-required { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; background: var(--navy, #1a2744); color: #fff; vertical-align: middle; }
+.feedback-required { margin-top: 4px; font-weight: 600; }

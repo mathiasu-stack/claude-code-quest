@@ -46,6 +46,47 @@ function capstoneCriteria(chapterId) {
   }] : [];
 }
 
+// Evidence gate (owner decision 2026-11-25): every practical test declares
+// `evidence` in the curriculum; it becomes a REQUIRED criterion, so no score
+// passes without real Claude Code output — a `claude -p --output-format json`
+// result that repeats this attempt's verification code, or a SKILL.md.
+function evidenceCriteria(test) {
+  const ev = test.evidence;
+  if (!ev) return [];
+  const kinds = ev.accept || ['headless-run'];
+  const what = kinds.map(k => k === 'skill-md' ? 'a SKILL.md (frontmatter with a description, then instructions)'
+    : 'the JSON from a real <code>claude -p … --output-format json</code> run whose reply includes your verification code').join(' or ');
+  return [{
+    type: 'evidence', value: ev, weight: 3, required: true,
+    description: 'Required: real Claude Code evidence',
+    improvement: `Paste ${what}.` + (ev.modelIncludes ? ` The run must use ${ev.modelIncludes}.` : '')
+      + (ev.minSubagents ? ' The run must dispatch at least one subagent.' : ''),
+  }];
+}
+
+function needsNonce(test) {
+  return test.criteria.some(c => c.type === 'nonce')
+    || !!(test.evidence && (test.evidence.accept || ['headless-run']).includes('headless-run'));
+}
+
+function buildEvidenceCard(test, nonce) {
+  const ev = test.evidence;
+  if (!ev) return '';
+  const kinds = ev.accept || ['headless-run'];
+  const cmd = ev.prompt ? String(ev.prompt).replace(/\{nonce\}/g, nonce || 'YOUR-CODE') : '';
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `
+    <div class="scenario-evidence">
+      📎 <strong>Evidence required.</strong> Your answer must include
+      ${kinds.includes('headless-run') ? `the JSON output of a real headless run${cmd ? ', for example:' : '.'}
+        ${cmd ? `<pre><code>${esc(cmd)}</code></pre>` : ''}
+        Paste the whole JSON object it prints. Claude's reply inside it must contain your verification code${nonce ? ` <code>${nonce}</code>` : ''}.` : ''}
+      ${kinds.length > 1 ? '<br><em>— or —</em> ' : ''}
+      ${kinds.includes('skill-md') ? 'the full text of your <code>SKILL.md</code>, starting with its <code>---</code> frontmatter.' : ''}
+      <br><span class="scenario-evidence-note">We check the shape of the evidence, not your machine. It is there so the pass reflects something you actually ran.</span>
+    </div>`;
+}
+
 function getStoredTestMode(chapterId) {
   try {
     const v = localStorage.getItem(TEST_MODE_KEY_PREFIX + chapterId);
@@ -257,7 +298,7 @@ function renderTest(chapterId, targetEl = null) {
   // save path so a reload mid-attempt keeps the same code. Practical track
   // ONLY — the MCQ track has no notion of a live session.
   let nonce = null;
-  if (test.criteria.some(c => c.type === 'nonce')) {
+  if (needsNonce(test)) {
     const minted = Progress.ensureTestNonce(progress, test.id);
     if (minted.progress !== progress) {
       progress = minted.progress;
@@ -562,6 +603,7 @@ function buildScenarioCard(test, nonce = null) {
           🛡️ <strong>Kedash InfoSec — Compliance verification code: <code>${nonce}</code></strong><br>
           Include this code in your real session: ask Claude to echo <code>${nonce}</code> in its reply, and paste the session output containing it below. Submissions without a live-session code won't clear compliance review.${(test.id === 'ch01-test' && window.Story?.getFlag?.('lobby_badge_printed')) ? ' <span style="opacity:0.75;font-style:italic;">(also printed at the lobby badge printer.)</span>' : ''}
         </div>` : ''}
+        ${buildEvidenceCard(test, nonce)}
       </div>
     </div>
   `;
@@ -573,7 +615,7 @@ function handleTestSubmit(ch, test) {
   let progress = window.App.progress;
   // Capstone: append the chapter's artifact criterion so passing requires a
   // real Playbook piece (threaded here, not in the 16 curriculum blocks).
-  const gradedCriteria = test.criteria.concat(capstoneCriteria(ch.id));
+  const gradedCriteria = test.criteria.concat(capstoneCriteria(ch.id), evidenceCriteria(test));
   const result = Evaluator.evaluate(submission, gradedCriteria, test.minLength, test.passThreshold, {
     nonce: Progress.getTestNonce(progress, test.id),
   });
@@ -699,6 +741,7 @@ function renderFeedback(result, test, wasAlreadyPassed, ch, levelBefore) {
     <div class="feedback-banner ${passClass}">
       <div class="feedback-title">${passText}</div>
       <div class="feedback-score">Structural score: ${result.score}% (pass threshold: ${test.passThreshold}%)</div>
+      ${result.missingRequired ? '<div class="feedback-required">A required item is missing — see the breakdown below.</div>' : ''}
       <div class="feedback-xp">${xpText}</div>
     </div>
     <div class="score-honesty">ℹ️ Automated structural check of your pasted evidence — it verifies the shape of what you submitted (keywords, sections, artifacts), not mastery.</div>
@@ -722,7 +765,7 @@ function renderFeedback(result, test, wasAlreadyPassed, ch, levelBefore) {
         <div class="criterion-row ${c.passed ? 'pass' : 'fail'}">
           <span class="criterion-icon">${c.passed ? '✓' : '✗'}</span>
           <div class="criterion-body">
-            <div class="criterion-desc">${c.description}</div>
+            <div class="criterion-desc">${c.description}${c.required ? ' <span class="criterion-required">must pass</span>' : ''}</div>
             ${!c.passed && c.improvement ? `<div class="criterion-improvement">→ ${c.improvement}</div>` : ''}
           </div>
           <span class="criterion-weight">${c.weight} pt${c.weight !== 1 ? 's' : ''}</span>

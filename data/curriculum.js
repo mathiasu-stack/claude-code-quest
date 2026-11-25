@@ -217,6 +217,7 @@ claude --resume auth-fix   # resume a named session directly
       task: 'Paste the setup commands AND a snippet of your first Claude session (welcome banner + one tiny exchange).',
       hint: 'Use two sections — `## Setup` (your terminal commands like `mkdir` and `claude`) and `## First session` (the welcome banner and Claude\'s reply to your `Hi`). One short exchange is enough.',
       minLength: 0, passThreshold: 70, xpReward: 300,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"In two sentences, say what this project does and name its main folders. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['mkdir', 'kedash-support'], description: 'Creates the project folder', weight: 2 },
         { type: 'keyword', value: ['claude'], description: 'Runs the claude command', weight: 2 },
@@ -463,6 +464,7 @@ Do not change the function signature or any callers.</code></pre>
       task: 'Paste your prompt AND Claude\'s response, with `## Prompt` / `## Response` markers.',
       hint: 'A good prompt names the task, gives voice context, lists required parts, specifies format. The response should be a usable template with the 4 sections.',
       minLength: 0, passThreshold: 75, xpReward: 325,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Rewrite the vague request 'fix the login bug' as a specific prompt with context, constraints and a done-condition. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Response'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['cancel', 'cancellation', 'subscription'], description: 'Prompt specifies the topic', weight: 2 },
@@ -729,6 +731,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       task: 'Paste your prompt and the resulting diff.',
       hint: 'Prompt should name the file, the specific line, and constrain Claude to that one change. The diff should show `-` (old line) and `+` (new line).',
       minLength: 0, passThreshold: 75, xpReward: 350,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Read this project's main config file and summarise its three most important settings. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Diff'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['faq.md'], description: 'Names the file in the prompt', weight: 2 },
@@ -1014,6 +1017,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       task: 'Enter Plan Mode, give the reorganize prompt, paste both your prompt and the plan Claude generated.',
       hint: '`## Prompt` and `## Plan` markers. The plan should list numbered steps with source/target paths and end with awaiting-approval language.',
       minLength: 0, passThreshold: 80, xpReward: 375,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p --permission-mode plan \"Plan, without changing anything, how you would add input validation to the main entry point. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## Prompt', '## Plan'], description: 'Both sections present', weight: 1 },
         { type: 'keyword', value: ['plan mode', 'shift+tab', 'shift-tab', 'plan'], description: 'Plan Mode referenced', weight: 2 },
@@ -1370,6 +1374,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
       task: 'Paste short snippets of `/init`, `/help`, and one other slash command\'s output.',
       hint: '/init prints tech-stack detection and a CLAUDE.md draft. /help lists available commands. /cost shows session token usage. Snippets only — don\'t paste pages.',
       minLength: 0, passThreshold: 80, xpReward: 400,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"List the slash commands and skills available in this project, grouped by type. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['/init'], description: 'Ran /init', weight: 2 },
         { type: 'keyword', value: ['/help'], description: 'Ran /help', weight: 2 },
@@ -1690,6 +1695,7 @@ Skills: .claude/skills/ (run /skills to list them)</code></pre>
       task: 'Paste the final lean CLAUDE.md after trimming /init\'s draft.',
       hint: 'Markdown headings. Tight sections. Drop anything not on the list. Aim for ~20-30 lines, definitely under 1500 characters.',
       minLength: 0, passThreshold: 70, xpReward: 425,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Summarise the rules in this project's CLAUDE.md in five bullets. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['# ', '## ', 'purpose'], description: 'Uses markdown headings', weight: 1 },
         { type: 'keyword', value: ['support', 'customer support'], description: 'States the support purpose', weight: 2 },
@@ -1940,6 +1946,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       task: 'Paste the three Business Brain files AND a Claude-drafted reply that uses your voice + at least one glossary term.',
       hint: 'Sections: `## brand-voice.md` / `## client-profiles.md` / `## glossary.md` / `## Test reply`. The test reply is the evidence Claude actually read your Business Brain.',
       minLength: 0, passThreshold: 70, xpReward: 450,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Using the .business-brain folder, say who our main customer is and what they need. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['## brand-voice.md', '## client-profiles.md', '## glossary.md', '## Test reply'], description: 'All four sections present', weight: 1 },
         { type: 'keyword', value: ['warm', 'technical', 'professional', 'tone', 'voice'], description: 'brand-voice.md content', weight: 2 },
@@ -2172,6 +2179,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
       task: 'For each of the 7 items, name the memory layer (User / Project / Business Brain / Skill) and give a one-line reason.',
       hint: 'Numbered list. Match scope to layer — user = personal across all projects, project = repo-specific, business brain = stable company knowledge, skill = repeatable workflow.',
       minLength: 0, passThreshold: 70, xpReward: 475,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p \"Read the memory files for this project and list three things they record. Finish with the code {nonce}.\" --output-format json"},
       criteria: [
         { type: 'keyword', value: ['user', '~/.claude'], description: 'Names the user layer', weight: 2 },
         { type: 'keyword', value: ['project', 'kedash-support/claude.md'], description: 'Names the project layer', weight: 2 },
@@ -2428,6 +2436,7 @@ Usage by model:
       task: 'Paste `## Before` (output of `/cost` after some activity), `## After` (`/cost` after `/clear` or `/compact`), and `## Strategy` (3-5 line takeaway).',
       hint: '`/cost` shows input/output token counts. `/clear` wipes context entirely; `/compact` summarizes and continues. Strategy should call out when to use each.',
       minLength: 0, passThreshold: 75, xpReward: 500,
+      evidence: {"accept": ["headless-run"], "prompt": "claude -p --model haiku \"Summarise the most recent commit in one sentence. Finish with the code {nonce}.\" --output-format json", "modelIncludes": "haiku"},
       criteria: [
         { type: 'keyword', value: ['## Before', '## After', '## Strategy'], description: 'All three sections present', weight: 1 },
         { type: 'keyword', value: ['/cost'], description: 'Ran /cost', weight: 2 },

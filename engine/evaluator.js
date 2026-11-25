@@ -32,7 +32,16 @@ function checkCriterion(type, value, submission, context) {
       // paste is a well-formed artifact of the right kind, not that a live
       // session produced it. value = { kind: 'skill'|'agent'|'command'|
       // 'claude-md'|'learnings'|'settings'|'hook'|'mcp'|'cron' }.
-      return checkArtifact(value, submission);
+      return checkArtifact(value, submission, context);
+    }
+    case 'evidence': {
+      // Practical-test evidence gate (owner decision 2026-11-25: a pass must
+      // rest on real Claude Code output — a `claude -p --output-format json`
+      // result or a SKILL.md). value = test.evidence = { accept: [...kinds],
+      // mustMention?, modelIncludes?, minSubagents? }. Passes if ANY accepted
+      // kind validates.
+      const kinds = (value && value.accept) || ['headless-run'];
+      return kinds.some(kind => checkArtifact({ ...value, kind }, submission, context));
     }
     default:
       return false;
@@ -69,11 +78,85 @@ function _extractJson(s) {
   }
   return null;
 }
-function checkArtifact(spec, submission) {
+// Every balanced top-level {…} object in the paste that parses as JSON.
+// String-aware, so braces inside JSON strings (e.g. a `result` containing
+// code) don't break the scan. Lets a submission mix prose, a settings.json
+// and a headless-run result.
+function _allJsonObjects(s) {
+  const out = [];
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '{') continue;
+    let depth = 0, inStr = false, esc = false, end = -1;
+    for (let k = i; k < s.length; k++) {
+      const ch = s[k];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = k; break; } }
+    }
+    if (end < 0) break;
+    try { out.push(JSON.parse(s.slice(i, end + 1))); i = end; } catch { /* not JSON; keep scanning inside */ }
+  }
+  return out;
+}
+
+const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function _mentionsAny(text, words) {
+  if (!Array.isArray(words) || words.length === 0) return true;
+  const t = String(text || '').toLowerCase();
+  return words.some(w => t.includes(String(w).toLowerCase()));
+}
+
+// A real `claude -p … --output-format json` result (shape verified against
+// Claude Code v2.1.332): type "result", is_error false, a UUID session_id,
+// numeric total_cost_usd, a modelUsage map and the model's text in `result`.
+// The current verification code must appear in `result`, i.e. the model was
+// asked to say it during THIS attempt. Shape-only by design: a determined
+// learner could hand-write this JSON, but it can no longer be passed by
+// keyword stuffing, and an honest run is the easy path.
+function _isHeadlessRun(o, spec, context) {
+  if (!o || typeof o !== 'object') return false;
+  if (o.type !== 'result' || o.is_error !== false) return false;
+  if (typeof o.result !== 'string' || !_UUID_RE.test(String(o.session_id || ''))) return false;
+  if (typeof o.total_cost_usd !== 'number') return false;
+  if (!o.modelUsage || typeof o.modelUsage !== 'object' || Object.keys(o.modelUsage).length === 0) return false;
+  const nonce = context && context.nonce;
+  if (nonce && !o.result.toLowerCase().includes(String(nonce).toLowerCase())) return false;
+  if (spec.modelIncludes && !Object.keys(o.modelUsage).some(m => m.toLowerCase().includes(String(spec.modelIncludes).toLowerCase()))) return false;
+  if (spec.minSubagents && !((o.subagent_stats && o.subagent_stats.spawned) >= spec.minSubagents)) return false;
+  return _mentionsAny(o.result, spec.mustMention);
+}
+
+// A SKILL.md: frontmatter with a description, then real instructions.
+// Scans every frontmatter block so a paste can hold several files.
+function _hasSkillMd(s, spec) {
+  const re = /(?:^|\n)---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/g;
+  let m;
+  while ((m = re.exec(s))) {
+    const fm = m[1];
+    const rest = s.slice(re.lastIndex);
+    const next = rest.search(/(?:^|\n)(?:---[ \t]*\r?\n|```)/);
+    const body = (next >= 0 ? rest.slice(0, next) : rest).trim();
+    if (_fmHasKey(fm, 'description') && body.length >= 40 && _mentionsAny(fm + '\n' + body, spec.mustMention)) return true;
+  }
+  return false;
+}
+
+function checkArtifact(spec, submission, context = {}) {
   const kind = (spec && spec.kind) || 'claude-md';
   const s = String(submission || '').trim();
   if (s.length < 15) return false;
   switch (kind) {
+    case 'headless-run':
+      return _allJsonObjects(s).some(o => _isHeadlessRun(o, spec || {}, context));
+    case 'skill-md':
+      return _hasSkillMd(s, spec || {});
     case 'skill':
     case 'command': {
       const fb = _frontmatterBody(s);
@@ -167,17 +250,20 @@ function evaluate(submission, criteria, minLength, passThreshold, context = {}) 
   let totalWeight = 0;
   let earnedWeight = 0;
 
+  let missingRequired = false;
   const criteriaResults = criteria.map(c => {
     const passed = checkCriterion(c.type, c.value, trimmed, context);
     totalWeight += c.weight;
     if (passed) earnedWeight += c.weight;
-    return { description: c.description, improvement: c.improvement, passed, weight: c.weight };
+    if (c.required && !passed) missingRequired = true;
+    return { description: c.description, improvement: c.improvement, passed, weight: c.weight, required: !!c.required };
   });
 
   const score = totalWeight === 0 ? 100 : Math.round((earnedWeight / totalWeight) * 100);
-  const passed = score >= passThreshold;
+  // A `required` criterion gates the pass regardless of score.
+  const passed = score >= passThreshold && !missingRequired;
 
-  return { passed, score, tooShort: false, criteriaResults };
+  return { passed, score, tooShort: false, missingRequired, criteriaResults };
 }
 
 // ── MCQ evaluation (theoretical test track) ─────────────────────────────
@@ -221,4 +307,4 @@ function evaluateMcq(attempt, theoreticalTest, drawnQuestions) {
   return { passed, score, correctCount, total, perQuestion };
 }
 
-window.Evaluator = { evaluate, evaluateMcq };
+window.Evaluator = { evaluate, evaluateMcq, checkArtifact };
