@@ -34,23 +34,93 @@ doesn't trip the Defender Firewall prompt that binding 0.0.0.0 raises).
 
 Persist across reboots: add a DSM Task Scheduler task (boot-up trigger)
 running the same command. See setup instructions in the deploy chat.
+
+Security model (2026-11-25, after docs/review-2026-11.md):
+    • Static serving is an ALLOWLIST, checked on the decoded + normalized
+      filesystem path (never on the raw request string — that's how the
+      old prefix blocklist was bypassed). Only the game's own roots are
+      served; dotfiles, raw/unoptimized assets and directory listings
+      never are.
+    • "Public" requests — anything arriving through Tailscale Funnel (or
+      from a non-private address) — can never use /save, and /tts only
+      plays cached lines plus a small daily synthesis budget.
+    • The admin passcode is NOT in source. It comes from env
+      CCQ_ADMIN_PASS or the gitignored admin_config.json
+      ({"admin_passcode": "..."}). Unset → /save is disabled outright
+      (that's the state of every offline-zip copy).
 """
 
 import hashlib
 import hmac
 import http.server
+import ipaddress
 import json
 import mimetypes
 import os
 import re
 import sys
+import threading
+import time
 import urllib.error
 import urllib.request
 from xml.sax.saxutils import escape as xml_escape
 
-PASS = 'Kapprim'  # keep in sync with sessionStorage.ccq_admin_pass set by app.js
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+
+
+def _load_admin_pass():
+    env = os.environ.get('CCQ_ADMIN_PASS', '').strip()
+    if env:
+        return env
+    try:
+        with open(os.path.join(PROJECT_ROOT, 'admin_config.json'), encoding='utf-8') as fh:
+            return str(json.load(fh).get('admin_passcode', '')).strip()
+    except (OSError, json.JSONDecodeError, ValueError, AttributeError):
+        return ''
+
+
+# ── Static allowlist ──────────────────────────────────────────────────────
+# Top-level names that may be served. Everything else at the project root
+# (server source, secrets, logs, notes, .git, docs/, scripts/, …) is 404.
+SERVE_TOP_FILES = frozenset({'index.html', 'style.css', 'app.js', 'favicon.ico'})
+SERVE_TOP_DIRS = frozenset({'engine', 'ui', 'data', 'play', 'downloads'})
+# Path segments that are never served even inside an allowed root: raw
+# Meshy uploads / Blender sources (hundreds of MB, gitignored) and NAS
+# sidecar junk. Any segment starting with '.' or containing a space is
+# also refused (the space-named GLBs are raw uploads, never shipped).
+DENY_SEGMENTS = frozenset({'_originals', 'Blender', '@eaDir', '__pycache__',
+                           'Hijabi_Professional_Arab_female.glb'})
+
+# ── Public-traffic limits ─────────────────────────────────────────────────
+PUBLIC_TTS_DAILY_CHARS = 20000   # ≈ $0.30/day at neural-voice rates
+PUBLIC_ERRLOG_DAILY = 2000       # reports/day accepted from the internet
+TTS_CACHE_MAX_BYTES = 500 * 1024 * 1024
+_budget_lock = threading.Lock()
+_budget = {'day': '', 'tts_chars': 0, 'errlog': 0}
+
+
+def _spend(kind, amount, limit):
+    """Atomically spend from today's public budget; False if it would exceed."""
+    with _budget_lock:
+        today = time.strftime('%Y-%m-%d')
+        if _budget['day'] != today:
+            _budget.update(day=today, tts_chars=0, errlog=0)
+        if _budget[kind] + amount > limit:
+            return False
+        _budget[kind] += amount
+        return True
+
+
+def _dir_size(path):
+    total = 0
+    try:
+        for entry in os.scandir(path):
+            if entry.is_file(follow_symlinks=False):
+                total += entry.stat().st_size
+    except OSError:
+        pass
+    return total
 ALLOWED = frozenset({
     'rooms.js',
     'npc_overrides.js',
@@ -105,10 +175,52 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # do_POST for the save endpoint and add CORS in case the editor is
     # ever served from a different origin.
     def _send_cors(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.send_header('Access-Control-Max-Age', '600')
+        # Deliberately no Access-Control-Allow-Origin: the game and editor
+        # are same-origin, and a wildcard let any website drive /save and
+        # /tts from a visitor's browser. Kept as a hook for call sites.
+        pass
+
+    # Is this request from the internet (Funnel) rather than LAN/tailnet?
+    # Funnel's proxy connects from loopback and adds forwarding headers, so
+    # loopback alone is NOT proof of a local caller. Any one signal → public.
+    def _is_public(self):
+        h = self.headers
+        if h.get('Tailscale-Funnel-Request') or h.get('X-Forwarded-For') \
+                or h.get('Forwarded') or h.get('X-Forwarded-Host'):
+            return True
+        host = (h.get('Host') or '').split(':', 1)[0].lower().rstrip('.')
+        if host.endswith('.ts.net'):
+            return True
+        try:
+            ip = ipaddress.ip_address(self.client_address[0])
+        except ValueError:
+            return True
+        if ip.version == 6 and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        tailnet = ipaddress.ip_network('100.64.0.0/10')
+        return not (ip.is_loopback or ip.is_private or ip in tailnet)
+
+    # Allowlist check on the path the parent class would actually open.
+    def _servable(self):
+        fs_path = os.path.realpath(self.translate_path(self.path))
+        root = os.path.realpath(PROJECT_ROOT)
+        if fs_path == root:
+            return True                      # "/" → index.html
+        rel = os.path.relpath(fs_path, root)
+        if rel.startswith('..') or os.path.isabs(rel):
+            return False
+        parts = rel.split(os.sep)
+        for seg in parts:
+            if seg.startswith('.') or ' ' in seg or seg in DENY_SEGMENTS:
+                return False
+        if len(parts) == 1:
+            return parts[0] in SERVE_TOP_FILES or parts[0] in SERVE_TOP_DIRS
+        return parts[0] in SERVE_TOP_DIRS
+
+    def list_directory(self, path):
+        # Never emit directory listings (they exposed raw asset folders).
+        self.send_error(404, 'Not Found')
+        return None
 
     def _send_json(self, status, obj):
         body = json.dumps(obj).encode('utf-8')
@@ -129,9 +241,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # user types it into localStorage) but there's no reason to hand
     # it out either. .git carries history that probably shouldn't be
     # served from a LAN box.
-    _BLOCKED_PREFIXES = ('/save_server.py', '/save.php', '/.git/', '/.git',
-                         '/RESUME.md', '/scripts/', '/CLAUDE.md', '/logs/', '/logs',
-                         '/tts-cache', '/tts_config.json')
 
     # Cache policy (replaces the manual ?v= cache-bust discipline):
     # code + data always revalidate (304 when unchanged — SimpleHTTP
@@ -150,14 +259,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/save' or self.path == '/save/':
             return self._send_json(405, {'ok': False, 'error': 'POST only'})
-        for blocked in self._BLOCKED_PREFIXES:
-            if self.path == blocked or self.path.startswith(blocked + '/') or self.path.startswith(blocked):
-                return self._send_json(403, {'ok': False, 'error': 'forbidden'})
+        if not self._servable():
+            return self.send_error(404, 'Not Found')
         return super().do_GET()
 
     def do_HEAD(self):
         if self.path == '/save' or self.path == '/save/':
             return self._send_json(405, {'ok': False, 'error': 'POST only'})
+        if not self._servable():
+            return self.send_error(404, 'Not Found')
         return super().do_HEAD()
 
     def do_POST(self):
@@ -167,6 +277,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._handle_tts()
         if self.path not in ('/save', '/save/'):
             return self._send_json(404, {'ok': False, 'error': 'unknown path'})
+        # The editor is tailnet/LAN-only. From the internet /save does not
+        # exist — not even a passcode prompt to brute-force.
+        if self._is_public():
+            return self._send_json(404, {'ok': False, 'error': 'unknown path'})
+        admin_pass = _load_admin_pass()
+        if not admin_pass:
+            return self._send_json(503, {'ok': False, 'error': 'save disabled (no admin passcode configured)'})
         try:
             n = int(self.headers.get('Content-Length', '0') or '0')
         except ValueError:
@@ -183,7 +300,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # Constant-time passcode check.
         supplied = payload.get('passcode', '')
-        if not isinstance(supplied, str) or not hmac.compare_digest(supplied, PASS):
+        if not isinstance(supplied, str) or not hmac.compare_digest(supplied, admin_pass):
             return self._send_json(403, {'ok': False, 'error': 'invalid passcode'})
 
         files = payload.get('files')
@@ -241,7 +358,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._send_json(400, {'ok': False})
         import time
         entry['_ts'] = time.strftime('%Y-%m-%dT%H:%M:%S')
-        entry['_ip'] = self.address_string()
+        # No client IP stored: the audience is the public internet now.
+        if self._is_public() and not _spend('errlog', 1, PUBLIC_ERRLOG_DAILY):
+            return self._send_json(200, {'ok': True, 'note': 'daily cap'})
         try:
             os.makedirs(os.path.dirname(self._ERRLOG_PATH), exist_ok=True)
             if (os.path.exists(self._ERRLOG_PATH)
@@ -307,6 +426,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except OSError:
             pass
 
+        # Cache miss. From the internet, synthesis spends a small shared daily
+        # budget (cached lines are always free); 503 makes the browser fall
+        # back to on-device voices for the rest of the session.
+        if self._is_public() and not _spend('tts_chars', len(text), PUBLIC_TTS_DAILY_CHARS):
+            return self._send_json(503, {'ok': False, 'error': 'tts budget exhausted'})
+
         lang = '-'.join(voice.split('-')[:2])  # en-US-GuyNeural → en-US
         ssml = (
             f'<speak version="1.0" xml:lang="{lang}">'
@@ -332,6 +457,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._send_json(502, {'ok': False, 'error': 'empty audio'})
         try:
             os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+            if _dir_size(TTS_CACHE_DIR) > TTS_CACHE_MAX_BYTES:
+                return self._send_audio(audio)   # serve, but stop growing the cache
             with open(cache_path, 'wb') as fh:
                 fh.write(audio)
         except OSError:

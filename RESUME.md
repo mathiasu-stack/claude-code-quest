@@ -8,6 +8,44 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
+## OWNER DECISIONS (2026-11-25) — from the critical review in docs/review-2026-11.md
+Read docs/review-2026-11.md first. R0 (security hotfix) is URGENT and not yet done:
+the save_server.py blocklist is bypassable from the public Funnel URL (Azure key, .git,
+errlog, passcode exposed); /save is a stored-XSS vector; /tts is an open paid proxy.
+Decisions: (1) editor + /save tailnet-only; (2) tests graded on `claude -p` JSON output or
+a SKILL.md artifact; (3) audience = anyone (restrict /tts, stop storing IPs); (4) 3D is the
+product (fund layout-as-data, play.js split, floor disposal); (5) re-verify content monthly
+(needs data/facts.js); (6) deepen existing chapters, no new ones (rooms on floors 2-4 need
+~8 lesson-NPC slots first: ch16-l07 is already unreachable); (7) videos = YouTube links
+only where a current, relevant one exists, otherwise render nothing (no "coming soon").
+Revised order: R0 → R1+R2 → R3 → R6 → R4+content fixes → R5 → videos → R7/R8/R9.
+
+## CURRICULUM AUDIT ③ (2026-11-24, FINDINGS ONLY — nothing edited yet)
+Owner asked for a critical, step-back audit. Verified against live docs
+(code.claude.com/docs commands/hooks/statusline/model-config/permissions/costs,
+platform.claude.com models overview) on CLI v2.1.331. Headlines:
+- **Model generation stale again**: current = Opus 5.5 ($4/$20), Sonnet 5.5
+  ($2/$10), Haiku 5.5 (from $0.10/$0.50, **1M ctx**), Fable 5.2 ($8/$40).
+  **Claude Code default is Opus 5.5 on every plan** (lessons say Sonnet).
+  Default effort is `medium` on the 5.5 models (lessons say `high`). `best` =
+  same as `opus`. Cache reads 5% on Opus/Sonnet 5.5. "Ultra" plan exists.
+- **Pass ② reversals**: `/output-style [style]` and `/reload-skills` ARE in the
+  current commands table (ch15-l04 says "There is no /output-style command").
+  `/plan` is real — the open question is closed, leave it. `/agents` no longer
+  opens a picker (v2.1.197+). `/review` is an alias of the `/code-review` skill.
+- **Wrong from the start**: hook exit 1 does NOT block (only exit 2) — ch15-l03;
+  statusLine gets JSON on stdin, not env vars — ch15-l04; ch16-l06 script runs
+  `--permission-mode plan` but must write a file; ch08 test asks for
+  `.claude/skills/support-reply.md` (invalid path); ch13-l04 MCP SDK snippet
+  calls `.tool()` on low-level `Server`; ch03-l02 says 1M only on Max/Team;
+  ch01-l03 uses /compact for cross-session handoff (resume is taught nowhere).
+- Cache TTL taught as a hard 5 min; /usage now shows a per-request TTL (1h seen).
+- Biggest gaps: --continue//resume, Esc/course-correct, verification, /diff +
+  /code-review + GitHub app/Actions, worktrees, background agents//tasks, /goal,
+  /loop + /schedule, workflows, managed settings, /import, /powerup.
+- Structural recommendation: volatile facts into one data file; restructure
+  around delegate→verify→ship; move safety/permissions to week 1; one audience.
+
 ## GRAPHICS QUALITY TIER (2026-08-30, DEPLOYED) — for constrained work laptops
 Owner: "the game is very slow on my company's laptops due to constrained GPU
 resources, can we make the offline version less graphics intensive?"
@@ -912,7 +950,7 @@ All shipped via `nas-deploy` and verified. Current entry cache-bust: **`play/pla
 ## Architecture (already in place)
 
 - **Data-driven scene layout**: `data/rooms.js` declares all room contents as `{ type: 'wall' | 'floor_plate' | 'decoration' | 'builder' | 'poster' | 'wall_sign' | 'ceo_portrait' | 'clutter', pos: [x, y, z], rotY?, ... }` entries. `play/world/roomsLoader.js` reads them, dispatches to registered builders, and tags every resulting `Object3D` with `_roomId / _roomEntryIndex / _yOffset` so the editor can map a clicked mesh back to its data entry. Compound builders (atrium, elevator, ceilings, exterior) live in the registry and add themselves to scene.
-- **In-game room editor** at `play/editor/roomsEditor.js`: admin-gated behind passcode `Kapprim` (stored in `sessionStorage.ccq_admin`), opens via toolbar. Features:
+- **In-game room editor** at `play/editor/roomsEditor.js`: admin-gated behind passcode (rotated 2026-11-25; lives in gitignored admin_config.json) (stored in `sessionStorage.ccq_admin`), opens via toolbar. Features:
   - TransformControls gizmo + free-drag (mouse hold on object → slides along floor plane at current Y).
   - Hand-rolled side panel with X/Y/Z/rotY numeric fields + per-axis 🔒 lock checkboxes that disable that axis on the gizmo via `transformControls.showX/Y/Z`.
   - **➕ Add Item** library modal: categorized templates (Walls, Floors, Signs, Furniture, Decorations, Characters). Characters category is dynamically populated from `window.__playApi.getHandBuiltNpcs()`.
@@ -1262,7 +1300,7 @@ A full audit + rewrite of all 16 chapters against the current Claude Code featur
 - **Ctrl/Cmd+C / Ctrl/Cmd+V in the editor.** Copies + pastes the currently-selected room item or NPC. Pastes land ~1 m offset on XZ so the duplicate doesn't z-fight; pasted item is auto-selected. NPC paste assigns a fresh id (`<orig>-copy<base36ts>`) so the duplicate doesn't share `NPC_OVERRIDES` with the source. Clipboard is in-memory only (cleared on exit edit mode). Interactables + compound children show a "can't copy" alert because they're baked into source files.
 - **Collider AABBs now re-derived from `window.ROOMS` after every edit.** Old hardcoded furniture entries in `registerStaticColliders()` (Marcus desk, Aisha desk, Diana cabinets, couches, library bookshelves, reading tables, F2-4 office desks) were removed and replaced with a `aabbForRoomEntry()` pass over `window.ROOMS`. Walls + grandfather clock + library cart stay hardcoded (compound builder children, not in rooms data). New `rebuildColliders()` is exposed via `window.__playApi`; editor calls it after every drag-sync, resize-rebuild, Add Item, Paste, and Delete. Footprint per builder fn lives in `BUILDER_FOOTPRINTS` (desk/table/couch/filing_cabinet/bookshelf/water_cooler); per decoration id in `DECORATION_BLOCKERS`. rotY ±π/2 swaps axes via cos/sin projection.
 - **Per-item collision toggle.** Rooms entries can carry `collide: true|false` to force collide-on or collide-off (overriding the type-default lookup above). Editor panel shows a "collide" checkbox for builder + decoration entries with a "(default: on/off)" / "(override)" suffix; toggling back to the default state drops the field to keep exports clean. Serialised by `stringifyEntry`. `_defaultBlocksByEntry()` in `roomsEditor.js` mirrors the play.js default lists — keep them in sync.
-- **"💾 Save Permanently" now has three save paths (tried in order).** (1) `POST ./save.php` — the new PHP endpoint at the project root that writes allow-listed files to `data/`, authenticated by the `Kapprim` admin passcode (stashed into `sessionStorage.ccq_admin_pass` by `app.js`'s admin-unlock prompt). Works in every browser, over plain HTTP, including the Synology Web Station deployment. (2) `window.showDirectoryPicker()` (File System Access API) for HTTPS/localhost Chrome/Edge — requires a secure context, so it's bypassed on the `http://192.168.70.10:8888` LAN URL even in Chrome. (3) Download-and-replace via `exportLayout()` — universal fallback. `save.php` hard-restricts writes: only POST, only allow-listed filenames (`rooms.js` + the three `*_overrides.js`), 1 MB ceiling per file, passcode-gated via `hash_equals`, basename'd to defend against path traversal.
+- **"💾 Save Permanently" now has three save paths (tried in order).** (1) `POST ./save.php` — the new PHP endpoint at the project root that writes allow-listed files to `data/`, authenticated by the admin passcode (gitignored admin_config.json since 2026-11-25) (stashed into `sessionStorage.ccq_admin_pass` by `app.js`'s admin-unlock prompt). Works in every browser, over plain HTTP, including the Synology Web Station deployment. (2) `window.showDirectoryPicker()` (File System Access API) for HTTPS/localhost Chrome/Edge — requires a secure context, so it's bypassed on the `http://192.168.70.10:8888` LAN URL even in Chrome. (3) Download-and-replace via `exportLayout()` — universal fallback. `save.php` hard-restricts writes: only POST, only allow-listed filenames (`rooms.js` + the three `*_overrides.js`), 1 MB ceiling per file, passcode-gated via `hash_equals`, basename'd to defend against path traversal.
 - **Cache-bust step removed from the export workflow.** `index.html` now loads `data/*.js` via a small inline `document.write` loop using `?t=${Date.now()}` so every page load fetches fresh copies. Costs ~10 KB re-fetch per load; saves a manual cache-bump every export. Workflow is now: save (FSA writes directly, or download + manual replace) → reload.
 - **Delete works for every selection kind.** Compound children + interactables now write `hidden: true` into their respective override map (`COMPOUND_OVERRIDES[owner][child].hidden`, `LESSON_DELIVERY_OVERRIDES[chapter].hidden`); `placeCompoundChild()` skips hidden children at build time, and the interactable spawn loop skips hidden chapter entries. Mesh is removed from the scene immediately so the editor reflects the change without a reload. Re-toggling the `hidden` flag (by manually editing the override file) brings the item back; future enhancement could add an "Unhide" panel.
 - **Universal scale row in the editor panel.** Three inputs (sx/sy/sz) for every selection; persists into the matching override slot (`entry.scale` for rooms, `NPC_OVERRIDES[id].scale`, `LESSON_DELIVERY_OVERRIDES[chapter].scale`, `COMPOUND_OVERRIDES[owner][child].scale`). All four override serializers + `stringifyEntry` now emit `scale: [sx, sy, sz]`. Toggling back to `[1,1,1]` drops the field for clean exports. Applied at build time via `mesh.scale.set(...)` in: `spawnNPC` (NPC), interactable loop (LESSON_DELIVERY), `placeCompoundChild()` (compound child), `loadRoom()` in `roomsLoader.js` (room entries).

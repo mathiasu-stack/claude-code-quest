@@ -41,3 +41,6 @@ tts-cache/
 # from tracked files on demand — not committed, just served from disk by
 # save_server.py for the in-app "Download for offline" link.
 downloads/
+
+# Admin passcode for /save (never commit)
+admin_config.json

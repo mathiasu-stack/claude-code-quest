@@ -111,6 +111,30 @@ When running on WSL, use ./deploy.sh which handles the WSL → GitHub → NAS sy
 Whichever side commits, always run `git pull` on the other side before 
 starting new work to avoid merge conflicts.
 
+## Server security model (public via Tailscale Funnel)
+
+The game is public on the internet through Funnel
+(`https://ds925-urlacher.tailc5f77d.ts.net` → `127.0.0.1:8888` →
+`save_server.py`; DSM's nginx is not in the path). `save_server.py` is the
+whole security boundary:
+
+- **Static serving is an allowlist** (`SERVE_TOP_FILES` / `SERVE_TOP_DIRS`),
+  checked on the decoded, normalized filesystem path, never on the raw URL.
+  A new top-level file or folder the game needs must be added there, or it
+  will 404. Dotfiles, space-named raw GLBs, `_originals/`, `Blender/` and
+  directory listings are never served. `docs/`, notes, scripts, logs and
+  secrets are not reachable.
+- **Public vs private requests** (`_is_public`): Funnel traffic (forwarding
+  headers, `Tailscale-Funnel-Request`, a `*.ts.net` Host, or a non-private
+  IP) can't use `/save` (it returns 404) and gets `/tts` only for cached lines
+  plus a 20k-char/day budget. **Use the room editor from
+  `http://ds925-urlacher:8888` or the LAN URL, never the ts.net URL.**
+- **The admin passcode is not in source.** It's in gitignored
+  `admin_config.json` (`{"admin_passcode": "..."}`) or env `CCQ_ADMIN_PASS`.
+  `app.js` holds only its SHA-256. If it's unset, `/save` is disabled (that's
+  the state of every offline copy). Rotating it means updating both.
+- `/errlog` stores no client IPs.
+
 ## Remote access
 
 The game is reachable from any Tailscale-connected device at:

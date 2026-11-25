@@ -613,7 +613,7 @@ function escHtml(str) {
 
 // SHA-256 of the admin passcode. The plaintext deliberately does not
 // appear in source — enter it once and it's kept for the session only.
-const ADMIN_PASS_HASH = '3708b32150ea6392c974c65fef2f0b236d0edc25ca09a8aad31ac27bfa027f7d';
+const ADMIN_PASS_HASH = '9c9b0a28f8b739f13e77432f5d06038778f8651c07217b82ea9f645e5633571b';
 
 // Compact synchronous SHA-256 (FIPS 180-4, public-domain K constants),
 // UTF-8 encoding the input. crypto.subtle is unavailable on this

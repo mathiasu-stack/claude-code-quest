@@ -13,3 +13,5 @@ scripts/                 export-ignore
 test-poses.html          export-ignore
 .gitattributes           export-ignore
 .gitignore               export-ignore
+docs/                    export-ignore
+admin_config.json        export-ignore

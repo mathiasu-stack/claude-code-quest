@@ -18,10 +18,10 @@
 
 declare(strict_types=1);
 
-// Keep in sync with the admin passcode in app.js (the Kedash "Kapprim"
-// flow). Hardcoded — this file lives in a private LAN/Tailscale-only
-// deployment.
-const SAVE_PASS = 'Kapprim';
+// Passcode comes from the gitignored admin_config.json next to this file
+// (same source as save_server.py). Missing/empty → every save is refused.
+$__cfg = @json_decode((string) @file_get_contents(__DIR__ . '/admin_config.json'), true);
+define('SAVE_PASS', is_array($__cfg) ? (string) ($__cfg['admin_passcode'] ?? '') : '');
 
 // Only these basenames can be written. New override types need to be
 // added here AND in the editor's _collectExportFiles().
@@ -53,7 +53,7 @@ $payload = json_decode($raw, true);
 if (!is_array($payload)) fail(400, 'body must be JSON object');
 
 $pass = $payload['passcode'] ?? '';
-if (!is_string($pass) || !hash_equals(SAVE_PASS, $pass)) {
+if (SAVE_PASS === '' || !is_string($pass) || !hash_equals(SAVE_PASS, $pass)) {
   fail(403, 'invalid passcode');
 }
 
