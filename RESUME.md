@@ -47,7 +47,9 @@ everything". Done and pushed (commits bb3d422 → 943c444):
 2. Remaining play.js seams (layout math → roster → dialogue → floors → loop),
    one per session, browser-smoke after each.
 3. New Azure key (owner), then re-enable TTS.
-4. First monthly facts re-check due by 2026-12-30.
+4. Monthly re-check is AUTOMATED: cloud routine "CCQ monthly curriculum audit"
+   (trig_01FozZkE723c1bjVcDZgkBZJ, 1st of month 05:00 UTC, Opus 5.5) opens a PR
+   from a claude/monthly-audit-YYYY-MM branch. Review and merge it; then pull on the NAS.
 
 ## CURRICULUM AUDIT ③ (2026-11-24, FINDINGS ONLY — nothing edited yet)
 Owner asked for a critical, step-back audit. Verified against live docs
