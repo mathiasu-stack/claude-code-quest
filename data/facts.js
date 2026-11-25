@@ -7,7 +7,9 @@
 // 20 lessons (that sweep happened three times in 2026 before this file).
 //
 // MONTHLY CHECK (owner decision 2026-11-25): re-verify every value below
-// against the `source` URLs, bump `verifiedOn` / `cliVersion`, then run
+// against the `source` URLs, re-check that every lesson video link still
+// exists and still matches current behaviour (scripts/audit README), bump
+// `verifiedOn` / `cliVersion`, then run
 // `node scripts/audit/data-consistency.cjs` (it fails if this file is more
 // than 35 days old).
 //

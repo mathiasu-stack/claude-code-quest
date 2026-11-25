@@ -13,7 +13,7 @@ window.CURRICULUM.push(
     xpReward: 380,
     lessons: [
       {
-        id: 'ch08-l01', title: 'What Are Skills?', xpReward: 95, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch08-l01', title: 'What Are Skills?', xpReward: 95, videos: [{"title": "Self-Improving Claude Code: Hooks, Skills, and Session Automation", "channel": "Cloud-Native Corner", "url": "https://www.youtube.com/watch?v=09dggS8KwBc"}],
         lastVerified: '2026-06-15',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Reusable Prompt Templates</h2>
@@ -45,7 +45,7 @@ window.CURRICULUM.push(
 <p>If an instruction is "always active", it belongs in CLAUDE.md. If it's "sometimes needed", it belongs in a skill. This distinction alone can halve your average session context cost.</p>`,
       },
       {
-        id: 'ch08-l03', title: 'Writing Your First Skill', xpReward: 95, videos: [],
+        id: 'ch08-l03', title: 'Writing Your First Skill', xpReward: 95, videos: [{"title": "Claude Skills Explained: SKILL.md Tutorial for Beginners", "channel": "S3CloudHub", "url": "https://www.youtube.com/watch?v=YKQEe3RR7r4"}],
         lastVerified: '2026-06-24',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>A Skill is Just a Markdown File</h2>
@@ -79,7 +79,7 @@ Format as Keep a Changelog. Be concise — one line per item.</code></pre>
 </ul>`,
       },
       {
-        id: 'ch08-l04', title: 'Hook-based Skills', xpReward: 95, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch08-l04', title: 'Hook-based Skills', xpReward: 95, videos: [{"title": "How Claude Code Hooks Save Me HOURS Daily", "channel": "Better Stack", "url": "https://www.youtube.com/watch?v=Q4gsvJvRjCU"}],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Skills That Trigger Automatically</h2>
@@ -864,7 +864,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
     xpReward: 440,
     lessons: [
       {
-        id: 'ch13-l01', title: 'What is MCP?', xpReward: 110, videos: ['<iframe src="https://www.youtube.com/embed/DfWHX7kszQI" title="Claude Code MCP: How to Add MCP Servers (Complete Guide)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch13-l01', title: 'What is MCP?', xpReward: 110, videos: [{"title": "Claude Code MCP: How to Add MCP Servers (Complete Guide)", "channel": "Leon van Zyl", "url": "https://www.youtube.com/watch?v=DfWHX7kszQI"}],
         lastVerified: '2026-06-24',
         verifiedAgainstVersion: 'v2.1.176',
         content: '<h2>Model Context Protocol</h2><p>MCP is an open standard that lets Claude Code connect to external services, databases, and tools. The community has built hundreds of MCP servers for common tools: GitHub, Postgres, Slack, Notion, Linear, Figma, and more — and Anthropic maintains a <strong>directory</strong> of hosted MCP servers you can browse. There is no bare-name install, though — you add a server by pointing the CLI at its URL or launch command: <code>claude mcp add --transport http &lt;name&gt; &lt;url&gt;</code> for a hosted (HTTP) server, or <code>claude mcp add &lt;name&gt; -- &lt;command&gt;</code> for a local one.</p><h3>How it works</h3><ol><li>An MCP server exposes tools over a standardised protocol</li><li>Claude Code connects to the server (local or remote)</li><li>Claude Code uses those tools as naturally as built-in ones</li></ol>',
@@ -1069,7 +1069,7 @@ claude --effort high      # set it at launch, for scripts and CI</code></pre>
 </ul>`,
       },
       {
-        id: 'ch14-l02', title: 'Custom Subagent Types in .claude/agents/', xpReward: 115, videos: [],
+        id: 'ch14-l02', title: 'Custom Subagent Types in .claude/agents/', xpReward: 115, videos: [{"title": "How to Create Sub Agents in Claude Code", "channel": "The Code City", "url": "https://www.youtube.com/watch?v=ICgTn1JMU9Y"}],
         lastVerified: '2026-06-24',
         verifiedAgainstVersion: 'v2.1.176',
         content: `<h2>Specialist Roles You Can Hire</h2>
@@ -1134,7 +1134,7 @@ Each is an independent file tree. Wait for all three reports.</code></pre>
 <p>More than ~5 parallel subagents on the same project tends to cause merge collisions, duplicated exploration, and a flood of summary text in the parent. Sam's rule: <em>"three on the board at once, max. If you need more, the task isn't decomposed cleanly yet."</em></p>`,
       },
       {
-        id: 'ch14-l04', title: 'Multi-Session Command Center', xpReward: 135, videos: ['<iframe src="https://www.youtube.com/embed/t5dpuXto-AM" title="Claude Code Agent Teams: Install, Build &amp; Run Them in Parallel" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch14-l04', title: 'Multi-Session Command Center', xpReward: 135, videos: [],
         lastVerified: '2026-05-30',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>When Subagents Aren't Enough</h2>
@@ -1163,7 +1163,7 @@ Summarise what changed. Wait for explicit approval before running git push.</cod
 <p>Sam's number: <em>check each pane every 15–30 minutes, or when it signals it's waiting</em>. Decisions are fast — unblock, redirect, move on. You're not reading every line of every diff; you're doing spot reviews and judgement calls.</p>`,
       },
       {
-        id: 'ch14-l05', title: 'Agent Teams (Experimental)', xpReward: 120, videos: [],
+        id: 'ch14-l05', title: 'Agent Teams (Experimental)', xpReward: 120, videos: [{"title": "Claude Code Agent Teams: Install, Build & Run Them in Parallel", "channel": "Nuno Tavares | Automated Marketer", "url": "https://www.youtube.com/watch?v=t5dpuXto-AM"}],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>When Reporting Back Isn't Enough</h2>
@@ -1201,7 +1201,7 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
 <p>Three hooks exist specifically to police a team: <code>TeammateIdle</code>, <code>TaskCreated</code> and <code>TaskCompleted</code> (Chapter 15). Exit code 2 from any of them sends feedback and blocks the transition — that's how you enforce "no task is complete until the tests pass".</p>`,
       },
       {
-        id: 'ch14-l06', title: 'Parallel Work: Worktrees and Background Sessions', xpReward: 130, videos: [],
+        id: 'ch14-l06', title: 'Parallel Work: Worktrees and Background Sessions', xpReward: 130, videos: [{"title": "Claude Code Worktrees: Ship 3 Features at Once", "channel": "TechWhistle", "url": "https://www.youtube.com/watch?v=FtJH3RxTuks"}],
         lastVerified: '2026-11-25',
         verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>More Than One Thing at Once</h2>
@@ -1525,7 +1525,7 @@ claude stop &lt;id&gt;                            # stop it
 <p>Rena's lab rule: <em>"Default to <code>ask</code>. Only promote to <code>allow</code> after you've watched the same prompt three times in a row. Only <code>deny</code> the things that can ruin a Friday."</em></p>`,
       },
       {
-        id: 'ch15-l03', title: 'Claude Code Hook Events', xpReward: 130, videos: ['<iframe src="https://www.youtube.com/embed/Q4gsvJvRjCU" title="How Claude Code Hooks Save Me HOURS Daily" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch15-l03', title: 'Claude Code Hook Events', xpReward: 130, videos: [{"title": "How Claude Code Hooks Save Me HOURS Daily", "channel": "Better Stack", "url": "https://www.youtube.com/watch?v=Q4gsvJvRjCU"}],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Wire Shell Commands to Lifecycle Events</h2>
@@ -1591,7 +1591,7 @@ claude stop &lt;id&gt;                            # stop it
 <p>Hooks run in your shell with your privileges. Treat them like git pre-commit hooks: keep them fast, idempotent, and clearly named under <code>.claude/hooks/</code> in the repo. A 5-second hook on <code>PostToolUse</code> turns every edit into a 5-second wait.</p>`,
       },
       {
-        id: 'ch15-l04', title: 'Status Line, Output Styles & Headless Mode', xpReward: 130, videos: [],
+        id: 'ch15-l04', title: 'Status Line, Output Styles & Headless Mode', xpReward: 130, videos: [{"title": "Claude Code + GitHub Actions", "channel": "Anthropic", "url": "https://www.youtube.com/watch?v=L_WFEgry87M"}],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>The Polish Layer</h2>
@@ -1876,7 +1876,7 @@ echo "[$model] $(git branch --show-current 2>/dev/null) · \$$cost"</code></pre>
         content: '<h2>Applying Everything You\'ve Learned</h2><p>A global <code>~/.claude/CLAUDE.md</code> on the remote box tells Claude the environment it\'s in. The shape is identical across hosts — only the specifics change:</p><pre><code># Example A — Synology NAS\nRunning on Synology DS925+, DSM 7.x, x86_64.\nNode.js via nvm. Projects in /volume1/projects/.\nNo browser available. Persistent sessions via tmux.\n\n# Example B — Hetzner CX11 cloud VM\nRunning on Ubuntu 24.04 LTS, x86_64, 2 GB RAM.\nNode.js 20 via apt. Projects in /home/dev/projects/.\nNo browser available. Persistent sessions via tmux.\n\n# Example C — Raspberry Pi 5\nRunning on Pi OS 64-bit (Bookworm), aarch64.\nNode.js 20 via nvm. Projects in ~/projects/.\nNo browser available. Persistent sessions via tmux.\n\n## Business Context (any host)\nGlobal: ~/shared/business-brain/\nPer-project: .business-brain/ in each project root.</code></pre><p>The "no browser available" line is doing real work: Claude will offer terminal-only flows for tasks that would normally suggest opening a docs page.</p><p>Most always-on boxes can run scheduled scripts that start tmux sessions, invoke Claude Code skills, and deposit output files — fully unattended scheduled automation on hardware that never sleeps. (You\'ll wire one up in the next lesson.)</p>',
       },
       {
-        id: 'ch16-l06', title: 'Scheduled Automation with Human Gates', xpReward: 125, videos: [],
+        id: 'ch16-l06', title: 'Scheduled Automation with Human Gates', xpReward: 125, videos: [{"title": "Claude Code + GitHub Actions", "channel": "Anthropic", "url": "https://www.youtube.com/watch?v=L_WFEgry87M"}],
         lastVerified: '2026-06-13',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Automating the Repetitive 80%</h2>

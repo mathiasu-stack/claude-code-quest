@@ -1,3 +1,22 @@
+// Lesson videos are links, not embeds (owner decision 2026-11-25): each
+// entry is { title, channel, url }, checked to exist when it was added.
+// Lessons without a relevant, current video show nothing.
+function renderVideoLinks(videos) {
+  const list = (videos || []).filter(v => v && typeof v === 'object' && /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/.test(v.url || ''));
+  if (!list.length) return '';
+  const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return `
+    <div class="video-links">
+      <div class="video-links-label">▶ Watch</div>
+      ${list.map(v => `
+        <a class="video-link" href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">
+          <span class="video-link-title">${esc(v.title)}</span>
+          <span class="video-link-channel">${esc(v.channel)} · YouTube</span>
+        </a>`).join('')}
+      <div class="video-links-note">Third-party videos can lag the product. Where a video and this lesson disagree, the lesson was checked more recently.</div>
+    </div>`;
+}
+
 function renderLesson(chapterId, lessonId, targetEl = null) {
   const ch = CURRICULUM.find(c => c.id === chapterId);
   if (!ch) return;
@@ -32,10 +51,7 @@ function renderLesson(chapterId, lessonId, targetEl = null) {
           : ''}
       </div>
 
-      ${lesson.videos && lesson.videos.length > 0
-        ? lesson.videos.map(v => `<div class="video-embed">${v}</div>`).join('')
-        : '<div class="video-placeholder"><span class="video-icon">▶</span><span>Video lesson coming soon</span></div>'
-      }
+      ${renderVideoLinks(lesson.videos)}
 
       <div class="lesson-content">
         ${lesson.content}

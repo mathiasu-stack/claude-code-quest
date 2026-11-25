@@ -50,6 +50,7 @@ function main() {
   audit_2_9_regex_compiles(curriculum);
   audit_2_12_knowledge_check_index(curriculum);
   audit_2_13_facts_fresh(curriculum);
+  audit_2_14_video_links(curriculum);
 
   report();
 }
@@ -268,6 +269,19 @@ function audit_2_13_facts_fresh(curriculum) {
   else if (age > MAX_DAYS) fail('2.13', `data/facts.js last verified ${age} days ago (${F.verifiedOn}) — monthly re-check overdue`, ['Re-verify every value against its source URL, then bump verifiedOn / cliVersion.']);
   else if (dangling.length) fail('2.13', `data/facts.js usedBy names ${dangling.length} unknown id(s)`, dangling);
   else pass('2.13', `data/facts.js verified ${age} day(s) ago (${F.verifiedOn}, ${F.cliVersion}); ${F.usedBy.length} dependants exist`);
+}
+
+// ── 2.14 Lesson videos are well-formed YouTube links (no embeds) ──────────
+function audit_2_14_video_links(curriculum) {
+  const RE = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/;
+  const bad = [];
+  let n = 0;
+  for (const ch of curriculum) for (const l of ch.lessons) for (const v of (l.videos || [])) {
+    n++;
+    if (!v || typeof v !== 'object' || !RE.test(v.url || '') || !v.title || !v.channel) bad.push(`${l.id}: ${JSON.stringify(v).slice(0, 80)}`);
+  }
+  if (bad.length) fail('2.14', `${bad.length} malformed lesson video entr(ies) — expected { title, channel, url }`, bad);
+  else pass('2.14', `All ${n} lesson video links well-formed`);
 }
 
 main();

@@ -11,7 +11,7 @@ window.CURRICULUM = [
     xpReward: 200,
     lessons: [
       {
-        id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/AJpK3YTTKZ4" title="Introducing Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch01-l01', title: 'What is Claude Code?', xpReward: 50, videos: [{"title": "Introducing Claude Code", "channel": "Anthropic", "url": "https://www.youtube.com/watch?v=AJpK3YTTKZ4"}, {"title": "Building Claude Code with Boris Cherny", "channel": "The Pragmatic Engineer", "url": "https://www.youtube.com/watch?v=julbw1JuAz0"}],
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Welcome to Kedash Corp</h2>
@@ -55,7 +55,7 @@ shall we start with a question?</div><div class="term-shot-cap">Simulated termin
         },
       },
       {
-        id: 'ch01-l02', title: 'Installation & Setup', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/SUysp3sJHbA" title="Claude Code Tutorial #1 - Introduction &amp; Setup" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch01-l02', title: 'Installation & Setup', xpReward: 50, videos: [{"title": "Claude Code Tutorial #1 - Introduction & Setup", "channel": "Net Ninja", "url": "https://www.youtube.com/watch?v=SUysp3sJHbA"}],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Getting Claude Code Running</h2>
@@ -104,7 +104,7 @@ winget install Anthropic.ClaudeCode</code></pre>
         },
       },
       {
-        id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/ntDIxaeo3Wg" title="Claude Code - Full Tutorial for Beginners" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch01-l03', title: 'Your First Session', xpReward: 50, videos: [{"title": "Claude Code - Full Tutorial for Beginners", "channel": "Tech With Tim", "url": "https://www.youtube.com/watch?v=ntDIxaeo3Wg"}],
         lastVerified: '2026-11-25',
         verifiedAgainstVersion: 'v2.1.332',
         content: `<h2>Starting Your First Session</h2>
@@ -145,7 +145,7 @@ claude --resume auth-fix   # resume a named session directly
         },
       },
       {
-        id: 'ch01-l04', title: 'Understanding the Interface', xpReward: 50, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch01-l04', title: 'Understanding the Interface', xpReward: 50, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>Navigating the Terminal Interface</h2>
@@ -436,7 +436,7 @@ propose a plan before touching any files.</div><div class="term-shot-cap">Simula
 <p>If a session has gone badly wrong — Claude Code is confused, making circular edits, or the context has bloated — use <code>/clear</code> to reset and start a new, focused conversation with a better-crafted first prompt. Don't double down on a bad session. For large operations spanning many files, switch to Plan Mode first (Chapter 4).</p>`,
       },
       {
-        id: 'ch05-l04', title: 'Anatomy of a Good Prompt', xpReward: 55, videos: ['<iframe src="https://www.youtube.com/embed/pUykUYkFVTM" title="Master Claude Code in 2 Hours (What Actually Matters)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch05-l04', title: 'Anatomy of a Good Prompt', xpReward: 55, videos: [],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Prompt Formula</h2>
@@ -659,7 +659,7 @@ Do not change the function signature or any callers.</code></pre>
 </ul>`,
       },
       {
-        id: 'ch06-l03', title: 'Multi-file Operations & The Safe Refactor Playbook', xpReward: 60, videos: ['<iframe src="https://www.youtube.com/embed/k5JxbbwEVGo" title="Claude Code in a 1 Million Line Codebase: What Works, What Doesn\'t" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch06-l03', title: 'Multi-file Operations & The Safe Refactor Playbook', xpReward: 60, videos: [{"title": "Claude Code in a 1 Million Line Codebase: What Works, What Doesn't", "channel": "Edward Donner", "url": "https://www.youtube.com/watch?v=k5JxbbwEVGo"}],
         lastVerified: '2026-05-30',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Working Across Files</h2>
@@ -892,7 +892,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     xpReward: 260,
     lessons: [
       {
-        id: 'ch12-l01', title: 'What is Plan Mode?', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/QlWyrYuEC84" title="Claude Code\'s Hidden Superpower: Plan Mode for Smart Developers" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch12-l01', title: 'What is Plan Mode?', xpReward: 65, videos: [{"title": "Claude Code's Hidden Superpower: Plan Mode for Smart Developers", "channel": "Dan Vega", "url": "https://www.youtube.com/watch?v=QlWyrYuEC84"}],
         lastVerified: '2026-05-30',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Think Before You Act</h2>
@@ -957,7 +957,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 <p>Plan mode never edits your source. But it no longer prompts you for every shell command: when auto mode is available and <code>useAutoModeDuringPlan</code> is on — the default — the classifier reviews commands during planning instead of stopping to ask. Approved commands run, rejected ones are blocked. Turn the setting off if you want planning strictly hands-off.</p>`,
       },
       {
-        id: 'ch12-l03', title: 'When to Use Plan Mode', xpReward: 65, videos: ['<iframe src="https://www.youtube.com/embed/7LWl3EbcFTc" title="Claude Code Plan Mode: The Senior Engineer\'s Workflow" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch12-l03', title: 'When to Use Plan Mode', xpReward: 65, videos: [{"title": "Yup, Claude Code Plan Mode is here: The Senior Engineer's Workflow", "channel": "IndyDevDan", "url": "https://www.youtube.com/watch?v=7LWl3EbcFTc"}],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: '<h2>Choosing the Right Mode</h2><h3>Use Plan Mode for</h3><ul><li>Operations affecting more than 3–5 files</li><li>Renames or restructures of shared interfaces</li><li>Database migrations, security-sensitive changes</li><li>Anything you\'d want code-reviewed before it exists</li></ul><h3>Auto mode is fine for</h3><ul><li>Single-file edits with a clear, bounded scope</li><li>Adding a function or fixing a small bug</li><li>Generating tests for an existing function</li></ul><h3>Heuristic</h3><p>Ask: "If this goes wrong, how long does it take to recover?" More than 5 minutes → use Plan Mode.</p>',
@@ -1216,7 +1216,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     xpReward: 280,
     lessons: [
       {
-        id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/09dggS8KwBc" title="Self-Improving Claude Code: Hooks, Skills, and Session Automation" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch11-l01', title: 'Essential Slash Commands', xpReward: 70, videos: [],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>The Command Vocabulary</h2>
@@ -1270,7 +1270,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 <p>Press <kbd>Shift+Tab</kbd> to cycle permission modes (Default → Auto-accept edits → Plan → back). Plan Mode is read-only — Claude reasons and proposes but cannot execute. Chapter 4 covers this in depth.</p>`,
       },
       {
-        id: 'ch11-l02', title: '/init and Project Setup', xpReward: 70, videos: ['<iframe src="https://www.youtube.com/embed/i_OHQH4-M2Y" title="Claude Code Tutorial #2 - CLAUDE.md Files &amp; /init" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch11-l02', title: '/init and Project Setup', xpReward: 70, videos: [{"title": "Claude Code Tutorial #2 - CLAUDE.md Files & /init", "channel": "Net Ninja", "url": "https://www.youtube.com/watch?v=i_OHQH4-M2Y"}],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: '<h2>Bootstrapping a New Project</h2><p><code>/init</code> inspects your project and generates a starter CLAUDE.md — identifying tech stack, test commands, and build tooling automatically.</p><p>Treat it as generating a first draft. After running it: correct inaccuracies, add the Business Brain pointer, apply lean CLAUDE.md principles (Chapter 6), and commit. The generated file is a starting point, not a finished product.</p>',
@@ -1558,7 +1558,7 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     xpReward: 300,
     lessons: [
       {
-        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 75, videos: ['<iframe src="https://www.youtube.com/embed/h7QJL2_gEXA" title="How to Use CLAUDE.md in Claude Code in 5 Minutes" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch03-l01', title: 'What is CLAUDE.md?', xpReward: 75, videos: [{"title": "How to Use CLAUDE.md in Claude Code in 5 Minutes", "channel": "GritAI Studio", "url": "https://www.youtube.com/watch?v=h7QJL2_gEXA"}],
         lastVerified: '2026-06-14',
         verifiedAgainstVersion: 'v2.1.130',
         content: `<h2>Persistent Memory for Your Project</h2>
@@ -2333,7 +2333,7 @@ When discussing product decisions, check \`.business-brain/product/decisions.md\
     xpReward: 360,
     lessons: [
       {
-        id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch07-l01', title: 'Understanding the Context Window Budget', xpReward: 90, videos: [{"title": "Context Window Management in Claude Code", "channel": "CampusX", "url": "https://www.youtube.com/watch?v=lN5tLx2_7HQ"}],
         lastVerified: '2026-08-26',
         verifiedAgainstVersion: 'v2.1.246',
         content: `<h2>Every Word Costs</h2>
@@ -2371,7 +2371,7 @@ Usage by model:
 <p>Leaner context = better results AND cheaper bills. Not because Claude Code gets smarter when lean, but because more of its attention is focused on what matters right now rather than diluted across thousands of tokens of noise.</p>`,
       },
       {
-        id: 'ch07-l02', title: 'When to Use /clear', xpReward: 90, videos: ['<iframe src="https://www.youtube.com/embed/lN5tLx2_7HQ" title="Context Window Management in Claude Code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'],
+        id: 'ch07-l02', title: 'When to Use /clear', xpReward: 90, videos: [{"title": "Context Window Management in Claude Code", "channel": "CampusX", "url": "https://www.youtube.com/watch?v=lN5tLx2_7HQ"}],
         lastVerified: '2026-04-22',
         verifiedAgainstVersion: 'v2.1.114',
         content: `<h2>The Fresh Start</h2>

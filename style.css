@@ -3616,3 +3616,12 @@ body.is-admin .lesson-todo-shot {
 .scenario-evidence-note { opacity: 0.75; font-size: 0.9em; }
 .criterion-required { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; background: var(--navy, #1a2744); color: #fff; vertical-align: middle; }
 .feedback-required { margin-top: 4px; font-weight: 600; }
+
+/* Lesson video links */
+.video-links { margin: 16px 0 20px; padding: 12px 14px; border: 1px solid var(--gray-200, #e5e7eb); border-radius: 8px; background: var(--gray-50, #f9fafb); }
+.video-links-label { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--navy, #1a2744); margin-bottom: 6px; }
+.video-link { display: flex; flex-direction: column; padding: 6px 0; text-decoration: none; color: inherit; }
+.video-link:hover .video-link-title { text-decoration: underline; }
+.video-link-title { font-weight: 600; color: var(--navy, #1a2744); }
+.video-link-channel { font-size: 12px; color: var(--gray-600, #4b5563); }
+.video-links-note { margin-top: 6px; font-size: 11px; color: var(--gray-600, #4b5563); }
