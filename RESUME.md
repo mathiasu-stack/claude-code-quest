@@ -8,17 +8,46 @@ I'm resuming work on **Claude Code Quest** at `/volume1/projects/claude-code-que
 
 Read `CLAUDE.md` first (it has full stack + deploy details). Key context the previous session built up that you should treat as live state:
 
-## OWNER DECISIONS (2026-11-25) — from the critical review in docs/review-2026-11.md
-Read docs/review-2026-11.md first. R0 (security hotfix) is URGENT and not yet done:
-the save_server.py blocklist is bypassable from the public Funnel URL (Azure key, .git,
-errlog, passcode exposed); /save is a stored-XSS vector; /tts is an open paid proxy.
-Decisions: (1) editor + /save tailnet-only; (2) tests graded on `claude -p` JSON output or
-a SKILL.md artifact; (3) audience = anyone (restrict /tts, stop storing IPs); (4) 3D is the
-product (fund layout-as-data, play.js split, floor disposal); (5) re-verify content monthly
-(needs data/facts.js); (6) deepen existing chapters, no new ones (rooms on floors 2-4 need
-~8 lesson-NPC slots first: ch16-l07 is already unreachable); (7) videos = YouTube links
-only where a current, relevant one exists, otherwise render nothing (no "coming soon").
-Revised order: R0 → R1+R2 → R3 → R6 → R4+content fixes → R5 → videos → R7/R8/R9.
+## REVIEW + IMPLEMENTATION (2026-11-25, DEPLOYED) — read docs/review-2026-11.md §7–§8
+Owner asked for a critical review, made 7 decisions, then said "proceed with
+everything". Done and pushed (commits bb3d422 → 943c444):
+- **Security (R0):** save_server.py serves an ALLOWLIST checked on the
+  normalized path (the old prefix blocklist leaked tts_config.json, .git,
+  logs and the passcode through the public Funnel URL). Funnel traffic is
+  detected by `_is_public()` (forwarding headers / ts.net Host / non-private
+  IP): /save is 404 for it, /tts is cache-only plus a 20k-char/day budget.
+  Admin passcode ROTATED → gitignored `admin_config.json` (owner has it);
+  app.js holds only the hash. Use the room editor via ds925-urlacher:8888 or
+  the LAN URL, never the ts.net URL. Azure key returns 401 (dead) — the owner
+  must issue a new one to re-enable neural voices.
+- **engine/layout.js** = the single chapter→floor→room→NPC-slot mapping (play.js,
+  progress.js, audits). 8 lesson NPCs per room. ch16-l07 was unreachable; fixed.
+- **data/facts.js** = model names/prices/defaults/TTLs; lessons interpolate it.
+  MONTHLY re-verify (owner decision); audit data::2.13 fails after 35 days.
+  Current facts: Opus 5.5 default ($4/$20), Sonnet 5.5 ($2/$10), Haiku 5.5
+  (from $0.10/$0.50, 1M), Fable 5.2 ($8/$40); effort default medium; cache
+  TTL 1h on subscriptions, 5m otherwise. CLI v2.1.332.
+- Content pass ④ fixed every row of the review's §4 (hooks exit 2, statusline
+  stdin JSON, plan-mode script → acceptEdits, SKILL.md path, McpServer,
+  resume, /output-style, /agents, /code-review). 4 new lessons: ch11-l06,
+  ch12-l05, ch14-l06, ch16-l08 (75 lessons; ch16 is at room capacity 8).
+- **Evidence gate:** every practicalTest has `evidence`; ui/test.js makes it a
+  REQUIRED criterion (real `claude -p --output-format json` result repeating
+  the attempt's KDQ code, or a SKILL.md). Keyword salad fails all 17 tests
+  (audit evaluator::5.2).
+- Videos are `{title, channel, url}` link cards (20 of 75 lessons); no placeholder.
+- play.js split started: furniture builders → play/world/furniture.js.
+- NO `?v=` on ES module imports anywhere under play/ (audit layout::4.5).
+- `scripts/audit/browser-smoke.sh` (Playwright via `sudo docker`) — clean.
+  Known pre-existing console noise: Raycaster sprite warning, "FACE MISSING".
+
+**Open / next:**
+1. MCQ track still grants a full chapter pass on its own — conflicts with
+   decision 2; needs an owner call.
+2. Remaining play.js seams (layout math → roster → dialogue → floors → loop),
+   one per session, browser-smoke after each.
+3. New Azure key (owner), then re-enable TTS.
+4. First monthly facts re-check due by 2026-12-30.
 
 ## CURRICULUM AUDIT ③ (2026-11-24, FINDINGS ONLY — nothing edited yet)
 Owner asked for a critical, step-back audit. Verified against live docs

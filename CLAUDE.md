@@ -66,8 +66,8 @@ Each file exposes its API on `window` (e.g. `window.Progress`, `window.CURRICULU
 1. Define a chapter object following the schema in `data/curriculum.js` (see ch01 as the canonical example)
 2. Append it to `window.CURRICULUM.push(...)` in `data/curriculum2.js` (or a new `curriculum3.js` if needed — add a script tag to `index.html`)
 3. Each chapter needs: `id`, `title`, `subtitle`, `icon`, `xpReward`, `lessons[]`, `practicalTest`
-4. Each lesson needs: `id`, `title`, `xpReward`, `videos[]` (leave empty — placeholder renders), `content` (HTML string)
-5. Each `practicalTest` needs: scenario fields, `criteria[]`, `minLength`, `passThreshold`, `xpReward`
+4. Each lesson needs: `id`, `title`, `xpReward`, `videos[]` (`{ title, channel, url }` YouTube links, or empty — nothing renders), `lastVerified`, `verifiedAgainstVersion`, `content` (HTML string)
+5. Each `practicalTest` needs: scenario fields, `criteria[]`, `evidence`, `minLength`, `passThreshold`, `xpReward`. Rooms hold at most 8 lessons per chapter (audit `layout::4.4`)
 
 ## Evaluation criteria types
 
