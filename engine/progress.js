@@ -294,8 +294,10 @@ function clearTestNonce(progress, testId) {
 // IDs in save data but rearrange display order, and this function
 // must follow the display order so the player's "floor 2" matches the
 // dashboard's positions 5–8.
-const CHAPTERS_PER_FLOOR = 4;
-const FLOORS_TOTAL = 4;
+// Shared with play.js via engine/layout.js (loaded first); the literals are
+// only a fallback for pages that load progress.js on its own.
+const CHAPTERS_PER_FLOOR = (typeof window !== 'undefined' && window.Layout && window.Layout.CHAPTERS_PER_FLOOR) || 4;
+const FLOORS_TOTAL = (typeof window !== 'undefined' && window.Layout && window.Layout.FLOORS_TOTAL) || 4;
 function isSideQuestChapter(ch) {
   return !!(ch && ch.sideQuest);
 }
@@ -322,6 +324,7 @@ function applyBadgeBumpsIfDue(progress) {
 }
 
 function floorForChapter(chapterId) {
+  if (typeof window !== 'undefined' && window.Layout) return window.Layout.floorForChapterId(chapterId);
   const curriculum = (typeof window !== 'undefined' && window.CURRICULUM) || [];
   const idx = curriculum.findIndex(c => c.id === chapterId);
   if (idx < 0) return 1;

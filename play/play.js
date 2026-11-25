@@ -254,31 +254,21 @@ const NPCS = [
 // zones at y=0. Floors 2-4 are compact office rooms built at higher Y;
 // the elevator shaft passes through all four. Only ONE floor is visible
 // at a time — non-current floors get hidden via userData.floor tagging.
-const FLOORS_TOTAL = 4;
+// Chapter → floor mapping lives in engine/layout.js (window.Layout), shared
+// with engine/progress.js and the audit suite so they can't drift apart.
+const FLOORS_TOTAL = window.Layout.FLOORS_TOTAL;
 // Floor M (FIN-01/02) — Maya's hidden loft above F4. Story-gated, never
 // part of badge/curriculum math: chapter→floor mapping still caps at
 // FLOORS_TOTAL; only the Y/clamp helpers know about index 5.
 const FLOOR_M_INDEX = 5;
-const CHAPTERS_PER_FLOOR = 4;
+const CHAPTERS_PER_FLOOR = window.Layout.CHAPTERS_PER_FLOOR;
 const FLOOR_HEIGHT_Y = 4.5;          // matches elevator.js FLOOR_HEIGHT
 function floorBaseY(n) {
   return (Math.max(1, Math.min(FLOOR_M_INDEX, n)) - 1) * FLOOR_HEIGHT_Y;
 }
-// Floor is determined by the chapter's POSITION in window.CURRICULUM,
-// not by parsing the numeric suffix from its id. After the curriculum
-// reshuffle (ids stay stable but display order changes) this is the
-// only way to keep floor assignments in sync with the dashboard.
-function indexForChapterId(chId) {
-  return (window.CURRICULUM || []).findIndex(c => c.id === chId);
-}
-function floorForChapterIdx(idx) {
-  if (idx < 0) return 1;
-  return Math.min(FLOORS_TOTAL, Math.ceil((idx + 1) / CHAPTERS_PER_FLOOR));
-}
-function floorForChapterId(chId) {
-  const idx = indexForChapterId(chId);
-  return idx < 0 ? 1 : floorForChapterIdx(idx);
-}
+const indexForChapterId = (chId) => window.Layout.indexForChapterId(chId);
+const floorForChapterIdx = (idx) => window.Layout.floorForChapterIdx(idx);
+const floorForChapterId = (chId) => window.Layout.floorForChapterId(chId);
 let currentFloor = 1;
 // Mirror currentFloor onto window so the in-game editor's "Add Item"
 // spawn picker can pick the right room without needing a play.js
@@ -3465,79 +3455,17 @@ function buildFloorOffice(floorIdx) {
 // NPC (ch03 Files or ch04 Plan Mode in the new 2×2 layout). Their
 // original generated positions assumed the legacy 1×4 corridor at z=44
 // and z=66; this snaps them to the new room centers.
+// NPC room placement (floor-1 west wing + floors 2–4) is computed by
+// engine/layout.js so the audit suite checks the exact positions the game
+// uses. Slots come from the lesson's position in chapter.lessons.
 function floor1WestWingPositionForNPC(npcDef) {
-  const idx = indexForChapterId(npcDef.chapterId);
-  // ch02 = library (idx 1), ch03 = Files (idx 2), ch04 = Plan Mode (idx 3).
-  // Library used to live south of reception (z=+22) but now sits in
-  // the west wing north of Files at center (-22, -22).
-  if (idx !== 1 && idx !== 2 && idx !== 3) return null;
-  const centerX = -22;
-  // Files = z=0, Plan Mode = z=+22, Library = z=-22.
-  const centerZ = idx === 1 ? -22 : (idx === 2 ? 0 : 22);
-  const ch = window.CURRICULUM?.[idx];
-  if (!ch) return null;
-  if (npcDef.kind === 'test') {
-    // Test NPC stands at the south end of the room (toward the doorway
-    // for library/Files; toward the back for Plan Mode).
-    // Library (idx 1): -8.5 would put the test NPC at z -30.5, flush
-    // against the lounge couch front (couch at -31, depth 0.9) — pull
-    // in to -29 for clearance.
-    const tz = idx === 3 ? centerZ + 8.5 : (idx === 1 ? centerZ - 7 : centerZ - 8.5);
-    const face = idx === 3 ? Math.PI : 0;
-    return { pos: [centerX, tz], face };
-  }
-  // Lesson NPCs — same alternating slot pattern as the other west-wing rooms.
-  const m = (npcDef.lessonId || '').match(/-l(\d+)$/);
-  const li = m ? Math.max(0, parseInt(m[1], 10) - 1) : 0;
-  // Library's lesson-1 NPC (Elena) is the librarian — stand her behind
-  // the checkout counter (library_counter at [-18.8, -13.8], placed
-  // east of the door swing: the 3.5 m leaf hinged at x=-23.75 sweeps
-  // z -11..-14.5 when open), facing the entrance.
-  if (idx === 1 && li === 0) {
-    return { pos: [-18.8, -14.9], face: 0 };
-  }
-  const xSign = (li % 2 === 0) ? -1 : 1;
-  const zOff = [-4, 0, 4][(li >> 1) % 3];
-  // Library: ±6 would land exactly on the bookshelf grid columns
-  // (x -28/-16, z -26/-22/-18) and embed NPCs inside the shelves.
-  // ±3 puts them in the 3.8 m clear aisles between shelf columns
-  // (x -25/-19), reading as "browsing the stacks".
-  const xOff = idx === 1 ? 3 : 6;
-  return {
-    pos: [centerX + xSign * xOff, centerZ + zOff],
-    face: xSign < 0 ? Math.PI / 2 : -Math.PI / 2,
-  };
+  const p = window.Layout.westWingPosition(npcDef);
+  return p && { pos: p.pos, face: p.face };
 }
 
 function floorOfficePositionForNPC(npcDef) {
-  const chId = npcDef.chapterId;
-  const idx = indexForChapterId(chId);
-  if (idx < 0) return null;
-  const f = floorForChapterIdx(idx);
-  if (f <= 1) return null; // floor 1 keeps original positions
-  const slotIdx = idx % CHAPTERS_PER_FLOOR; // 0..3 within floor
-  // Slots spread to the four quadrants of the 36×36 floor (±13 from
-  // origin so they sit ~5 m inside each outer wall). rearZ is the
-  // "back of the desk" position for the test NPC.
-  const slots = [
-    { cx: -13, cz: -13, face: 0,        rearZ: -15 },
-    { cx:  13, cz: -13, face: 0,        rearZ: -15 },
-    { cx: -13, cz:  13, face: Math.PI,  rearZ:  15 },
-    { cx:  13, cz:  13, face: Math.PI,  rearZ:  15 },
-  ];
-  const slot = slots[slotIdx];
-  // Spread lesson NPCs in a small arc in front of the desk; test NPC
-  // stands behind the desk (closer to the wall).
-  if (npcDef.kind === 'test') {
-    return { pos: [slot.cx, slot.rearZ], face: slot.face + Math.PI, y: floorBaseY(f) };
-  }
-  // Lesson NPCs — distribute along x within ±2m of cluster center
-  // based on lesson index (extract from lessonId like 'ch05-l02').
-  const lm = (npcDef.lessonId || '').match(/-l(\d+)$/);
-  const lessonIdx = lm ? Math.max(0, parseInt(lm[1], 10) - 1) : 0;
-  const dx = (lessonIdx - 1) * 1.4; // -1.4, 0, +1.4, +2.8 (rare 5th)
-  const dz = (slot.cz > 0) ? -1.6 : 1.6; // step IN from cluster center toward the room center
-  return { pos: [slot.cx + dx, slot.cz + dz], face: slot.face, y: floorBaseY(f) };
+  const p = window.Layout.officePosition(npcDef);
+  return p && { pos: p.pos, face: p.face, y: floorBaseY(p.floor) };
 }
 
 // Iterate scene and toggle visibility based on userData.floor.

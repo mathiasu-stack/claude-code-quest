@@ -32,7 +32,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { dispatchEntry } from '../world/roomsLoader.js?v=20260528g';
-import { setAllGlowsVisible, syncGlowToMesh } from '../world/interactables.js?v=20260527i';
+import { setAllGlowsVisible, syncGlowToMesh } from '../world/interactables.js';
 
 // ── Public API ───────────────────────────────────────────────────────
 

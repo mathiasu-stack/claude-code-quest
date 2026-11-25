@@ -257,7 +257,7 @@ function makeCampBed() {
 let _makeDecoration = null;
 async function _lazyDecorations() {
   try {
-    const mod = await import('../decorations/decorationAssets.js');
+    const mod = await import('../decorations/decorationAssets.js?v=20260528j');
     _makeDecoration = mod.makeDecoration;
   } catch { /* fall back to procedural pots */ }
 }
