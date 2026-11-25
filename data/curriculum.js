@@ -965,6 +965,47 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
         verifiedAgainstVersion: 'v2.1.114',
         content: '<h2>Reading a Plan Critically</h2><ol><li>Scope check — files affected as expected?</li><li>Approach check — is this the right solution?</li><li>Constraint check — respects your constraints?</li><li>Side-effect check — could this break something else?</li><li>Completeness check — anything missed?</li></ol><p>Correct conversationally before executing: "Remove step 3", "Add a step for TypeScript types", "Step 2 should use a transaction". The execution won\'t start until you switch back to Auto — take your time.</p>',
       },
+      {
+        id: 'ch12-l05', title: 'Course-Correcting: Esc, Checkpoints and /rewind', xpReward: 120, videos: [],
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
+        content: `<h2>When the Plan Meets Reality</h2>
+<p>Plan Mode stops bad changes <em>before</em> they happen. This lesson is about the other half of the safety net: stopping and undoing work that's already under way.</p>
+<h3>1. Esc — interrupt, don't watch</h3>
+<p>The moment Claude heads somewhere you didn't intend — the wrong file, a rewrite you didn't ask for — press <kbd>Esc</kbd>. Claude stops what it's doing and waits. Then say what you actually want ("only touch <code>billing/</code>; keep the public API"). Interrupting early is cheaper than reviewing and reverting a finished wrong answer.</p>
+<h3>2. Checkpoints — every prompt is a save point</h3>
+<p>Claude Code takes a checkpoint each time you send a prompt, recording the files Claude edits. Press <kbd>Esc</kbd> twice on an empty prompt — or run <code>/rewind</code> (alias <code>/undo</code>) — pick the point to go back to, and choose:</p>
+<ul>
+  <li><strong>Restore code and conversation</strong> — as if the last few turns never happened.</li>
+  <li><strong>Restore conversation</strong> — keep the files, rewind what Claude remembers.</li>
+  <li><strong>Restore code</strong> — keep the discussion, put the files back.</li>
+  <li><strong>Summarize from here / up to here</strong> — compress part of the conversation instead of discarding it.</li>
+</ul>
+<h3>3. What checkpoints do NOT cover</h3>
+<ul>
+  <li><strong>Changes made only by Bash commands</strong> (<code>rm</code>, <code>mv</code>, a migration script, a <code>git</code> command) are not tracked and stay as they are.</li>
+  <li><strong>Most subagent edits</strong> and edits from other, concurrent sessions are not captured.</li>
+  <li>Snapshots are kept for the 100 most recent checkpoints in a session and cleaned up after about 30 days.</li>
+</ul>
+<div class="callout"><strong>Checkpoints are not version control.</strong> They are a local undo for Claude's file edits. Commit before risky work, and keep anything with side effects outside the repo (databases, deploys, emails) behind Plan Mode and permission rules — <code>/rewind</code> can't un-send an email.</div>
+<h3>The recovery ladder</h3>
+<ol>
+  <li><kbd>Esc</kbd> and redirect — the cheapest fix.</li>
+  <li><code>/rewind</code> to the last good checkpoint and re-prompt with what you learned.</li>
+  <li><code>git</code> for anything that touched the shell, or anything older.</li>
+</ol>`,
+        check: {
+          question: 'Claude ran a shell script that renamed 40 files, then edited three of them. You /rewind and choose "Restore code". What happens to the 40 renames?',
+          options: [
+            'They are reverted along with the edits',
+            'They stay — changes made only by Bash commands are not tracked by checkpoints',
+            'Claude Code asks whether to undo them',
+            'The rewind fails because the files moved',
+          ],
+          correctIndex: 1,
+          explanation: 'Checkpoints track Claude\'s file edits, not Bash side effects. The three edits can be restored; the renames need git (or a manual fix).',
+        },
+      },
     ],
     practicalTest: {
       id: 'ch12-test',
@@ -987,6 +1028,30 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     theoreticalTest: {
       id: 'ch12-test-mcq', passThreshold: 80, xpReward: 375, drawCount: 6,
       questionPool: [
+        {
+          id: 'ch12-q20', type: 'single',
+          prompt: 'How do you open the rewind menu to roll back to an earlier checkpoint?',
+          options: [
+            'Press <kbd>Esc</kbd> twice on an empty prompt, or run <code>/rewind</code>',
+            'Press <kbd>Ctrl+Z</kbd>',
+            'Run <code>/compact undo</code>',
+            'Run <code>git checkpoint</code>',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Course-Correcting: Esc, Checkpoints and /rewind" — Esc Esc (empty prompt) or <code>/rewind</code> (alias <code>/undo</code>).',
+        },
+        {
+          id: 'ch12-q21', type: 'multi',
+          prompt: 'Which of these will a checkpoint rewind NOT undo?',
+          options: [
+            'A file deleted by a Bash <code>rm</code> command',
+            'An email sent by a script Claude ran',
+            'A database migration Claude executed',
+            'An edit Claude made with its Edit tool',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Course-Correcting" — checkpoints restore Claude\'s own file edits. Shell side effects and anything outside the repo are untouched.',
+        },
         {
           id: 'ch12-q01', type: 'single',
           prompt: 'What does Plan Mode do in one sentence?',
@@ -1256,6 +1321,47 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
 <h3>Distribution</h3>
 <p>Plugins are installed from <strong>marketplaces</strong>, which are just repositories with a catalog file. Anthropic runs two: <code>claude-plugins-official</code> (curated, registered automatically) and <code>claude-community</code>. For a team, host a marketplace in a private repository and nobody outside sees it. Browse and install with <code>/plugin</code>; validate your own work with <code>claude plugin validate ./my-plugin</code> before you share it.</p>`,
       },
+      {
+        id: 'ch11-l06', title: 'Review Before You Ship: /diff and /code-review', xpReward: 90, videos: [],
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
+        content: `<h2>Delegate, Then Verify</h2>
+<p>The habit that separates people who ship with Claude Code from people who get burned by it: <strong>never commit work you haven't looked at</strong>. Two commands make looking cheap.</p>
+<h3>/diff — see exactly what changed</h3>
+<p><code>/diff</code> shows the changes in your working tree, including every edit Claude has made so far, without leaving the session. Read it the way you'd read a colleague's pull request: is every changed file one you expected? Is anything deleted that shouldn't be?</p>
+<h3>/code-review — a second pair of eyes</h3>
+<pre><code>/code-review                 # your branch's commits ahead of upstream + uncommitted changes
+/code-review high            # broader coverage (low · medium · high · xhigh · max)
+/code-review --fix           # apply the findings to your working tree afterwards
+/code-review --comment 142   # post findings as inline comments on PR #142
+/code-review ultra           # deep multi-agent review in the cloud</code></pre>
+<p><code>/review</code> is an alias. With no target it reviews your branch's commits ahead of its upstream plus anything uncommitted (with no upstream, it compares against <code>main</code> or the previous commit). It runs as a background subagent with its own context window, so it doesn't crowd your session.</p>
+<ul>
+  <li><strong>Effort</strong>: at <code>low</code> it reports only the findings it's most confident in; <code>medium</code> through <code>max</code> broaden coverage at more cost. If you don't type a level, it reuses the last one you typed.</li>
+  <li><strong><code>--fix</code></strong> applies findings through your normal permission mode — you still approve edits.</li>
+  <li><strong><code>ultra</code></strong> needs a claude.ai login and isn't available on Bedrock, Vertex or Foundry (it falls back to a local review there).</li>
+</ul>
+<h3>The ship loop</h3>
+<ol>
+  <li>Delegate the change (with a plan, for anything non-trivial — Chapter 12).</li>
+  <li><code>/diff</code> — does the change look like what you asked for?</li>
+  <li>Run the tests yourself, or ask Claude to and read the output.</li>
+  <li><code>/code-review</code> — fix what it finds (<code>--fix</code>, or by hand).</li>
+  <li>Commit with a message that says <em>why</em>.</li>
+</ol>
+<div class="callout"><strong>A review is evidence, not a verdict.</strong> Treat findings like a careful colleague's comments: most are right, some are wrong, and you are the one accountable for what merges.</div>`,
+        check: {
+          question: 'You ask Claude to fix a bug, it reports "done". What is the fastest way to confirm it only touched what you expected before committing?',
+          options: [
+            'Trust the summary — Claude lists every change',
+            'Run /diff and read the working-tree changes',
+            'Run /compact',
+            'Run /init',
+          ],
+          correctIndex: 1,
+          explanation: '/diff shows every change in the working tree, including Claude\'s edits. A summary is a claim; the diff is the evidence.',
+        },
+      },
     ],
     practicalTest: {
       id: 'ch11-test',
@@ -1276,6 +1382,30 @@ After implementing, run \`npm test -- format.test.js\` and report the result.</c
     theoreticalTest: {
       id: 'ch11-test-mcq', passThreshold: 80, xpReward: 400, drawCount: 6,
       questionPool: [
+        {
+          id: 'ch11-q20', type: 'single',
+          prompt: 'With no arguments, what does <code>/code-review</code> review?',
+          options: [
+            'Only the last file Claude edited',
+            'Your branch\'s commits ahead of its upstream, plus uncommitted changes',
+            'The whole repository from scratch',
+            'Only staged changes',
+          ],
+          correctIndexes: [1],
+          explanation: 'Lesson "Review Before You Ship" — default scope is commits ahead of upstream plus uncommitted work (or vs <code>main</code> / the previous commit when there is no upstream).',
+        },
+        {
+          id: 'ch11-q21', type: 'single',
+          prompt: 'What does <code>/code-review --fix</code> add?',
+          options: [
+            'It applies the review\'s findings to your working tree afterwards, through your permission mode',
+            'It commits and pushes the fixes automatically',
+            'It skips the review and runs the linter',
+            'It deletes the files with findings',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Review Before You Ship" — <code>--fix</code> applies findings after the review; you still approve edits under your permission mode.',
+        },
         {
           id: 'ch11-q01', type: 'single',
           prompt: 'Which slash command generates a starter CLAUDE.md by inspecting your project?',

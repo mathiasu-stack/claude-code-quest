@@ -1196,6 +1196,43 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
 </ul>
 <p>Three hooks exist specifically to police a team: <code>TeammateIdle</code>, <code>TaskCreated</code> and <code>TaskCompleted</code> (Chapter 15). Exit code 2 from any of them sends feedback and blocks the transition — that's how you enforce "no task is complete until the tests pass".</p>`,
       },
+      {
+        id: 'ch14-l06', title: 'Parallel Work: Worktrees and Background Sessions', xpReward: 130, videos: [],
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
+        content: `<h2>More Than One Thing at Once</h2>
+<p>Subagents parallelise <em>inside</em> one session. Sometimes you want two whole sessions working at once — a bug fix while a refactor runs — without them editing the same files. That's what worktrees and background sessions are for.</p>
+<h3>Worktrees — a separate checkout per task</h3>
+<pre><code>claude --worktree fix-login     # or -w fix-login</code></pre>
+<p>This creates a git worktree under <code>.claude/worktrees/fix-login/</code> on a new branch <code>worktree-fix-login</code> and starts Claude inside it. Each worktree has its own files, so two sessions can't trample each other's edits. Notes:</p>
+<ul>
+  <li>The repo needs at least one commit first.</li>
+  <li>Gitignored files (like <code>.env</code>) aren't in a new worktree; list the ones you need in <code>.worktreeinclude</code> and they're copied in.</li>
+  <li>When an unnamed session ends with the worktree clean, Claude removes the worktree and its branch; for a named one it asks first.</li>
+  <li>Subagents can isolate themselves the same way with <code>isolation: worktree</code> in their frontmatter.</li>
+  <li>The manual route still works: <code>git worktree add ../app-fix -b fix</code>, then run <code>claude</code> there.</li>
+</ul>
+<h3>Background sessions — free your terminal</h3>
+<pre><code>claude --bg "migrate the tests to vitest"   # start a session in the background
+/background                                 # (alias /bg) detach the session you're in
+claude agents                               # agent view: monitor and dispatch background sessions
+claude attach &lt;id-or-name&gt;                  # bring one back into this terminal
+claude stop &lt;id&gt;                            # stop it
+/tasks                                      # background work inside this session, incl. finished subagents</code></pre>
+<p>Detaching never stops a background session — it keeps working, and you attach when it needs you. Pair it with a worktree and you can run a long refactor in the background while you keep fixing bugs in the foreground.</p>
+<div class="callout"><strong>Parallel is not free.</strong> Every session burns tokens independently, and every one of them still needs your review (Chapter 11's ship loop). Two well-scoped parallel tasks beat five vague ones you can't keep up with.</div>`,
+        check: {
+          question: 'You want Claude to refactor the payments module while you keep fixing small bugs in the same repo, without the two colliding. What is the cleanest setup?',
+          options: [
+            'Two terminals in the same folder',
+            'Run the refactor in its own worktree (claude --worktree payments-refactor), optionally in the background',
+            'One session, alternating prompts',
+            'Copy the repo by hand into a zip',
+          ],
+          correctIndex: 1,
+          explanation: 'A worktree gives the refactor its own checkout and branch, so the sessions can\'t overwrite each other; --bg or /background frees your terminal while it runs.',
+        },
+      },
     ],
     practicalTest: {
       id: 'ch14-test',
@@ -1219,6 +1256,30 @@ like a scientific debate. Update the findings doc with the consensus.</code></pr
     theoreticalTest: {
       id: 'ch14-test-mcq', passThreshold: 80, xpReward: 675, drawCount: 6,
       questionPool: [
+        {
+          id: 'ch14-q20', type: 'single',
+          prompt: 'What does <code>claude --worktree fix-login</code> do?',
+          options: [
+            'Creates a git worktree under <code>.claude/worktrees/fix-login/</code> on a new branch and starts Claude inside it',
+            'Switches the current folder to the <code>fix-login</code> branch',
+            'Starts a cloud session named fix-login',
+            'Creates a subagent named fix-login',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Parallel Work" — a separate checkout and branch (<code>worktree-fix-login</code>) so parallel sessions don\'t collide.',
+        },
+        {
+          id: 'ch14-q21', type: 'multi',
+          prompt: 'Which of these are ways to run or manage Claude Code sessions in the background?',
+          options: [
+            '<code>claude --bg "&lt;prompt&gt;"</code>',
+            '<code>/background</code> (alias <code>/bg</code>)',
+            '<code>claude agents</code> and <code>claude attach &lt;id&gt;</code>',
+            '<code>/compact --background</code>',
+          ],
+          correctIndexes: [0, 1, 2],
+          explanation: 'Lesson "Parallel Work" — start with <code>--bg</code>, detach with <code>/background</code>, monitor with <code>claude agents</code>, reattach with <code>claude attach</code>.',
+        },
         {
           id: 'ch14-q01', type: 'single',
           prompt: 'In one sentence, what is a subagent?',
@@ -1881,6 +1942,46 @@ claude remote-control          # server mode: no local prompt, waits for remote 
 </ul>
 <p>These are not competitors so much as three different answers to "where should the work happen". The chapter's remote box is worth building; just build it because you want that box, not because you think it is the only way to reach Claude Code from your phone.</p>`,
       },
+      {
+        id: 'ch16-l08', title: 'Recurring Work: /loop, /goal and /schedule', xpReward: 130, videos: [],
+        lastVerified: '2026-11-25',
+        verifiedAgainstVersion: 'v2.1.332',
+        content: `<h2>Let It Keep Going — Deliberately</h2>
+<p>The weekly-report script (Lesson 6) runs on <em>your</em> box. Claude Code also has three built-in ways to keep work going without you typing every step. Each fits a different job.</p>
+<h3>/loop — repeat while this session is open</h3>
+<pre><code>/loop 5m check whether the deploy finished and tell me when it does
+/loop 1h triage new issues labelled "bug"
+/loop                       # no interval: Claude picks 1 min – 1 h based on what it sees</code></pre>
+<p>Units are <code>s</code>, <code>m</code>, <code>h</code> and <code>d</code> (seconds round up to a minute). With no prompt it runs a built-in maintenance prompt — or your own <code>.claude/loop.md</code>. Loops only fire <strong>while Claude Code is running and idle</strong>, a session holds up to 50 of them, and recurring ones expire after 30 days. Close the terminal and they stop.</p>
+<h3>/goal — keep working until a condition is true</h3>
+<pre><code>/goal all tests in tests/billing pass, or stop after 20 turns
+/goal clear</code></pre>
+<p>After each turn, a separate model checks the condition and returns <em>not yet</em>, <em>met</em> or <em>impossible</em>. It doesn't run tools itself, so it can only judge what Claude has shown in the conversation — phrase conditions as things Claude will visibly prove (test output, a file's contents). Always add a bound ("or stop after 20 turns"). <code>/goal</code> doesn't change your permission mode, and it also works headless: <code>claude -p "/goal CHANGELOG.md has an entry for every PR merged this week"</code>.</p>
+<h3>/schedule — run in the cloud, laptop closed</h3>
+<p><code>/schedule</code> (alias <code>/routines</code>) creates a <strong>cloud scheduled task</strong> that runs on Anthropic-managed infrastructure. It needs GitHub access to clone your repo, each run starts in auto mode, pushes go only to <code>claude/</code> branches, and it can't run more often than hourly. It needs a Claude subscription login (Pro, Max, Ultra, Team or Enterprise), not an API key. Manage tasks at claude.ai/code/routines.</p>
+<h3>Which one?</h3>
+<table>
+  <thead><tr><th>Job</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td>Poll something while you work</td><td><code>/loop</code></td></tr>
+    <tr><td>Grind until a checkable condition holds</td><td><code>/goal</code></td></tr>
+    <tr><td>Recurring job, nobody's machine on</td><td><code>/schedule</code></td></tr>
+    <tr><td>Recurring job that must run on your own box or network</td><td>cron / Task Scheduler + <code>claude -p</code> (Lesson 6)</td></tr>
+  </tbody>
+</table>
+<div class="callout"><strong>The gate principle still applies.</strong> Anything that leaves the building — a Slack post, a merged PR, an email — goes through a human first. Automation drafts; people approve.</div>`,
+        check: {
+          question: 'You want a dependency-update check every weekday morning, even when your laptop is closed. Which fits best?',
+          options: [
+            '/loop 1d check for dependency updates',
+            '/schedule — a cloud scheduled task',
+            '/goal dependencies are up to date',
+            'Keep a terminal open all week',
+          ],
+          correctIndex: 1,
+          explanation: '/loop only fires while your session is open and idle; /goal is for a condition within one run. /schedule runs on Anthropic\'s cloud on a schedule (at most hourly), with no machine of yours on.',
+        },
+      },
     ],
     practicalTest: {
       id: 'ch16-test',
@@ -1905,6 +2006,30 @@ claude remote-control          # server mode: no local prompt, waits for remote 
     theoreticalTest: {
       id: 'ch16-test-mcq', passThreshold: 80, xpReward: 675, drawCount: 6,
       questionPool: [
+        {
+          id: 'ch16-q20', type: 'single',
+          prompt: 'When does a <code>/loop</code> task fire?',
+          options: [
+            'Only while Claude Code is running and idle in that session',
+            'On Anthropic\'s cloud, even with your laptop closed',
+            'Whenever a new commit is pushed',
+            'Once, at the next session start',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Recurring Work" — loops are session-scoped; use <code>/schedule</code> for cloud runs.',
+        },
+        {
+          id: 'ch16-q21', type: 'single',
+          prompt: 'Why should a <code>/goal</code> condition be something Claude visibly proves in the conversation?',
+          options: [
+            'Because the checker model does not run tools — it can only judge what Claude has surfaced',
+            'Because goals are limited to 50 characters',
+            'Because <code>/goal</code> switches to plan mode',
+            'It doesn\'t matter how it\'s phrased',
+          ],
+          correctIndexes: [0],
+          explanation: 'Lesson "Recurring Work" — the evaluator checks the conversation, not the repo; phrase conditions as test output or file contents Claude will show, and add a bound like "or stop after 20 turns".',
+        },
         {
           id: 'ch16-q01', type: 'multi',
           prompt: 'Which of these are listed as candidate "always-on remote boxes" for Claude Code?',
